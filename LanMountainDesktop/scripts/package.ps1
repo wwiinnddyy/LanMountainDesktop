@@ -6,10 +6,12 @@ param(
     [string]$Version = "",
     [string]$PublishDir = "",
     [string]$InstallerOutputDir = "",
+    [string]$OnlineInstallerOutputDir = "",
     [string]$ArchiveOutputDir = "",
     [string]$InnoScript = "",
     [string]$InnoCompiler = "",
     [switch]$SkipInstaller,
+    [switch]$SkipOnlineInstaller,
     [switch]$SkipArchive,
     [switch]$KeepSymbols
 )
@@ -427,6 +429,35 @@ if (Is-WindowsRuntimeIdentifier -Rid $RuntimeIdentifier) {
         $InstallerOutputDir = Join-Path $repoRoot $InstallerOutputDir
     }
     [System.IO.Directory]::CreateDirectory($InstallerOutputDir) | Out-Null
+
+    if (-not $SkipOnlineInstaller) {
+        if (-not $OnlineInstallerOutputDir) {
+            $OnlineInstallerOutputDir = Join-Path $repoRoot "artifacts/installer-online/$RuntimeIdentifier"
+        }
+        if (-not [System.IO.Path]::IsPathRooted($OnlineInstallerOutputDir)) {
+            $OnlineInstallerOutputDir = Join-Path $repoRoot $OnlineInstallerOutputDir
+        }
+        Clear-DirectoryContents -TargetDirectory $OnlineInstallerOutputDir
+
+        $onlineInstallerProject = Join-Path $repoRoot "LanDesktopPLONDS.installer/LanDesktopPLONDS.installer.csproj"
+        Write-Host "Publishing PLONDS online installer..."
+        $onlineInstallerArgs = @(
+            "publish",
+            $onlineInstallerProject,
+            "-c", $Configuration,
+            "-r", $RuntimeIdentifier,
+            "-p:Version=$Version",
+            "-p:PublishAot=true",
+            "-o", $OnlineInstallerOutputDir
+        )
+
+        & dotnet @onlineInstallerArgs
+        if ($LASTEXITCODE -ne 0) {
+            throw "Online installer publish failed with exit code $LASTEXITCODE."
+        }
+
+        Write-Host "Online installer published: $OnlineInstallerOutputDir"
+    }
 
     if ($SkipInstaller) {
         Write-Host "Publish completed. Installer step skipped."

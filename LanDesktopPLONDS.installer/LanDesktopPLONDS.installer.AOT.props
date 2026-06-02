@@ -1,0 +1,34 @@
+<Project>
+  <PropertyGroup Condition="'$(PublishAot)' == 'true'">
+    <PublishAot>true</PublishAot>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <OptimizationPreference>Size</OptimizationPreference>
+    <PublishReadyToRun>false</PublishReadyToRun>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(PublishAot)' == 'true'">
+    <TrimmerRootAssembly Include="Avalonia" />
+    <TrimmerRootAssembly Include="Avalonia.Desktop" />
+    <TrimmerRootAssembly Include="FluentAvalonia" />
+    <TrimmerRootAssembly Include="FluentIcons.Avalonia" />
+    <TrimmerRootAssembly Include="LanDesktopPLONDS.installer" />
+    <TrimmerRootAssembly Include="System.Text.Json" />
+  </ItemGroup>
+
+  <PropertyGroup Condition="'$(PublishAot)' == 'true'">
+    <SuppressTrimAnalysisWarnings>false</SuppressTrimAnalysisWarnings>
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+</Project>

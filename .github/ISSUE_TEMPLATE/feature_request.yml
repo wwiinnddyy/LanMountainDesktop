@@ -1,0 +1,103 @@
+name: 功能请求 / Feature request
+description: 提出新的能力、体验优化或行为调整建议。
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢提出想法。请尽量描述真实场景和目标用户，而不是只描述一个实现方案。
+
+        Thanks for the idea. Please describe the real user scenario and target users, not only a proposed implementation.
+
+        > [!IMPORTANT]
+        > 如果是多项功能，请分别创建 Issue。若需求更适合插件市场、官方示例插件或第三方插件实现，请转到对应仓库或讨论区。
+        >
+        > Please open separate issues for separate features. If the request belongs to marketplace metadata, sample plugins, or third-party plugins, use the related repository or discussion channel.
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 提交前检查 / Pre-flight checklist
+      options:
+        - label: 我已经搜索过现有 Issues 和 `.trae/specs/`，确认没有相同或高度相似的需求。 / I searched existing issues and `.trae/specs/` and found no same or highly similar request.
+          required: true
+        - label: "我已经确认该需求属于本仓库边界：桌面宿主、插件运行时、Plugin SDK、共享契约、外观或设置基础设施。 / I confirmed this belongs to this repo: desktop host, plugin runtime, Plugin SDK, shared contracts, appearance, or settings infrastructure."
+          required: true
+        - label: 我已考虑该能力是否可以由插件实现，并在下方说明。 / I considered whether this can be implemented as a plugin and explain it below.
+          required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: 需求区域 / Request area
+      options:
+        - 桌面宿主体验 / Desktop host UX
+        - 启动器、更新或安装 / Launcher, update, or installation
+        - AirApp Runtime
+        - 插件运行时或安装 / Plugin runtime or installation
+        - Plugin SDK 或共享契约 / Plugin SDK or shared contracts
+        - 设置、主题或外观 / Settings, theme, or appearance
+        - 桌面组件系统 / Desktop component system
+        - 开发、构建或 CI / Development, build, or CI
+        - 文档 / Documentation
+        - 不确定 / Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: 背景与问题 / Background and problem
+      description: 你遇到了什么限制、低效或不清楚的地方？谁会受影响？
+      placeholder: |
+        例如：插件开发者在调试安装流程时无法判断包签名失败还是复制失败。
+
+        Example: Plugin developers cannot tell whether an install failure is caused by package signature validation or file copying.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 想要的结果 / Desired outcome
+      description: 描述你希望用户或开发者最终能完成什么。
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 已考虑的替代方案 / Alternatives considered
+      description: 是否可以通过现有设置、插件、脚本、文档或外部仓库解决？为什么仍需要本仓库改动？
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: 范围、边界与兼容性 / Scope, boundaries, and compatibility
+      description: 是否涉及 UI、设置持久化、Plugin SDK、共享契约、迁移、跨平台行为或破坏性变更？
+      placeholder: |
+        - 是否需要更新 `.trae/specs/<feature>/`
+        - 是否影响已有插件或用户配置
+        - 是否仅适用于 Windows/Linux/macOS 某个平台
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: 参考资料、截图或草图 / References, screenshots, or sketches
+      description: 可附上截图、录屏、草图、相关 PR、文档链接或类似产品参考。
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 优先级感知 / Priority signal
+      description: 这不是维护者承诺，仅帮助 triage。
+      options:
+        - 低：有帮助但不紧急 / Low: useful but not urgent
+        - 中：明显改善主要流程 / Medium: improves a main workflow
+        - 高：阻塞使用或开发 / High: blocks usage or development
+    validations:
+      required: true
+  - type: checkboxes
+    id: final
+    attributes:
+      label: 最后确认 / Final confirmation
+      options:
+        - label: 我确认这个请求描述的是一个清晰、可讨论的目标，而不是多个无关需求的集合。 / I confirm this request describes a clear discussable goal, not a bundle of unrelated requests.
+          required: true

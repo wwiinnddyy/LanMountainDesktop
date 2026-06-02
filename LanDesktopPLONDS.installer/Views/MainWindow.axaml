@@ -1,0 +1,321 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="using:FluentAvalonia.UI.Controls"
+        xmlns:fi="using:FluentIcons.Avalonia"
+        xmlns:vm="using:LanDesktopPLONDS.Installer.ViewModels"
+        x:Class="LanDesktopPLONDS.Installer.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Width="1080"
+        Height="720"
+        MinWidth="860"
+        MinHeight="620"
+        CanResize="True"
+        Title="{Binding WindowTitle}"
+        Background="Transparent"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="48"
+        WindowDecorations="None">
+  <Window.Styles>
+    <Style Selector="Grid.step-page">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <Style Selector="Grid.step-page.visible">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+    <Style Selector="TextBlock.muted">
+      <Setter Property="Foreground" Value="{DynamicResource InstallerSecondaryTextBrush}" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style Selector="Border.inline-panel">
+      <Setter Property="Background" Value="{DynamicResource InstallerSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource InstallerBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusMd}" />
+      <Setter Property="Padding" Value="18" />
+    </Style>
+  </Window.Styles>
+
+  <Grid x:Name="RootGrid"
+        Background="{DynamicResource InstallerWindowBackgroundBrush}"
+        RowDefinitions="48,*">
+    <Border Grid.RowSpan="2"
+            Background="{DynamicResource InstallerTintBrush}"
+            IsHitTestVisible="False" />
+
+    <Border Grid.Row="0"
+            Background="Transparent"
+            PointerPressed="OnTitleBarPointerPressed">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <StackPanel Orientation="Horizontal"
+                    Margin="12,0,0,0"
+                    Spacing="8"
+                    VerticalAlignment="Center">
+          <fi:FluentIcon Icon="ArrowDownload"
+                         IconVariant="Regular"
+                         FontSize="18" />
+          <TextBlock Text="{Binding WindowTitle}"
+                     FontSize="12"
+                     FontWeight="SemiBold"
+                     VerticalAlignment="Center" />
+        </StackPanel>
+
+        <StackPanel Grid.Column="2"
+                    Orientation="Horizontal"
+                    Spacing="4"
+                    Margin="0,0,8,0"
+                    VerticalAlignment="Center">
+          <Button Classes="titlebar-icon-button"
+                  ToolTip.Tip="最小化"
+                  Click="OnMinimizeClick">
+            <fi:FluentIcon Icon="Subtract"
+                           IconVariant="Regular"
+                           FontSize="14" />
+          </Button>
+          <Button Classes="titlebar-icon-button"
+                  ToolTip.Tip="关闭"
+                  Click="OnCloseClick">
+            <fi:FluentIcon Icon="Dismiss"
+                           IconVariant="Regular"
+                           FontSize="14" />
+          </Button>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <ui:FANavigationView x:Name="StepNavigation"
+                         Grid.Row="1"
+                         PaneDisplayMode="Left"
+                         OpenPaneLength="272"
+                         IsPaneOpen="True"
+                         IsSettingsVisible="False"
+                         IsBackButtonVisible="False"
+                         IsPaneToggleButtonVisible="False"
+                         IsPaneVisible="True"
+                         MenuItemsSource="{Binding Steps}"
+                         SelectedItem="{Binding SelectedStep, Mode=TwoWay}"
+                         Background="Transparent"
+                         Margin="0,0,0,0">
+      <ui:FANavigationView.Resources>
+        <SolidColorBrush x:Key="NavigationViewContentBackground" Color="Transparent" />
+        <SolidColorBrush x:Key="NavigationViewDefaultPaneBackground" Color="Transparent" />
+        <SolidColorBrush x:Key="NavigationViewExpandedPaneBackground" Color="Transparent" />
+        <SolidColorBrush x:Key="NavigationViewPaneBackground" Color="Transparent" />
+      </ui:FANavigationView.Resources>
+      <ui:FANavigationView.MenuItemTemplate>
+        <DataTemplate x:DataType="vm:InstallerStepViewModel">
+          <ui:FANavigationViewItem Content="{Binding Title}"
+                                   Tag="{Binding StepId}"
+                                   IsEnabled="{Binding IsUnlocked}">
+            <ui:FANavigationViewItem.IconSource>
+              <ui:FAFontIconSource Glyph="&#xE10F;" />
+            </ui:FANavigationViewItem.IconSource>
+          </ui:FANavigationViewItem>
+        </DataTemplate>
+      </ui:FANavigationView.MenuItemTemplate>
+
+      <Grid Margin="28,4,36,28"
+            RowDefinitions="*,Auto">
+        <Grid Grid.Row="0">
+          <Grid Classes="step-page"
+                IsVisible="{Binding IsWelcomeStep}">
+            <StackPanel Classes="installer-page-container">
+              <TextBlock Classes="page-title-text"
+                         Text="安装阑山桌面" />
+              <TextBlock Classes="page-description-text"
+                         Text="在线安装程序会从 PLONDS 获取最新完整包，并部署到本机的版本目录结构中。" />
+              <ui:FASettingsExpander Header="准备开始"
+                                     Description="安装器将检查最新版本、下载 Files 完整包、校验并部署。">
+                <StackPanel Spacing="8">
+                  <TextBlock Text="首版支持 Windows 首次安装。修复和增量更新入口将在后续版本开放。"
+                             Classes="muted" />
+                  <TextBlock Text="安装完成后将使用 LanMountainDesktop.Launcher 作为统一入口。"
+                             Classes="muted" />
+                </StackPanel>
+              </ui:FASettingsExpander>
+            </StackPanel>
+          </Grid>
+
+          <Grid Classes="step-page"
+                IsVisible="{Binding IsLocationStep}">
+            <StackPanel Classes="installer-page-container">
+              <TextBlock Classes="page-title-text"
+                         Text="选择安装位置" />
+              <TextBlock Classes="page-description-text"
+                         Text="请选择一个专用文件夹。默认位置需要管理员权限，和现有安装器保持一致。" />
+              <ui:FASettingsExpander Header="安装目录"
+                                     Description="安装根目录下会创建 .Launcher 和 app-{version}-0。">
+                <Grid ColumnDefinitions="*,Auto"
+                      ColumnSpacing="10">
+                  <TextBox Text="{Binding InstallPath, Mode=TwoWay}"
+                           PlaceholderText="安装路径" />
+                  <Button Grid.Column="1"
+                          Command="{Binding BrowseCommand}">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="6">
+                      <fi:FluentIcon Icon="FolderOpen"
+                                     IconVariant="Regular" />
+                      <TextBlock Text="浏览" />
+                    </StackPanel>
+                  </Button>
+                </Grid>
+              </ui:FASettingsExpander>
+              <ui:FASettingsExpander Header="安装后选项"
+                                     Description="开始菜单快捷方式会自动创建，桌面快捷方式可选。">
+                <StackPanel Spacing="10">
+                  <CheckBox IsChecked="{Binding CreateDesktopShortcut}"
+                            Content="创建桌面快捷方式" />
+                </StackPanel>
+              </ui:FASettingsExpander>
+            </StackPanel>
+          </Grid>
+
+          <Grid Classes="step-page"
+                IsVisible="{Binding IsPrivacyStep}">
+            <StackPanel Classes="installer-page-container">
+              <TextBlock Classes="page-title-text"
+                         Text="确认上传数据" />
+              <TextBlock Classes="page-description-text"
+                         Text="请确认安装阶段需要使用的匿名数据类别。" />
+              <ui:FASettingsExpander Header="匿名设备码"
+                                     Description="与后续隐私计算使用同一设备码口径。">
+                <TextBlock Text="{Binding DeviceIdPreview}"
+                           TextWrapping="Wrap"
+                           FontFamily="Consolas" />
+              </ui:FASettingsExpander>
+              <ui:FASettingsExpander Header="网络与统计"
+                                     Description="服务端会接收 IP 地址，用于防 DDoS 与统计用户量。">
+                <StackPanel Spacing="8">
+                  <TextBlock Classes="muted"
+                             Text="安装器会发送匿名设备码、系统与架构信息、目标版本和请求 IP。不会上传用户名、机器名或安装目录。" />
+                  <CheckBox IsChecked="{Binding PrivacyConfirmed}"
+                            Content="我确认上述匿名数据可用于安装、风控和用户量统计。" />
+                </StackPanel>
+              </ui:FASettingsExpander>
+            </StackPanel>
+          </Grid>
+
+          <Grid Classes="step-page"
+                IsVisible="{Binding IsDeployStep}">
+            <StackPanel Classes="installer-page-container">
+              <TextBlock Classes="page-title-text"
+                         Text="开始部署" />
+              <TextBlock Classes="page-description-text"
+                         Text="安装时会下载 Files 完整包并写入当前版本目录。" />
+              <Border Classes="inline-panel">
+                <StackPanel Spacing="14">
+                  <Grid ColumnDefinitions="Auto,*"
+                        RowDefinitions="Auto,Auto,Auto"
+                        ColumnSpacing="12"
+                        RowSpacing="8">
+                    <TextBlock Text="版本" />
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding TargetVersion}" />
+                    <TextBlock Grid.Row="1"
+                               Text="来源" />
+                    <TextBlock Grid.Row="1"
+                               Grid.Column="1"
+                               Text="{Binding SourceId}" />
+                    <TextBlock Grid.Row="2"
+                               Text="状态" />
+                    <TextBlock Grid.Row="2"
+                               Grid.Column="1"
+                               Text="{Binding StatusText}" />
+                  </Grid>
+                  <StackPanel Spacing="6">
+                    <TextBlock Text="下载进度" />
+                    <ProgressBar Minimum="0"
+                                 Maximum="1"
+                                 Value="{Binding DownloadProgress}" />
+                    <TextBlock Classes="muted"
+                               Text="{Binding DownloadBytesText}" />
+                  </StackPanel>
+                  <StackPanel Spacing="6">
+                    <TextBlock Text="安装进度" />
+                    <ProgressBar Minimum="0"
+                                 Maximum="1"
+                                 Value="{Binding InstallProgress}" />
+                    <TextBlock Classes="muted"
+                               Text="{Binding CurrentFile}" />
+                  </StackPanel>
+                  <StackPanel Orientation="Horizontal"
+                              Spacing="8">
+                    <Button Command="{Binding StartInstallCommand}">
+                      <StackPanel Orientation="Horizontal"
+                                  Spacing="6">
+                        <fi:FluentIcon Icon="ArrowDownload"
+                                       IconVariant="Regular" />
+                        <TextBlock Text="开始安装" />
+                      </StackPanel>
+                    </Button>
+                    <Button Command="{Binding CancelInstallCommand}"
+                            IsEnabled="{Binding IsInstalling}">
+                      <StackPanel Orientation="Horizontal"
+                                  Spacing="6">
+                        <fi:FluentIcon Icon="Dismiss"
+                                       IconVariant="Regular" />
+                        <TextBlock Text="取消" />
+                      </StackPanel>
+                    </Button>
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </Grid>
+
+          <Grid Classes="step-page"
+                IsVisible="{Binding IsCompleteStep}">
+            <StackPanel Classes="installer-page-container">
+              <TextBlock Classes="page-title-text"
+                         Text="完成安装" />
+              <TextBlock Classes="page-description-text"
+                         Text="阑山桌面已经部署完成。" />
+              <ui:FASettingsExpander Header="启动应用"
+                                     Description="使用 Launcher 进入首次启动流程。">
+                <StackPanel Spacing="12">
+                  <TextBlock Text="如果需要，可以从这里重新启动 LanMountainDesktop.Launcher。"
+                             Classes="muted" />
+                  <Button Command="{Binding LaunchCommand}">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="6">
+                      <fi:FluentIcon Icon="Play"
+                                     IconVariant="Regular" />
+                      <TextBlock Text="启动阑山桌面" />
+                    </StackPanel>
+                  </Button>
+                </StackPanel>
+              </ui:FASettingsExpander>
+            </StackPanel>
+          </Grid>
+        </Grid>
+
+        <Grid Grid.Row="1"
+              ColumnDefinitions="*,Auto,Auto"
+              ColumnSpacing="8"
+              Margin="0,16,0,0">
+          <TextBlock Text="{Binding ErrorMessage}"
+                     Foreground="#C42B1C"
+                     TextWrapping="Wrap"
+                     VerticalAlignment="Center" />
+          <Button Grid.Column="1"
+                  Command="{Binding BackCommand}">
+            <StackPanel Orientation="Horizontal"
+                        Spacing="6">
+              <fi:FluentIcon Icon="ArrowLeft"
+                             IconVariant="Regular" />
+              <TextBlock Text="上一步" />
+            </StackPanel>
+          </Button>
+          <Button Grid.Column="2"
+                  Command="{Binding NextCommand}">
+            <StackPanel Orientation="Horizontal"
+                        Spacing="6">
+              <TextBlock Text="下一步" />
+              <fi:FluentIcon Icon="ArrowRight"
+                             IconVariant="Regular" />
+            </StackPanel>
+          </Button>
+        </Grid>
+      </Grid>
+    </ui:FANavigationView>
+  </Grid>
+</Window>
