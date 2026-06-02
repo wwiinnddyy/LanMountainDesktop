@@ -27,11 +27,16 @@ public sealed class PlondsS3Client : IDisposable
             AccessKey = Require(options.AccessKey, nameof(options.AccessKey)),
             SecretKey = Require(options.SecretKey, nameof(options.SecretKey)),
             PublicBaseUrl = Require(options.PublicBaseUrl, nameof(options.PublicBaseUrl)).TrimEnd('/'),
-            PublicBaseKeyPrefix = NormalizeOptionalKeyPrefix(options.PublicBaseKeyPrefix)
+            PublicBaseKeyPrefix = NormalizeOptionalKeyPrefix(options.PublicBaseKeyPrefix),
+            RequestTimeout = options.RequestTimeout <= TimeSpan.Zero ? TimeSpan.FromMinutes(30) : options.RequestTimeout,
+            MaxUploadAttempts = Math.Max(1, options.MaxUploadAttempts)
         };
 
-        this.httpClient = httpClient ?? new HttpClient();
         ownsHttpClient = httpClient is null;
+        this.httpClient = httpClient ?? new HttpClient
+        {
+            Timeout = this.options.RequestTimeout
+        };
     }
 
     public async Task UploadFileAsync(PlondsS3ObjectUpload upload, CancellationToken cancellationToken = default)
@@ -47,20 +52,47 @@ public sealed class PlondsS3Client : IDisposable
         var key = NormalizeKey(upload.Key);
         var payloadHash = PayloadUtilities.ComputeSha256(sourcePath);
         var contentLength = new FileInfo(sourcePath).Length;
+
+        for (var attempt = 1; attempt <= options.MaxUploadAttempts; attempt++)
+        {
+            try
+            {
+                await UploadFileOnceAsync(sourcePath, key, upload.ContentType, payloadHash, contentLength, attempt, cancellationToken).ConfigureAwait(false);
+                return;
+            }
+            catch (Exception ex) when (attempt < options.MaxUploadAttempts && IsRetriable(ex))
+            {
+                var delay = TimeSpan.FromSeconds(Math.Min(30, Math.Pow(2, attempt)));
+                Console.Error.WriteLine($"S3 upload retry {attempt + 1}/{options.MaxUploadAttempts} for {key} after {delay.TotalSeconds:0}s: {ex.Message}");
+                await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+            }
+        }
+    }
+
+    private async Task UploadFileOnceAsync(
+        string sourcePath,
+        string key,
+        string? contentType,
+        string payloadHash,
+        long contentLength,
+        int attempt,
+        CancellationToken cancellationToken = default)
+    {
         var now = DateTimeOffset.UtcNow;
         var requestUri = BuildObjectUri(key);
+        Console.WriteLine($"Uploading S3 object {key} ({FormatBytes(contentLength)}), attempt {attempt}/{options.MaxUploadAttempts}.");
 
-        using var content = new StreamContent(File.OpenRead(sourcePath));
-        content.Headers.ContentType = new MediaTypeHeaderValue(string.IsNullOrWhiteSpace(upload.ContentType)
+        await using var fileStream = File.OpenRead(sourcePath);
+        using var content = new StreamContent(fileStream);
+        content.Headers.ContentType = new MediaTypeHeaderValue(string.IsNullOrWhiteSpace(contentType)
             ? "application/octet-stream"
-            : upload.ContentType);
+            : contentType);
         content.Headers.ContentLength = contentLength;
 
         using var request = new HttpRequestMessage(HttpMethod.Put, requestUri)
         {
             Content = content
         };
-
         SignRequest(request, key, payloadHash, now);
 
         using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
@@ -69,6 +101,8 @@ public sealed class PlondsS3Client : IDisposable
             var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             throw new InvalidOperationException($"S3 upload failed for {key}: HTTP {(int)response.StatusCode} {response.ReasonPhrase}. {Truncate(body, 512)}");
         }
+
+        Console.WriteLine($"Uploaded S3 object {key}.");
     }
 
     public async Task EnsureObjectExistsAsync(string key, CancellationToken cancellationToken = default)
@@ -256,5 +290,29 @@ public sealed class PlondsS3Client : IDisposable
         }
 
         return value[..maxLength];
+    }
+
+    private static bool IsRetriable(Exception exception)
+    {
+        if (exception is TaskCanceledException or TimeoutException or HttpRequestException)
+        {
+            return true;
+        }
+
+        return exception.InnerException is not null && IsRetriable(exception.InnerException);
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB"];
+        double value = bytes;
+        var unit = 0;
+        while (value >= 1024 && unit < units.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+
+        return $"{value:0.##} {units[unit]}";
     }
 }

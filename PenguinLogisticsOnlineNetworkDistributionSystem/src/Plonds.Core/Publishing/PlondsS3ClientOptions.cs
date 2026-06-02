@@ -7,4 +7,9 @@ public sealed record PlondsS3ClientOptions(
     string AccessKey,
     string SecretKey,
     string PublicBaseUrl,
-    string PublicBaseKeyPrefix = "");
+    string PublicBaseKeyPrefix = "")
+{
+    public TimeSpan RequestTimeout { get; init; } = TimeSpan.FromMinutes(30);
+
+    public int MaxUploadAttempts { get; init; } = 3;
+}
