@@ -791,8 +791,11 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
     private readonly GitHubReleaseUpdateService _githubReleaseUpdateService = new("wwiinnddyy", "LanMountainDesktop");
     private readonly IPlondsService _plondsService;
     private readonly PlondsPreparedPackageInstaller _plondsInstaller = new();
+    private readonly UpdateInstallGateway _plondsUpdateInstallGateway = new();
     private readonly Lazy<UpdateOrchestrator> _orchestrator;
     private PlondsLatestResult? _pendingPlondsLatest;
+    private PlondsManifestCandidate? _pendingPlondsCleanInstallCandidate;
+    private UpdateManifest? _pendingPlondsInstallerManifest;
     private PlondsPreparedPackage? _pendingPlondsPackage;
     private UpdatePhase _plondsPhase = UpdatePhase.Idle;
     private bool _orchestratorEventsSubscribed;
@@ -957,6 +960,8 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         if (IsPlondsSelected())
         {
             _pendingPlondsLatest = null;
+            _pendingPlondsCleanInstallCandidate = null;
+            _pendingPlondsInstallerManifest = null;
             _pendingPlondsPackage = null;
             TransitionPlonds(UpdatePhase.Idle);
             return Task.CompletedTask;
@@ -979,7 +984,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
     {
         if (IsPlondsSelected())
         {
-            return false;
+            return TryApplyPlondsOnExit();
         }
 
         return GetOrchestrator().TryApplyOnExit();
@@ -1087,6 +1092,9 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
 
         var latest = await _plondsService.FindLatestAsync(currentVersion, cancellationToken).ConfigureAwait(false);
         _pendingPlondsLatest = latest.Success && latest.IsUpdateAvailable ? latest : null;
+        _pendingPlondsCleanInstallCandidate = _pendingPlondsLatest?.Candidates
+            .FirstOrDefault(candidate => candidate.Manifest.RequiresCleanInstall);
+        _pendingPlondsInstallerManifest = null;
         _pendingPlondsPackage = null;
         TransitionPlonds(UpdatePhase.Checked);
         SaveLastChecked();
@@ -1096,11 +1104,17 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
             return new UpdateCheckReport(false, null, currentVersionText, null, null, null, null, null, null, latest.ErrorMessage);
         }
 
+        var payloadKind = latest.IsUpdateAvailable
+            ? _pendingPlondsCleanInstallCandidate is not null
+                ? UpdatePayloadKind.FullInstaller
+                : UpdatePayloadKind.DeltaPlonds
+            : (UpdatePayloadKind?)null;
+
         return new UpdateCheckReport(
             latest.IsUpdateAvailable,
             latest.LatestVersion?.ToString(),
             currentVersionText,
-            latest.IsUpdateAvailable ? UpdatePayloadKind.DeltaPlonds : null,
+            payloadKind,
             latest.Candidates.FirstOrDefault()?.Source.Id,
             Get().UpdateChannel,
             DateTimeOffset.UtcNow,
@@ -1111,7 +1125,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
 
     private async Task<LanMountainDesktop.Services.Update.DownloadResult> DownloadPlondsAsync(CancellationToken cancellationToken)
     {
-        if (_plondsPhase is not UpdatePhase.Checked)
+        if (_plondsPhase is not (UpdatePhase.Checked or UpdatePhase.PausedDownloading))
         {
             return new LanMountainDesktop.Services.Update.DownloadResult(false, null, $"Cannot download in phase {_plondsPhase}.", false);
         }
@@ -1121,8 +1135,13 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
             return new LanMountainDesktop.Services.Update.DownloadResult(false, null, "No PLONDS update is pending.", false);
         }
 
-        TransitionPlonds(UpdatePhase.Downloading);
         var currentVersion = _pendingPlondsLatest.CurrentVersion;
+        if (_pendingPlondsCleanInstallCandidate is not null)
+        {
+            return await DownloadPlondsCleanInstallAsync(_pendingPlondsCleanInstallCandidate, cancellationToken).ConfigureAwait(false);
+        }
+
+        TransitionPlonds(UpdatePhase.Downloading);
         var result = await _plondsService.FindAndPrepareLatestAsync(currentVersion, cancellationToken).ConfigureAwait(false);
         if (!result.Success || result.Package is null)
         {
@@ -1134,6 +1153,95 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         TransitionPlonds(UpdatePhase.Downloaded);
         SavePendingPlondsPackage(result.Package);
         return new LanMountainDesktop.Services.Update.DownloadResult(true, result.Package.ManifestPath, null, true);
+    }
+
+    private async Task<LanMountainDesktop.Services.Update.DownloadResult> DownloadPlondsCleanInstallAsync(
+        PlondsManifestCandidate candidate,
+        CancellationToken cancellationToken)
+    {
+        TransitionPlonds(UpdatePhase.Downloading);
+
+        var manifest = await ResolveGitHubInstallerManifestForPlondsAsync(candidate.Manifest, cancellationToken).ConfigureAwait(false);
+        if (manifest is null)
+        {
+            TransitionPlonds(UpdatePhase.Failed);
+            return new LanMountainDesktop.Services.Update.DownloadResult(
+                false,
+                null,
+                $"PLONDS {candidate.Manifest.CurrentVersion} requires clean install, but no matching GitHub installer release was found.",
+                false);
+        }
+
+        var mirror = manifest.InstallerMirrors?
+            .FirstOrDefault(item => !string.IsNullOrWhiteSpace(item.Url));
+        if (mirror is null || string.IsNullOrWhiteSpace(mirror.Url))
+        {
+            TransitionPlonds(UpdatePhase.Failed);
+            return new LanMountainDesktop.Services.Update.DownloadResult(
+                false,
+                null,
+                $"PLONDS {candidate.Manifest.CurrentVersion} requires clean install, but GitHub release has no usable installer asset.",
+                false);
+        }
+
+        var fileName = string.IsNullOrWhiteSpace(mirror.Name)
+            ? $"{manifest.DistributionId}-{manifest.ToVersion}-installer.exe"
+            : mirror.Name!;
+        var asset = new GitHubReleaseAsset(fileName, mirror.Url!, mirror.Size, mirror.Sha256);
+        var destinationPath = CreateInstallerDestinationPath(manifest, fileName);
+        var maxThreads = UpdateSettingsValues.NormalizeDownloadThreads(Get().UpdateDownloadThreads);
+        var progress = new Progress<double>(fraction =>
+        {
+            var downloadReport = new DownloadProgressReport(
+                fileName,
+                0,
+                Math.Max(0, mirror.Size),
+                0,
+                fraction >= 1 ? 1 : 0,
+                1,
+                Math.Clamp(fraction, 0, 1));
+
+            _progressChanged?.Invoke(new UpdateProgressReport(
+                UpdatePhase.Downloading,
+                $"Downloading {fileName}",
+                Math.Clamp(fraction, 0, 1),
+                downloadReport,
+                null));
+        });
+
+        var result = await _githubReleaseUpdateService.DownloadAssetAsync(
+                asset,
+                destinationPath,
+                UpdateSettingsValues.DownloadSourceGitHub,
+                maxThreads,
+                progress,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!result.Success || string.IsNullOrWhiteSpace(result.FilePath))
+        {
+            TransitionPlonds(UpdatePhase.Failed);
+            return new LanMountainDesktop.Services.Update.DownloadResult(
+                false,
+                result.FilePath,
+                result.ErrorMessage ?? "Failed to download GitHub installer for PLONDS clean install.",
+                result.HashVerified);
+        }
+
+        var launcherRoot = UpdatePaths.ResolveLauncherRoot(AppContext.BaseDirectory);
+        DeploymentLockService.WriteLock(launcherRoot, new DeploymentLock(
+            SchemaVersion: 1,
+            Kind: "full",
+            TargetVersion: manifest.ToVersion,
+            PayloadPath: result.FilePath,
+            PayloadSha256: result.ExpectedHash,
+            CreatedAtUtc: DateTimeOffset.UtcNow));
+
+        _pendingPlondsInstallerManifest = manifest;
+        _pendingPlondsPackage = null;
+        TransitionPlonds(UpdatePhase.Downloaded);
+        SavePendingPlondsInstaller(manifest, result.FilePath, result.ExpectedHash);
+        return new LanMountainDesktop.Services.Update.DownloadResult(true, result.FilePath, null, result.HashVerified);
     }
 
     private Task PausePlondsAsync()
@@ -1158,6 +1266,11 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         if (!_plondsPhase.CanInstall())
         {
             return new InstallResult(false, $"Cannot install in phase {_plondsPhase}.", false, "invalid_phase");
+        }
+
+        if (_pendingPlondsInstallerManifest is not null)
+        {
+            return await InstallPlondsCleanInstallAsync(cancellationToken).ConfigureAwait(false);
         }
 
         if (_pendingPlondsPackage is null)
@@ -1186,6 +1299,37 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
 
         TransitionPlonds(UpdatePhase.Installed);
         return new InstallResult(true, null, false);
+    }
+
+    private async Task<InstallResult> InstallPlondsCleanInstallAsync(CancellationToken cancellationToken)
+    {
+        TransitionPlonds(UpdatePhase.Installing);
+        var launcherRoot = UpdatePaths.ResolveLauncherRoot(AppContext.BaseDirectory);
+        var progress = new Progress<InstallProgressReport>(report =>
+        {
+            _progressChanged?.Invoke(new UpdateProgressReport(
+                UpdatePhase.Installing,
+                report.Message,
+                report.ProgressPercent / 100.0,
+                null,
+                report));
+        });
+
+        var install = await _plondsUpdateInstallGateway.InstallAsync(
+                UpdatePayloadKind.FullInstaller,
+                launcherRoot,
+                progress,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!install.Success)
+        {
+            TransitionPlonds(UpdatePhase.Failed);
+            return install;
+        }
+
+        TransitionPlonds(UpdatePhase.Installed);
+        return install;
     }
 
     private async Task AutoCheckPlondsIfEnabledAsync(CancellationToken cancellationToken)
@@ -1267,6 +1411,160 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
             PendingUpdateSha256 = null,
             LastUpdateCheckUtcMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
         });
+    }
+
+    private void SavePendingPlondsInstaller(UpdateManifest manifest, string installerPath, string? sha256)
+    {
+        var state = Get();
+        Save(state with
+        {
+            PendingUpdateInstallerPath = installerPath,
+            PendingUpdateVersion = manifest.ToVersion,
+            PendingUpdatePublishedAtUtcMs = manifest.PublishedAt.ToUnixTimeMilliseconds(),
+            PendingUpdateSha256 = string.IsNullOrWhiteSpace(sha256) ? null : sha256.Trim().ToLowerInvariant(),
+            LastUpdateCheckUtcMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+        });
+    }
+
+    private bool TryApplyPlondsOnExit()
+    {
+        var settings = Get();
+        if (!string.Equals(
+                UpdateSettingsValues.NormalizeMode(settings.UpdateMode),
+                UpdateSettingsValues.ModeSilentOnExit,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var launcherRoot = UpdatePaths.ResolveLauncherRoot(AppContext.BaseDirectory);
+        try
+        {
+            if (_pendingPlondsPackage is not null)
+            {
+                AppLogger.Info("UpdateWorkflow", "PLONDS package pending. Applying from Host on exit.");
+                var result = _plondsInstaller.InstallAsync(
+                        _pendingPlondsPackage,
+                        launcherRoot,
+                        progress: null,
+                        CancellationToken.None)
+                    .GetAwaiter()
+                    .GetResult();
+                return result.Success;
+            }
+
+            var deploymentLock = DeploymentLockService.ReadLock(launcherRoot);
+            if (!string.Equals(deploymentLock?.Kind, "full", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(settings.PendingUpdateInstallerPath) ||
+                !File.Exists(settings.PendingUpdateInstallerPath))
+            {
+                return false;
+            }
+
+            AppLogger.Info("UpdateWorkflow", "PLONDS clean-install installer pending. Launching from Host Update on exit.");
+            var install = _plondsUpdateInstallGateway.InstallAsync(
+                    UpdatePayloadKind.FullInstaller,
+                    launcherRoot,
+                    progress: null,
+                    CancellationToken.None)
+                .GetAwaiter()
+                .GetResult();
+            return install.Success;
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("UpdateWorkflow", "Failed to apply pending PLONDS update on exit.", ex);
+            return false;
+        }
+    }
+
+    private async Task<UpdateManifest?> ResolveGitHubInstallerManifestForPlondsAsync(
+        PlondsClientManifest plondsManifest,
+        CancellationToken cancellationToken)
+    {
+        foreach (var tag in BuildReleaseTagCandidates(plondsManifest.CurrentVersion))
+        {
+            try
+            {
+                var release = await _githubReleaseUpdateService
+                    .GetReleaseByTagAsync(tag, cancellationToken)
+                    .ConfigureAwait(false);
+                if (release is null)
+                {
+                    continue;
+                }
+
+                return UpdateManifestMapper.FromFullInstaller(release, Get().UpdateChannel, ResolveCurrentPlatform());
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("UpdateWorkflow", $"Failed to resolve GitHub installer release '{tag}' for PLONDS clean install: {ex.Message}");
+            }
+        }
+
+        return null;
+    }
+
+    private static IEnumerable<string> BuildReleaseTagCandidates(string? version)
+    {
+        if (string.IsNullOrWhiteSpace(version))
+        {
+            yield break;
+        }
+
+        var trimmed = version.Trim();
+        if (trimmed.StartsWith("v", StringComparison.OrdinalIgnoreCase))
+        {
+            yield return trimmed;
+            yield return trimmed[1..];
+            yield break;
+        }
+
+        yield return $"v{trimmed}";
+        yield return trimmed;
+    }
+
+    private static string CreateInstallerDestinationPath(UpdateManifest manifest, string fileName)
+    {
+        var safeFileName = string.Join(
+            "_",
+            fileName.Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries)).Trim();
+        if (string.IsNullOrWhiteSpace(safeFileName))
+        {
+            safeFileName = $"{manifest.DistributionId}-{manifest.ToVersion}-installer.exe";
+        }
+
+        return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "LanMountainDesktop",
+            "Updates",
+            safeFileName);
+    }
+
+    private static string ResolveCurrentPlatform()
+    {
+        var os = OperatingSystem.IsWindows()
+            ? "windows"
+            : OperatingSystem.IsLinux()
+                ? "linux"
+                : OperatingSystem.IsMacOS()
+                    ? "macos"
+                    : "unknown";
+        var arch = System.Runtime.InteropServices.RuntimeInformation.OSArchitecture switch
+        {
+            System.Runtime.InteropServices.Architecture.Arm64 => "arm64",
+            System.Runtime.InteropServices.Architecture.X86 => "x86",
+            _ => "x64"
+        };
+        return $"{os}-{arch}";
     }
 
     private static bool TryParseVersion(string? value, out Version version)

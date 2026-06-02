@@ -47,17 +47,26 @@ public sealed class PlondsDeltaBuilder
             PayloadUtilities.ExtractZip(baselinePayloadZip!, baselineExtractRoot);
         }
 
+        var currentAppRoot = ResolvePayloadAppRoot(currentExtractRoot, options.CurrentVersion);
+        var baselineAppRoot = isFullUpdate
+            ? null
+            : ResolvePayloadAppRoot(baselineExtractRoot, options.BaselineVersion);
+
         var previousManifest = isFullUpdate
             ? new Dictionary<string, PayloadUtilities.FileFingerprint>(StringComparer.OrdinalIgnoreCase)
-            : PayloadUtilities.ScanDirectory(baselineExtractRoot);
-        var currentManifest = PayloadUtilities.ScanDirectory(currentExtractRoot);
+            : PayloadUtilities.ScanDirectory(baselineAppRoot);
+        var currentManifest = PayloadUtilities.ScanDirectory(currentAppRoot);
 
         var filesMap = BuildFilesMap(previousManifest, currentManifest, hashAlgorithm);
         var changedFilesMap = BuildChangedFilesMap(filesMap, hashAlgorithm);
 
-        var changedZipPath = CreateChangedZip(currentExtractRoot, filesMap, outputRoot, options.Platform);
+        var changedZipPath = CreateChangedZip(currentAppRoot, filesMap, outputRoot, options.Platform);
 
-        var launcherChanged = DetectLauncherChange(previousManifest, currentManifest, options.LauncherRelativePath);
+        var previousRootManifest = isFullUpdate
+            ? new Dictionary<string, PayloadUtilities.FileFingerprint>(StringComparer.OrdinalIgnoreCase)
+            : PayloadUtilities.ScanDirectory(baselineExtractRoot);
+        var currentRootManifest = PayloadUtilities.ScanDirectory(currentExtractRoot);
+        var launcherChanged = DetectLauncherChange(previousRootManifest, currentRootManifest, options.LauncherRelativePath);
         var requiresCleanInstall = launcherChanged && !isFullUpdate;
 
         var changedZipMd5 = ComputeMd5Hex(changedZipPath);
@@ -214,6 +223,34 @@ public sealed class PlondsDeltaBuilder
         }
 
         return !string.Equals(current.Sha256, previous.Sha256, StringComparison.OrdinalIgnoreCase);
+    }
+
+    internal static string ResolvePayloadAppRoot(string extractRoot, string? version)
+    {
+        var resolvedRoot = Path.GetFullPath(extractRoot);
+        if (File.Exists(Path.Combine(resolvedRoot, "LanMountainDesktop.exe")))
+        {
+            return resolvedRoot;
+        }
+
+        if (!string.IsNullOrWhiteSpace(version))
+        {
+            var versionedAppRoot = Path.Combine(resolvedRoot, $"app-{version.Trim().TrimStart('v', 'V')}");
+            if (Directory.Exists(versionedAppRoot) &&
+                File.Exists(Path.Combine(versionedAppRoot, "LanMountainDesktop.exe")))
+            {
+                return versionedAppRoot;
+            }
+        }
+
+        var appRoots = Directory.Exists(resolvedRoot)
+            ? Directory.GetDirectories(resolvedRoot, "app-*", SearchOption.TopDirectoryOnly)
+                .Where(path => File.Exists(Path.Combine(path, "LanMountainDesktop.exe")))
+                .OrderByDescending(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
+                .ToArray()
+            : [];
+
+        return appRoots.FirstOrDefault() ?? resolvedRoot;
     }
 
     internal static string ComputeHash(string filePath, string hashAlgorithm)

@@ -92,6 +92,25 @@ public sealed class PlondsClientServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task DownloadPlanner_WhenManifestRequiresCleanInstall_DoesNotPreparePlondsPackage()
+    {
+        var downloader = new FakeDownloader(deltaFails: false, fullFails: false);
+        var planner = new PlondsDownloadPlanner(downloader);
+
+        var result = await planner.PrepareAsync(
+            new PlondsManifestCandidate(
+                new("s3", "s3", "https://s3.test/PLONDS.json"),
+                CreateManifest("1.2.3", requiresCleanInstall: true)),
+            CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.True(result.RequiresUiHandling);
+        Assert.Contains("clean install", result.ErrorMessage);
+        Assert.Equal(0, downloader.DeltaCalls);
+        Assert.Equal(0, downloader.FullCalls);
+    }
+
+    [Fact]
     public async Task PlondsService_ReadsBuiltInSources_RegistersManifestSources_AndPreparesHighestVersion()
     {
         using var httpClient = new HttpClient(new ManifestHandler(new Dictionary<string, string>
@@ -411,18 +430,62 @@ public sealed class PlondsClientServiceTests : IDisposable
         Assert.True(File.Exists(Path.Combine(currentDeployment, ".destroy")));
     }
 
+    [Fact]
+    public async Task PreparedPackageInstaller_InstallsFullPackageFromCompleteRootLayout()
+    {
+        var launcherRoot = Path.Combine(_tempRoot, "launcher-full");
+        var currentDeployment = Path.Combine(launcherRoot, "app-1.0.0-0");
+        Directory.CreateDirectory(currentDeployment);
+        File.WriteAllText(Path.Combine(currentDeployment, ".current"), string.Empty);
+        File.WriteAllText(Path.Combine(currentDeployment, "LanMountainDesktop.exe"), "old-exe");
+        File.WriteAllText(Path.Combine(currentDeployment, "app.dll"), "old");
+
+        var filesRoot = Path.Combine(_tempRoot, "Files-root");
+        var fullAppDirectory = Path.Combine(filesRoot, "app-1.2.0");
+        Directory.CreateDirectory(fullAppDirectory);
+        File.WriteAllText(Path.Combine(filesRoot, "LanMountainDesktop.Launcher.exe"), "launcher");
+        File.WriteAllText(Path.Combine(filesRoot, "LanMountainDesktop.AirAppRuntime.exe"), "runtime");
+        File.WriteAllText(Path.Combine(fullAppDirectory, ".current"), string.Empty);
+        File.WriteAllText(Path.Combine(fullAppDirectory, "LanMountainDesktop.exe"), "new-exe");
+        File.WriteAllText(Path.Combine(fullAppDirectory, "app.dll"), "new");
+
+        var package = new PlondsPreparedPackage(
+            new Version(1, 2, 0),
+            PlondsPackageMode.Full,
+            Path.Combine(_tempRoot, "PLONDS.json"),
+            null,
+            null,
+            Path.Combine(_tempRoot, "Files.zip"),
+            filesRoot);
+
+        var result = await new PlondsPreparedPackageInstaller().InstallAsync(
+            package,
+            launcherRoot,
+            progress: null,
+            CancellationToken.None);
+
+        Assert.True(result.Success);
+        var target = Assert.Single(Directory.GetDirectories(launcherRoot, "app-1.2.0-*"));
+        Assert.Equal("new-exe", File.ReadAllText(Path.Combine(target, "LanMountainDesktop.exe")));
+        Assert.Equal("new", File.ReadAllText(Path.Combine(target, "app.dll")));
+        Assert.False(File.Exists(Path.Combine(target, "LanMountainDesktop.Launcher.exe")));
+        Assert.True(File.Exists(Path.Combine(target, ".current")));
+        Assert.True(File.Exists(Path.Combine(currentDeployment, ".destroy")));
+    }
+
     private static PlondsClientManifest CreateManifest(
         string version,
         IReadOnlyList<PlondsSourceDescriptor>? sources = null,
         PlondsClientDownloads? downloads = null,
-        IReadOnlyDictionary<string, string>? checksums = null)
+        IReadOnlyDictionary<string, string>? checksums = null,
+        bool requiresCleanInstall = false)
     {
         return new PlondsClientManifest(
             FormatVersion: "2.0",
             CurrentVersion: version,
             PreviousVersion: "1.0.0",
             IsFullUpdate: false,
-            RequiresCleanInstall: false,
+            RequiresCleanInstall: requiresCleanInstall,
             Channel: "stable",
             Platform: "windows-x64",
             UpdatedAt: DateTimeOffset.Parse("2026-06-01T00:00:00Z"),

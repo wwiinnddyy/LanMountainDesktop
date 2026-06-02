@@ -141,6 +141,43 @@ public sealed class UpdateSettingsInterfaceTests
     }
 
     [Fact]
+    public async Task UpdateSettingsService_WhenPlondsManifestRequiresCleanInstall_ReportsFullInstaller()
+    {
+        var settings = new FakeSettingsService
+        {
+            Snapshot =
+            {
+                UpdateDownloadSource = UpdateSettingsValues.DownloadSourcePlonds
+            }
+        };
+        var plonds = new FakePlondsService
+        {
+            LatestResult = PlondsLatestResult.Available(
+                new Version(1, 0, 0),
+                new Version(9, 9, 9),
+                [new PlondsManifestCandidate(
+                    new PlondsSourceDescriptor("s3", "s3", "https://s3.test/PLONDS.json", 100),
+                    CreatePlondsManifest("9.9.9", requiresCleanInstall: true))])
+        };
+        var orchestratorCreated = false;
+        var service = new UpdateSettingsService(
+            settings,
+            orchestratorFactory: () =>
+            {
+                orchestratorCreated = true;
+                throw new InvalidOperationException("UpdateOrchestrator should not be created for PLONDS check.");
+            },
+            plondsService: plonds);
+
+        var report = await service.CheckAsync(CancellationToken.None);
+
+        Assert.True(report.IsUpdateAvailable);
+        Assert.Equal(UpdatePayloadKind.FullInstaller, report.PayloadKind);
+        Assert.Equal("9.9.9", report.LatestVersion);
+        Assert.False(orchestratorCreated);
+    }
+
+    [Fact]
     public async Task UpdateSettingsService_WhenGitHubSelected_UsesOrchestrator()
     {
         var settings = new FakeSettingsService
@@ -226,14 +263,14 @@ public sealed class UpdateSettingsInterfaceTests
             new UpdateStateStore(new FakeSettingsFacade(new FakeUpdateSettingsService { State = state })));
     }
 
-    private static PlondsClientManifest CreatePlondsManifest(string version)
+    private static PlondsClientManifest CreatePlondsManifest(string version, bool requiresCleanInstall = false)
     {
         return new PlondsClientManifest(
             FormatVersion: "2.0",
             CurrentVersion: version,
             PreviousVersion: "1.0.0",
             IsFullUpdate: false,
-            RequiresCleanInstall: false,
+            RequiresCleanInstall: requiresCleanInstall,
             Channel: "stable",
             Platform: "windows-x64",
             UpdatedAt: DateTimeOffset.Parse("2026-06-01T00:00:00Z"),

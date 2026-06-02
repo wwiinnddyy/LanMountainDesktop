@@ -8,6 +8,12 @@ internal sealed class PlondsDownloadPlanner(IPlondsPackageDownloader downloader)
     {
         ArgumentNullException.ThrowIfNull(candidate);
 
+        if (candidate.Manifest.RequiresCleanInstall)
+        {
+            return PlondsPrepareResult.FailedForUi(
+                "PLONDS manifest requires a clean install. Use the Host Update installer flow instead.");
+        }
+
         try
         {
             var deltaPackage = await downloader
