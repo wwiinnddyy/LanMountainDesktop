@@ -1,0 +1,111 @@
+name: 配置、构建或打包问题 / Configuration, build, or packaging issue
+description: 报告还原、构建、测试、运行、打包、CI 或环境配置相关问题。
+title: "[Config] "
+labels: ["configuration"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        这个模板用于环境、构建、测试、运行和打包问题。如果问题是应用运行后的具体功能异常，请优先使用 Bug 反馈。
+
+        Use this template for environment, build, test, run, and packaging issues. For runtime feature bugs, prefer the Bug report template.
+
+        > [!IMPORTANT]
+        > 请不要公开 NuGet 源凭据、签名证书、API token、私有路径、机器名、用户名或其他敏感配置。
+        >
+        > Do not expose NuGet credentials, signing certificates, API tokens, private paths, machine names, usernames, or other sensitive configuration.
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 提交前检查 / Pre-flight checklist
+      options:
+        - label: 我已经阅读过 `docs/DEVELOPMENT.md` 中对应的构建、运行或测试说明。 / I read the relevant build, run, or test instructions in `docs/DEVELOPMENT.md`.
+          required: true
+        - label: 我已经运行过 `dotnet restore`，或说明了为什么无法运行。 / I ran `dotnet restore`, or explained why I could not.
+          required: true
+        - label: 我已经搜索过现有 Issues，确认没有重复问题。 / I searched existing issues and found no duplicate.
+          required: true
+        - label: 我已对日志、路径和配置片段做脱敏处理。 / I redacted sensitive data from logs, paths, and config snippets.
+          required: true
+  - type: dropdown
+    id: category
+    attributes:
+      label: 问题类型 / Issue type
+      options:
+        - dotnet restore
+        - dotnet build
+        - dotnet test
+        - dotnet run
+        - Launcher 启动或维护命令 / Launcher startup or maintenance command
+        - 插件包生成 / Plugin package generation
+        - Windows 安装包或发布产物 / Windows installer or release artifact
+        - GitHub Actions / CI
+        - NuGet、SDK 或依赖版本 / NuGet, SDK, or dependency version
+        - 其他 / Other
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: 执行的命令 / Command executed
+      description: 请粘贴触发问题的最小命令。
+      render: shell
+      placeholder: |
+        dotnet build LanMountainDesktop.slnx -c Debug
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望结果 / Expected result
+      description: 你期望命令或流程产生什么结果？
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际结果 / Actual result
+      description: 实际输出、错误码、失败阶段或 CI 链接。
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境信息 / Environment
+      description: 请尽量完整填写。可粘贴 `dotnet --info` 中和问题相关的部分。
+      value: |
+        - OS / 操作系统：
+        - Shell / 终端：
+        - `dotnet --version`：
+        - `dotnet --info` relevant parts / 相关片段：
+        - Repository branch or commit / 仓库分支或提交：
+        - Configuration / 构建配置（Debug/Release）：
+        - Architecture / 架构（x64/arm64 等）：
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 已脱敏日志 / Redacted logs
+      description: 请粘贴关键错误日志。长日志建议只贴失败段落，或通过 GitHub 附件上传。
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: 相关配置片段 / Relevant config snippets
+      description: 如 `.csproj`、`Directory.Packages.props`、workflow、环境变量名等。请先脱敏，不要粘贴真实密钥。
+      render: xml
+  - type: textarea
+    id: extra
+    attributes:
+      label: 补充信息 / Additional context
+      description: 例如是否只在某个平台、某个 runner、某个 NuGet 源或某个安装路径下出现。
+  - type: checkboxes
+    id: final
+    attributes:
+      label: 最后确认 / Final confirmation
+      options:
+        - label: 我确认以上信息足够维护者定位失败阶段，并且没有包含敏感配置。 / I confirm the information above is enough to identify the failing stage and contains no sensitive configuration.
+          required: true

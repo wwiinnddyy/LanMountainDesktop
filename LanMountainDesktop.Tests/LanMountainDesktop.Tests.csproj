@@ -20,5 +20,6 @@
     <ProjectReference Include="..\LanMountainDesktop\LanMountainDesktop.csproj" />
     <ProjectReference Include="..\LanMountainDesktop.AirAppRuntime\LanMountainDesktop.AirAppRuntime.csproj" />
     <ProjectReference Include="..\LanMountainDesktop.Launcher\LanMountainDesktop.Launcher.csproj" />
+    <ProjectReference Include="..\LanDesktopPLONDS.installer\LanDesktopPLONDS.installer.csproj" />
   </ItemGroup>
 </Project>

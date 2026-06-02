@@ -1,0 +1,59 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sty="using:FluentAvalonia.Styling"
+             xmlns:fi="using:FluentIcons.Avalonia"
+             x:Class="LanDesktopPLONDS.Installer.App"
+             RequestedThemeVariant="Default">
+  <Application.Resources>
+    <FontFamily x:Key="AppFontFamily">Inter, Segoe UI, Microsoft YaHei UI</FontFamily>
+    <CornerRadius x:Key="DesignCornerRadiusMicro">2</CornerRadius>
+    <CornerRadius x:Key="DesignCornerRadiusXs">4</CornerRadius>
+    <CornerRadius x:Key="DesignCornerRadiusSm">6</CornerRadius>
+    <CornerRadius x:Key="DesignCornerRadiusMd">8</CornerRadius>
+    <CornerRadius x:Key="DesignCornerRadiusLg">10</CornerRadius>
+    <CornerRadius x:Key="DesignCornerRadiusXl">12</CornerRadius>
+    <CornerRadius x:Key="DesignCornerRadiusComponent">12</CornerRadius>
+    <SolidColorBrush x:Key="InstallerWindowBackgroundBrush" Color="#F7F9FC" />
+    <SolidColorBrush x:Key="InstallerTintBrush" Color="#DDF8FAFF" />
+    <SolidColorBrush x:Key="InstallerSurfaceBrush" Color="#F9FFFFFF" />
+    <SolidColorBrush x:Key="InstallerBorderBrush" Color="#22000000" />
+    <SolidColorBrush x:Key="InstallerSecondaryTextBrush" Color="#A0000000" />
+  </Application.Resources>
+
+  <Application.Styles>
+    <sty:FluentAvaloniaTheme />
+    <Style Selector="Window">
+      <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}" />
+    </Style>
+    <Style Selector="UserControl">
+      <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}" />
+    </Style>
+    <Style Selector="fi|FluentIcon">
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.titlebar-icon-button">
+      <Setter Property="Width" Value="40" />
+      <Setter Property="Height" Value="40" />
+      <Setter Property="MinWidth" Value="40" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusSm}" />
+    </Style>
+    <Style Selector="StackPanel.installer-page-container">
+      <Setter Property="Spacing" Value="18" />
+      <Setter Property="Margin" Value="0,20,0,24" />
+      <Setter Property="MaxWidth" Value="860" />
+    </Style>
+    <Style Selector="TextBlock.page-title-text">
+      <Setter Property="FontSize" Value="28" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="TextBlock.page-description-text">
+      <Setter Property="FontSize" Value="14" />
+      <Setter Property="Foreground" Value="{DynamicResource InstallerSecondaryTextBrush}" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+  </Application.Styles>
+</Application>

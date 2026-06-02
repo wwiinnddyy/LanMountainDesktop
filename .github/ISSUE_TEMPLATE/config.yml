@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 插件市场元数据 / Plugin marketplace metadata
+    url: https://github.com/wwiinnddyy/LanAirApp/issues/new
+    about: 插件市场索引、生态材料、开发者门户内容请在 LanAirApp 仓库反馈。 / Report marketplace index, ecosystem materials, and developer portal content in LanAirApp.
+  - name: 官方示例插件 / Official sample plugin
+    url: https://github.com/wwiinnddyy/LanMountainDesktop.SamplePlugin/issues/new
+    about: 示例插件实现、示例包发布和示例插件使用问题请在 SamplePlugin 仓库反馈。 / Report sample plugin implementation, packages, and usage in the SamplePlugin repo.
+  - name: 贡献指南 / Contribution guide
+    url: https://github.com/wwiinnddyy/LanMountainDesktop/blob/main/docs/CONTRIBUTING.md
+    about: 提交 PR 前请阅读贡献、文档和 spec 更新规则。 / Read contribution, documentation, and spec update rules before opening a PR.

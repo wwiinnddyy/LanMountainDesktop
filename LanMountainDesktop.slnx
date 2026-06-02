@@ -14,6 +14,7 @@
   <Project Path="LanMountainDesktop.AirAppHost/LanMountainDesktop.AirAppHost.csproj" />
   <Project Path="LanMountainDesktop.PluginTemplate/LanMountainDesktop.PluginTemplate.csproj" />
   <Project Path="LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj" />
+  <Project Path="LanDesktopPLONDS.installer/LanDesktopPLONDS.installer.csproj" />
   <Project Path="ThirdParty/DotNetCampus.InkCanvas/DotNetCampus.AvaloniaInkCanvas.Avalonia12.csproj" />
   <Project Path="LanMountainDesktop/LanMountainDesktop.csproj" />
   <Project Path="LanMountainDesktop.Tests/LanMountainDesktop.Tests.csproj" />

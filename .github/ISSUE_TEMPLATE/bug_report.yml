@@ -1,0 +1,122 @@
+name: Bug 反馈 / Bug report
+description: 报告 LanMountainDesktop 宿主、启动器、插件运行时、SDK 或共享契约中的可复现问题。
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈问题。请用一句话写清标题，并尽量为每个独立 Bug 单独创建一个 Issue。
+
+        Thank you for reporting a bug. Please use a clear title and open one issue for each independent bug.
+
+        > [!IMPORTANT]
+        > 请不要上传未脱敏的日志、截图或配置。移除 token、密钥、Cookie、账号、学生/班级个人信息、绝对隐私路径等敏感内容。
+        >
+        > Do not share unredacted logs, screenshots, or configs. Remove tokens, secrets, cookies, accounts, student/class personal data, and private local paths.
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 提交前检查 / Pre-flight checklist
+      description: 提交前请确认以下事项。
+      options:
+        - label: 我已经搜索过现有 Issues，确认没有重复反馈。 / I searched existing issues and found no duplicate.
+          required: true
+        - label: 我已经确认该问题属于 LanMountainDesktop 仓库边界，而不是插件市场元数据或官方示例插件实现。 / I confirmed this belongs to LanMountainDesktop, not marketplace metadata or the sample plugin implementation.
+          required: true
+        - label: 我已尽量使用最新版本、最新构建或最新提交验证问题仍然存在。 / I reproduced this on the latest release, build, or commit available to me.
+          required: true
+        - label: 我已对所有附件和日志做脱敏处理。 / I redacted sensitive information from all attachments and logs.
+          required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: 影响区域 / Affected area
+      description: 选择最接近的问题区域。
+      options:
+        - 桌面宿主 / Desktop host
+        - 启动器、更新或打包 / Launcher, update, or packaging
+        - AirApp Runtime
+        - 插件运行时或安装 / Plugin runtime or installation
+        - Plugin SDK 或共享契约 / Plugin SDK or shared contracts
+        - 设置、主题或外观 / Settings, theme, or appearance
+        - 桌面组件系统 / Desktop component system
+        - 构建、测试或 CI / Build, test, or CI
+        - 文档 / Documentation
+        - 不确定 / Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: 问题描述 / Summary
+      description: 清楚说明发生了什么，以及它为什么是问题。
+      placeholder: |
+        例如：打开设置窗口后，点击“外观”页会导致应用崩溃。
+
+        Example: Opening the Appearance settings page crashes the app.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为 / Expected behavior
+      description: 说明你原本期望发生什么。
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为 / Actual behavior
+      description: 说明实际发生了什么，包括错误提示、异常表现或回归点。
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤 / Steps to reproduce
+      description: 请提供能让维护者复现问题的最小步骤。
+      placeholder: |
+        1. 启动应用
+        2. 打开……
+        3. 点击……
+        4. 看到……
+
+        1. Launch the app
+        2. Open ...
+        3. Click ...
+        4. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境信息 / Environment
+      description: 请尽量完整填写。可粘贴 `dotnet --info` 中和问题相关的部分。
+      value: |
+        - OS / 操作系统：
+        - LanMountainDesktop version / 应用版本：
+        - Build channel or commit / 构建渠道或提交：
+        - .NET SDK / Runtime：
+        - Install mode / 安装方式（源码运行、安装包、便携版等）：
+        - Plugin SDK version if relevant / 如涉及插件，SDK 版本：
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志、堆栈或截图 / Logs, stack traces, or screenshots
+      description: 请粘贴已脱敏的日志、异常堆栈，或附上截图/录屏。大文件请打包后通过 GitHub 附件上传。
+      render: shell
+  - type: textarea
+    id: extra
+    attributes:
+      label: 补充信息 / Additional context
+      description: 例如是否只在某个插件、主题、显示器缩放、系统语言或更新通道下出现。
+  - type: checkboxes
+    id: final
+    attributes:
+      label: 最后确认 / Final confirmation
+      options:
+        - label: 我确认以上信息足够维护者理解并尝试复现问题。 / I confirm the information above is enough for maintainers to understand and try to reproduce the issue.
+          required: true
