@@ -113,7 +113,10 @@ internal static class PlondsCli
                 AccessKey: Require(options, "s3-access-key"),
                 SecretKey: Require(options, "s3-secret-key"),
                 PublicBaseUrl: Require(options, "s3-public-base-url"),
-                PublicBaseKeyPrefix: Get(options, "s3-public-base-key-prefix", string.Empty) ?? string.Empty))).ConfigureAwait(false);
+                PublicBaseKeyPrefix: Get(options, "s3-public-base-key-prefix", string.Empty) ?? string.Empty))
+        {
+            DirectoryUploadConcurrency = GetInt(options, "directory-upload-concurrency", 4)
+        }).ConfigureAwait(false);
 
         Console.WriteLine($"Published PLONDS release {result.ReleaseTag}:");
         Console.WriteLine($"  Prefix:             {result.VersionPrefix}");
@@ -212,6 +215,19 @@ internal static class PlondsCli
         Console.WriteLine("    --s3-public-base-url <url> Public URL prefix for uploaded keys");
         Console.WriteLine("    [--s3-public-base-key-prefix <prefix>] Key prefix already represented by public URL");
         Console.WriteLine("    [--s3-prefix <prefix>]  Object key prefix (default: lanmountain/update/plonds)");
+        Console.WriteLine("    [--directory-upload-concurrency <n>] Parallel file uploads for expanded directories (default: 4)");
         Console.WriteLine("    [--work-dir <dir>]      Temporary publish work directory");
+    }
+
+    private static int GetInt(IReadOnlyDictionary<string, string> options, string key, int defaultValue)
+    {
+        if (!options.TryGetValue(key, out var value) || string.IsNullOrWhiteSpace(value))
+        {
+            return defaultValue;
+        }
+
+        return int.TryParse(value, out var parsed) && parsed > 0
+            ? parsed
+            : throw new InvalidOperationException($"Option --{key} must be a positive integer.");
     }
 }
