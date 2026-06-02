@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using Avalonia;
@@ -88,7 +88,7 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
     private FontWeight _weekdayFontWeight = FontWeight.SemiBold;
     private double _calendarDayFontSize = 18;
     private FontWeight _calendarDayFontWeight = FontWeight.SemiBold;
-    private double _calendarTodayDotSize = 32;
+    private double _calendarTodayDotSize = 38;
     private int _lunarItemCount = 3;
     private int _calendarVisibleRows = 6;
     private bool? _isNightModeApplied;
@@ -254,7 +254,7 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
         // 4x2 widget has less vertical space than 2x2. Compress only on 6-row months.
         var rowDensity = _calendarVisibleRows >= 6 ? 0.84 : 1.0;
         var dayFontSize = Math.Clamp(_calendarDayFontSize * rowDensity, 8, 24);
-        var todayDotSize = Math.Clamp(_calendarTodayDotSize * rowDensity, 13.5, 32);
+        var todayDotSize = Math.Clamp(_calendarTodayDotSize * rowDensity, 16, 46);
 
         for (var day = 1; day <= daysInMonth; day++)
         {
@@ -363,7 +363,7 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
 
         _calendarDayFontSize = Math.Clamp(15.4 * scale * densityBoost, 8, 22);
         _calendarDayFontWeight = ToVariableWeight(Lerp(540, 680, Math.Clamp((scale - 0.60) / 1.2, 0, 1)));
-        _calendarTodayDotSize = Math.Clamp(_calendarDayFontSize * 1.30, 13.5, 31);
+        _calendarTodayDotSize = Math.Clamp(_calendarDayFontSize * 1.85, 16, 42);
 
         var rightDensity = scale <= 0.72 ? 0.90 : scale <= 0.90 ? 0.95 : scale >= 1.38 ? 1.03 : 1.0;
         LunarDateTextBlock.FontSize = Math.Clamp(30 * scale * rightDensity, 14, 44);
