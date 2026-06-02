@@ -113,7 +113,12 @@ internal static class PlondsCli
                 AccessKey: Require(options, "s3-access-key"),
                 SecretKey: Require(options, "s3-secret-key"),
                 PublicBaseUrl: Require(options, "s3-public-base-url"),
-                PublicBaseKeyPrefix: Get(options, "s3-public-base-key-prefix", string.Empty) ?? string.Empty))
+                PublicBaseKeyPrefix: Get(options, "s3-public-base-key-prefix", string.Empty) ?? string.Empty)
+            {
+                MultipartThresholdBytes = GetLong(options, "multipart-threshold-mb", 8) * 1024 * 1024,
+                MultipartPartSizeBytes = GetLong(options, "multipart-part-size-mb", 8) * 1024 * 1024,
+                MultipartConcurrency = GetInt(options, "multipart-concurrency", 4)
+            })
         {
             DirectoryUploadConcurrency = GetInt(options, "directory-upload-concurrency", 4)
         }).ConfigureAwait(false);
@@ -216,6 +221,9 @@ internal static class PlondsCli
         Console.WriteLine("    [--s3-public-base-key-prefix <prefix>] Key prefix already represented by public URL");
         Console.WriteLine("    [--s3-prefix <prefix>]  Object key prefix (default: lanmountain/update/plonds)");
         Console.WriteLine("    [--directory-upload-concurrency <n>] Parallel file uploads for expanded directories (default: 4)");
+        Console.WriteLine("    [--multipart-threshold-mb <n>] Use multipart upload for files at or above this size (default: 8)");
+        Console.WriteLine("    [--multipart-part-size-mb <n>] Multipart upload part size in MiB (default: 8)");
+        Console.WriteLine("    [--multipart-concurrency <n>] Parallel multipart part uploads (default: 4)");
         Console.WriteLine("    [--work-dir <dir>]      Temporary publish work directory");
     }
 
@@ -227,6 +235,18 @@ internal static class PlondsCli
         }
 
         return int.TryParse(value, out var parsed) && parsed > 0
+            ? parsed
+            : throw new InvalidOperationException($"Option --{key} must be a positive integer.");
+    }
+
+    private static long GetLong(IReadOnlyDictionary<string, string> options, string key, long defaultValue)
+    {
+        if (!options.TryGetValue(key, out var value) || string.IsNullOrWhiteSpace(value))
+        {
+            return defaultValue;
+        }
+
+        return long.TryParse(value, out var parsed) && parsed > 0
             ? parsed
             : throw new InvalidOperationException($"Option --{key} must be a positive integer.");
     }

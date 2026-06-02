@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
+using System.Xml.Linq;
 
 namespace Plonds.Core.Publishing;
 
@@ -29,7 +30,10 @@ public sealed class PlondsS3Client : IDisposable
             PublicBaseUrl = Require(options.PublicBaseUrl, nameof(options.PublicBaseUrl)).TrimEnd('/'),
             PublicBaseKeyPrefix = NormalizeOptionalKeyPrefix(options.PublicBaseKeyPrefix),
             RequestTimeout = options.RequestTimeout <= TimeSpan.Zero ? TimeSpan.FromMinutes(30) : options.RequestTimeout,
-            MaxUploadAttempts = Math.Max(1, options.MaxUploadAttempts)
+            MaxUploadAttempts = Math.Max(1, options.MaxUploadAttempts),
+            MultipartThresholdBytes = Math.Max(5L * 1024 * 1024, options.MultipartThresholdBytes),
+            MultipartPartSizeBytes = Math.Max(5L * 1024 * 1024, options.MultipartPartSizeBytes),
+            MultipartConcurrency = Math.Max(1, options.MultipartConcurrency)
         };
 
         ownsHttpClient = httpClient is null;
@@ -53,6 +57,19 @@ public sealed class PlondsS3Client : IDisposable
         var payloadHash = PayloadUtilities.ComputeSha256(sourcePath);
         var contentLength = new FileInfo(sourcePath).Length;
 
+        if (contentLength >= options.MultipartThresholdBytes)
+        {
+            try
+            {
+                await UploadFileMultipartAsync(sourcePath, key, upload.ContentType, contentLength, cancellationToken).ConfigureAwait(false);
+                return;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                Console.Error.WriteLine($"S3 multipart upload failed for {key}; falling back to single PUT. {ex.Message}");
+            }
+        }
+
         for (var attempt = 1; attempt <= options.MaxUploadAttempts; attempt++)
         {
             try
@@ -66,6 +83,216 @@ public sealed class PlondsS3Client : IDisposable
                 Console.Error.WriteLine($"S3 upload retry {attempt + 1}/{options.MaxUploadAttempts} for {key} after {delay.TotalSeconds:0}s: {ex.Message}");
                 await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
             }
+        }
+    }
+
+    private async Task UploadFileMultipartAsync(
+        string sourcePath,
+        string key,
+        string? contentType,
+        long contentLength,
+        CancellationToken cancellationToken)
+    {
+        var uploadId = await CreateMultipartUploadAsync(key, contentType, cancellationToken).ConfigureAwait(false);
+        var partCount = checked((int)((contentLength + options.MultipartPartSizeBytes - 1) / options.MultipartPartSizeBytes));
+        var parts = new PlondsS3UploadedPart[partCount];
+
+        Console.WriteLine($"Uploading S3 object {key} ({FormatBytes(contentLength)}) using multipart upload {uploadId}: {partCount} parts, part size {FormatBytes(options.MultipartPartSizeBytes)}, concurrency {options.MultipartConcurrency}.");
+
+        try
+        {
+            var completed = 0;
+            await Parallel.ForEachAsync(
+                Enumerable.Range(1, partCount),
+                new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = options.MultipartConcurrency,
+                    CancellationToken = cancellationToken
+                },
+                async (partNumber, token) =>
+                {
+                    var offset = (long)(partNumber - 1) * options.MultipartPartSizeBytes;
+                    var length = Math.Min(options.MultipartPartSizeBytes, contentLength - offset);
+                    parts[partNumber - 1] = await UploadMultipartPartWithRetriesAsync(
+                        sourcePath,
+                        key,
+                        uploadId,
+                        partNumber,
+                        offset,
+                        length,
+                        token).ConfigureAwait(false);
+
+                    var done = Interlocked.Increment(ref completed);
+                    Console.WriteLine($"S3 multipart progress {key}: {done}/{partCount} parts uploaded.");
+                }).ConfigureAwait(false);
+
+            await CompleteMultipartUploadAsync(key, uploadId, parts, cancellationToken).ConfigureAwait(false);
+            Console.WriteLine($"Uploaded S3 object {key} using multipart upload.");
+        }
+        catch
+        {
+            await AbortMultipartUploadBestEffortAsync(key, uploadId, CancellationToken.None).ConfigureAwait(false);
+            throw;
+        }
+    }
+
+    private async Task<string> CreateMultipartUploadAsync(string key, string? contentType, CancellationToken cancellationToken)
+    {
+        var requestUri = BuildObjectUri(key, "uploads=");
+        using var request = new HttpRequestMessage(HttpMethod.Post, requestUri);
+        if (!string.IsNullOrWhiteSpace(contentType))
+        {
+            request.Headers.TryAddWithoutValidation("Content-Type", contentType);
+        }
+
+        SignRequest(request, key, EmptyPayloadHash, DateTimeOffset.UtcNow);
+
+        using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new InvalidOperationException($"S3 create multipart upload failed for {key}: HTTP {(int)response.StatusCode} {response.ReasonPhrase}. {Truncate(body, 512)}");
+        }
+
+        var uploadId = XDocument.Parse(body).Descendants().FirstOrDefault(element => element.Name.LocalName == "UploadId")?.Value;
+        return string.IsNullOrWhiteSpace(uploadId)
+            ? throw new InvalidOperationException($"S3 create multipart upload response did not include UploadId for {key}.")
+            : uploadId;
+    }
+
+    private async Task<PlondsS3UploadedPart> UploadMultipartPartWithRetriesAsync(
+        string sourcePath,
+        string key,
+        string uploadId,
+        int partNumber,
+        long offset,
+        long length,
+        CancellationToken cancellationToken)
+    {
+        for (var attempt = 1; attempt <= options.MaxUploadAttempts; attempt++)
+        {
+            try
+            {
+                return await UploadMultipartPartOnceAsync(
+                    sourcePath,
+                    key,
+                    uploadId,
+                    partNumber,
+                    offset,
+                    length,
+                    attempt,
+                    cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (attempt < options.MaxUploadAttempts && IsRetriable(ex))
+            {
+                var delay = TimeSpan.FromSeconds(Math.Min(30, Math.Pow(2, attempt)));
+                Console.Error.WriteLine($"S3 multipart retry {attempt + 1}/{options.MaxUploadAttempts} for {key} part {partNumber} after {delay.TotalSeconds:0}s: {ex.Message}");
+                await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        throw new InvalidOperationException($"S3 multipart upload failed for {key} part {partNumber}.");
+    }
+
+    private async Task<PlondsS3UploadedPart> UploadMultipartPartOnceAsync(
+        string sourcePath,
+        string key,
+        string uploadId,
+        int partNumber,
+        long offset,
+        long length,
+        int attempt,
+        CancellationToken cancellationToken)
+    {
+        var requestUri = BuildObjectUri(key, $"partNumber={partNumber}&uploadId={Uri.EscapeDataString(uploadId)}");
+        var bytes = new byte[length];
+        await using (var fileStream = File.OpenRead(sourcePath))
+        {
+            fileStream.Seek(offset, SeekOrigin.Begin);
+            var totalRead = 0;
+            while (totalRead < bytes.Length)
+            {
+                var read = await fileStream.ReadAsync(bytes.AsMemory(totalRead), cancellationToken).ConfigureAwait(false);
+                if (read == 0)
+                {
+                    throw new EndOfStreamException($"Unexpected end of file while reading {sourcePath} for part {partNumber}.");
+                }
+
+                totalRead += read;
+            }
+        }
+
+        var payloadHash = Sha256Hex(bytes);
+        Console.WriteLine($"Uploading S3 multipart part {partNumber} for {key} ({FormatBytes(length)}), attempt {attempt}/{options.MaxUploadAttempts}.");
+
+        using var content = new ByteArrayContent(bytes);
+        content.Headers.ContentLength = length;
+        using var request = new HttpRequestMessage(HttpMethod.Put, requestUri)
+        {
+            Content = content
+        };
+        SignRequest(request, key, payloadHash, DateTimeOffset.UtcNow);
+
+        using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            throw new InvalidOperationException($"S3 multipart upload failed for {key} part {partNumber}: HTTP {(int)response.StatusCode} {response.ReasonPhrase}. {Truncate(body, 512)}");
+        }
+
+        var etag = response.Headers.ETag?.Tag;
+        if (string.IsNullOrWhiteSpace(etag))
+        {
+            throw new InvalidOperationException($"S3 multipart upload did not return ETag for {key} part {partNumber}.");
+        }
+
+        return new PlondsS3UploadedPart(partNumber, etag);
+    }
+
+    private async Task CompleteMultipartUploadAsync(
+        string key,
+        string uploadId,
+        IReadOnlyList<PlondsS3UploadedPart> parts,
+        CancellationToken cancellationToken)
+    {
+        var body = BuildCompleteMultipartUploadBody(parts);
+        var bodyBytes = Encoding.UTF8.GetBytes(body);
+        var payloadHash = Sha256Hex(bodyBytes);
+        var requestUri = BuildObjectUri(key, $"uploadId={Uri.EscapeDataString(uploadId)}");
+
+        using var content = new ByteArrayContent(bodyBytes);
+        content.Headers.ContentType = new MediaTypeHeaderValue("application/xml");
+        content.Headers.ContentLength = bodyBytes.Length;
+        using var request = new HttpRequestMessage(HttpMethod.Post, requestUri)
+        {
+            Content = content
+        };
+        SignRequest(request, key, payloadHash, DateTimeOffset.UtcNow);
+
+        using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+        if (!response.IsSuccessStatusCode)
+        {
+            var responseBody = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            throw new InvalidOperationException($"S3 complete multipart upload failed for {key}: HTTP {(int)response.StatusCode} {response.ReasonPhrase}. {Truncate(responseBody, 512)}");
+        }
+    }
+
+    private async Task AbortMultipartUploadBestEffortAsync(string key, string uploadId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var requestUri = BuildObjectUri(key, $"uploadId={Uri.EscapeDataString(uploadId)}");
+            using var request = new HttpRequestMessage(HttpMethod.Delete, requestUri);
+            SignRequest(request, key, EmptyPayloadHash, DateTimeOffset.UtcNow);
+            using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                Console.Error.WriteLine($"S3 abort multipart upload failed for {key}: HTTP {(int)response.StatusCode} {response.ReasonPhrase}.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"S3 abort multipart upload failed for {key}: {ex.Message}");
         }
     }
 
@@ -204,6 +431,7 @@ public sealed class PlondsS3Client : IDisposable
         var dateStamp = now.UtcDateTime.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
         var credentialScope = $"{dateStamp}/{options.Region}/{ServiceName}/aws4_request";
         var canonicalUri = BuildCanonicalUri(key);
+        var canonicalQueryString = BuildCanonicalQueryString(request.RequestUri);
         var host = request.RequestUri?.IsDefaultPort == true
             ? request.RequestUri.Host
             : request.RequestUri?.Authority;
@@ -227,7 +455,7 @@ public sealed class PlondsS3Client : IDisposable
         [
             request.Method.Method,
             canonicalUri,
-            string.Empty,
+            canonicalQueryString,
             canonicalHeaders.ToString(),
             signedHeaders,
             payloadHash
@@ -247,13 +475,14 @@ public sealed class PlondsS3Client : IDisposable
         request.Headers.TryAddWithoutValidation("Authorization", authorization);
     }
 
-    private Uri BuildObjectUri(string key)
+    private Uri BuildObjectUri(string key, string? query = null)
     {
         var bucketPrefix = Uri.EscapeDataString(options.Bucket).Replace("%2F", "/", StringComparison.OrdinalIgnoreCase);
         var path = $"{options.Endpoint.AbsolutePath.TrimEnd('/')}/{bucketPrefix}/{BuildCanonicalKey(key)}";
         var builder = new UriBuilder(options.Endpoint)
         {
-            Path = path
+            Path = path,
+            Query = query ?? string.Empty
         };
 
         return builder.Uri;
@@ -270,6 +499,27 @@ public sealed class PlondsS3Client : IDisposable
         return string.Join("/", NormalizeKey(key)
             .Split('/', StringSplitOptions.RemoveEmptyEntries)
             .Select(Uri.EscapeDataString));
+    }
+
+    private static string BuildCanonicalQueryString(Uri? uri)
+    {
+        if (uri is null || string.IsNullOrEmpty(uri.Query))
+        {
+            return string.Empty;
+        }
+
+        return string.Join("&", uri.Query.TrimStart('?')
+            .Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .Select(parameter =>
+            {
+                var parts = parameter.Split('=', 2);
+                var name = Uri.UnescapeDataString(parts[0]);
+                var value = parts.Length > 1 ? Uri.UnescapeDataString(parts[1]) : string.Empty;
+                return new KeyValuePair<string, string>(name, value);
+            })
+            .OrderBy(parameter => parameter.Key, StringComparer.Ordinal)
+            .ThenBy(parameter => parameter.Value, StringComparer.Ordinal)
+            .Select(parameter => $"{Uri.EscapeDataString(parameter.Key)}={Uri.EscapeDataString(parameter.Value)}"));
     }
 
     private static string NormalizeKey(string value)
@@ -318,6 +568,23 @@ public sealed class PlondsS3Client : IDisposable
     private static string Sha256Hex(string value)
     {
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
+    }
+
+    private static string Sha256Hex(byte[] value)
+    {
+        return Convert.ToHexString(SHA256.HashData(value)).ToLowerInvariant();
+    }
+
+    private static string BuildCompleteMultipartUploadBody(IEnumerable<PlondsS3UploadedPart> parts)
+    {
+        var document = new XDocument(
+            new XElement("CompleteMultipartUpload",
+                parts.OrderBy(part => part.PartNumber)
+                    .Select(part => new XElement("Part",
+                        new XElement("PartNumber", part.PartNumber.ToString(CultureInfo.InvariantCulture)),
+                        new XElement("ETag", part.ETag)))));
+
+        return document.ToString(SaveOptions.DisableFormatting);
     }
 
     private static byte[] HmacSha256(byte[] key, string data)
@@ -371,4 +638,6 @@ public sealed class PlondsS3Client : IDisposable
 
         return $"{value:0.##} {units[unit]}";
     }
+
+    private sealed record PlondsS3UploadedPart(int PartNumber, string ETag);
 }

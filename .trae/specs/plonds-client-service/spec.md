@@ -118,6 +118,7 @@ Publisher 上传到 S3 的版本目录：
 - `PLONDS.json` 的 downloads 字段同时包含 GitHub 与 S3 的增量包、完整包位置。
 - Publisher 必须先完成版本目录内的 `changed.zip`、`Files.zip`、解压目录和版本 `PLONDS.json` 上传，再更新 `<prefix>/PLONDS.json` latest 指针。
 - Publisher 的 S3 目录上传必须支持重跑续传；同 key 且大小一致的对象可以跳过，避免失败后从头上传完整包目录。
+- Publisher 上传大对象时应使用 S3 multipart upload，以避免 `changed.zip` / `Files.zip` 在低吞吐链路上被单次 PUT 长时间阻塞。
 
 ## 7. 建议代码结构
 
