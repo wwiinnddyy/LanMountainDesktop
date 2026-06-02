@@ -22,6 +22,9 @@ env:
   PLONDS_S3_PREFIX: lanmountain/update/plonds
   PLONDS_S3_PUBLIC_BASE_KEY_PREFIX: lanmountain/update
   PLONDS_S3_DIRECTORY_UPLOAD_CONCURRENCY: '4'
+  PLONDS_S3_MULTIPART_THRESHOLD_MB: '8'
+  PLONDS_S3_MULTIPART_PART_SIZE_MB: '8'
+  PLONDS_S3_MULTIPART_CONCURRENCY: '4'
 
 jobs:
   publish:
@@ -119,7 +122,10 @@ jobs:
             --s3-secret-key "$S3_SECRET_KEY" \
             --s3-public-base-url "$PUBLIC_BASE" \
             --s3-public-base-key-prefix "$PLONDS_S3_PUBLIC_BASE_KEY_PREFIX" \
-            --directory-upload-concurrency "$PLONDS_S3_DIRECTORY_UPLOAD_CONCURRENCY"
+            --directory-upload-concurrency "$PLONDS_S3_DIRECTORY_UPLOAD_CONCURRENCY" \
+            --multipart-threshold-mb "$PLONDS_S3_MULTIPART_THRESHOLD_MB" \
+            --multipart-part-size-mb "$PLONDS_S3_MULTIPART_PART_SIZE_MB" \
+            --multipart-concurrency "$PLONDS_S3_MULTIPART_CONCURRENCY"
 
           jq -e '.downloads.github.changedZipUrl and .downloads.github.filesZipUrl and .downloads.s3.changedFolderUrl and .downloads.s3.filesFolderUrl' plonds-assets/PLONDS.json >/dev/null
 
