@@ -52,7 +52,7 @@ internal sealed class DesktopEditGhostView : Border
         ClipToBounds = true;
         RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative);
         RenderTransform = _scaleTransform;
-        if (Dispatcher.UIThread.CheckAccess())
+        if (DesktopEditAnimationRuntime.CanUseTransitions())
         {
             Transitions = new Transitions
             {
@@ -301,6 +301,12 @@ internal sealed class DesktopEditGhostView : Border
 
     internal void SetScaleTransitionDuration(TimeSpan duration)
     {
+        if (!DesktopEditAnimationRuntime.CanUseTransitions())
+        {
+            _scaleTransform.Transitions = null;
+            return;
+        }
+
         _scaleTransform.Transitions = new Transitions
         {
             CreateScaleTransition(ScaleTransform.ScaleXProperty, duration),
@@ -310,6 +316,12 @@ internal sealed class DesktopEditGhostView : Border
 
     internal void SetOpacityTransitionDuration(TimeSpan duration)
     {
+        if (!DesktopEditAnimationRuntime.CanUseTransitions())
+        {
+            Transitions = null;
+            return;
+        }
+
         Transitions = new Transitions
         {
             CreateOpacityTransition(duration)
