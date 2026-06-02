@@ -1,0 +1,51 @@
+name: LanDesktopPLONDS Installer Build
+
+on:
+  push:
+    tags-ignore:
+      - '*'
+    paths:
+      - '.github/workflows/installer-build.yml'
+      - 'Directory.Packages.props'
+      - 'LanDesktopPLONDS.installer/**'
+      - 'LanMountainDesktop.Shared.Contracts/**'
+  pull_request:
+    paths:
+      - '.github/workflows/installer-build.yml'
+      - 'Directory.Packages.props'
+      - 'LanDesktopPLONDS.installer/**'
+      - 'LanMountainDesktop.Shared.Contracts/**'
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  INSTALLER_PROJECT: LanDesktopPLONDS.installer/LanDesktopPLONDS.installer.csproj
+  DOTNET_gcServer: 1
+
+jobs:
+  build-installer:
+    runs-on: windows-latest
+    name: Build_Installer_${{ matrix.configuration }}
+    strategy:
+      fail-fast: false
+      matrix:
+        configuration: [Debug, Release]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: preview
+
+      - name: Restore installer
+        run: dotnet restore ${{ env.INSTALLER_PROJECT }}
+
+      - name: Build installer
+        run: dotnet build ${{ env.INSTALLER_PROJECT }} --no-restore -c ${{ matrix.configuration }} -v minimal
