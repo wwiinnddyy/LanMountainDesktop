@@ -68,6 +68,65 @@ public sealed class OnlineInstallerCoreTests : IDisposable
     }
 
     [Fact]
+    public async Task BrowseCommand_ReportsPickerFailuresWithoutChangingInstallPath()
+    {
+        var vm = new MainWindowViewModel(
+            new FakeInstallService(),
+            new PrivacyDeviceIdentityProvider(Path.Combine(_tempRoot, "identity.json")))
+        {
+            BrowseRequested = _ => throw new InvalidOperationException("picker failed")
+        };
+        var originalPath = vm.InstallPath;
+
+        await vm.BrowseCommand.ExecuteAsync(null);
+
+        Assert.Equal(originalPath, vm.InstallPath);
+        Assert.Contains("选择安装位置失败", vm.ErrorMessage);
+        Assert.Contains("picker failed", vm.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task BrowseCommand_UsesSelectedLocalFolder()
+    {
+        var selectedPath = Path.Combine(_tempRoot, "selected-install-root");
+        var vm = new MainWindowViewModel(
+            new FakeInstallService(),
+            new PrivacyDeviceIdentityProvider(Path.Combine(_tempRoot, "identity.json")))
+        {
+            BrowseRequested = _ => Task.FromResult<string?>(selectedPath)
+        };
+
+        await vm.BrowseCommand.ExecuteAsync(null);
+
+        Assert.Equal(selectedPath, vm.InstallPath);
+        Assert.Null(vm.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task StartInstallCommand_PassesShortcutAndStartupOptions()
+    {
+        var installService = new FakeInstallService();
+        var vm = new MainWindowViewModel(
+            installService,
+            new PrivacyDeviceIdentityProvider(Path.Combine(_tempRoot, "identity.json")))
+        {
+            InstallPath = Path.Combine(_tempRoot, "install", "LanMountainDesktop"),
+            PrivacyConfirmed = true,
+            CreateDesktopShortcut = true,
+            CreateStartupShortcut = true
+        };
+        await vm.NextCommand.ExecuteAsync(null);
+        await vm.NextCommand.ExecuteAsync(null);
+        await vm.NextCommand.ExecuteAsync(null);
+
+        await vm.StartInstallCommand.ExecuteAsync(null);
+
+        Assert.NotNull(installService.LastOptions);
+        Assert.True(installService.LastOptions.CreateDesktopShortcut);
+        Assert.True(installService.LastOptions.CreateStartupShortcut);
+    }
+
+    [Fact]
     public void FilesZipUrlResolver_PrefersSourceSpecificThenDerivedThenFallbacks()
     {
         var manifest = CreateManifest(
@@ -248,6 +307,8 @@ public sealed class OnlineInstallerCoreTests : IDisposable
 
     private sealed class FakeInstallService : IOnlineInstallService
     {
+        public OnlineInstallOptions? LastOptions { get; private set; }
+
         public Task<OnlineInstallPackageInfo> CheckLatestAsync(CancellationToken cancellationToken)
             => Task.FromResult(new OnlineInstallPackageInfo("1.2.3", "test", new Uri("https://test/Files.zip"), 1));
 
@@ -259,7 +320,10 @@ public sealed class OnlineInstallerCoreTests : IDisposable
             OnlineInstallOptions options,
             IProgress<InstallerDeployProgress>? progress,
             CancellationToken cancellationToken)
-            => Task.CompletedTask;
+        {
+            LastOptions = options;
+            return Task.CompletedTask;
+        }
 
         public Task RepairAsync(string installPath, IProgress<InstallerDeployProgress>? progress, CancellationToken cancellationToken)
             => throw new NotSupportedException();

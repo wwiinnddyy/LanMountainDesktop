@@ -5,19 +5,65 @@
              x:Class="LanDesktopPLONDS.Installer.App"
              RequestedThemeVariant="Default">
   <Application.Resources>
-    <FontFamily x:Key="AppFontFamily">Inter, Segoe UI, Microsoft YaHei UI</FontFamily>
-    <CornerRadius x:Key="DesignCornerRadiusMicro">2</CornerRadius>
-    <CornerRadius x:Key="DesignCornerRadiusXs">4</CornerRadius>
-    <CornerRadius x:Key="DesignCornerRadiusSm">6</CornerRadius>
-    <CornerRadius x:Key="DesignCornerRadiusMd">8</CornerRadius>
-    <CornerRadius x:Key="DesignCornerRadiusLg">10</CornerRadius>
-    <CornerRadius x:Key="DesignCornerRadiusXl">12</CornerRadius>
-    <CornerRadius x:Key="DesignCornerRadiusComponent">12</CornerRadius>
-    <SolidColorBrush x:Key="InstallerWindowBackgroundBrush" Color="#F7F9FC" />
-    <SolidColorBrush x:Key="InstallerTintBrush" Color="#DDF8FAFF" />
-    <SolidColorBrush x:Key="InstallerSurfaceBrush" Color="#F9FFFFFF" />
-    <SolidColorBrush x:Key="InstallerBorderBrush" Color="#22000000" />
-    <SolidColorBrush x:Key="InstallerSecondaryTextBrush" Color="#A0000000" />
+    <ResourceDictionary>
+      <FontFamily x:Key="AppFontFamily">Inter, Segoe UI, Microsoft YaHei UI</FontFamily>
+      <CornerRadius x:Key="DesignCornerRadiusMicro">2</CornerRadius>
+      <CornerRadius x:Key="DesignCornerRadiusXs">4</CornerRadius>
+      <CornerRadius x:Key="DesignCornerRadiusSm">4</CornerRadius>
+      <CornerRadius x:Key="DesignCornerRadiusMd">8</CornerRadius>
+      <CornerRadius x:Key="DesignCornerRadiusLg">8</CornerRadius>
+      <CornerRadius x:Key="DesignCornerRadiusXl">12</CornerRadius>
+      <CornerRadius x:Key="DesignCornerRadiusComponent">8</CornerRadius>
+
+      <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Default">
+          <SolidColorBrush x:Key="InstallerWindowBackgroundBrush" Color="#F3F3F3" />
+          <SolidColorBrush x:Key="InstallerPaneBackgroundBrush" Color="#F9F9F9" />
+          <SolidColorBrush x:Key="InstallerContentBackgroundBrush" Color="#FFFFFF" />
+          <SolidColorBrush x:Key="InstallerSurfaceBrush" Color="#FFFFFF" />
+          <SolidColorBrush x:Key="InstallerSurfaceAltBrush" Color="#F7F7F7" />
+          <SolidColorBrush x:Key="InstallerSubtleFillBrush" Color="#F5F5F5" />
+          <SolidColorBrush x:Key="InstallerSubtleFillHoverBrush" Color="#EFEFEF" />
+          <SolidColorBrush x:Key="InstallerBorderBrush" Color="#14000000" />
+          <SolidColorBrush x:Key="InstallerStrongBorderBrush" Color="#29000000" />
+          <SolidColorBrush x:Key="InstallerTextPrimaryBrush" Color="#1A1A1A" />
+          <SolidColorBrush x:Key="InstallerTextSecondaryBrush" Color="#5D5D5D" />
+          <SolidColorBrush x:Key="InstallerTextTertiaryBrush" Color="#6B6B6B" />
+          <SolidColorBrush x:Key="InstallerDisabledTextBrush" Color="#8A8A8A" />
+          <SolidColorBrush x:Key="InstallerAccentBrush" Color="#0067C0" />
+          <SolidColorBrush x:Key="InstallerAccentHoverBrush" Color="#005A9E" />
+          <SolidColorBrush x:Key="InstallerAccentPressedBrush" Color="#004578" />
+          <SolidColorBrush x:Key="InstallerOnAccentBrush" Color="#FFFFFF" />
+          <SolidColorBrush x:Key="InstallerSuccessBrush" Color="#0F7B0F" />
+          <SolidColorBrush x:Key="InstallerErrorBrush" Color="#B3261E" />
+          <SolidColorBrush x:Key="InstallerErrorBackgroundBrush" Color="#FFF4F3" />
+          <SolidColorBrush x:Key="InstallerErrorBorderBrush" Color="#F3B8B3" />
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Dark">
+          <SolidColorBrush x:Key="InstallerWindowBackgroundBrush" Color="#202020" />
+          <SolidColorBrush x:Key="InstallerPaneBackgroundBrush" Color="#272727" />
+          <SolidColorBrush x:Key="InstallerContentBackgroundBrush" Color="#1B1B1B" />
+          <SolidColorBrush x:Key="InstallerSurfaceBrush" Color="#2B2B2B" />
+          <SolidColorBrush x:Key="InstallerSurfaceAltBrush" Color="#252525" />
+          <SolidColorBrush x:Key="InstallerSubtleFillBrush" Color="#333333" />
+          <SolidColorBrush x:Key="InstallerSubtleFillHoverBrush" Color="#3A3A3A" />
+          <SolidColorBrush x:Key="InstallerBorderBrush" Color="#24FFFFFF" />
+          <SolidColorBrush x:Key="InstallerStrongBorderBrush" Color="#3DFFFFFF" />
+          <SolidColorBrush x:Key="InstallerTextPrimaryBrush" Color="#F3F3F3" />
+          <SolidColorBrush x:Key="InstallerTextSecondaryBrush" Color="#C7C7C7" />
+          <SolidColorBrush x:Key="InstallerTextTertiaryBrush" Color="#A0A0A0" />
+          <SolidColorBrush x:Key="InstallerDisabledTextBrush" Color="#7A7A7A" />
+          <SolidColorBrush x:Key="InstallerAccentBrush" Color="#60CDFF" />
+          <SolidColorBrush x:Key="InstallerAccentHoverBrush" Color="#8AD7FF" />
+          <SolidColorBrush x:Key="InstallerAccentPressedBrush" Color="#4CC2FF" />
+          <SolidColorBrush x:Key="InstallerOnAccentBrush" Color="#000000" />
+          <SolidColorBrush x:Key="InstallerSuccessBrush" Color="#6CCB5F" />
+          <SolidColorBrush x:Key="InstallerErrorBrush" Color="#FFB4AB" />
+          <SolidColorBrush x:Key="InstallerErrorBackgroundBrush" Color="#442726" />
+          <SolidColorBrush x:Key="InstallerErrorBorderBrush" Color="#8C4A45" />
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
   </Application.Resources>
 
   <Application.Styles>
@@ -29,8 +75,13 @@
       <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}" />
     </Style>
     <Style Selector="fi|FluentIcon">
+      <Setter Property="Foreground" Value="{DynamicResource InstallerTextPrimaryBrush}" />
       <Setter Property="VerticalAlignment" Value="Center" />
       <Setter Property="HorizontalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource InstallerTextPrimaryBrush}" />
+      <Setter Property="FontWeight" Value="Normal" />
     </Style>
     <Style Selector="Button.titlebar-icon-button">
       <Setter Property="Width" Value="40" />
@@ -41,19 +92,109 @@
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusSm}" />
     </Style>
+    <Style Selector="Button.titlebar-icon-button:pointerover">
+      <Setter Property="Background" Value="{DynamicResource InstallerSubtleFillHoverBrush}" />
+    </Style>
+    <Style Selector="Button.titlebar-icon-button:pressed">
+      <Setter Property="Background" Value="{DynamicResource InstallerStrongBorderBrush}" />
+    </Style>
     <Style Selector="StackPanel.installer-page-container">
-      <Setter Property="Spacing" Value="18" />
-      <Setter Property="Margin" Value="0,20,0,24" />
-      <Setter Property="MaxWidth" Value="860" />
+      <Setter Property="Spacing" Value="20" />
+      <Setter Property="Margin" Value="0" />
+      <Setter Property="MaxWidth" Value="780" />
     </Style>
     <Style Selector="TextBlock.page-title-text">
-      <Setter Property="FontSize" Value="28" />
+      <Setter Property="FontSize" Value="30" />
       <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="LineHeight" Value="38" />
+      <Setter Property="Foreground" Value="{DynamicResource InstallerTextPrimaryBrush}" />
     </Style>
     <Style Selector="TextBlock.page-description-text">
       <Setter Property="FontSize" Value="14" />
-      <Setter Property="Foreground" Value="{DynamicResource InstallerSecondaryTextBrush}" />
+      <Setter Property="LineHeight" Value="21" />
+      <Setter Property="Foreground" Value="{DynamicResource InstallerTextSecondaryBrush}" />
       <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style Selector="TextBlock.caption-text">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="LineHeight" Value="17" />
+      <Setter Property="Foreground" Value="{DynamicResource InstallerTextTertiaryBrush}" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style Selector="Button.primary-command">
+      <Setter Property="Background" Value="{DynamicResource InstallerAccentBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource InstallerOnAccentBrush}" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusSm}" />
+      <Setter Property="Padding" Value="18,9" />
+      <Setter Property="MinHeight" Value="38" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button.primary-command:pointerover">
+      <Setter Property="Background" Value="{DynamicResource InstallerAccentHoverBrush}" />
+    </Style>
+    <Style Selector="Button.primary-command:pressed">
+      <Setter Property="Background" Value="{DynamicResource InstallerAccentPressedBrush}" />
+    </Style>
+    <Style Selector="Button.primary-command:disabled">
+      <Setter Property="Background" Value="{DynamicResource InstallerSubtleFillBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource InstallerDisabledTextBrush}" />
+    </Style>
+    <Style Selector="Button.primary-command fi|FluentIcon">
+      <Setter Property="Foreground" Value="{DynamicResource InstallerOnAccentBrush}" />
+    </Style>
+    <Style Selector="Button.primary-command TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource InstallerOnAccentBrush}" />
+    </Style>
+    <Style Selector="Button.primary-command:disabled fi|FluentIcon">
+      <Setter Property="Foreground" Value="{DynamicResource InstallerDisabledTextBrush}" />
+    </Style>
+    <Style Selector="Button.primary-command:disabled TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource InstallerDisabledTextBrush}" />
+    </Style>
+    <Style Selector="Button.secondary-command">
+      <Setter Property="Background" Value="{DynamicResource InstallerSurfaceBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource InstallerTextPrimaryBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource InstallerStrongBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusSm}" />
+      <Setter Property="Padding" Value="16,9" />
+      <Setter Property="MinHeight" Value="38" />
+    </Style>
+    <Style Selector="Button.secondary-command:pointerover">
+      <Setter Property="Background" Value="{DynamicResource InstallerSubtleFillHoverBrush}" />
+    </Style>
+    <Style Selector="Button.secondary-command:disabled">
+      <Setter Property="Background" Value="{DynamicResource InstallerSubtleFillBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource InstallerDisabledTextBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource InstallerBorderBrush}" />
+    </Style>
+    <Style Selector="Button.secondary-command TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource InstallerTextPrimaryBrush}" />
+    </Style>
+    <Style Selector="Button.secondary-command fi|FluentIcon">
+      <Setter Property="Foreground" Value="{DynamicResource InstallerTextPrimaryBrush}" />
+    </Style>
+    <Style Selector="Button.secondary-command:disabled TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource InstallerDisabledTextBrush}" />
+    </Style>
+    <Style Selector="Button.secondary-command:disabled fi|FluentIcon">
+      <Setter Property="Foreground" Value="{DynamicResource InstallerDisabledTextBrush}" />
+    </Style>
+    <Style Selector="TextBox">
+      <Setter Property="MinHeight" Value="38" />
+      <Setter Property="Foreground" Value="{DynamicResource InstallerTextPrimaryBrush}" />
+      <Setter Property="Background" Value="{DynamicResource InstallerSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource InstallerStrongBorderBrush}" />
+      <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusSm}" />
+    </Style>
+    <Style Selector="CheckBox">
+      <Setter Property="Foreground" Value="{DynamicResource InstallerTextPrimaryBrush}" />
+    </Style>
+    <Style Selector="ProgressBar">
+      <Setter Property="Foreground" Value="{DynamicResource InstallerAccentBrush}" />
+      <Setter Property="Background" Value="{DynamicResource InstallerSubtleFillBrush}" />
+      <Setter Property="MinHeight" Value="6" />
     </Style>
   </Application.Styles>
 </Application>

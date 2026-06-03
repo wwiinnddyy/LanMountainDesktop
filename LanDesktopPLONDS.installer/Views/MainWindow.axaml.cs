@@ -24,9 +24,12 @@ public partial class MainWindow : Window
 
     private async Task<string?> BrowseForFolderAsync(string currentPath)
     {
-        var startFolder = Directory.Exists(currentPath)
-            ? await StorageProvider.TryGetFolderFromPathAsync(currentPath)
-            : null;
+        IStorageFolder? startFolder = null;
+        if (Directory.Exists(currentPath))
+        {
+            startFolder = await StorageProvider.TryGetFolderFromPathAsync(currentPath);
+        }
+
         var result = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
             Title = "选择安装位置",
@@ -34,12 +37,28 @@ public partial class MainWindow : Window
             SuggestedStartLocation = startFolder
         });
 
-        return result.Count == 0 ? null : result[0].Path.LocalPath;
+        if (result.Count == 0)
+        {
+            return null;
+        }
+
+        var path = result[0].TryGetLocalPath();
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            throw new InvalidOperationException("请选择本机文件夹作为安装位置。");
+        }
+
+        return path;
     }
 
     private void OnTitleBarPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         _ = sender;
+        if (e.Source is Button)
+        {
+            return;
+        }
+
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
         {
             BeginMoveDrag(e);

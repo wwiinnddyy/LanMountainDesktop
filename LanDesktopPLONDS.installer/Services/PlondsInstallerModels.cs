@@ -63,9 +63,11 @@ public sealed record OnlineInstallPackageInfo(
     Uri FilesZipUrl,
     long EstimatedBytes);
 
-public sealed record OnlineInstallOptions(bool CreateDesktopShortcut)
+public sealed record OnlineInstallOptions(bool CreateDesktopShortcut, bool CreateStartupShortcut)
 {
-    public static OnlineInstallOptions Default { get; } = new(CreateDesktopShortcut: false);
+    public static OnlineInstallOptions Default { get; } = new(
+        CreateDesktopShortcut: false,
+        CreateStartupShortcut: false);
 }
 
 internal sealed record InstallerPlondsCandidate(
