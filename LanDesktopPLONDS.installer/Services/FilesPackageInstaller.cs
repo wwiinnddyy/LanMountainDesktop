@@ -56,7 +56,7 @@ internal sealed class FilesPackageInstaller
             null));
 
         ActivateInitialDeployment(launcherRoot, targetDeployment);
-        CreateWindowsShortcutsIfAvailable(launcherRoot, options.CreateDesktopShortcut);
+        CreateWindowsShortcutsIfAvailable(launcherRoot, options);
 
         progress?.Report(new InstallerDeployProgress(
             "Completed",
@@ -273,7 +273,7 @@ internal sealed class FilesPackageInstaller
         return name is ".current" or ".partial" or ".destroy";
     }
 
-    private static void CreateWindowsShortcutsIfAvailable(string launcherRoot, bool createDesktopShortcut)
+    private static void CreateWindowsShortcutsIfAvailable(string launcherRoot, OnlineInstallOptions options)
     {
         try
         {
@@ -315,19 +315,25 @@ internal sealed class FilesPackageInstaller
             var shortcutPath = Path.Combine(programs, "LanMountainDesktop.url");
             WriteUrlShortcut(shortcutPath, launcherPath);
 
-            if (!createDesktopShortcut)
+            if (options.CreateDesktopShortcut)
             {
-                return;
+                var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                if (!string.IsNullOrWhiteSpace(desktop))
+                {
+                    Directory.CreateDirectory(desktop);
+                    WriteUrlShortcut(Path.Combine(desktop, "LanMountainDesktop.url"), launcherPath);
+                }
             }
 
-            var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-            if (string.IsNullOrWhiteSpace(desktop))
+            if (options.CreateStartupShortcut)
             {
-                return;
+                var startup = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
+                if (!string.IsNullOrWhiteSpace(startup))
+                {
+                    Directory.CreateDirectory(startup);
+                    WriteUrlShortcut(Path.Combine(startup, "LanMountainDesktop.url"), launcherPath);
+                }
             }
-
-            Directory.CreateDirectory(desktop);
-            WriteUrlShortcut(Path.Combine(desktop, "LanMountainDesktop.url"), launcherPath);
         }
         catch
         {

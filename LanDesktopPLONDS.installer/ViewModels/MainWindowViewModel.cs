@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FluentIcons.Common;
 using LanDesktopPLONDS.Installer.Models;
 using LanDesktopPLONDS.Installer.Services;
 using LanMountainDesktop.Shared.Contracts.Privacy;
@@ -61,10 +62,15 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartInstallCommand))]
+    [NotifyCanExecuteChangedFor(nameof(BackCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NextCommand))]
     private bool _isInstalling;
 
     [ObservableProperty]
     private bool _createDesktopShortcut;
+
+    [ObservableProperty]
+    private bool _createStartupShortcut;
 
     [ObservableProperty]
     private InstallerStepViewModel? _selectedStep;
@@ -79,11 +85,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _privacyConsentStore = privacyConsentStore ?? new InstallerPrivacyConsentStore();
         Steps =
         [
-            new InstallerStepViewModel(InstallerStepId.Welcome, "开始安装", "Play"),
-            new InstallerStepViewModel(InstallerStepId.InstallLocation, "安装位置", "Folder"),
-            new InstallerStepViewModel(InstallerStepId.PrivacyConfirm, "数据确认", "Info"),
-            new InstallerStepViewModel(InstallerStepId.Deploy, "开始部署", "Apps"),
-            new InstallerStepViewModel(InstallerStepId.Complete, "完成安装", "Circle")
+            new InstallerStepViewModel(InstallerStepId.Welcome, "开始安装", Icon.Play),
+            new InstallerStepViewModel(InstallerStepId.InstallLocation, "安装位置", Icon.Folder),
+            new InstallerStepViewModel(InstallerStepId.PrivacyConfirm, "数据确认", Icon.Info),
+            new InstallerStepViewModel(InstallerStepId.Deploy, "开始部署", Icon.ArrowDownload),
+            new InstallerStepViewModel(InstallerStepId.Complete, "完成安装", Icon.Circle)
         ];
         SyncSteps();
         SelectedStep = Steps[0];
@@ -108,6 +114,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public bool IsDeployStep => CurrentStep == InstallerStepId.Deploy;
 
     public bool IsCompleteStep => CurrentStep == InstallerStepId.Complete;
+
+    public bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
 
     public bool CanGoBack => CurrentStep > InstallerStepId.Welcome && !IsInstalling;
 
@@ -145,10 +153,24 @@ public sealed partial class MainWindowViewModel : ObservableObject
         SyncSteps();
     }
 
+    partial void OnErrorMessageChanged(string? value)
+    {
+        _ = value;
+        OnPropertyChanged(nameof(HasError));
+    }
+
     partial void OnMaxUnlockedStepChanged(InstallerStepId value)
     {
         _ = value;
         SyncSteps();
+    }
+
+    partial void OnIsInstallingChanged(bool value)
+    {
+        _ = value;
+        OnPropertyChanged(nameof(CanGoBack));
+        OnPropertyChanged(nameof(CanGoNext));
+        OnPropertyChanged(nameof(CanStartInstall));
     }
 
     partial void OnSelectedStepChanged(InstallerStepViewModel? value)
@@ -158,7 +180,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        if (value.StepId <= MaxUnlockedStep)
+        if (!IsInstalling && value.StepId <= MaxUnlockedStep)
         {
             CurrentStep = value.StepId;
             return;
@@ -198,6 +220,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanGoBack))]
     private void Back()
     {
+        if (IsInstalling)
+        {
+            return;
+        }
+
         if (CurrentStep > InstallerStepId.Welcome)
         {
             CurrentStep -= 1;
@@ -207,15 +234,23 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private async Task BrowseAsync()
     {
+        ErrorMessage = null;
         if (BrowseRequested is null)
         {
             return;
         }
 
-        var selected = await BrowseRequested(InstallPath);
-        if (!string.IsNullOrWhiteSpace(selected))
+        try
         {
-            InstallPath = selected;
+            var selected = await BrowseRequested(InstallPath);
+            if (!string.IsNullOrWhiteSpace(selected))
+            {
+                InstallPath = selected;
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"选择安装位置失败：{ex.Message}";
         }
     }
 
@@ -230,7 +265,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         try
         {
             var progress = new Progress<InstallerDeployProgress>(ApplyProgress);
-            var options = new OnlineInstallOptions(CreateDesktopShortcut);
+            var options = new OnlineInstallOptions(CreateDesktopShortcut, CreateStartupShortcut);
             await _installService.InstallFreshAsync(InstallPath, options, progress, _installCts.Token);
             UnlockAndNavigate(InstallerStepId.Complete);
             StatusText = "安装完成";
@@ -320,6 +355,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             {
                 step.IsUnlocked = step.StepId <= MaxUnlockedStep;
                 step.IsSelected = step.StepId == CurrentStep;
+                step.IsCompleted = step.StepId < CurrentStep;
                 if (step.StepId == CurrentStep && !ReferenceEquals(SelectedStep, step))
                 {
                     SelectedStep = step;
