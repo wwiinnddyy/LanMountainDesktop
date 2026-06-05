@@ -146,15 +146,22 @@
                                    TextWrapping="Wrap"
                                    TextTrimming="CharacterEllipsis"/>
 
-                        <Border Grid.Row="2"
+                        <Border x:Name="PreviewInteractionHost"
+                                Grid.Row="2"
                                 CornerRadius="{DynamicResource DesignCornerRadiusLg}"
                                 Background="{DynamicResource AdaptiveSurfaceOverlayBrush}"
                                 BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
                                 BorderThickness="1"
                                 Width="390"
                                 Height="230"
+                                Focusable="True"
                                 HorizontalAlignment="Center"
-                                VerticalAlignment="Center">
+                                VerticalAlignment="Center"
+                                PointerPressed="OnPreviewPointerPressed"
+                                PointerReleased="OnPreviewPointerReleased"
+                                PointerCaptureLost="OnPreviewPointerCaptureLost"
+                                PointerWheelChanged="OnPreviewPointerWheelChanged"
+                                KeyDown="OnPreviewKeyDown">
                             <Border CornerRadius="{DynamicResource DesignCornerRadiusSm}"
                                     Background="{DynamicResource AdaptiveGlassPanelBackgroundBrush}"
                                     BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"

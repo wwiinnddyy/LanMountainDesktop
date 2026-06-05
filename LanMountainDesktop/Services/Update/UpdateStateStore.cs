@@ -39,7 +39,7 @@ internal sealed class UpdateStateStore
         PhaseChanged?.Invoke(newPhase);
         ProgressChanged?.Invoke(new UpdateProgressReport(
             newPhase,
-            $"Phase changed to {newPhase}",
+            string.Empty,
             0,
             null,
             null));

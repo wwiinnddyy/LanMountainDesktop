@@ -17,10 +17,11 @@ public partial class OobeWindow : Window
     private const int AnimationDurationMs = 300;
     private const int TypingDelayMs = 100;
 
-    private readonly TaskCompletionSource<bool> _completionSource = new();
+    private readonly TaskCompletionSource<OobeSessionDraft?> _completionSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly DataLocationResolver _resolver;
     private bool _isTransitioning;
     private bool _isDebugMode;
+    private bool _isCompleting;
     private int _currentStep = 1;
     
     // 数据位置选择
@@ -40,6 +41,7 @@ public partial class OobeWindow : Window
         AvaloniaXamlLoader.Load(this);
         Loaded += OnWindowLoaded;
         Opened += OnWindowOpened;
+        Closed += OnWindowClosed;
 
         var appRoot = AppDomain.CurrentDomain.BaseDirectory;
         _resolver = new DataLocationResolver(appRoot);
@@ -51,7 +53,7 @@ public partial class OobeWindow : Window
         _isDebugMode = isDebugMode;
     }
 
-    public Task WaitForEnterAsync() => _completionSource.Task;
+    internal Task<OobeSessionDraft?> WaitForCompletionAsync() => _completionSource.Task;
 
     private void OnWindowLoaded(object? sender, RoutedEventArgs e)
     {
@@ -259,6 +261,14 @@ public partial class OobeWindow : Window
     private async void OnWindowOpened(object? sender, EventArgs e)
     {
         await PlayTypingAnimationAsync();
+    }
+
+    private void OnWindowClosed(object? sender, EventArgs e)
+    {
+        if (!_isCompleting)
+        {
+            _completionSource.TrySetResult(null);
+        }
     }
 
     private async Task PlayTypingAnimationAsync()
@@ -477,11 +487,6 @@ public partial class OobeWindow : Window
         if (_isTransitioning) return;
 
         // 应用数据位置选择
-        if (!_isDebugMode)
-        {
-            _resolver.ApplyLocationChoice(_selectedDataLocationMode, null, _migrateExistingData);
-        }
-
         await NavigateToStep(4);
     }
 
@@ -495,7 +500,6 @@ public partial class OobeWindow : Window
     private async void OnStartupPresentationNextClick(object? sender, RoutedEventArgs e)
     {
         if (_isTransitioning) return;
-        SaveOobeStartupPresentation();
         await NavigateToStep(5);
     }
 
@@ -521,7 +525,7 @@ public partial class OobeWindow : Window
 
     private void RefreshOobeStartupPresentationFromDisk()
     {
-        var path = HostAppSettingsOobeMerger.GetSettingsFilePath(_resolver.ResolveDataRoot());
+        var path = HostAppSettingsOobeMerger.GetSettingsFilePath(ResolveSelectedDataRoot());
         var defaults = HostAppSettingsOobeMerger.LoadStartupDefaults(path);
 
         if (this.FindControl<Border>("OobeSlideTransitionSection") is { } slideSection)
@@ -675,8 +679,6 @@ public partial class OobeWindow : Window
         if (_isTransitioning) return;
 
         // 保存隐私设置
-        SavePrivacySettings();
-
         await NavigateToStep(6);
     }
 
@@ -725,13 +727,15 @@ public partial class OobeWindow : Window
         try
         {
             await PlayExitAnimationAsync();
-            _completionSource.TrySetResult(true);
+            _isCompleting = true;
+            _completionSource.TrySetResult(BuildSessionDraft());
             Close();
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine($"[OobeWindow] Error: {ex.Message}");
-            _completionSource.TrySetResult(true);
+            _isCompleting = true;
+            _completionSource.TrySetResult(BuildSessionDraft());
             Close();
         }
     }
@@ -975,6 +979,43 @@ public partial class OobeWindow : Window
             var eased = EaseOutCubic(progress);
             element.Opacity = from + (to - from) * eased;
             await Task.Delay(delay);
+        }
+    }
+
+    private OobeSessionDraft BuildSessionDraft()
+    {
+        var privacy = BuildPrivacyConfig();
+        return new OobeSessionDraft
+        {
+            DataLocationMode = _selectedDataLocationMode,
+            MigrateExistingData = _migrateExistingData,
+            StartupChoices = CollectOobeStartupChoices(),
+            PrivacyConfig = privacy,
+            PrivacyAgreementAccepted = this.FindControl<CheckBox>("PrivacyAgreementCheckBox")?.IsChecked ?? false,
+            PrivacyUserId = privacy.TelemetryId,
+            PrivacyDeviceId = GetDeviceIdentifier()
+        };
+    }
+
+    private PrivacyConfig BuildPrivacyConfig()
+    {
+        return new PrivacyConfig
+        {
+            CrashTelemetryEnabled = this.FindControl<ToggleSwitch>("CrashTelemetryToggle")?.IsChecked ?? true,
+            UsageTelemetryEnabled = this.FindControl<ToggleSwitch>("UsageTelemetryToggle")?.IsChecked ?? true,
+            TelemetryId = this.FindControl<TextBox>("TelemetryIdTextBox")?.Text ?? Guid.NewGuid().ToString("N")
+        };
+    }
+
+    private string ResolveSelectedDataRoot()
+    {
+        try
+        {
+            return _resolver.ResolveDataRoot(_selectedDataLocationMode);
+        }
+        catch
+        {
+            return _resolver.DefaultSystemDataPath;
         }
     }
 

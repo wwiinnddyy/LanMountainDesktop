@@ -1,5 +1,6 @@
 using Avalonia;
 using LanMountainDesktop.DesktopEditing;
+using LanMountainDesktop.Models;
 using Xunit;
 
 namespace LanMountainDesktop.Tests;
@@ -169,5 +170,124 @@ public sealed class DesktopPlacementMathTests
         Assert.False(resizeSession.IsPointerInsideComponentLibrary());
         Assert.False(resizeSession.IsPreviewOccludedByComponentLibrary(new Rect(100, 100, 40, 40)));
         Assert.True(resizeSession.CanCommit);
+    }
+
+    [Fact]
+    public void FusedCenteredPlacement_UsesGridCenterAndComponentSpan()
+    {
+        var grid = new DesktopGridGeometry(
+            Origin: new Point(12, 20),
+            CellSize: 80,
+            CellGap: 8,
+            ColumnCount: 8,
+            RowCount: 6);
+
+        var placement = FusedDesktopPlacementMath.CreateCenteredPlacement(
+            "placement-1",
+            "component-1",
+            grid,
+            widthCells: 4,
+            heightCells: 2);
+
+        Assert.Equal(2, placement.GridColumn);
+        Assert.Equal(2, placement.GridRow);
+        Assert.Equal(4, placement.GridWidthCells);
+        Assert.Equal(2, placement.GridHeightCells);
+        Assert.Equal(188, placement.X, 3);
+        Assert.Equal(196, placement.Y, 3);
+        Assert.Equal(344, placement.Width, 3);
+        Assert.Equal(168, placement.Height, 3);
+    }
+
+    [Fact]
+    public void FusedSnapToNearestCell_RoundsAndPersistsGridCoordinates()
+    {
+        var grid = new DesktopGridGeometry(
+            Origin: new Point(10, 10),
+            CellSize: 100,
+            CellGap: 12,
+            ColumnCount: 6,
+            RowCount: 5);
+        var placement = new FusedDesktopComponentPlacementSnapshot
+        {
+            PlacementId = "placement-1",
+            ComponentId = "component-1",
+            Width = 212,
+            Height = 100,
+            GridWidthCells = 2,
+            GridHeightCells = 1
+        };
+
+        var snapped = FusedDesktopPlacementMath.SnapToNearestCell(
+            placement,
+            grid,
+            requestedOrigin: new Point(255, 135));
+
+        Assert.Equal(2, snapped.GridColumn);
+        Assert.Equal(1, snapped.GridRow);
+        Assert.Equal(234, snapped.X, 3);
+        Assert.Equal(122, snapped.Y, 3);
+        Assert.Equal(212, snapped.Width, 3);
+        Assert.Equal(100, snapped.Height, 3);
+    }
+
+    [Fact]
+    public void FusedSnapToNearestCell_ClampsInsideGridBounds()
+    {
+        var grid = new DesktopGridGeometry(
+            Origin: default,
+            CellSize: 80,
+            CellGap: 8,
+            ColumnCount: 4,
+            RowCount: 3);
+        var placement = new FusedDesktopComponentPlacementSnapshot
+        {
+            PlacementId = "placement-1",
+            ComponentId = "component-1",
+            Width = 168,
+            Height = 168,
+            GridWidthCells = 2,
+            GridHeightCells = 2
+        };
+
+        var snapped = FusedDesktopPlacementMath.SnapToNearestCell(
+            placement,
+            grid,
+            requestedOrigin: new Point(900, 600));
+
+        Assert.Equal(2, snapped.GridColumn);
+        Assert.Equal(1, snapped.GridRow);
+        Assert.Equal(176, snapped.X, 3);
+        Assert.Equal(88, snapped.Y, 3);
+    }
+
+    [Fact]
+    public void FusedSnapToNearestCell_EstimatesMissingSpanFromPixelSize()
+    {
+        var grid = new DesktopGridGeometry(
+            Origin: default,
+            CellSize: 80,
+            CellGap: 8,
+            ColumnCount: 6,
+            RowCount: 6);
+        var placement = new FusedDesktopComponentPlacementSnapshot
+        {
+            PlacementId = "placement-1",
+            ComponentId = "component-1",
+            Width = 168,
+            Height = 256
+        };
+
+        var snapped = FusedDesktopPlacementMath.SnapToNearestCell(
+            placement,
+            grid,
+            requestedOrigin: new Point(90, 180));
+
+        Assert.Equal(2, snapped.GridWidthCells);
+        Assert.Equal(3, snapped.GridHeightCells);
+        Assert.Equal(1, snapped.GridColumn);
+        Assert.Equal(2, snapped.GridRow);
+        Assert.Equal(168, snapped.Width, 3);
+        Assert.Equal(256, snapped.Height, 3);
     }
 }

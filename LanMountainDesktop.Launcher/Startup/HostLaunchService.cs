@@ -108,6 +108,8 @@ internal sealed class HostLaunchService
             return HostLaunchOutcome.FromResult(prerequisiteFailure);
         }
 
+        await EnsureAirAppRuntimeStartedAsync(context.DeploymentLocator.GetAppRoot(), dataRoot).ConfigureAwait(false);
+
         var hostPath = plan.HostPath;
         if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
         {
@@ -202,6 +204,18 @@ internal sealed class HostLaunchService
             "host_exited_early",
             $"Host exited early using start mode '{finalAttempt.StartMode}'.",
             details));
+    }
+
+    private static async Task EnsureAirAppRuntimeStartedAsync(string appRoot, string? dataRoot)
+    {
+        try
+        {
+            await new AirAppRuntimeBridge(appRoot, dataRoot).EnsureStartedAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"AirApp Runtime pre-start failed; Host fallback remains available. Error='{ex.Message}'.");
+        }
     }
 
     private static async Task<HostStartAttempt> StartHostProcessAsync(

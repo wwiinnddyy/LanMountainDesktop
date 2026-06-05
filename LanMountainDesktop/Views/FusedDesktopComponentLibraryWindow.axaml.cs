@@ -65,9 +65,8 @@ public partial class FusedDesktopComponentLibraryWindow : Window
 
     private void OnAddComponentRequested(object? sender, string componentId)
     {
-        FusedDesktopManagerServiceFactory.GetOrCreate().AddComponent(componentId);
+        FusedDesktopManagerServiceFactory.GetOrCreate().AddComponent(componentId, this);
         AppLogger.Info("FusedDesktopLibrary", $"Added component '{componentId}' directly to fused desktop.");
-        Close();
     }
 
     private void OnCloseClick(object? sender, RoutedEventArgs e)

@@ -132,6 +132,27 @@ internal sealed class DataLocationResolver
         return ResolveDataRoot(config);
     }
 
+    public string ResolveDataRoot(DataLocationMode mode, string? customPath = null)
+    {
+        return ResolveDataRoot(BuildConfig(mode, customPath));
+    }
+
+    public DataLocationConfig BuildConfig(DataLocationMode mode, string? customPath = null)
+    {
+        var targetDataRoot = mode == DataLocationMode.Portable
+            ? Path.GetFullPath(!string.IsNullOrWhiteSpace(customPath)
+                ? customPath
+                : DefaultPortableDataPath)
+            : _defaultSystemDataPath;
+
+        return new DataLocationConfig
+        {
+            DataLocationMode = mode.ToString(),
+            SystemDataPath = _defaultSystemDataPath,
+            PortableDataPath = mode == DataLocationMode.Portable ? targetDataRoot : null
+        };
+    }
+
     private string ResolveDataRoot(DataLocationConfig? config)
     {
         if (config is null)
@@ -193,18 +214,8 @@ internal sealed class DataLocationResolver
 
     public bool ApplyLocationChoice(DataLocationMode mode, string? customPath = null, bool migrateExistingData = false)
     {
-        var targetDataRoot = mode == DataLocationMode.Portable
-            ? Path.GetFullPath(!string.IsNullOrWhiteSpace(customPath)
-                ? customPath
-                : DefaultPortableDataPath)
-            : _defaultSystemDataPath;
-
-        var config = new DataLocationConfig
-        {
-            DataLocationMode = mode.ToString(),
-            SystemDataPath = _defaultSystemDataPath,
-            PortableDataPath = mode == DataLocationMode.Portable ? targetDataRoot : null
-        };
+        var config = BuildConfig(mode, customPath);
+        var targetDataRoot = ResolveDataRoot(config);
 
         // 先创建目录结构
         try

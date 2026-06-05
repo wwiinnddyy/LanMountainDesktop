@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using LanMountainDesktop.Shared.IPC;
 using LanMountainDesktop.Shared.IPC.Abstractions.Services;
 
@@ -24,11 +25,21 @@ internal sealed class AirAppRuntimeBridge
             return;
         }
 
-        var process = AirAppRuntimeProcessStarter.Start(new AirAppRuntimeStartRequest(
-            _appRoot,
-            Environment.ProcessId,
-            0,
-            _dataRoot));
+        Process? process;
+        try
+        {
+            process = AirAppRuntimeProcessStarter.Start(new AirAppRuntimeStartRequest(
+                _appRoot,
+                Environment.ProcessId,
+                0,
+                _dataRoot));
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"AirApp Runtime start request failed. AppRoot='{_appRoot}'; Error='{ex.Message}'.");
+            return;
+        }
+
         Logger.Info($"AirApp Runtime start requested. Pid={(process is null ? -1 : process.Id)}; AppRoot='{_appRoot}'.");
 
         for (var attempt = 1; attempt <= ConnectAttempts; attempt++)

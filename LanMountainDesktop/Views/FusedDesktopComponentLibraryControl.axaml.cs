@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using FluentIcons.Common;
@@ -18,6 +19,8 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
 {
     public event EventHandler<string>? AddComponentRequested;
 
+    private const double PreviewSwipeThreshold = 48d;
+
     private static readonly LocalizationService LocalizationService = new();
 
     private readonly ComponentLibraryWindowViewModel _viewModel = new();
@@ -28,9 +31,13 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
     private readonly ICalculatorDataService _calculatorDataService = new CalculatorDataService();
 
     private List<DesktopComponentDefinition> _allDefinitions = new();
+    private IReadOnlyList<DesktopComponentDefinition> _selectedCategoryDefinitions = [];
+    private int _selectedComponentIndex;
     private ComponentRegistry? _componentRegistry;
     private DesktopComponentRuntimeRegistry? _componentRuntimeRegistry;
     private Control? _selectedPreviewControl;
+    private bool _isPreviewSwipeActive;
+    private Point _previewSwipeStartPoint;
 
     public FusedDesktopComponentLibraryControl()
     {
@@ -157,17 +164,114 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
                 .Where(definition => string.Equals(definition.Category, selectedCategory.Id, StringComparison.OrdinalIgnoreCase))
                 .OrderBy(static definition => definition.DisplayName, StringComparer.OrdinalIgnoreCase);
 
-        var firstComponent = filtered.FirstOrDefault();
-        if (firstComponent is null)
+        _selectedCategoryDefinitions = filtered.ToList();
+        _selectedComponentIndex = 0;
+        ApplySelectedComponentIndex();
+    }
+
+    private void ApplySelectedComponentIndex()
+    {
+        if (_selectedCategoryDefinitions.Count == 0)
         {
             _viewModel.SelectedComponent = null;
             SetSelectedPreviewControl(null);
             return;
         }
 
-        _viewModel.SelectedComponent = selectedCategory.Components.FirstOrDefault(component => component.ComponentId == firstComponent.Id)
-            ?? CreateComponentItem(firstComponent, _settingsFacade.Region.Get().LanguageCode);
-        SetSelectedPreviewControl(CreateStaticPreviewControl(firstComponent));
+        _selectedComponentIndex = NormalizeComponentIndex(_selectedComponentIndex);
+        var selectedDefinition = _selectedCategoryDefinitions[_selectedComponentIndex];
+        _viewModel.SelectedComponent = CreateComponentItem(selectedDefinition, _settingsFacade.Region.Get().LanguageCode);
+        SetSelectedPreviewControl(CreateStaticPreviewControl(selectedDefinition));
+    }
+
+    private int NormalizeComponentIndex(int index)
+    {
+        if (_selectedCategoryDefinitions.Count == 0)
+        {
+            return 0;
+        }
+
+        var count = _selectedCategoryDefinitions.Count;
+        return ((index % count) + count) % count;
+    }
+
+    private void MoveSelectedComponent(int direction)
+    {
+        if (_selectedCategoryDefinitions.Count <= 1 || direction == 0)
+        {
+            return;
+        }
+
+        _selectedComponentIndex = NormalizeComponentIndex(_selectedComponentIndex + direction);
+        ApplySelectedComponentIndex();
+    }
+
+    private void OnPreviewPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        _ = sender;
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            _isPreviewSwipeActive = true;
+            _previewSwipeStartPoint = e.GetPosition(this);
+            PreviewInteractionHost.Focus();
+            e.Pointer.Capture(PreviewInteractionHost);
+        }
+    }
+
+    private void OnPreviewPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        _ = sender;
+        if (!_isPreviewSwipeActive)
+        {
+            return;
+        }
+
+        _isPreviewSwipeActive = false;
+        e.Pointer.Capture(null);
+
+        var endPoint = e.GetPosition(this);
+        var delta = endPoint - _previewSwipeStartPoint;
+        if (Math.Abs(delta.Y) < PreviewSwipeThreshold || Math.Abs(delta.Y) <= Math.Abs(delta.X))
+        {
+            return;
+        }
+
+        MoveSelectedComponent(delta.Y < 0 ? 1 : -1);
+        e.Handled = true;
+    }
+
+    private void OnPreviewPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        _isPreviewSwipeActive = false;
+    }
+
+    private void OnPreviewPointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    {
+        _ = sender;
+        if (Math.Abs(e.Delta.Y) <= 0)
+        {
+            return;
+        }
+
+        MoveSelectedComponent(e.Delta.Y < 0 ? 1 : -1);
+        e.Handled = true;
+    }
+
+    private void OnPreviewKeyDown(object? sender, KeyEventArgs e)
+    {
+        _ = sender;
+        if (e.Key == Key.Down)
+        {
+            MoveSelectedComponent(1);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Up)
+        {
+            MoveSelectedComponent(-1);
+            e.Handled = true;
+        }
     }
 
     private Control? CreateStaticPreviewControl(DesktopComponentDefinition definition)

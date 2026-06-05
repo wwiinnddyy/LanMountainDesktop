@@ -1091,18 +1091,24 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         }
 
         var latest = await _plondsService.FindLatestAsync(currentVersion, cancellationToken).ConfigureAwait(false);
-        _pendingPlondsLatest = latest.Success && latest.IsUpdateAvailable ? latest : null;
+        if (!latest.Success)
+        {
+            _pendingPlondsLatest = null;
+            _pendingPlondsCleanInstallCandidate = null;
+            _pendingPlondsInstallerManifest = null;
+            _pendingPlondsPackage = null;
+            TransitionPlonds(UpdatePhase.Idle);
+            SaveLastChecked();
+            return new UpdateCheckReport(false, null, currentVersionText, null, null, null, null, null, null, latest.ErrorMessage);
+        }
+
+        _pendingPlondsLatest = latest.IsUpdateAvailable ? latest : null;
         _pendingPlondsCleanInstallCandidate = _pendingPlondsLatest?.Candidates
             .FirstOrDefault(candidate => candidate.Manifest.RequiresCleanInstall);
         _pendingPlondsInstallerManifest = null;
         _pendingPlondsPackage = null;
         TransitionPlonds(UpdatePhase.Checked);
         SaveLastChecked();
-
-        if (!latest.Success)
-        {
-            return new UpdateCheckReport(false, null, currentVersionText, null, null, null, null, null, null, latest.ErrorMessage);
-        }
 
         var payloadKind = latest.IsUpdateAvailable
             ? _pendingPlondsCleanInstallCandidate is not null
@@ -1368,7 +1374,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
 
         _plondsPhase = phase;
         _phaseChanged?.Invoke(phase);
-        _progressChanged?.Invoke(new UpdateProgressReport(phase, $"Phase changed to {phase}", 0, null, null));
+        _progressChanged?.Invoke(new UpdateProgressReport(phase, string.Empty, 0, null, null));
     }
 
     private UpdateOrchestrator GetOrchestrator()

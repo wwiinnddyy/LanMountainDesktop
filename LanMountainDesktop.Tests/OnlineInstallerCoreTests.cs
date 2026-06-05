@@ -56,13 +56,17 @@ public sealed class OnlineInstallerCoreTests : IDisposable
     public async Task InstallerWorkflowNavigation_AllowsOnlyUnlockedSteps()
     {
         var vm = new MainWindowViewModel(new FakeInstallService(), new PrivacyDeviceIdentityProvider(Path.Combine(_tempRoot, "identity.json")));
+        var deployStep = vm.Steps.Single(step => step.StepId == InstallerStepId.Deploy);
 
-        vm.SelectedStep = vm.Steps.Single(step => step.StepId == InstallerStepId.Deploy);
+        Assert.False(deployStep.IsUnlocked);
+
+        vm.SelectStepCommand.Execute(deployStep);
 
         Assert.Equal(InstallerStepId.Welcome, vm.CurrentStep);
+        Assert.True(vm.Steps.Single(step => step.StepId == InstallerStepId.Welcome).IsSelected);
 
         await vm.NextCommand.ExecuteAsync(null);
-        vm.SelectedStep = vm.Steps.Single(step => step.StepId == InstallerStepId.Welcome);
+        vm.SelectStepCommand.Execute(vm.Steps.Single(step => step.StepId == InstallerStepId.Welcome));
 
         Assert.Equal(InstallerStepId.Welcome, vm.CurrentStep);
     }
@@ -86,9 +90,26 @@ public sealed class OnlineInstallerCoreTests : IDisposable
     }
 
     [Fact]
-    public async Task BrowseCommand_UsesSelectedLocalFolder()
+    public async Task BrowseCommand_UsesSelectedLocalFolderAsInstallParent()
     {
         var selectedPath = Path.Combine(_tempRoot, "selected-install-root");
+        var vm = new MainWindowViewModel(
+            new FakeInstallService(),
+            new PrivacyDeviceIdentityProvider(Path.Combine(_tempRoot, "identity.json")))
+        {
+            BrowseRequested = _ => Task.FromResult<string?>(selectedPath)
+        };
+
+        await vm.BrowseCommand.ExecuteAsync(null);
+
+        Assert.Equal(Path.Combine(selectedPath, InstallerPathGuard.ApplicationDirectoryName), vm.InstallPath);
+        Assert.Null(vm.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task BrowseCommand_DoesNotDuplicateApplicationFolder()
+    {
+        var selectedPath = Path.Combine(_tempRoot, InstallerPathGuard.ApplicationDirectoryName);
         var vm = new MainWindowViewModel(
             new FakeInstallService(),
             new PrivacyDeviceIdentityProvider(Path.Combine(_tempRoot, "identity.json")))

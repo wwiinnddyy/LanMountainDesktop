@@ -116,7 +116,7 @@ internal static class PreviewEntryHandler
     {
         try
         {
-            await window.WaitForEnterAsync().ConfigureAwait(false);
+            await window.WaitForCompletionAsync().ConfigureAwait(false);
         }
         catch (Exception ex)
         {

@@ -13,7 +13,18 @@ internal sealed class OobeGatePhase : ILaunchPhase
             await LaunchUiPresenter.HideSplashAsync(context.SplashWindow).ConfigureAwait(false);
             foreach (var step in context.OobeSteps)
             {
-                await step.RunAsync(cancellationToken).ConfigureAwait(false);
+                var stepResult = await step.RunAsync(cancellationToken).ConfigureAwait(false);
+                if (!stepResult.ContinueLaunch)
+                {
+                    context.WindowsClosingByOrchestrator = true;
+                    await LaunchUiPresenter.CloseWindowsAsync(context.SplashWindow, context.LoadingDetailsWindow).ConfigureAwait(false);
+                    return new LaunchPhaseResult(
+                        LaunchPhaseStatus.Completed,
+                        stepResult.Result ?? LaunchResultBuilder.BuildFailure(
+                            "oobe",
+                            "oobe_cancelled",
+                            "OOBE did not complete."));
+                }
             }
 
             await LaunchUiPresenter.ShowSplashAsync(context.SplashWindow).ConfigureAwait(false);

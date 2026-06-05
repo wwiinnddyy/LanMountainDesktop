@@ -57,6 +57,23 @@ internal sealed class OobeCompletionResult
     public string ErrorMessage { get; init; } = string.Empty;
 }
 
+internal sealed class OobeSessionDraft
+{
+    public DataLocationMode DataLocationMode { get; init; } = DataLocationMode.System;
+
+    public bool MigrateExistingData { get; init; }
+
+    public HostAppSettingsStartupChoices StartupChoices { get; init; }
+
+    public PrivacyConfig PrivacyConfig { get; init; } = new();
+
+    public bool PrivacyAgreementAccepted { get; init; }
+
+    public string PrivacyUserId { get; init; } = string.Empty;
+
+    public string PrivacyDeviceId { get; init; } = string.Empty;
+}
+
 internal sealed record LauncherExecutionSnapshot(
     bool IsElevated,
     string UserName,

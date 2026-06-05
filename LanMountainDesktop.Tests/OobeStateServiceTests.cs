@@ -66,16 +66,80 @@ public sealed class OobeStateServiceTests : IDisposable
     }
 
     [Fact]
-    public void Evaluate_SuppressesOobe_ForElevatedFirstRun()
+    public void Evaluate_ReturnsFirstRun_ForElevatedFirstRun()
     {
         var service = CreateService(new LauncherExecutionSnapshot(true, "tester", "S-1-5-test"));
         var context = CommandContext.FromArgs(["launch"]);
 
         var decision = service.Evaluate(context);
 
+        Assert.Equal(OobeStateStatus.FirstRun, decision.Status);
+        Assert.True(decision.ShouldShowOobe);
+        Assert.True(decision.IsElevated);
+    }
+
+    [Fact]
+    public void Evaluate_ReturnsFirstRun_ForElevatedPostInstall()
+    {
+        var service = CreateService(new LauncherExecutionSnapshot(true, "tester", "S-1-5-test"));
+        var context = CommandContext.FromArgs(["launch", "--launch-source", "postinstall"]);
+
+        var decision = service.Evaluate(context);
+
+        Assert.Equal(OobeStateStatus.FirstRun, decision.Status);
+        Assert.True(decision.ShouldShowOobe);
+        Assert.Equal("postinstall", decision.LaunchSource);
+    }
+
+    [Fact]
+    public void Evaluate_SuppressesOobe_ForMaintenanceLaunch()
+    {
+        var service = CreateService();
+        var context = CommandContext.FromArgs(["plugin", "install", "--source", "x", "--plugins-dir", "p"]);
+
+        var decision = service.Evaluate(context);
+
         Assert.Equal(OobeStateStatus.Suppressed, decision.Status);
         Assert.False(decision.ShouldShowOobe);
-        Assert.Equal("oobe_suppressed_elevated", decision.ResultCode);
+        Assert.Equal("oobe_suppressed_maintenance", decision.ResultCode);
+    }
+
+    [Fact]
+    public void Evaluate_SuppressesOobe_ForDebugPreview()
+    {
+        var service = CreateService();
+        var context = CommandContext.FromArgs(["preview-oobe"]);
+
+        var decision = service.Evaluate(context);
+
+        Assert.Equal(OobeStateStatus.Suppressed, decision.Status);
+        Assert.False(decision.ShouldShowOobe);
+        Assert.Equal("oobe_suppressed_debug_preview", decision.ResultCode);
+    }
+
+    [Fact]
+    public void Evaluate_MigratesLegacyStateFile_ToCurrentStatePath()
+    {
+        var legacyStatePath = GetLegacyStatePath();
+        Directory.CreateDirectory(Path.GetDirectoryName(legacyStatePath)!);
+        var state = new OobeStateFile
+        {
+            SchemaVersion = 1,
+            CompletedAtUtc = DateTimeOffset.UtcNow.ToString("O"),
+            UserName = "tester",
+            UserSid = "S-1-5-test",
+            LaunchSource = "normal"
+        };
+        File.WriteAllText(legacyStatePath, JsonSerializer.Serialize(state));
+
+        var service = CreateService();
+        var context = CommandContext.FromArgs(["launch"]);
+
+        var decision = service.Evaluate(context);
+
+        Assert.Equal(OobeStateStatus.Completed, decision.Status);
+        Assert.True(decision.MigratedLegacyMarker);
+        Assert.True(File.Exists(GetStatePath()));
     }
 
     [Fact]
@@ -118,6 +182,8 @@ public sealed class OobeStateServiceTests : IDisposable
     }
 
     private string GetStatePath() => Path.Combine(_tempRoot, "Launcher", "state", "oobe-state.json");
+
+    private string GetLegacyStatePath() => Path.Combine(_tempRoot, ".launcher", "state", "oobe-state.json");
 
     private string GetLegacyMarkerPath() => Path.Combine(_tempRoot, ".launcher", "state", "first_run_completed");
 }
