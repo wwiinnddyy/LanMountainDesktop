@@ -503,26 +503,6 @@ public partial class OobeWindow : Window
         await NavigateToStep(5);
     }
 
-    private void SaveOobeStartupPresentation()
-    {
-        try
-        {
-            var choices = CollectOobeStartupChoices();
-            var path = HostAppSettingsOobeMerger.GetSettingsFilePath(_resolver.ResolveDataRoot());
-            HostAppSettingsOobeMerger.MergeStartupPresentation(path, choices);
-            if (OperatingSystem.IsWindows())
-            {
-                _ = new LauncherWindowsStartupService().SetEnabled(choices.AutoStartWithWindows);
-            }
-
-            Logger.Info($"[OobeWindow] 启动与展示已写入 '{path}'.");
-        }
-        catch (Exception ex)
-        {
-            Logger.Warn($"[OobeWindow] 启动与展示保存失败: {ex.Message}");
-        }
-    }
-
     private void RefreshOobeStartupPresentationFromDisk()
     {
         var path = HostAppSettingsOobeMerger.GetSettingsFilePath(ResolveSelectedDataRoot());
@@ -1036,44 +1016,6 @@ public partial class OobeWindow : Window
         if (this.FindControl<TextBox>("TelemetryIdTextBox") is { } telemetryIdTextBox)
         {
             telemetryIdTextBox.Text = telemetryId;
-        }
-    }
-
-    private void SavePrivacySettings()
-    {
-        try
-        {
-            var crashTelemetryEnabled = this.FindControl<ToggleSwitch>("CrashTelemetryToggle")?.IsChecked ?? true;
-            var usageTelemetryEnabled = this.FindControl<ToggleSwitch>("UsageTelemetryToggle")?.IsChecked ?? true;
-            var telemetryId = this.FindControl<TextBox>("TelemetryIdTextBox")?.Text ?? Guid.NewGuid().ToString("N");
-
-            // 保存到启动器配置
-            var privacyConfig = new PrivacyConfig
-            {
-                CrashTelemetryEnabled = crashTelemetryEnabled,
-                UsageTelemetryEnabled = usageTelemetryEnabled,
-                TelemetryId = telemetryId
-            };
-
-            var configPath = Path.Combine(_resolver.ResolveLauncherDataPath(), "privacy-config.json");
-            var json = System.Text.Json.JsonSerializer.Serialize(privacyConfig, AppJsonContext.Default.PrivacyConfig);
-            File.WriteAllText(configPath, json);
-
-            // 保存隐私协议同意状态（带防篡改保护）
-            var agreementService = new PrivacyAgreementService(_resolver.ResolveLauncherDataPath());
-            var isAgreed = this.FindControl<CheckBox>("PrivacyAgreementCheckBox")?.IsChecked ?? false;
-
-            // 生成用户ID和设备ID
-            var userId = telemetryId;
-            var deviceId = GetDeviceIdentifier();
-
-            agreementService.SaveAgreement(isAgreed, userId, deviceId);
-
-            Logger.Info($"[OobeWindow] 隐私设置已保存: Crash={crashTelemetryEnabled}, Usage={usageTelemetryEnabled}, Agreement={isAgreed}");
-        }
-        catch (Exception ex)
-        {
-            Logger.Warn($"[OobeWindow] 保存隐私设置失败: {ex.Message}");
         }
     }
 
