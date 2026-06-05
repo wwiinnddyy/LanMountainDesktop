@@ -57,15 +57,21 @@ jobs:
         shell: pwsh
         run: |
           $publishDir = Join-Path $env:GITHUB_WORKSPACE '${{ env.INSTALLER_ARTIFACT_DIR }}'
+          $tempDir = Join-Path $env:GITHUB_WORKSPACE 'artifacts/installer-online/tmp'
           if (Test-Path $publishDir) {
             Remove-Item -LiteralPath $publishDir -Recurse -Force
           }
 
           New-Item -ItemType Directory -Path $publishDir -Force | Out-Null
+          New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
+          $env:TEMP = $tempDir
+          $env:TMP = $tempDir
 
-          dotnet restore '${{ env.INSTALLER_PROJECT }}' -r '${{ env.INSTALLER_RUNTIME }}'
+          dotnet restore '${{ env.INSTALLER_PROJECT }}' `
+            -r '${{ env.INSTALLER_RUNTIME }}' `
+            -p:PublishAot=true
           if ($LASTEXITCODE -ne 0) {
-            throw "Online installer runtime restore failed with exit code $LASTEXITCODE."
+            throw "Online installer NativeAOT restore failed with exit code $LASTEXITCODE."
           }
 
           dotnet publish '${{ env.INSTALLER_PROJECT }}' `
@@ -74,6 +80,9 @@ jobs:
             -r '${{ env.INSTALLER_RUNTIME }}' `
             -p:PublishAot=true `
             -p:UseAppHost=true `
+            -p:DebugType=none `
+            -p:DebugSymbols=false `
+            -p:StripSymbols=true `
             -o $publishDir `
             -v minimal
 
@@ -90,7 +99,32 @@ jobs:
             Write-Warning "dotnet publish exited with $LASTEXITCODE after producing the installer artifact."
           }
 
-          Get-ChildItem -Path $publishDir -File -Filter 'LanDesktopPLONDS.installer*' |
+          Get-ChildItem -Path $publishDir -Recurse -Filter '*.pdb' |
+            Remove-Item -Force
+
+          $jitFiles = @(
+            'coreclr.dll',
+            'clrjit.dll',
+            'hostfxr.dll',
+            'hostpolicy.dll',
+            'LanDesktopPLONDS.installer.deps.json',
+            'LanDesktopPLONDS.installer.runtimeconfig.json'
+          )
+          foreach ($file in $jitFiles) {
+            if (Test-Path (Join-Path $publishDir $file)) {
+              throw "JIT runtime artifact found in NativeAOT output: $file"
+            }
+          }
+
+          $unexpectedFiles = Get-ChildItem -Path $publishDir -File |
+            Where-Object { $_.Name -ne 'LanDesktopPLONDS.installer.exe' }
+          if ($unexpectedFiles) {
+            $names = ($unexpectedFiles | Select-Object -ExpandProperty Name) -join ', '
+            throw "Unexpected files in single-exe NativeAOT installer artifact: $names"
+          }
+
+          Get-ChildItem -Path $publishDir -File |
+            Sort-Object Name |
             Select-Object Name, Length
 
       - name: Upload online installer artifact

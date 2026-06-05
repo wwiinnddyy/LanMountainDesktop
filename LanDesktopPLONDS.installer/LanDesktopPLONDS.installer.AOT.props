@@ -19,11 +19,51 @@
   <ItemGroup Condition="'$(PublishAot)' == 'true'">
     <TrimmerRootAssembly Include="Avalonia" />
     <TrimmerRootAssembly Include="Avalonia.Desktop" />
-    <TrimmerRootAssembly Include="FluentAvalonia" />
+    <TrimmerRootAssembly Include="Avalonia.Themes.Fluent" />
     <TrimmerRootAssembly Include="FluentIcons.Avalonia" />
     <TrimmerRootAssembly Include="LanDesktopPLONDS.installer" />
     <TrimmerRootAssembly Include="System.Text.Json" />
   </ItemGroup>
+
+  <Target
+    Name="PrepareInstallerEmbeddedNativeLibraries"
+    BeforeTargets="AssignTargetPaths"
+    Condition="'$(PublishAot)' == 'true' and '$(RuntimeIdentifier)' == 'win-x64'">
+    <ItemGroup>
+      <InstallerNativeLibrary
+        Include="$(PkgAvalonia_Angle_Windows_Natives)\runtimes\win-x64\native\av_libglesv2.dll"
+        CompressedName="av_libglesv2.dll.gz"
+        Condition="Exists('$(PkgAvalonia_Angle_Windows_Natives)\runtimes\win-x64\native\av_libglesv2.dll')" />
+      <InstallerNativeLibrary
+        Include="$(PkgHarfBuzzSharp_NativeAssets_Win32)\runtimes\win-x64\native\libHarfBuzzSharp.dll"
+        CompressedName="libHarfBuzzSharp.dll.gz"
+        Condition="Exists('$(PkgHarfBuzzSharp_NativeAssets_Win32)\runtimes\win-x64\native\libHarfBuzzSharp.dll')" />
+      <InstallerNativeLibrary
+        Include="$(PkgSkiaSharp_NativeAssets_Win32)\runtimes\win-x64\native\libSkiaSharp.dll"
+        CompressedName="libSkiaSharp.dll.gz"
+        Condition="Exists('$(PkgSkiaSharp_NativeAssets_Win32)\runtimes\win-x64\native\libSkiaSharp.dll')" />
+    </ItemGroup>
+
+    <Error
+      Condition="'@(InstallerNativeLibrary)' == ''"
+      Text="NativeAOT installer native libraries were not found. Restore the installer with -p:PublishAot=true -r win-x64 before publishing." />
+
+    <MakeDir Directories="$(IntermediateOutputPath)embedded-native\$(RuntimeIdentifier)\" />
+    <Exec
+      Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)Compress-NativeLibrary.ps1&quot; -SourcePath &quot;%(InstallerNativeLibrary.FullPath)&quot; -DestinationPath &quot;$(IntermediateOutputPath)embedded-native\$(RuntimeIdentifier)\%(InstallerNativeLibrary.CompressedName)&quot;" />
+
+    <ItemGroup>
+      <EmbeddedResource
+        Include="$(IntermediateOutputPath)embedded-native\$(RuntimeIdentifier)\av_libglesv2.dll.gz"
+        LogicalName="LanDesktopPLONDS.Installer.NativeLibraries.av_libglesv2.dll.gz" />
+      <EmbeddedResource
+        Include="$(IntermediateOutputPath)embedded-native\$(RuntimeIdentifier)\libHarfBuzzSharp.dll.gz"
+        LogicalName="LanDesktopPLONDS.Installer.NativeLibraries.libHarfBuzzSharp.dll.gz" />
+      <EmbeddedResource
+        Include="$(IntermediateOutputPath)embedded-native\$(RuntimeIdentifier)\libSkiaSharp.dll.gz"
+        LogicalName="LanDesktopPLONDS.Installer.NativeLibraries.libSkiaSharp.dll.gz" />
+    </ItemGroup>
+  </Target>
 
   <PropertyGroup Condition="'$(PublishAot)' == 'true'">
     <SuppressTrimAnalysisWarnings>false</SuppressTrimAnalysisWarnings>
