@@ -7,6 +7,7 @@ public static class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        NativeDependencyBootstrapper.Prepare();
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
 

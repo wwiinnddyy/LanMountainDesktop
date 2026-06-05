@@ -20,10 +20,13 @@
 
   <ItemGroup>
     <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Angle.Windows.Natives" GeneratePathProperty="true" PrivateAssets="all" />
     <PackageReference Include="Avalonia.Desktop" />
     <PackageReference Include="Avalonia.Fonts.Inter" />
-    <PackageReference Include="FluentAvaloniaUI" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
     <PackageReference Include="FluentIcons.Avalonia" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.Win32" GeneratePathProperty="true" PrivateAssets="all" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" GeneratePathProperty="true" PrivateAssets="all" />
     <PackageReference Include="CommunityToolkit.Mvvm" />
   </ItemGroup>
 
