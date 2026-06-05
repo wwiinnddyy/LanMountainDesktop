@@ -15,72 +15,91 @@
         ShowInTaskbar="False"
         WindowStartupLocation="CenterScreen"
         WindowDecorations="None"
-        Background="#0B0B0B"
-        TransparencyLevelHint="None"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent"
         Icon="/Assets/logo.ico">
+  <Window.Resources>
+    <CornerRadius x:Key="DesignCornerRadiusMicro">2</CornerRadius>
+    <CornerRadius x:Key="DesignCornerRadiusXs">4</CornerRadius>
+    <CornerRadius x:Key="DesignCornerRadiusSm">4</CornerRadius>
+    <CornerRadius x:Key="DesignCornerRadiusMd">8</CornerRadius>
+    <CornerRadius x:Key="DesignCornerRadiusLg">8</CornerRadius>
+    <CornerRadius x:Key="DesignCornerRadiusXl">12</CornerRadius>
+    <CornerRadius x:Key="DesignCornerRadiusIsland">16</CornerRadius>
+    <CornerRadius x:Key="DesignCornerRadiusComponent">8</CornerRadius>
+    <CornerRadius x:Key="OverlayCornerRadius">8</CornerRadius>
+    <CornerRadius x:Key="ControlCornerRadius">4</CornerRadius>
+  </Window.Resources>
+
   <Design.DataContext>
     <views:SplashWindow />
   </Design.DataContext>
 
-  <Grid RowDefinitions="*,Auto">
-    <!-- 背景图片 -->
-    <Image x:Name="BackgroundImage"
-           Grid.RowSpan="2"
-           Stretch="UniformToFill"
-           IsVisible="False"
-           Opacity="0"/>
+  <Border x:Name="RootShell"
+          Background="#0B0B0B"
+          CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+          ClipToBounds="True">
+    <Grid RowDefinitions="*,Auto">
+      <Image x:Name="BackgroundImage"
+             Grid.RowSpan="2"
+             Stretch="Uniform"
+             HorizontalAlignment="Center"
+             VerticalAlignment="Center"
+             IsVisible="False"
+             Opacity="0"/>
 
-    <!-- 半透明遮罩层 -->
-    <Border x:Name="BackgroundOverlay"
-            Grid.RowSpan="2"
-            Background="#0B0B0B"
-            Opacity="0.85"/>
+      <Border x:Name="BackgroundOverlay"
+              Grid.RowSpan="2"
+              Background="#0B0B0B"
+              Opacity="0.42"/>
 
-    <Grid Grid.Row="0"
-          Margin="24">
-      <TextBlock x:Name="AppNameText"
-                 Text="LanMountain Desktop"
-                 FontSize="24"
-                 FontWeight="SemiBold"
-                 VerticalAlignment="Top"
-                 HorizontalAlignment="Left"
-                 Foreground="#F6F7FB" />
-    </Grid>
-
-    <Border Grid.Row="1"
-            Padding="24,18,24,24"
-            Background="Transparent">
-      <Grid RowDefinitions="Auto,Auto"
-            RowSpacing="10">
-        <Grid ColumnDefinitions="*,Auto">
-          <Border x:Name="VersionTextBorder"
-                  Background="Transparent"
-                  Cursor="Hand"
-                  HorizontalAlignment="Left">
-            <TextBlock x:Name="VersionText"
-                       FontSize="11"
-                       Foreground="#B9C0CC"
-                       Text="0.0.0-dev (Administrate)" />
-          </Border>
-
-          <TextBlock x:Name="StatusText"
-                     Grid.Column="1"
-                     FontSize="11"
-                     Foreground="#B9C0CC"
-                     HorizontalAlignment="Right"
-                     Text="{x:Static res:Strings.Splash_StatusInitializing}" />
-        </Grid>
-
-        <ProgressBar x:Name="ProgressIndicator"
-                     Grid.Row="1"
-                     Minimum="0"
-                     Maximum="100"
-                     Value="0"
-                     Height="4"
-                     IsIndeterminate="False"
-                     Foreground="#F6F7FB"
-                     Background="#2C313D" />
+      <Grid Grid.Row="0"
+            Margin="24">
+        <TextBlock x:Name="AppNameText"
+                   Text="{x:Static res:Strings.Splash_AppName}"
+                   FontSize="24"
+                   FontWeight="SemiBold"
+                   VerticalAlignment="Top"
+                   HorizontalAlignment="Left"
+                   Foreground="#F6F7FB" />
       </Grid>
-    </Border>
-  </Grid>
+
+      <Border Grid.Row="1"
+              Padding="24,18,24,24"
+              Background="Transparent">
+        <Grid RowDefinitions="Auto,Auto"
+              RowSpacing="10">
+          <Grid ColumnDefinitions="*,Auto">
+            <Border x:Name="VersionTextBorder"
+                    Background="Transparent"
+                    Cursor="Hand"
+                    CornerRadius="{DynamicResource DesignCornerRadiusSm}"
+                    HorizontalAlignment="Left">
+              <TextBlock x:Name="VersionText"
+                         FontSize="11"
+                         Foreground="#D8DEE9"
+                         Text="0.0.0-dev (Administrate)" />
+            </Border>
+
+            <TextBlock x:Name="StatusText"
+                       Grid.Column="1"
+                       FontSize="11"
+                       Foreground="#D8DEE9"
+                       HorizontalAlignment="Right"
+                       Text="{x:Static res:Strings.Splash_StatusInitializing}" />
+          </Grid>
+
+          <ProgressBar x:Name="ProgressIndicator"
+                       Grid.Row="1"
+                       Minimum="0"
+                       Maximum="100"
+                       Value="0"
+                       Height="4"
+                       IsIndeterminate="False"
+                       Foreground="#F6F7FB"
+                       Background="#592C313D" />
+        </Grid>
+      </Border>
+    </Grid>
+  </Border>
 </Window>

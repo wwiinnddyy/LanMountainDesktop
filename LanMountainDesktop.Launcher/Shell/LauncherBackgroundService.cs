@@ -2,22 +2,28 @@ using Avalonia.Media.Imaging;
 
 namespace LanMountainDesktop.Launcher.Shell;
 
-/// <summary>
-/// 启动器背景图片服务
-/// </summary>
 internal static class LauncherBackgroundService
 {
     private const string PictureFileName = "Launcher Picture";
-    private const long MaxFileSize = 10 * 1024 * 1024; // 10MB
-    private const double WindowAspectRatio = 7.0 / 5.0; // 700:500
-    private const double AspectRatioTolerance = 0.15; // 15% 误差
+    private const long MaxFileSize = 10 * 1024 * 1024;
+
+    private static readonly string[] SupportedExtensions =
+    [
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".bmp",
+        ".gif",
+        ".webp"
+    ];
 
     private static Bitmap? _cachedBitmap;
     private static string? _cachedPath;
+    private static long _cachedLength;
+    private static DateTime _cachedLastWriteTimeUtc;
 
-    /// <summary>
-    /// 背景图片信息
-    /// </summary>
+    internal static string? LauncherDataDirectoryOverride { get; set; }
+
     public record BackgroundImageInfo
     {
         public required bool Exists { get; init; }
@@ -30,29 +36,29 @@ internal static class LauncherBackgroundService
         public string? ErrorMessage { get; init; }
     }
 
-    /// <summary>
-    /// 加载背景图片
-    /// </summary>
+    public record BackgroundImageMutationResult
+    {
+        public required bool IsSuccess { get; init; }
+        public string? FilePath { get; init; }
+        public string? ErrorMessage { get; init; }
+    }
+
     public static BackgroundImageInfo LoadBackgroundImage()
     {
         try
         {
-            var resolver = new DataLocationResolver(AppContext.BaseDirectory);
-            var launcherPath = resolver.ResolveLauncherDataPath();
-
-            // 查找图片文件
+            var launcherPath = ResolveLauncherDataPath();
             var imagePath = FindImageFile(launcherPath);
-            if (imagePath == null)
+            if (imagePath is null)
             {
                 return new BackgroundImageInfo
                 {
                     Exists = false,
                     IsValid = false,
-                    ErrorMessage = "未找到背景图片文件"
+                    ErrorMessage = "No launcher background image was found."
                 };
             }
 
-            // 检查文件大小
             var fileInfo = new FileInfo(imagePath);
             if (fileInfo.Length > MaxFileSize)
             {
@@ -61,12 +67,11 @@ internal static class LauncherBackgroundService
                     Exists = true,
                     IsValid = false,
                     FilePath = imagePath,
-                    ErrorMessage = $"图片文件过大 ({fileInfo.Length / 1024 / 1024}MB > 10MB)"
+                    ErrorMessage = $"Image file is too large ({fileInfo.Length / 1024 / 1024}MB > 10MB)."
                 };
             }
 
-            // 使用缓存
-            if (_cachedBitmap != null && _cachedPath == imagePath)
+            if (IsCacheCurrent(imagePath, fileInfo))
             {
                 return new BackgroundImageInfo
                 {
@@ -74,40 +79,40 @@ internal static class LauncherBackgroundService
                     IsValid = true,
                     FilePath = imagePath,
                     Bitmap = _cachedBitmap,
-                    Width = _cachedBitmap.PixelSize.Width,
+                    Width = _cachedBitmap!.PixelSize.Width,
                     Height = _cachedBitmap.PixelSize.Height,
                     AspectRatio = (double)_cachedBitmap.PixelSize.Width / _cachedBitmap.PixelSize.Height
                 };
             }
 
-            // 加载图片
-            var bitmap = new Bitmap(imagePath);
-            var width = bitmap.PixelSize.Width;
-            var height = bitmap.PixelSize.Height;
-            var aspectRatio = (double)width / height;
+            DisposeCache();
 
-            // 校验比例
-            var ratioDiff = Math.Abs(aspectRatio - WindowAspectRatio) / WindowAspectRatio;
-            if (ratioDiff > AspectRatioTolerance)
+            Bitmap bitmap;
+            try
             {
-                bitmap.Dispose();
+                bitmap = new Bitmap(imagePath);
+            }
+            catch (Exception ex)
+            {
                 return new BackgroundImageInfo
                 {
                     Exists = true,
                     IsValid = false,
                     FilePath = imagePath,
-                    Width = width,
-                    Height = height,
-                    AspectRatio = aspectRatio,
-                    ErrorMessage = $"图片比例不符合要求 ({aspectRatio:F2}，需要接近 {WindowAspectRatio:F2})"
+                    ErrorMessage = $"Image could not be decoded: {ex.Message}"
                 };
             }
 
-            // 缓存图片
+            var width = bitmap.PixelSize.Width;
+            var height = bitmap.PixelSize.Height;
+            var aspectRatio = height == 0 ? 0d : (double)width / height;
+
             _cachedBitmap = bitmap;
             _cachedPath = imagePath;
+            _cachedLength = fileInfo.Length;
+            _cachedLastWriteTimeUtc = fileInfo.LastWriteTimeUtc;
 
-            Logger.Info($"[LauncherBackground] 背景图片加载成功: {imagePath} ({width}x{height}, 比例: {aspectRatio:F2})");
+            Logger.Info($"[LauncherBackground] Background image loaded: {imagePath} ({width}x{height}).");
 
             return new BackgroundImageInfo
             {
@@ -122,38 +127,159 @@ internal static class LauncherBackgroundService
         }
         catch (Exception ex)
         {
-            Logger.Warn($"[LauncherBackground] 加载背景图片失败: {ex.Message}");
+            Logger.Warn($"[LauncherBackground] Failed to load background image: {ex.Message}");
             return new BackgroundImageInfo
             {
                 Exists = false,
                 IsValid = false,
-                ErrorMessage = $"加载失败: {ex.Message}"
+                ErrorMessage = $"Load failed: {ex.Message}"
             };
         }
     }
 
-    /// <summary>
-    /// 查找图片文件
-    /// </summary>
+    public static BackgroundImageMutationResult SaveBackgroundImage(string sourcePath)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(sourcePath))
+            {
+                return FailMutation("No image file was selected.");
+            }
+
+            var fullSourcePath = Path.GetFullPath(sourcePath);
+            if (!File.Exists(fullSourcePath))
+            {
+                return FailMutation("The selected image file does not exist.");
+            }
+
+            var extension = NormalizeExtension(Path.GetExtension(fullSourcePath));
+            if (!IsSupportedExtension(extension))
+            {
+                return FailMutation("The selected image format is not supported.");
+            }
+
+            var sourceInfo = new FileInfo(fullSourcePath);
+            if (sourceInfo.Length > MaxFileSize)
+            {
+                return FailMutation($"Image file is too large ({sourceInfo.Length / 1024 / 1024}MB > 10MB).");
+            }
+
+            try
+            {
+                using var bitmap = new Bitmap(fullSourcePath);
+                _ = bitmap.PixelSize;
+            }
+            catch (Exception ex)
+            {
+                return FailMutation($"The selected image could not be decoded: {ex.Message}");
+            }
+
+            var launcherPath = ResolveLauncherDataPath();
+            Directory.CreateDirectory(launcherPath);
+
+            var destinationPath = Path.Combine(launcherPath, PictureFileName + extension);
+            var tempPath = Path.Combine(launcherPath, $".{PictureFileName}.{Guid.NewGuid():N}.tmp");
+
+            try
+            {
+                File.Copy(fullSourcePath, tempPath, overwrite: true);
+                ClearCache();
+                File.Move(tempPath, destinationPath, overwrite: true);
+                DeleteManagedImageFiles(launcherPath, destinationPath);
+            }
+            finally
+            {
+                TryDeleteFile(tempPath);
+            }
+
+            ClearCache();
+
+            Logger.Info($"[LauncherBackground] Background image saved: {destinationPath}.");
+            return new BackgroundImageMutationResult
+            {
+                IsSuccess = true,
+                FilePath = destinationPath
+            };
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"[LauncherBackground] Failed to save background image: {ex.Message}");
+            return FailMutation($"Save failed: {ex.Message}");
+        }
+    }
+
+    public static BackgroundImageMutationResult ClearBackgroundImage()
+    {
+        try
+        {
+            var launcherPath = ResolveLauncherDataPath();
+            ClearCache();
+            DeleteManagedImageFiles(launcherPath, exceptPath: null);
+
+            Logger.Info("[LauncherBackground] Background image cleared.");
+            return new BackgroundImageMutationResult
+            {
+                IsSuccess = true
+            };
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"[LauncherBackground] Failed to clear background image: {ex.Message}");
+            return FailMutation($"Clear failed: {ex.Message}");
+        }
+    }
+
+    public static void ClearCache()
+    {
+        DisposeCache();
+        _cachedPath = null;
+        _cachedLength = 0;
+        _cachedLastWriteTimeUtc = DateTime.MinValue;
+    }
+
+    internal static string? FindManagedImageFile()
+    {
+        return FindImageFile(ResolveLauncherDataPath());
+    }
+
+    internal static IReadOnlyList<string> GetSupportedExtensions() => SupportedExtensions;
+
+    private static BackgroundImageMutationResult FailMutation(string message)
+    {
+        return new BackgroundImageMutationResult
+        {
+            IsSuccess = false,
+            ErrorMessage = message
+        };
+    }
+
+    private static bool IsCacheCurrent(string imagePath, FileInfo fileInfo)
+    {
+        return _cachedBitmap is not null &&
+               string.Equals(_cachedPath, imagePath, StringComparison.OrdinalIgnoreCase) &&
+               _cachedLength == fileInfo.Length &&
+               _cachedLastWriteTimeUtc == fileInfo.LastWriteTimeUtc;
+    }
+
     private static string? FindImageFile(string directory)
     {
-        var extensions = new[] { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp" };
-
-        foreach (var ext in extensions)
+        if (!Directory.Exists(directory))
         {
-            var path = Path.Combine(directory, PictureFileName + ext);
+            return null;
+        }
+
+        foreach (var extension in SupportedExtensions)
+        {
+            var path = Path.Combine(directory, PictureFileName + extension);
             if (File.Exists(path))
             {
                 return path;
             }
         }
 
-        // 也尝试不带扩展名的匹配（如果文件本身就有扩展名）
-        var files = Directory.GetFiles(directory, PictureFileName + ".*");
-        foreach (var file in files)
+        foreach (var file in Directory.GetFiles(directory, PictureFileName + ".*"))
         {
-            var ext = Path.GetExtension(file).ToLowerInvariant();
-            if (extensions.Contains(ext))
+            if (IsSupportedExtension(Path.GetExtension(file)))
             {
                 return file;
             }
@@ -162,13 +288,72 @@ internal static class LauncherBackgroundService
         return null;
     }
 
-    /// <summary>
-    /// 清除缓存
-    /// </summary>
-    public static void ClearCache()
+    private static void DeleteManagedImageFiles(string directory, string? exceptPath)
+    {
+        if (!Directory.Exists(directory))
+        {
+            return;
+        }
+
+        foreach (var file in Directory.GetFiles(directory, PictureFileName + ".*"))
+        {
+            if (!IsSupportedExtension(Path.GetExtension(file)))
+            {
+                continue;
+            }
+
+            if (!string.IsNullOrWhiteSpace(exceptPath) &&
+                string.Equals(Path.GetFullPath(file), Path.GetFullPath(exceptPath), StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            TryDeleteFile(file);
+        }
+    }
+
+    private static void TryDeleteFile(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"[LauncherBackground] Failed to delete '{path}': {ex.Message}");
+        }
+    }
+
+    private static string NormalizeExtension(string? extension)
+    {
+        return string.IsNullOrWhiteSpace(extension)
+            ? string.Empty
+            : extension.Trim().ToLowerInvariant();
+    }
+
+    private static bool IsSupportedExtension(string? extension)
+    {
+        var normalized = NormalizeExtension(extension);
+        return SupportedExtensions.Contains(normalized, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static string ResolveLauncherDataPath()
+    {
+        if (!string.IsNullOrWhiteSpace(LauncherDataDirectoryOverride))
+        {
+            return Path.GetFullPath(LauncherDataDirectoryOverride);
+        }
+
+        var resolver = new DataLocationResolver(AppContext.BaseDirectory);
+        return resolver.ResolveLauncherDataPath();
+    }
+
+    private static void DisposeCache()
     {
         _cachedBitmap?.Dispose();
         _cachedBitmap = null;
-        _cachedPath = null;
     }
 }

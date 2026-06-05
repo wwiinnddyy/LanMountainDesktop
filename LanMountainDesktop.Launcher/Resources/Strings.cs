@@ -105,6 +105,17 @@ public static class Strings
     public static string DebugDebug_ButtonCancel => ResourceManager.GetString(nameof(DebugDebug_ButtonCancel), Culture)!;
     public static string DebugDebug_ButtonOk => ResourceManager.GetString(nameof(DebugDebug_ButtonOk), Culture)!;
     public static string DebugDebug_SelectExeDialog => ResourceManager.GetString(nameof(DebugDebug_SelectExeDialog), Culture)!;
+    public static string DebugDebug_BackgroundImage => ResourceManager.GetString(nameof(DebugDebug_BackgroundImage), Culture)!;
+    public static string DebugDebug_BackgroundImageDesc => ResourceManager.GetString(nameof(DebugDebug_BackgroundImageDesc), Culture)!;
+    public static string DebugDebug_BackgroundImageNotSet => ResourceManager.GetString(nameof(DebugDebug_BackgroundImageNotSet), Culture)!;
+    public static string DebugDebug_BackgroundImageSaved => ResourceManager.GetString(nameof(DebugDebug_BackgroundImageSaved), Culture)!;
+    public static string DebugDebug_BackgroundImageCleared => ResourceManager.GetString(nameof(DebugDebug_BackgroundImageCleared), Culture)!;
+    public static string DebugDebug_BackgroundImageSaveFailedFormat => ResourceManager.GetString(nameof(DebugDebug_BackgroundImageSaveFailedFormat), Culture)!;
+    public static string DebugDebug_BackgroundImageReadyFormat => ResourceManager.GetString(nameof(DebugDebug_BackgroundImageReadyFormat), Culture)!;
+    public static string DebugDebug_BackgroundImageInvalidFormat => ResourceManager.GetString(nameof(DebugDebug_BackgroundImageInvalidFormat), Culture)!;
+    public static string DebugDebug_Clear => ResourceManager.GetString(nameof(DebugDebug_Clear), Culture)!;
+    public static string DebugDebug_SelectImageDialog => ResourceManager.GetString(nameof(DebugDebug_SelectImageDialog), Culture)!;
+    public static string DebugDebug_ImageFiles => ResourceManager.GetString(nameof(DebugDebug_ImageFiles), Culture)!;
     public static string Oobe_Title => ResourceManager.GetString(nameof(Oobe_Title), Culture)!;
     public static string Oobe_WelcomeTitle => ResourceManager.GetString(nameof(Oobe_WelcomeTitle), Culture)!;
     public static string Oobe_WelcomeSubtitle => ResourceManager.GetString(nameof(Oobe_WelcomeSubtitle), Culture)!;

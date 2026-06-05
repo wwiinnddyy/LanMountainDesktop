@@ -21,6 +21,14 @@ This supplement records the startup rules that are shared by the launcher and th
 - Slide splash enters from the right edge of the target screen and exits back to the right edge.
 - Static splash uses the same fullscreen black surface without motion.
 
+## Launcher splash image rules
+
+- The hidden launcher debug menu can save a custom splash image.
+- The selected image is copied into the Launcher data directory as `Launcher Picture.<ext>`.
+- Supported formats are `.png`, `.jpg`, `.jpeg`, `.bmp`, `.gif`, and `.webp`; files larger than `10MB` are rejected.
+- Splash displays the image with `Uniform` fitting, preserving the full image and allowing black letterboxing.
+- The splash window uses a transparent self-drawn shell with a fixed Fluent `8px` outer corner radius.
+
 ## Recovery rules
 
 - Closing Launcher during startup does not cancel the startup attempt.

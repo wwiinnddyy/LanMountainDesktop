@@ -119,6 +119,17 @@
   <data name="DebugDebug_ButtonCancel" xml:space="preserve"><value>キャンセル</value></data>
   <data name="DebugDebug_ButtonOk" xml:space="preserve"><value>OK</value></data>
   <data name="DebugDebug_SelectExeDialog" xml:space="preserve"><value>蘭山デスクトップホスト実行可能ファイルを選択</value></data>
+  <data name="DebugDebug_BackgroundImage" xml:space="preserve"><value>スプラッシュ画像</value></data>
+  <data name="DebugDebug_BackgroundImageDesc" xml:space="preserve"><value>起動画面に表示する画像を選択します。画像は Launcher のデータディレクトリにコピーされます。</value></data>
+  <data name="DebugDebug_BackgroundImageNotSet" xml:space="preserve"><value>スプラッシュ画像は未設定です</value></data>
+  <data name="DebugDebug_BackgroundImageSaved" xml:space="preserve"><value>スプラッシュ画像を保存しました。現在の起動画面はすぐに更新されます。</value></data>
+  <data name="DebugDebug_BackgroundImageCleared" xml:space="preserve"><value>スプラッシュ画像をクリアしました。</value></data>
+  <data name="DebugDebug_BackgroundImageSaveFailedFormat" xml:space="preserve"><value>画像設定に失敗しました: {0}</value></data>
+  <data name="DebugDebug_BackgroundImageReadyFormat" xml:space="preserve"><value>現在のスプラッシュ画像は使用できます（{0} x {1}）。</value></data>
+  <data name="DebugDebug_BackgroundImageInvalidFormat" xml:space="preserve"><value>現在のスプラッシュ画像は使用できません: {0}</value></data>
+  <data name="DebugDebug_Clear" xml:space="preserve"><value>クリア</value></data>
+  <data name="DebugDebug_SelectImageDialog" xml:space="preserve"><value>スプラッシュ画像を選択</value></data>
+  <data name="DebugDebug_ImageFiles" xml:space="preserve"><value>画像ファイル</value></data>
   <data name="Oobe_Title" xml:space="preserve"><value>蘭山デスクトップへようこそ</value></data>
   <data name="Oobe_WelcomeTitle" xml:space="preserve"><value>蘭山デスクトップへようこそ</value></data>
   <data name="Oobe_WelcomeSubtitle" xml:space="preserve"><value>あなたのデスクトップ、一面だけじゃない</value></data>
