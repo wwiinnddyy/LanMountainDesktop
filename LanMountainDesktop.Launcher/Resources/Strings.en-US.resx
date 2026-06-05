@@ -119,6 +119,17 @@
   <data name="DebugDebug_ButtonCancel" xml:space="preserve"><value>Cancel</value></data>
   <data name="DebugDebug_ButtonOk" xml:space="preserve"><value>OK</value></data>
   <data name="DebugDebug_SelectExeDialog" xml:space="preserve"><value>Select LanMountainDesktop host executable</value></data>
+  <data name="DebugDebug_BackgroundImage" xml:space="preserve"><value>Splash image</value></data>
+  <data name="DebugDebug_BackgroundImageDesc" xml:space="preserve"><value>Choose an image to show on the splash screen. It will be copied into the Launcher data directory.</value></data>
+  <data name="DebugDebug_BackgroundImageNotSet" xml:space="preserve"><value>No splash image selected</value></data>
+  <data name="DebugDebug_BackgroundImageSaved" xml:space="preserve"><value>Splash image saved. The current splash screen will refresh immediately.</value></data>
+  <data name="DebugDebug_BackgroundImageCleared" xml:space="preserve"><value>Splash image cleared.</value></data>
+  <data name="DebugDebug_BackgroundImageSaveFailedFormat" xml:space="preserve"><value>Image setting failed: {0}</value></data>
+  <data name="DebugDebug_BackgroundImageReadyFormat" xml:space="preserve"><value>Current splash image is ready ({0} x {1}).</value></data>
+  <data name="DebugDebug_BackgroundImageInvalidFormat" xml:space="preserve"><value>Current splash image is unavailable: {0}</value></data>
+  <data name="DebugDebug_Clear" xml:space="preserve"><value>Clear</value></data>
+  <data name="DebugDebug_SelectImageDialog" xml:space="preserve"><value>Select splash image</value></data>
+  <data name="DebugDebug_ImageFiles" xml:space="preserve"><value>Image files</value></data>
   <data name="Oobe_Title" xml:space="preserve"><value>Welcome to LanMountain Desktop</value></data>
   <data name="Oobe_WelcomeTitle" xml:space="preserve"><value>Welcome to LanMountain Desktop</value></data>
   <data name="Oobe_WelcomeSubtitle" xml:space="preserve"><value>Your desktop, more than one side</value></data>

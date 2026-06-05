@@ -3,6 +3,7 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
 using LanMountainDesktop.Launcher.Resources;
+using LanMountainDesktop.Launcher.Shell;
 
 namespace LanMountainDesktop.Launcher.Views;
 
@@ -46,6 +47,7 @@ public partial class ErrorDebugWindow : Window
         }
 
         UpdatePathDisplay(_selectedHostPath);
+        RefreshBackgroundImageDisplay();
     }
 
     private void InitializeComponents()
@@ -61,6 +63,16 @@ public partial class ErrorDebugWindow : Window
         if (this.FindControl<Button>("BrowseButton") is { } browseButton)
         {
             browseButton.Click += OnBrowseClick;
+        }
+
+        if (this.FindControl<Button>("BrowseImageButton") is { } browseImageButton)
+        {
+            browseImageButton.Click += OnBrowseImageClick;
+        }
+
+        if (this.FindControl<Button>("ClearImageButton") is { } clearImageButton)
+        {
+            clearImageButton.Click += OnClearImageClick;
         }
 
         if (this.FindControl<Button>("OkButton") is { } okButton)
@@ -111,11 +123,103 @@ public partial class ErrorDebugWindow : Window
         UpdatePathDisplay(_selectedHostPath);
     }
 
+    private async void OnBrowseImageClick(object? sender, RoutedEventArgs e)
+    {
+        var storageProvider = StorageProvider;
+        if (storageProvider is null)
+        {
+            return;
+        }
+
+        var patterns = LauncherBackgroundService
+            .GetSupportedExtensions()
+            .Select(extension => "*" + extension)
+            .ToArray();
+
+        var options = new FilePickerOpenOptions
+        {
+            Title = Strings.DebugDebug_SelectImageDialog,
+            AllowMultiple = false,
+            FileTypeFilter =
+            [
+                new FilePickerFileType(Strings.DebugDebug_ImageFiles)
+                {
+                    Patterns = patterns
+                }
+            ]
+        };
+
+        var result = await storageProvider.OpenFilePickerAsync(options);
+        if (result.Count <= 0)
+        {
+            return;
+        }
+
+        var saveResult = LauncherBackgroundService.SaveBackgroundImage(result[0].Path.LocalPath);
+        var status = saveResult.IsSuccess
+            ? Strings.DebugDebug_BackgroundImageSaved
+            : string.Format(Strings.DebugDebug_BackgroundImageSaveFailedFormat, saveResult.ErrorMessage ?? string.Empty);
+
+        RefreshBackgroundImageDisplay(status);
+    }
+
+    private void OnClearImageClick(object? sender, RoutedEventArgs e)
+    {
+        var clearResult = LauncherBackgroundService.ClearBackgroundImage();
+        var status = clearResult.IsSuccess
+            ? Strings.DebugDebug_BackgroundImageCleared
+            : string.Format(Strings.DebugDebug_BackgroundImageSaveFailedFormat, clearResult.ErrorMessage ?? string.Empty);
+
+        RefreshBackgroundImageDisplay(status);
+    }
+
     private void UpdatePathDisplay(string? path)
     {
         if (this.FindControl<TextBlock>("PathTextBlock") is { } pathTextBlock)
         {
             pathTextBlock.Text = string.IsNullOrEmpty(path) ? Strings.DebugDebug_NotSelected : path;
         }
+    }
+
+    private void RefreshBackgroundImageDisplay(string? statusOverride = null)
+    {
+        var imageInfo = LauncherBackgroundService.LoadBackgroundImage();
+
+        if (this.FindControl<TextBlock>("BackgroundImagePathTextBlock") is { } pathTextBlock)
+        {
+            pathTextBlock.Text = imageInfo.Exists && !string.IsNullOrWhiteSpace(imageInfo.FilePath)
+                ? imageInfo.FilePath
+                : Strings.DebugDebug_BackgroundImageNotSet;
+        }
+
+        if (this.FindControl<TextBlock>("BackgroundImageStatusTextBlock") is { } statusTextBlock)
+        {
+            statusTextBlock.Text = statusOverride ?? ResolveBackgroundImageStatus(imageInfo);
+        }
+
+        if (this.FindControl<Button>("ClearImageButton") is { } clearButton)
+        {
+            clearButton.IsEnabled = imageInfo.Exists;
+        }
+    }
+
+    private static string ResolveBackgroundImageStatus(LauncherBackgroundService.BackgroundImageInfo imageInfo)
+    {
+        if (imageInfo.IsValid)
+        {
+            return string.Format(
+                Strings.DebugDebug_BackgroundImageReadyFormat,
+                imageInfo.Width,
+                imageInfo.Height);
+        }
+
+        if (imageInfo.Exists)
+        {
+            return string.Format(
+                Strings.DebugDebug_BackgroundImageInvalidFormat,
+                imageInfo.ErrorMessage ?? string.Empty);
+        }
+
+        return Strings.DebugDebug_BackgroundImageNotSet;
     }
 }

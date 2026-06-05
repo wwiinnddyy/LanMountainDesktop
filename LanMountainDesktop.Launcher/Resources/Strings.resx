@@ -119,6 +119,17 @@
   <data name="DebugDebug_ButtonCancel" xml:space="preserve"><value>取消</value></data>
   <data name="DebugDebug_ButtonOk" xml:space="preserve"><value>确定</value></data>
   <data name="DebugDebug_SelectExeDialog" xml:space="preserve"><value>选择阑山桌面主程序可执行文件</value></data>
+  <data name="DebugDebug_BackgroundImage" xml:space="preserve"><value>启动图</value></data>
+  <data name="DebugDebug_BackgroundImageDesc" xml:space="preserve"><value>选择一张图片显示在启动画面中。图片会复制保存到 Launcher 数据目录。</value></data>
+  <data name="DebugDebug_BackgroundImageNotSet" xml:space="preserve"><value>未设置启动图</value></data>
+  <data name="DebugDebug_BackgroundImageSaved" xml:space="preserve"><value>启动图已保存，当前启动画面会立即刷新。</value></data>
+  <data name="DebugDebug_BackgroundImageCleared" xml:space="preserve"><value>启动图已清除。</value></data>
+  <data name="DebugDebug_BackgroundImageSaveFailedFormat" xml:space="preserve"><value>图片设置失败：{0}</value></data>
+  <data name="DebugDebug_BackgroundImageReadyFormat" xml:space="preserve"><value>当前启动图可用（{0} × {1}）。</value></data>
+  <data name="DebugDebug_BackgroundImageInvalidFormat" xml:space="preserve"><value>当前启动图不可用：{0}</value></data>
+  <data name="DebugDebug_Clear" xml:space="preserve"><value>清除</value></data>
+  <data name="DebugDebug_SelectImageDialog" xml:space="preserve"><value>选择启动图</value></data>
+  <data name="DebugDebug_ImageFiles" xml:space="preserve"><value>图片文件</value></data>
   <data name="Oobe_Title" xml:space="preserve"><value>欢迎使用阑山桌面</value></data>
   <data name="Oobe_WelcomeTitle" xml:space="preserve"><value>欢迎使用阑山桌面</value></data>
   <data name="Oobe_WelcomeSubtitle" xml:space="preserve"><value>你的桌面，不止一面</value></data>

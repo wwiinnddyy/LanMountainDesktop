@@ -42,6 +42,8 @@ public partial class SplashWindow : Window, ISplashStageReporter
     {
         try
         {
+            ResetBackgroundImage();
+
             var imageInfo = LauncherBackgroundService.LoadBackgroundImage();
             if (imageInfo is { IsValid: true, Bitmap: not null })
             {
@@ -51,16 +53,27 @@ public partial class SplashWindow : Window, ISplashStageReporter
                     backgroundImage.IsVisible = true;
                     backgroundImage.Opacity = 1;
                 }
-                Logger.Info("[SplashWindow] 背景图片加载成功");
+
+                Logger.Info("[SplashWindow] Background image loaded.");
             }
             else if (imageInfo is { Exists: true, IsValid: false })
             {
-                Logger.Warn($"[SplashWindow] 背景图片校验失败: {imageInfo.ErrorMessage}");
+                Logger.Warn($"[SplashWindow] Background image validation failed: {imageInfo.ErrorMessage}");
             }
         }
         catch (Exception ex)
         {
-            Logger.Warn($"[SplashWindow] 加载背景图片失败: {ex.Message}");
+            Logger.Warn($"[SplashWindow] Failed to load background image: {ex.Message}");
+        }
+    }
+
+    private void ResetBackgroundImage()
+    {
+        if (this.FindControl<Image>("BackgroundImage") is { } backgroundImage)
+        {
+            backgroundImage.Source = null;
+            backgroundImage.IsVisible = false;
+            backgroundImage.Opacity = 0;
         }
     }
 
@@ -224,6 +237,7 @@ public partial class SplashWindow : Window, ISplashStageReporter
                         debugWindow.SelectedHostPath));
                 }
 
+                InitializeBackgroundImage();
                 _isDebugModeOpened = false;
                 _versionTextClickCount = 0;
             };

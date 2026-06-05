@@ -19,6 +19,14 @@
 - `EnableSlideTransition = false && EnableFadeTransition = false` resolves to `StartupVisualMode.StaticSplash`.
 - `EnableSlideTransition = false && EnableFadeTransition = true` resolves to `StartupVisualMode.Fade`.
 
+## Launcher custom splash image
+
+- The hidden Launcher debug menu owns the splash image picker.
+- Saving an image copies it into `.Launcher` as `Launcher Picture.<ext>` and clears the in-memory image cache.
+- Invalid, unsupported, or oversized images must not overwrite the existing managed image.
+- Splash image rendering uses `Uniform` fitting so the full image remains visible.
+- The self-drawn Splash shell uses fixed Fluent corner tokens: `8px` outer radius and `4px` control radius.
+
 ## UX safeguards
 
 - If the host process is still alive at failure time, the failure dialog must prefer:
