@@ -126,7 +126,7 @@ public partial class DevDebugWindow : Window
         try
         {
             // 等待用户点击开始按钮
-            await oobeWindow.WaitForEnterAsync();
+            await oobeWindow.WaitForCompletionAsync();
             
             // 用户点击后，窗口会自动关闭（通过OobeWindow内部的动画和关闭逻辑）
             Console.WriteLine("[DevDebugWindow] OOBE completed by user");

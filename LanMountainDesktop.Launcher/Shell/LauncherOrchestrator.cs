@@ -35,8 +35,7 @@ internal sealed class LauncherOrchestrator
         _dataLocationResolver = new DataLocationResolver(deploymentLocator.GetAppRoot());
         _oobeSteps =
         [
-            new WelcomeOobeStep(_oobeStateService, _context),
-            new DataLocationOobeStep(_dataLocationResolver)
+            new WelcomeOobeStep(_oobeStateService, _context, _dataLocationResolver)
         ];
         _pipeline = pipeline ?? new LaunchPipeline(
         [

@@ -40,6 +40,8 @@ public sealed class UpdateSettingsInterfaceTests
         Assert.Equal(1, update.CheckCalls);
         Assert.Equal("1.2.3", viewModel.LatestVersionText);
         Assert.True(viewModel.IsDeltaUpdate);
+        Assert.True(viewModel.CanDownload);
+        Assert.True(viewModel.IsProgressSectionVisible);
 
         update.SetPhase(UpdatePhase.Checked);
         await ((IAsyncRelayCommand)viewModel.DownloadCommand).ExecuteAsync(null);
@@ -60,6 +62,36 @@ public sealed class UpdateSettingsInterfaceTests
         update.SetPhase(UpdatePhase.Downloading);
         await ((IAsyncRelayCommand)viewModel.CancelCommand).ExecuteAsync(null);
         Assert.Equal(1, update.CancelCalls);
+    }
+
+    [Fact]
+    public async Task UpdateSettingsViewModel_WhenCheckFailsInCheckedPhase_DoesNotExposeDownload()
+    {
+        var update = new FakeUpdateSettingsService
+        {
+            CheckReport = new UpdateCheckReport(
+                false,
+                null,
+                "1.0.0",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                "No usable update manifest was found.")
+        };
+        var viewModel = new UpdateSettingsViewModel(new FakeSettingsFacade(update));
+        viewModel.IsUpdateAvailable = true;
+        viewModel.LatestVersionText = "9.9.9";
+
+        await ((IAsyncRelayCommand)viewModel.CheckCommand).ExecuteAsync(null);
+
+        Assert.False(viewModel.IsUpdateAvailable);
+        Assert.Empty(viewModel.LatestVersionText);
+        Assert.False(viewModel.CanDownload);
+        Assert.False(viewModel.IsProgressSectionVisible);
+        Assert.Equal(0, update.DownloadCalls);
     }
 
     [Fact]
@@ -138,6 +170,32 @@ public sealed class UpdateSettingsInterfaceTests
         Assert.Equal("9.9.9", report.LatestVersion);
         Assert.Equal(1, plonds.FindLatestCalls);
         Assert.False(orchestratorCreated);
+    }
+
+    [Fact]
+    public async Task UpdateSettingsService_WhenPlondsCheckFails_ReturnsIdleAndNoDownload()
+    {
+        var settings = new FakeSettingsService
+        {
+            Snapshot =
+            {
+                UpdateDownloadSource = UpdateSettingsValues.DownloadSourcePlonds
+            }
+        };
+        var plonds = new FakePlondsService
+        {
+            LatestResult = PlondsLatestResult.Failed(new Version(1, 0, 0), "No usable PLONDS manifest was found.")
+        };
+        var service = new UpdateSettingsService(
+            settings,
+            orchestratorFactory: () => throw new InvalidOperationException("not used"),
+            plondsService: plonds);
+
+        var report = await service.CheckAsync(CancellationToken.None);
+
+        Assert.False(report.IsUpdateAvailable);
+        Assert.Equal("No usable PLONDS manifest was found.", report.ErrorMessage);
+        Assert.Equal(UpdatePhase.Idle, service.CurrentPhase);
     }
 
     [Fact]

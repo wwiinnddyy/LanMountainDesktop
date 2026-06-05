@@ -24,6 +24,7 @@
           <SolidColorBrush x:Key="InstallerSurfaceAltBrush" Color="#F7F7F7" />
           <SolidColorBrush x:Key="InstallerSubtleFillBrush" Color="#F5F5F5" />
           <SolidColorBrush x:Key="InstallerSubtleFillHoverBrush" Color="#EFEFEF" />
+          <SolidColorBrush x:Key="InstallerSubtleFillPressedBrush" Color="#E5E5E5" />
           <SolidColorBrush x:Key="InstallerBorderBrush" Color="#14000000" />
           <SolidColorBrush x:Key="InstallerStrongBorderBrush" Color="#29000000" />
           <SolidColorBrush x:Key="InstallerTextPrimaryBrush" Color="#1A1A1A" />
@@ -47,6 +48,7 @@
           <SolidColorBrush x:Key="InstallerSurfaceAltBrush" Color="#252525" />
           <SolidColorBrush x:Key="InstallerSubtleFillBrush" Color="#333333" />
           <SolidColorBrush x:Key="InstallerSubtleFillHoverBrush" Color="#3A3A3A" />
+          <SolidColorBrush x:Key="InstallerSubtleFillPressedBrush" Color="#444444" />
           <SolidColorBrush x:Key="InstallerBorderBrush" Color="#24FFFFFF" />
           <SolidColorBrush x:Key="InstallerStrongBorderBrush" Color="#3DFFFFFF" />
           <SolidColorBrush x:Key="InstallerTextPrimaryBrush" Color="#F3F3F3" />

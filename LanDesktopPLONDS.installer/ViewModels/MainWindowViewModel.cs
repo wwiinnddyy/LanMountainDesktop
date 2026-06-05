@@ -15,7 +15,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly IPrivacyDeviceIdentityProvider _privacyIdentity;
     private readonly InstallerPrivacyConsentStore _privacyConsentStore;
     private CancellationTokenSource? _installCts;
-    private bool _isNavigatingInternally;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(NextCommand))]
@@ -72,9 +71,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private bool _createStartupShortcut;
 
-    [ObservableProperty]
-    private InstallerStepViewModel? _selectedStep;
-
     public MainWindowViewModel(
         IOnlineInstallService installService,
         IPrivacyDeviceIdentityProvider privacyIdentity,
@@ -92,7 +88,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
             new InstallerStepViewModel(InstallerStepId.Complete, "完成安装", Icon.Circle)
         ];
         SyncSteps();
-        SelectedStep = Steps[0];
         DeviceIdPreview = _privacyIdentity.GetOrCreateDeviceId();
         PrivacyConfirmed = _privacyConsentStore.HasConfirmed(DeviceIdPreview);
     }
@@ -173,22 +168,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(CanStartInstall));
     }
 
-    partial void OnSelectedStepChanged(InstallerStepViewModel? value)
-    {
-        if (_isNavigatingInternally || value is null)
-        {
-            return;
-        }
-
-        if (!IsInstalling && value.StepId <= MaxUnlockedStep)
-        {
-            CurrentStep = value.StepId;
-            return;
-        }
-
-        SyncSteps();
-    }
-
     [RelayCommand(CanExecute = nameof(CanGoNext))]
     private async Task NextAsync()
     {
@@ -232,6 +211,17 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void SelectStep(InstallerStepViewModel? step)
+    {
+        if (step is null || IsInstalling || step.StepId > MaxUnlockedStep)
+        {
+            return;
+        }
+
+        CurrentStep = step.StepId;
+    }
+
+    [RelayCommand]
     private async Task BrowseAsync()
     {
         ErrorMessage = null;
@@ -245,7 +235,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             var selected = await BrowseRequested(InstallPath);
             if (!string.IsNullOrWhiteSpace(selected))
             {
-                InstallPath = selected;
+                InstallPath = InstallerPathGuard.GetInstallPathForSelectedFolder(selected);
             }
         }
         catch (Exception ex)
@@ -348,23 +338,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private void SyncSteps()
     {
-        _isNavigatingInternally = true;
-        try
+        foreach (var step in Steps)
         {
-            foreach (var step in Steps)
-            {
-                step.IsUnlocked = step.StepId <= MaxUnlockedStep;
-                step.IsSelected = step.StepId == CurrentStep;
-                step.IsCompleted = step.StepId < CurrentStep;
-                if (step.StepId == CurrentStep && !ReferenceEquals(SelectedStep, step))
-                {
-                    SelectedStep = step;
-                }
-            }
-        }
-        finally
-        {
-            _isNavigatingInternally = false;
+            step.IsUnlocked = step.StepId <= MaxUnlockedStep;
+            step.IsSelected = step.StepId == CurrentStep;
         }
     }
 

@@ -24,8 +24,6 @@ internal static class LauncherGuiCoordinator
         var startupAttemptRegistry = new StartupAttemptRegistry();
         var coordinatorPipeName = LauncherCoordinatorIpcServer.CreatePipeName();
         var successPolicy = LauncherOrchestrator.ResolveSuccessPolicyKey(context);
-        var airAppRuntimeBridge = new AirAppRuntimeBridge(appRoot, dataLocationResolver.ResolveDataRoot());
-        await airAppRuntimeBridge.EnsureStartedAsync().ConfigureAwait(false);
 
         if (!startupAttemptRegistry.TryReserveCoordinator(
                 context.LaunchSource,
@@ -123,6 +121,7 @@ internal static class LauncherGuiCoordinator
         if (result.Success)
         {
             var hostPid = ResolveManagedHostPid(result, startupAttemptRegistry.GetOwnedAttempt()?.HostPid ?? 0);
+            var airAppRuntimeBridge = new AirAppRuntimeBridge(appRoot, dataLocationResolver.ResolveDataRoot());
             await airAppRuntimeBridge.AttachHostAsync(hostPid).ConfigureAwait(false);
             await WaitForHostProcessToExitAsync(hostPid).ConfigureAwait(false);
         }

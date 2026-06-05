@@ -164,3 +164,25 @@
 
 * ~~搜索功能~~：根据Windows 11小组件面板设计，暂不提供搜索功能
 
+
+## 2026-06 Fusion Desktop Editing Update
+
+### Requirement: Library window controls edit mode
+
+The fused desktop component library is the edit-mode boundary. Opening the independent Fluent-style library window enters fused desktop edit mode. Closing that window exits edit mode. While edit mode is active, component windows can be moved but their inner component UI is not hit-test interactive. After the library closes, component windows cannot be moved and their normal component UI interaction resumes.
+
+### Requirement: Add button keeps the library open
+
+The selected preview component can only be added through the library add button. Adding a component places it at the center of the library window's current screen and keeps the library open so the user can continue adding and placing components. Components must not be dragged out of the library.
+
+### Requirement: Preview swipe changes the selected component
+
+The right-side preview area maintains a selected component index for the current category. Selecting a category chooses the first component in that category. Vertical touch-style swipes in the preview area switch to the previous or next component in the same category with a 48 DIP threshold and wrap at the ends. Mouse wheel and Up/Down keys may provide equivalent desktop input.
+
+### Requirement: Reuse existing desktop grid settings
+
+Fusion desktop placement must reuse the existing Lan Mountain desktop grid settings exposed by the components settings page: short-side cell count, spacing preset, and desktop edge inset. No independent fused-desktop grid configuration source should be introduced. Adding a component and releasing a dragged component both resolve the current grid through the existing grid settings service.
+
+### Requirement: Snap individual windows to the grid
+
+Fusion desktop no longer displays or depends on a full-screen grid window. Each component window uses the grid only as an individual placement constraint. Dragging remains free while the pointer is moving; on release, the window snaps to the nearest cell that can contain its saved cell span, clamps inside the current screen grid, and persists `X`, `Y`, `GridRow`, `GridColumn`, `GridWidthCells`, and `GridHeightCells`.

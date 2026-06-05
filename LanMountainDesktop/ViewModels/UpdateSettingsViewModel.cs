@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LanMountainDesktop.Services;
@@ -114,18 +115,19 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
     public bool IsBusy => CurrentPhase.IsBusy();
     public bool IsPaused => CurrentPhase.IsPaused();
     public bool CanCheck => CurrentPhase.CanCheck();
-    public bool CanDownload => CurrentPhase.CanDownload();
+    public bool CanDownload => IsUpdateAvailable && CurrentPhase.CanDownload();
     public bool CanInstall => CurrentPhase.CanInstall();
     public bool CanRollback => CurrentPhase.CanRollback();
     public bool CanPause => CurrentPhase.CanPause();
     public bool CanResume => CurrentPhase.CanResume();
     public bool CanCancel => CurrentPhase.CanCancel();
     public bool IsProgressVisible => CurrentPhase is UpdatePhase.Checking or UpdatePhase.Downloading or UpdatePhase.PausedDownloading or UpdatePhase.Installing or UpdatePhase.Verifying or UpdatePhase.RollingBack or UpdatePhase.Recovering;
-    public bool IsProgressSectionVisible => IsBusy || IsProgressVisible || IsPaused;
+    public bool IsProgressSectionVisible => IsBusy || IsProgressVisible || IsPaused || HasVisibleAction;
     public string PhaseText => GetPhaseText(CurrentPhase);
     public string LatestVersionDisplayText => string.IsNullOrEmpty(LatestVersionText)
         ? L("settings.update.latest_version_none", "Up to date")
         : LatestVersionText;
+    private bool HasVisibleAction => CanDownload || CanInstall || CanRollback || CanPause || CanResume || CanCancel;
 
     partial void OnCurrentPhaseChanged(UpdatePhase value)
     {
@@ -148,6 +150,13 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
         PauseCommand.NotifyCanExecuteChanged();
         ResumeCommand.NotifyCanExecuteChanged();
         CancelCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnIsUpdateAvailableChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CanDownload));
+        OnPropertyChanged(nameof(IsProgressSectionVisible));
+        DownloadCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnSelectedUpdateChannelValueChanged(string value)
@@ -221,9 +230,21 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
             PublishedAtText = report.PublishedAt?.ToLocalTime().ToString("g", CultureInfo.CurrentCulture) ?? string.Empty;
             UpdateTypeText = GetUpdateTypeText(report.PayloadKind);
             IsDeltaUpdate = report.PayloadKind is UpdatePayloadKind.DeltaPlonds;
-            StatusMessage = report.LatestVersion is null
+            var availableMessage = report.LatestVersion is null
                 ? GetUpdateAvailableStatusText(string.Empty)
-                : string.Format(CultureInfo.CurrentCulture, L("settings.update.status_available_format", "New version {0} is available. Click Download and Install."), report.LatestVersion);
+                : string.Format(CultureInfo.CurrentCulture, L("settings.update.status_available_format", "New version {0} is available. Download it when you are ready."), report.LatestVersion);
+            StatusMessage = string.IsNullOrWhiteSpace(report.ErrorMessage)
+                ? availableMessage
+                : $"{availableMessage} {report.ErrorMessage}";
+        }
+        else if (!string.IsNullOrWhiteSpace(report.ErrorMessage))
+        {
+            IsUpdateAvailable = false;
+            LatestVersionText = string.Empty;
+            PublishedAtText = string.Empty;
+            UpdateTypeText = string.Empty;
+            IsDeltaUpdate = false;
+            StatusMessage = report.ErrorMessage;
         }
         else
         {
@@ -315,10 +336,15 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
 
     private void OnUpdatePhaseChanged(UpdatePhase phase)
     {
-        CurrentPhase = phase;
+        RunOnUiThread(() => CurrentPhase = phase);
     }
 
     private void OnUpdateProgressChanged(UpdateProgressReport report)
+    {
+        RunOnUiThread(() => ApplyUpdateProgress(report));
+    }
+
+    private void ApplyUpdateProgress(UpdateProgressReport report)
     {
         ProgressFraction = report.ProgressFraction;
 
@@ -338,11 +364,35 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
         }
         else
         {
-            StatusMessage = string.IsNullOrWhiteSpace(report.Message)
-                ? GetPhaseStatusText(CurrentPhase)
-                : report.Message;
+            if (!string.IsNullOrWhiteSpace(report.Message))
+            {
+                StatusMessage = report.Message;
+            }
+
             ProgressDetail = string.Empty;
         }
+    }
+
+    private void RunOnUiThread(Action action)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            action();
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (!_disposed)
+            {
+                action();
+            }
+        }, DispatcherPriority.Normal);
     }
 
 
@@ -565,19 +615,19 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
         => L("settings.update.status_ready", "Ready to check for updates.");
 
     private string GetCheckingStatusText()
-        => L("settings.update.status_checking", "Checking GitHub releases...");
+        => L("settings.update.status_checking", "Checking update sources...");
 
     private string GetUpToDateStatusText()
         => L("settings.update.status_up_to_date", "You are already on the latest version.");
 
     private string GetUpdateAvailableStatusText(string version)
-        => string.Format(CultureInfo.CurrentCulture, L("settings.update.status_available_format", "New version {0} is available. Click Download and Install."), version);
+        => string.Format(CultureInfo.CurrentCulture, L("settings.update.status_available_format", "New version {0} is available. Download it when you are ready."), version);
 
     private string GetDownloadingStatusText()
         => L("settings.update.status_downloading", "Downloading installer...");
 
     private string GetDownloadCompleteStatusText()
-        => L("settings.update.status_launching_installer", "Download complete. Launching installer...");
+        => L("settings.update.status_launching_installer", "Download complete. You can install the update now.");
 
     private string GetDownloadFailedStatusText()
         => L("settings.update.status_download_failed", "Download failed.");

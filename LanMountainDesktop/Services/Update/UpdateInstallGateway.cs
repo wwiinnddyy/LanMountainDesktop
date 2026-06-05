@@ -222,7 +222,7 @@ internal sealed class UpdateInstallGateway
         try
         {
             AppLogger.Info("UpdateInstallGateway", "Launching full installer with elevation.");
-            var workingDir = Path.GetDirectoryName(installerPath) ?? Path.GetDirectoryName(installerPath)!;
+            var workingDir = Path.GetDirectoryName(installerPath) ?? AppContext.BaseDirectory;
 
             var startInfo = new ProcessStartInfo
             {

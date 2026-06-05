@@ -9,8 +9,10 @@
         MinWidth="900"
         MinHeight="620"
         CanResize="True"
+        x:Name="Root"
         Title="{Binding WindowTitle}"
-        Background="{DynamicResource InstallerWindowBackgroundBrush}"
+        Background="Transparent"
+        TransparencyLevelHint="Mica, AcrylicBlur, None"
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaTitleBarHeightHint="48"
         WindowDecorations="None">
@@ -23,40 +25,54 @@
       <Setter Property="TextWrapping" Value="Wrap" />
       <Setter Property="LineHeight" Value="20" />
     </Style>
-    <Style Selector="ListBox.step-list">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="Padding" Value="0" />
-    </Style>
-    <Style Selector="ListBox.step-list ListBoxItem">
+    <Style Selector="Button.step-nav-item">
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}"
+                  CornerRadius="{TemplateBinding CornerRadius}">
+            <ContentPresenter Content="{TemplateBinding Content}"
+                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                              HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+          </Border>
+        </ControlTemplate>
+      </Setter>
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusMd}" />
-      <Setter Property="Margin" Value="0,0,0,4" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="VerticalContentAlignment" Value="Stretch" />
+      <Setter Property="Margin" Value="0,0,0,3" />
       <Setter Property="Padding" Value="0" />
-      <Setter Property="MinHeight" Value="48" />
+      <Setter Property="MinHeight" Value="40" />
     </Style>
-    <Style Selector="ListBox.step-list ListBoxItem:pointerover">
+    <Style Selector="Button.step-nav-item:pointerover">
       <Setter Property="Background" Value="{DynamicResource InstallerSubtleFillHoverBrush}" />
     </Style>
-    <Style Selector="ListBox.step-list ListBoxItem:selected">
-      <Setter Property="Background" Value="{DynamicResource InstallerSubtleFillBrush}" />
+    <Style Selector="Button.step-nav-item:pressed">
+      <Setter Property="Background" Value="{DynamicResource InstallerSubtleFillPressedBrush}" />
     </Style>
-    <Style Selector="ListBox.step-list ListBoxItem:disabled">
+    <Style Selector="Button.step-nav-item:disabled">
       <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Opacity" Value="1" />
+    </Style>
+    <Style Selector="Button.step-nav-item:disabled TextBlock.step-title">
+      <Setter Property="Foreground" Value="{DynamicResource InstallerDisabledTextBrush}" />
+    </Style>
+    <Style Selector="Button.step-nav-item:disabled fi|FluentIcon">
+      <Setter Property="Foreground" Value="{DynamicResource InstallerDisabledTextBrush}" />
+    </Style>
+    <Style Selector="Border.step-nav-selected-fill">
+      <Setter Property="Background" Value="{DynamicResource InstallerSubtleFillBrush}" />
+      <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusMd}" />
     </Style>
     <Style Selector="TextBlock.step-title">
       <Setter Property="FontSize" Value="13" />
       <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="Foreground" Value="{DynamicResource InstallerTextPrimaryBrush}" />
-    </Style>
-    <Style Selector="Border.step-icon-host">
-      <Setter Property="Width" Value="32" />
-      <Setter Property="Height" Value="32" />
-      <Setter Property="Background" Value="{DynamicResource InstallerSubtleFillBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource InstallerBorderBrush}" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusSm}" />
+      <Setter Property="Foreground" Value="{DynamicResource InstallerTextSecondaryBrush}" />
     </Style>
     <Style Selector="Border.info-panel">
       <Setter Property="Background" Value="{DynamicResource InstallerSurfaceAltBrush}" />
@@ -95,13 +111,14 @@
     </Style>
   </Window.Styles>
 
-  <Grid x:Name="RootGrid"
-        RowDefinitions="48,*"
-        Background="{DynamicResource InstallerWindowBackgroundBrush}">
+  <Border Background="{DynamicResource InstallerWindowBackgroundBrush}"
+          CornerRadius="{DynamicResource DesignCornerRadiusXl}"
+          ClipToBounds="True">
+    <Grid x:Name="RootGrid"
+          RowDefinitions="48,*"
+          Background="Transparent">
     <Border Grid.Row="0"
-            Background="{DynamicResource InstallerPaneBackgroundBrush}"
-            BorderBrush="{DynamicResource InstallerBorderBrush}"
-            BorderThickness="0,0,0,1"
+            Background="{DynamicResource InstallerWindowBackgroundBrush}"
             PointerPressed="OnTitleBarPointerPressed">
       <Grid ColumnDefinitions="Auto,*,Auto">
         <StackPanel Orientation="Horizontal"
@@ -147,12 +164,12 @@
     </Border>
 
     <Grid Grid.Row="1"
-          ColumnDefinitions="260,*">
+          ColumnDefinitions="260,10,*"
+          Margin="10,0,10,10">
       <Border Grid.Column="0"
               Background="{DynamicResource InstallerPaneBackgroundBrush}"
-              BorderBrush="{DynamicResource InstallerBorderBrush}"
-              BorderThickness="0,0,1,0"
-              Padding="24,28">
+              CornerRadius="{DynamicResource DesignCornerRadiusLg}"
+              Padding="22,24">
         <Grid RowDefinitions="Auto,*,Auto">
           <StackPanel Spacing="8">
             <TextBlock Text="阑山桌面"
@@ -162,71 +179,50 @@
                        Classes="caption-text" />
           </StackPanel>
 
-          <ListBox Grid.Row="1"
-                   Classes="step-list"
-                   Margin="0,28,0,0"
-                   ItemsSource="{Binding Steps}"
-                   SelectedItem="{Binding SelectedStep, Mode=TwoWay}">
-            <ListBox.ItemTemplate>
+          <ItemsControl Grid.Row="1"
+                        Margin="0,28,0,0"
+                        ItemsSource="{Binding Steps}">
+            <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:InstallerStepViewModel">
-                <Grid ColumnDefinitions="4,Auto,*"
-                      ColumnSpacing="12"
-                      IsEnabled="{Binding IsUnlocked}"
-                      Margin="8,6">
-                  <Border Background="{DynamicResource InstallerAccentBrush}"
-                          CornerRadius="{DynamicResource DesignCornerRadiusMicro}"
-                          IsVisible="{Binding IsSelected}" />
-                  <Border Grid.Column="1"
-                          Classes="step-icon-host">
-                    <Grid>
-                      <fi:FluentIcon Icon="{Binding DisplayIcon}"
-                                     IconVariant="Regular"
-                                     Foreground="{DynamicResource InstallerTextTertiaryBrush}"
-                                     FontSize="16"
-                                     IsVisible="{Binding IsLocked}" />
-                      <fi:FluentIcon Icon="{Binding DisplayIcon}"
-                                     IconVariant="Regular"
-                                     Foreground="{DynamicResource InstallerSuccessBrush}"
-                                     FontSize="16"
-                                     IsVisible="{Binding IsCompleted}" />
-                      <fi:FluentIcon Icon="{Binding DisplayIcon}"
-                                     IconVariant="Regular"
-                                     Foreground="{DynamicResource InstallerAccentBrush}"
-                                     FontSize="16"
-                                     IsVisible="{Binding IsSelected}" />
-                      <fi:FluentIcon Icon="{Binding DisplayIcon}"
-                                     IconVariant="Regular"
-                                     Foreground="{DynamicResource InstallerTextPrimaryBrush}"
-                                     FontSize="16"
-                                     IsVisible="{Binding IsAvailable}" />
+                <Button Classes="step-nav-item"
+                        Command="{Binding #Root.DataContext.SelectStepCommand}"
+                        CommandParameter="{Binding}"
+                        IsEnabled="{Binding IsUnlocked}">
+                  <Grid MinHeight="40">
+                    <Border Classes="step-nav-selected-fill"
+                            IsVisible="{Binding IsSelected}" />
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="10"
+                          Margin="10,0">
+                      <Grid Width="18"
+                            VerticalAlignment="Center">
+                        <fi:FluentIcon Icon="{Binding Icon}"
+                                       IconVariant="Regular"
+                                       Foreground="{DynamicResource InstallerTextSecondaryBrush}"
+                                       FontSize="17"
+                                       IsVisible="{Binding !IsSelected}" />
+                        <fi:FluentIcon Icon="{Binding Icon}"
+                                       IconVariant="Filled"
+                                       Foreground="{DynamicResource InstallerTextPrimaryBrush}"
+                                       FontSize="17"
+                                       IsVisible="{Binding IsSelected}" />
+                      </Grid>
+                      <Grid Grid.Column="1"
+                            VerticalAlignment="Center">
+                        <TextBlock Classes="step-title"
+                                   Text="{Binding Title}"
+                                   IsVisible="{Binding !IsSelected}" />
+                        <TextBlock Classes="step-title"
+                                   Text="{Binding Title}"
+                                   Foreground="{DynamicResource InstallerTextPrimaryBrush}"
+                                   IsVisible="{Binding IsSelected}" />
+                      </Grid>
                     </Grid>
-                  </Border>
-                  <Grid Grid.Column="2">
-                    <TextBlock Classes="step-title"
-                               Text="{Binding Title}"
-                               Foreground="{DynamicResource InstallerTextTertiaryBrush}"
-                               VerticalAlignment="Center"
-                               IsVisible="{Binding IsLocked}" />
-                    <TextBlock Classes="step-title"
-                               Text="{Binding Title}"
-                               Foreground="{DynamicResource InstallerSuccessBrush}"
-                               VerticalAlignment="Center"
-                               IsVisible="{Binding IsCompleted}" />
-                    <TextBlock Classes="step-title"
-                               Text="{Binding Title}"
-                               Foreground="{DynamicResource InstallerAccentBrush}"
-                               VerticalAlignment="Center"
-                               IsVisible="{Binding IsSelected}" />
-                    <TextBlock Classes="step-title"
-                               Text="{Binding Title}"
-                               Foreground="{DynamicResource InstallerTextPrimaryBrush}"
-                               VerticalAlignment="Center"
-                               IsVisible="{Binding IsAvailable}" />
                   </Grid>
-                </Grid>
+                </Button>
               </DataTemplate>
-            </ListBox.ItemTemplate>
-          </ListBox>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
 
           <TextBlock Grid.Row="2"
                      Classes="caption-text"
@@ -234,9 +230,12 @@
         </Grid>
       </Border>
 
-      <Grid Grid.Column="1"
-            RowDefinitions="*,Auto"
-            Background="{DynamicResource InstallerContentBackgroundBrush}">
+      <Border Grid.Column="2"
+              Background="{DynamicResource InstallerContentBackgroundBrush}"
+              CornerRadius="{DynamicResource DesignCornerRadiusLg}"
+              ClipToBounds="True">
+        <Grid RowDefinitions="*,Auto"
+              Background="Transparent">
         <ScrollViewer Grid.Row="0"
                       Padding="36,34,42,24"
                       VerticalScrollBarVisibility="Auto">
@@ -488,9 +487,7 @@
         </ScrollViewer>
 
         <Border Grid.Row="1"
-                Background="{DynamicResource InstallerContentBackgroundBrush}"
-                BorderBrush="{DynamicResource InstallerBorderBrush}"
-                BorderThickness="0,1,0,0"
+                Background="Transparent"
                 Padding="36,16,42,18">
           <Grid ColumnDefinitions="*,Auto,Auto"
                 ColumnSpacing="8">
@@ -531,7 +528,9 @@
             </Button>
           </Grid>
         </Border>
-      </Grid>
+        </Grid>
+      </Border>
     </Grid>
-  </Grid>
+    </Grid>
+  </Border>
 </Window>

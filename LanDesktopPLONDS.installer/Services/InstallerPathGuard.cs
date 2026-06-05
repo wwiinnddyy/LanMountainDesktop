@@ -2,6 +2,8 @@ namespace LanDesktopPLONDS.Installer.Services;
 
 public static class InstallerPathGuard
 {
+    public const string ApplicationDirectoryName = "LanMountainDesktop";
+
     public static string GetDefaultInstallPath()
     {
         var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
@@ -12,7 +14,29 @@ public static class InstallerPathGuard
                 "Programs");
         }
 
-        return Path.Combine(programFiles, "LanMountainDesktop");
+        return Path.Combine(programFiles, ApplicationDirectoryName);
+    }
+
+    public static string GetInstallPathForSelectedFolder(string selectedFolder)
+    {
+        if (string.IsNullOrWhiteSpace(selectedFolder))
+        {
+            throw new ArgumentException("Selected folder is required.", nameof(selectedFolder));
+        }
+
+        var fullPath = Path.GetFullPath(selectedFolder.Trim());
+        var root = Path.GetPathRoot(fullPath);
+        var trimmedPath = fullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var trimmedRoot = root?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var basePath = string.Equals(trimmedPath, trimmedRoot, StringComparison.OrdinalIgnoreCase)
+            ? fullPath
+            : trimmedPath;
+        var selectedName = Path.GetFileName(trimmedPath);
+        var installPath = string.Equals(selectedName, ApplicationDirectoryName, StringComparison.OrdinalIgnoreCase)
+            ? trimmedPath
+            : Path.Combine(basePath, ApplicationDirectoryName);
+
+        return NormalizeInstallPath(installPath);
     }
 
     public static string NormalizeInstallPath(string path)

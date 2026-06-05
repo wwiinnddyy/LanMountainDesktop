@@ -7,10 +7,12 @@ internal sealed class OobeStateService
 {
     private const int CurrentSchemaVersion = 1;
 
+    private readonly string _appRoot;
+    private readonly string? _stateRootOverride;
     private readonly string _stateDirectory;
     private readonly string _statePath;
-    private readonly string _legacyStatePath;
-    private readonly string _legacyMarkerPath;
+    private readonly IReadOnlyList<string> _legacyStatePaths;
+    private readonly IReadOnlyList<string> _legacyMarkerPaths;
     private readonly LauncherExecutionSnapshot _executionSnapshot;
 
     public OobeStateService(
@@ -18,21 +20,17 @@ internal sealed class OobeStateService
         string? stateRootOverride = null,
         LauncherExecutionSnapshot? executionSnapshot = null)
     {
-        _ = Path.GetFullPath(appRoot);
+        _appRoot = Path.GetFullPath(appRoot);
+        _stateRootOverride = string.IsNullOrWhiteSpace(stateRootOverride)
+            ? null
+            : Path.GetFullPath(stateRootOverride);
         _executionSnapshot = executionSnapshot ?? LauncherExecutionContext.Capture();
 
-        var stateRoot = string.IsNullOrWhiteSpace(stateRootOverride)
-            ? ResolveStateRoot(appRoot)
-            : Path.GetFullPath(stateRootOverride);
-        _stateDirectory = Path.Combine(stateRoot, "Launcher", "state");
-        _statePath = Path.Combine(_stateDirectory, "oobe-state.json");
+        var stateRoot = ResolveCurrentStateRoot();
+        (_stateDirectory, _statePath) = BuildStatePaths(stateRoot);
 
-        var legacyRoot = string.IsNullOrWhiteSpace(stateRootOverride)
-            ? Path.GetFullPath(appRoot)
-            : Path.GetFullPath(stateRootOverride);
-        var legacyStateDirectory = Path.Combine(legacyRoot, ".launcher", "state");
-        _legacyStatePath = Path.Combine(legacyStateDirectory, "oobe-state.json");
-        _legacyMarkerPath = Path.Combine(legacyStateDirectory, "first_run_completed");
+        _legacyStatePaths = BuildLegacyPaths("oobe-state.json");
+        _legacyMarkerPaths = BuildLegacyPaths("first_run_completed");
     }
 
     public OobeLaunchDecision Evaluate(CommandContext context)
@@ -48,9 +46,16 @@ internal sealed class OobeStateService
 
     public OobeCompletionResult MarkCompleted(CommandContext context)
     {
+        return MarkCompleted(context, null);
+    }
+
+    public OobeCompletionResult MarkCompleted(CommandContext context, string? stateRoot)
+    {
         try
         {
-            Directory.CreateDirectory(_stateDirectory);
+            var (stateDirectory, statePath) = BuildStatePaths(
+                string.IsNullOrWhiteSpace(stateRoot) ? ResolveCurrentStateRoot() : Path.GetFullPath(stateRoot));
+            Directory.CreateDirectory(stateDirectory);
             var payload = new OobeStateFile
             {
                 SchemaVersion = CurrentSchemaVersion,
@@ -60,14 +65,14 @@ internal sealed class OobeStateService
                 LaunchSource = context.LaunchSource
             };
 
-            var tempPath = Path.Combine(_stateDirectory, $"oobe-state.{Guid.NewGuid():N}.tmp");
+            var tempPath = Path.Combine(stateDirectory, $"oobe-state.{Guid.NewGuid():N}.tmp");
             var json = JsonSerializer.Serialize(payload, AppJsonContext.Default.OobeStateFile);
             File.WriteAllText(tempPath, json);
-            File.Move(tempPath, _statePath, overwrite: true);
+            File.Move(tempPath, statePath, overwrite: true);
             TryDeleteLegacyMarker();
 
             Logger.Info(
-                $"OOBE completion persisted. LaunchSource='{context.LaunchSource}'; StatePath='{_statePath}'; " +
+                $"OOBE completion persisted. LaunchSource='{context.LaunchSource}'; StatePath='{statePath}'; " +
                 $"UserSid='{_executionSnapshot.UserSid ?? string.Empty}'.");
 
             return new OobeCompletionResult
@@ -110,20 +115,27 @@ internal sealed class OobeStateService
                 return EvaluateStateFile(context, _statePath, migratedLegacyState: false);
             }
 
-            if (File.Exists(_legacyStatePath))
+            foreach (var legacyStatePath in _legacyStatePaths)
             {
-                return EvaluateStateFile(context, _legacyStatePath, migratedLegacyState: false);
+                if (File.Exists(legacyStatePath))
+                {
+                    var decision = EvaluateStateFile(context, legacyStatePath, migratedLegacyState: true);
+                    if (decision.Status == OobeStateStatus.Completed)
+                    {
+                        _ = MarkCompleted(context);
+                    }
+
+                    return decision;
+                }
             }
 
-            if (File.Exists(_legacyMarkerPath))
+            foreach (var legacyMarkerPath in _legacyMarkerPaths)
             {
-                migratedLegacyMarker = TryMigrateLegacyMarker(context);
-                return BuildDecision(context, OobeStateStatus.Completed, shouldShowOobe: false, usedLegacyMarker: true, migratedLegacyMarker: migratedLegacyMarker);
-            }
-
-            if (_executionSnapshot.IsElevated)
-            {
-                return BuildSuppressedDecision(context, "elevated", "oobe_suppressed_elevated");
+                if (File.Exists(legacyMarkerPath))
+                {
+                    migratedLegacyMarker = TryMigrateLegacyMarker(context);
+                    return BuildDecision(context, OobeStateStatus.Completed, shouldShowOobe: false, usedLegacyMarker: true, migratedLegacyMarker: migratedLegacyMarker);
+                }
             }
 
             if (string.Equals(context.LaunchSource, "postinstall", StringComparison.OrdinalIgnoreCase))
@@ -159,15 +171,18 @@ internal sealed class OobeStateService
 
     private void TryDeleteLegacyMarker()
     {
-        try
+        foreach (var legacyMarkerPath in _legacyMarkerPaths)
         {
-            if (File.Exists(_legacyMarkerPath))
+            try
             {
-                File.Delete(_legacyMarkerPath);
+                if (File.Exists(legacyMarkerPath))
+                {
+                    File.Delete(legacyMarkerPath);
+                }
             }
-        }
-        catch
-        {
+            catch
+            {
+            }
         }
     }
 
@@ -225,6 +240,44 @@ internal sealed class OobeStateService
         };
     }
 
+    private string ResolveCurrentStateRoot()
+    {
+        return _stateRootOverride ?? ResolveStateRoot(_appRoot);
+    }
+
+    private static (string StateDirectory, string StatePath) BuildStatePaths(string stateRoot)
+    {
+        var stateDirectory = Path.Combine(Path.GetFullPath(stateRoot), "Launcher", "state");
+        return (stateDirectory, Path.Combine(stateDirectory, "oobe-state.json"));
+    }
+
+    private IReadOnlyList<string> BuildLegacyPaths(string fileName)
+    {
+        var roots = new List<string>();
+        if (_stateRootOverride is not null)
+        {
+            roots.Add(_stateRootOverride);
+        }
+        else
+        {
+            roots.Add(ResolveDefaultSystemStateRoot());
+            roots.Add(_appRoot);
+            try
+            {
+                roots.Add(ResolveCurrentStateRoot());
+            }
+            catch
+            {
+            }
+        }
+
+        return roots
+            .Where(root => !string.IsNullOrWhiteSpace(root))
+            .Select(root => Path.Combine(Path.GetFullPath(root), ".launcher", "state", fileName))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
     private static string ResolveStateRoot(string appRoot)
     {
         try
@@ -242,5 +295,16 @@ internal sealed class OobeStateService
 
             return Path.Combine(appData, "LanMountainDesktop");
         }
+    }
+
+    private static string ResolveDefaultSystemStateRoot()
+    {
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(appData))
+        {
+            return string.Empty;
+        }
+
+        return Path.Combine(appData, "LanMountainDesktop");
     }
 }

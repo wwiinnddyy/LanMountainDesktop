@@ -4,7 +4,10 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
+using LanMountainDesktop.DesktopEditing;
+using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Services.Settings;
 
 namespace LanMountainDesktop.Views;
 
@@ -12,6 +15,7 @@ public partial class DesktopWidgetWindow : Window
 {
     private readonly IWindowBottomMostService _bottomMostService = WindowBottomMostServiceFactory.GetOrCreate();
     private readonly IRegionPassthroughService _regionPassthroughService = RegionPassthroughServiceFactory.GetOrCreate();
+    private readonly ISettingsFacadeService _settingsFacade = HostSettingsFacadeProvider.GetOrCreate();
 
     private bool _isEditMode;
     private bool _isDragging;
@@ -174,13 +178,76 @@ public partial class DesktopWidgetWindow : Window
                 p => string.Equals(p.PlacementId, PlacementId, StringComparison.OrdinalIgnoreCase));
             if (placement is not null)
             {
-                placement.X = Position.X;
-                placement.Y = Position.Y;
+                ApplySnappedDragPlacement(placement);
                 layoutService.Save(layout);
             }
         }
 
         RefreshDesktopLayer();
+    }
+
+    private void ApplySnappedDragPlacement(FusedDesktopComponentPlacementSnapshot placement)
+    {
+        if (!TrySnapToCurrentScreenGrid(placement, Position, out var snappedPosition) ||
+            !snappedPosition.HasValue)
+        {
+            placement.X = Position.X;
+            placement.Y = Position.Y;
+            return;
+        }
+
+        placement.X = snappedPosition.Value.X;
+        placement.Y = snappedPosition.Value.Y;
+        Position = snappedPosition.Value;
+    }
+
+    private bool TrySnapToCurrentScreenGrid(
+        FusedDesktopComponentPlacementSnapshot placement,
+        PixelPoint requestedPosition,
+        out PixelPoint? snappedPosition)
+    {
+        snappedPosition = null;
+
+        var screen = Screens.ScreenFromWindow(this) ?? Screens.Primary;
+        if (screen is null)
+        {
+            return false;
+        }
+
+        var scaling = Math.Max(0.1, screen.Scaling);
+        var workArea = screen.WorkingArea;
+        var viewportSize = new Size(workArea.Width / scaling, workArea.Height / scaling);
+        var adapter = new FusedDesktopEditGridAdapter(_settingsFacade);
+        if (!adapter.TryCreate(viewportSize, out var context))
+        {
+            return false;
+        }
+
+        var requestedLocalOrigin = new Point(
+            (requestedPosition.X - workArea.X) / scaling,
+            (requestedPosition.Y - workArea.Y) / scaling);
+        var localPlacement = placement.Clone();
+        localPlacement.X = requestedLocalOrigin.X;
+        localPlacement.Y = requestedLocalOrigin.Y;
+
+        var snappedLocalPlacement = FusedDesktopPlacementMath.SnapToNearestCell(
+            localPlacement,
+            context.Geometry,
+            requestedLocalOrigin);
+        placement.Width = snappedLocalPlacement.Width;
+        placement.Height = snappedLocalPlacement.Height;
+        placement.GridColumn = snappedLocalPlacement.GridColumn;
+        placement.GridRow = snappedLocalPlacement.GridRow;
+        placement.GridWidthCells = snappedLocalPlacement.GridWidthCells;
+        placement.GridHeightCells = snappedLocalPlacement.GridHeightCells;
+
+        snappedPosition = new PixelPoint(
+            workArea.X + (int)Math.Round(snappedLocalPlacement.X * scaling),
+            workArea.Y + (int)Math.Round(snappedLocalPlacement.Y * scaling));
+        placement.X = snappedPosition.Value.X;
+        placement.Y = snappedPosition.Value.Y;
+        UpdateComponentLayout(placement.Width, placement.Height);
+        return true;
     }
 
     private void ShowContextMenu(PointerPressedEventArgs e)
