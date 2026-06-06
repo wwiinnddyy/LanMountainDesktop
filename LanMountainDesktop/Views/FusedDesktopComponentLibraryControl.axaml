@@ -108,7 +108,9 @@
                             Click="OnFindMoreComponentsClick">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <fi:FluentIcon Icon="Globe" IconVariant="Regular" FontSize="14"/>
-                            <TextBlock Text="查找更多小组件" FontSize="12"/>
+                            <TextBlock x:Name="FindMoreComponentsTextBlock"
+                                       Text="查找更多小组件"
+                                       FontSize="12"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>
@@ -121,95 +123,96 @@
                 Background="{DynamicResource AdaptiveGlassPanelBorderBrush}"
                 Opacity="0.35"/>
 
-        <ScrollViewer Grid.Column="1"
-                      VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Margin="28,8,8,10">
-                <Panel IsVisible="{Binding SelectedComponent, Converter={x:Static converters:ObjectConverters.IsNotNull}}">
-                    <Grid RowDefinitions="Auto,Auto,*,Auto"
-                          MinHeight="330">
-                        <TextBlock FontSize="24"
-                                   FontWeight="SemiBold"
-                                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                                   Text="{Binding SelectedComponent.DisplayName}"
-                                   HorizontalAlignment="Center"
-                                   TextTrimming="CharacterEllipsis"/>
+        <Grid Grid.Column="1"
+              Margin="28,8,8,10">
+            <Grid IsVisible="{Binding SelectedComponent, Converter={x:Static converters:ObjectConverters.IsNotNull}}"
+                  RowDefinitions="Auto,Auto,*,Auto"
+                  MinHeight="0">
+                <TextBlock FontSize="24"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                           Text="{Binding SelectedComponent.DisplayName}"
+                           HorizontalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"/>
 
-                        <TextBlock Grid.Row="1"
-                                   Margin="0,6,0,14"
-                                   MaxHeight="44"
-                                   FontSize="13"
-                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
-                                   Opacity="0.82"
-                                   Text="{Binding SelectedComponent.Description}"
-                                   HorizontalAlignment="Center"
-                                   TextWrapping="Wrap"
-                                   TextTrimming="CharacterEllipsis"/>
+                <TextBlock Grid.Row="1"
+                           Margin="0,6,0,14"
+                           MaxHeight="44"
+                           FontSize="13"
+                           Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                           Opacity="0.82"
+                           Text="{Binding SelectedComponent.Description}"
+                           HorizontalAlignment="Center"
+                           TextWrapping="Wrap"
+                           TextTrimming="CharacterEllipsis"/>
 
-                        <Border x:Name="PreviewInteractionHost"
-                                Grid.Row="2"
-                                CornerRadius="{DynamicResource DesignCornerRadiusLg}"
-                                Background="{DynamicResource AdaptiveSurfaceOverlayBrush}"
-                                BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
-                                BorderThickness="1"
-                                Width="390"
-                                Height="230"
-                                Focusable="True"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                PointerPressed="OnPreviewPointerPressed"
-                                PointerReleased="OnPreviewPointerReleased"
-                                PointerCaptureLost="OnPreviewPointerCaptureLost"
-                                PointerWheelChanged="OnPreviewPointerWheelChanged"
-                                KeyDown="OnPreviewKeyDown">
-                            <Border CornerRadius="{DynamicResource DesignCornerRadiusSm}"
-                                    Background="{DynamicResource AdaptiveGlassPanelBackgroundBrush}"
-                                    BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
-                                    BorderThickness="1"
-                                    Padding="12"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center">
-                                <ContentControl x:Name="SelectedComponentPreviewHost"
-                                                HorizontalAlignment="Center"
-                                                VerticalAlignment="Center"
-                                                IsHitTestVisible="False"
-                                                Focusable="False"/>
-                            </Border>
-                        </Border>
+                <Border x:Name="PreviewInteractionHost"
+                        Grid.Row="2"
+                        CornerRadius="{DynamicResource DesignCornerRadiusLg}"
+                        Background="{DynamicResource AdaptiveSurfaceOverlayBrush}"
+                        BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
+                        BorderThickness="1"
+                        MinWidth="360"
+                        MinHeight="220"
+                        Focusable="True"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        SizeChanged="OnPreviewInteractionHostSizeChanged"
+                        PointerPressed="OnPreviewPointerPressed"
+                        PointerReleased="OnPreviewPointerReleased"
+                        PointerCaptureLost="OnPreviewPointerCaptureLost"
+                        PointerWheelChanged="OnPreviewPointerWheelChanged"
+                        KeyDown="OnPreviewKeyDown">
+                    <Border x:Name="SelectedComponentPreviewFrame"
+                            CornerRadius="{DynamicResource DesignCornerRadiusSm}"
+                            Background="{DynamicResource AdaptiveGlassPanelBackgroundBrush}"
+                            BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
+                            BorderThickness="1"
+                            Padding="12"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                        <ContentControl x:Name="SelectedComponentPreviewHost"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        IsHitTestVisible="False"
+                                        Focusable="False"/>
+                    </Border>
+                </Border>
 
-                        <Button Grid.Row="3"
-                                HorizontalAlignment="Center"
-                                Margin="0,18,0,0"
-                                Classes="fused-library-add-button"
-                                Tag="{Binding SelectedComponent.ComponentId}"
-                                Click="OnAddComponentClick">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <fi:FluentIcon Icon="Add" IconVariant="Regular" FontSize="16"/>
-                                <TextBlock Text="添加小组件" FontWeight="SemiBold"/>
-                            </StackPanel>
-                        </Button>
-                    </Grid>
-                </Panel>
-
-                <Grid IsVisible="{Binding SelectedComponent, Converter={x:Static converters:ObjectConverters.IsNull}}"
-                      HorizontalAlignment="Center"
-                      VerticalAlignment="Center"
-                      MinHeight="330">
-                    <StackPanel Spacing="16"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center">
-                        <fi:FluentIcon Icon="Apps"
-                                       IconVariant="Regular"
-                                       FontSize="64"
-                                       Opacity="0.3"
-                                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"/>
-                        <TextBlock HorizontalAlignment="Center"
-                                   FontSize="16"
-                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
-                                   Text="选择一个分类以查看可添加组件。"/>
+                <Button Grid.Row="3"
+                        HorizontalAlignment="Center"
+                        Margin="0,18,0,0"
+                        Classes="fused-library-add-button"
+                        Tag="{Binding SelectedComponent.ComponentId}"
+                        Click="OnAddComponentClick">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <fi:FluentIcon Icon="Add" IconVariant="Regular" FontSize="16"/>
+                        <TextBlock x:Name="AddComponentButtonTextBlock"
+                                   Text="添加小组件"
+                                   FontWeight="SemiBold"/>
                     </StackPanel>
-                </Grid>
-            </StackPanel>
-        </ScrollViewer>
+                </Button>
+            </Grid>
+
+            <Grid IsVisible="{Binding SelectedComponent, Converter={x:Static converters:ObjectConverters.IsNull}}"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  MinHeight="330">
+                <StackPanel Spacing="16"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                    <fi:FluentIcon Icon="Apps"
+                                   IconVariant="Regular"
+                                   FontSize="64"
+                                   Opacity="0.3"
+                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"/>
+                    <TextBlock x:Name="EmptySelectionTextBlock"
+                               HorizontalAlignment="Center"
+                               FontSize="16"
+                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                               Text="选择一个分类以查看可添加组件。"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
     </Grid>
 </UserControl>

@@ -186,3 +186,7 @@ Fusion desktop placement must reuse the existing Lan Mountain desktop grid setti
 ### Requirement: Snap individual windows to the grid
 
 Fusion desktop no longer displays or depends on a full-screen grid window. Each component window uses the grid only as an individual placement constraint. Dragging remains free while the pointer is moving; on release, the window snaps to the nearest cell that can contain its saved cell span, clamps inside the current screen grid, and persists `X`, `Y`, `GridRow`, `GridColumn`, `GridWidthCells`, and `GridHeightCells`.
+
+### Requirement: Preview area preserves widget proportions
+
+The fused desktop component library preview area must size the selected widget from its component cell span instead of compressing every widget into a fixed preview box. The preview stage should stretch with the resizable library window, calculate the largest usable widget preview that fits the available stage, preserve the `MinWidthCells` / `MinHeightCells` ratio, and assign explicit preview control width and height before displaying the widget.

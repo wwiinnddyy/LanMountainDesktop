@@ -22,6 +22,10 @@ public sealed class PluginDesktopComponentOptions
 
     public string? DisplayNameLocalizationKey { get; init; }
 
+    public string? Description { get; init; }
+
+    public string? DescriptionLocalizationKey { get; init; }
+
     public PluginCornerRadiusPreset CornerRadiusPreset { get; init; } = PluginCornerRadiusPreset.Default;
 
     public Func<IPluginAppearanceContext, double, double>? CornerRadiusResolver { get; init; }

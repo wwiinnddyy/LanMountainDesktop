@@ -9,4 +9,6 @@ public sealed record DesktopComponentDefinition(
     int MinHeightCells,
     bool AllowStatusBarPlacement,
     bool AllowDesktopPlacement,
-    DesktopComponentResizeMode ResizeMode = DesktopComponentResizeMode.Proportional);
+    DesktopComponentResizeMode ResizeMode = DesktopComponentResizeMode.Proportional,
+    string? Description = null,
+    string? DescriptionLocalizationKey = null);
