@@ -36,6 +36,8 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
     private ComponentRegistry? _componentRegistry;
     private DesktopComponentRuntimeRegistry? _componentRuntimeRegistry;
     private Control? _selectedPreviewControl;
+    private DesktopComponentDefinition? _selectedPreviewDefinition;
+    private FusedDesktopLibraryPreviewMetrics? _selectedPreviewMetrics;
     private bool _isPreviewSwipeActive;
     private Point _previewSwipeStartPoint;
 
@@ -47,6 +49,7 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
         _weatherDataService = _settingsFacade.Weather.GetWeatherInfoService();
         _timeZoneService = _settingsFacade.Region.GetTimeZoneService();
 
+        ApplyLocalization();
         LoadRegistry();
         LoadCategories();
 
@@ -55,6 +58,24 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
         {
             CategoryListBox.SelectedIndex = 0;
         }
+    }
+
+    private void ApplyLocalization()
+    {
+        var languageCode = _settingsFacade.Region.Get().LanguageCode;
+        _viewModel.Title = L(languageCode, "fused_desktop.library.title", "Add widgets");
+        FindMoreComponentsTextBlock.Text = L(
+            languageCode,
+            "fused_desktop.library.find_more",
+            "Find more widgets");
+        AddComponentButtonTextBlock.Text = L(
+            languageCode,
+            "fused_desktop.library.add_button",
+            "Add widget");
+        EmptySelectionTextBlock.Text = L(
+            languageCode,
+            "fused_desktop.library.empty_selection",
+            "Choose a category to view widgets.");
     }
 
     private void OnCategoryListBoxContainerPrepared(object? sender, ContainerPreparedEventArgs e)
@@ -137,9 +158,72 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
 
     private ComponentLibraryItemViewModel CreateComponentItem(DesktopComponentDefinition definition, string languageCode)
     {
+        return new ComponentLibraryItemViewModel(
+            definition.Id,
+            ResolveComponentDisplayName(definition, languageCode),
+            ResolveComponentDescription(definition, languageCode));
+    }
+
+    private string ResolveComponentDisplayName(DesktopComponentDefinition definition, string languageCode)
+    {
+        if (_componentRuntimeRegistry is not null &&
+            _componentRuntimeRegistry.TryGetDescriptor(definition.Id, out var descriptor) &&
+            !string.IsNullOrWhiteSpace(descriptor.DisplayNameLocalizationKey))
+        {
+            return L(languageCode, descriptor.DisplayNameLocalizationKey, definition.DisplayName);
+        }
+
+        return definition.DisplayName;
+    }
+
+    private string ResolveComponentDescription(DesktopComponentDefinition definition, string languageCode)
+    {
+        if (_componentRuntimeRegistry is not null &&
+            _componentRuntimeRegistry.TryGetDescriptor(definition.Id, out var descriptor))
+        {
+            if (!string.IsNullOrWhiteSpace(descriptor.DescriptionLocalizationKey))
+            {
+                return L(
+                    languageCode,
+                    descriptor.DescriptionLocalizationKey,
+                    descriptor.Description ?? CreateComponentFallbackDescription(definition, languageCode));
+            }
+
+            if (!string.IsNullOrWhiteSpace(descriptor.Description))
+            {
+                return descriptor.Description;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(definition.DescriptionLocalizationKey))
+        {
+            return L(
+                languageCode,
+                definition.DescriptionLocalizationKey,
+                definition.Description ?? CreateComponentFallbackDescription(definition, languageCode));
+        }
+
+        if (!string.IsNullOrWhiteSpace(definition.Description))
+        {
+            return definition.Description;
+        }
+
+        return CreateComponentFallbackDescription(definition, languageCode);
+    }
+
+    private string CreateComponentFallbackDescription(DesktopComponentDefinition definition, string languageCode)
+    {
         var categoryTitle = GetLocalizedCategoryTitle(languageCode, definition.Category);
-        var description = $"{categoryTitle} - {Math.Max(1, definition.MinWidthCells)} x {Math.Max(1, definition.MinHeightCells)}";
-        return new ComponentLibraryItemViewModel(definition.Id, definition.DisplayName, description);
+        var fallbackFormat = L(
+            languageCode,
+            "fused_desktop.library.component_summary_format",
+            "{0} - {1} x {2}");
+        return string.Format(
+            System.Globalization.CultureInfo.CurrentCulture,
+            fallbackFormat,
+            categoryTitle,
+            Math.Max(1, definition.MinWidthCells),
+            Math.Max(1, definition.MinHeightCells));
     }
 
     private void OnCategorySelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -154,6 +238,8 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
         if (CategoryListBox.SelectedItem is not ComponentLibraryCategoryViewModel selectedCategory)
         {
             _viewModel.SelectedComponent = null;
+            _selectedPreviewDefinition = null;
+            _selectedPreviewMetrics = null;
             SetSelectedPreviewControl(null);
             return;
         }
@@ -174,14 +260,18 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
         if (_selectedCategoryDefinitions.Count == 0)
         {
             _viewModel.SelectedComponent = null;
+            _selectedPreviewDefinition = null;
+            _selectedPreviewMetrics = null;
             SetSelectedPreviewControl(null);
             return;
         }
 
         _selectedComponentIndex = NormalizeComponentIndex(_selectedComponentIndex);
         var selectedDefinition = _selectedCategoryDefinitions[_selectedComponentIndex];
+        _selectedPreviewDefinition = selectedDefinition;
+        _selectedPreviewMetrics = null;
         _viewModel.SelectedComponent = CreateComponentItem(selectedDefinition, _settingsFacade.Region.Get().LanguageCode);
-        SetSelectedPreviewControl(CreateStaticPreviewControl(selectedDefinition));
+        RefreshSelectedPreviewControl(force: true);
     }
 
     private int NormalizeComponentIndex(int index)
@@ -274,7 +364,45 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
         }
     }
 
-    private Control? CreateStaticPreviewControl(DesktopComponentDefinition definition)
+    private void OnPreviewInteractionHostSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        RefreshSelectedPreviewControl(force: false);
+    }
+
+    private void RefreshSelectedPreviewControl(bool force)
+    {
+        if (_selectedPreviewDefinition is null)
+        {
+            _selectedPreviewMetrics = null;
+            SetSelectedPreviewControl(null);
+            return;
+        }
+
+        var metrics = FusedDesktopLibraryPreviewLayout.Calculate(
+            _selectedPreviewDefinition,
+            PreviewInteractionHost.Bounds.Size);
+        if (!force &&
+            _selectedPreviewMetrics is { } previousMetrics &&
+            ArePreviewMetricsClose(previousMetrics, metrics))
+        {
+            return;
+        }
+
+        _selectedPreviewMetrics = metrics;
+        if (!force && _selectedPreviewControl is not null)
+        {
+            ApplyPreviewMetricsToControl(_selectedPreviewControl, metrics);
+            return;
+        }
+
+        SetSelectedPreviewControl(CreateStaticPreviewControl(_selectedPreviewDefinition, metrics));
+    }
+
+    private Control? CreateStaticPreviewControl(
+        DesktopComponentDefinition definition,
+        FusedDesktopLibraryPreviewMetrics metrics)
     {
         if (_componentRuntimeRegistry is null ||
             !_componentRuntimeRegistry.TryGetDescriptor(definition.Id, out var descriptor))
@@ -285,7 +413,7 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
         try
         {
             var control = descriptor.CreateControl(
-                ResolvePreviewCellSize(definition),
+                metrics.CellSize,
                 _timeZoneService,
                 _weatherDataService,
                 _recommendationInfoService,
@@ -293,6 +421,7 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
                 _settingsFacade,
                 placementId: null,
                 renderMode: DesktopComponentRenderMode.LibraryPreview);
+            ApplyPreviewMetricsToControl(control, metrics);
             ComponentPreviewRuntimeQuiescer.Attach(control);
             return control;
         }
@@ -306,16 +435,30 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
         }
     }
 
-    private static double ResolvePreviewCellSize(DesktopComponentDefinition definition)
+    private static void ApplyPreviewMetricsToControl(
+        Control control,
+        FusedDesktopLibraryPreviewMetrics metrics)
     {
-        const double maxWidth = 360d;
-        const double maxHeight = 240d;
-        return Math.Clamp(
-            Math.Min(
-                maxWidth / Math.Max(1, definition.MinWidthCells),
-                maxHeight / Math.Max(1, definition.MinHeightCells)),
-            32d,
-            96d);
+        control.Width = metrics.Width;
+        control.Height = metrics.Height;
+        control.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center;
+        control.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center;
+        if (control is IDesktopComponentWidget sizedComponent)
+        {
+            sizedComponent.ApplyCellSize(metrics.CellSize);
+        }
+    }
+
+    private static bool ArePreviewMetricsClose(
+        FusedDesktopLibraryPreviewMetrics first,
+        FusedDesktopLibraryPreviewMetrics second)
+    {
+        const double tolerance = 0.5d;
+        return first.WidthCells == second.WidthCells &&
+               first.HeightCells == second.HeightCells &&
+               Math.Abs(first.CellSize - second.CellSize) <= tolerance &&
+               Math.Abs(first.Width - second.Width) <= tolerance &&
+               Math.Abs(first.Height - second.Height) <= tolerance;
     }
 
     private void SetSelectedPreviewControl(Control? control)

@@ -18,27 +18,37 @@ internal static class NativeDependencyBootstrapper
         "libSkiaSharp.dll"
     ];
 
-    public static void Prepare()
+    public static bool TryPrepare()
     {
         if (!OperatingSystem.IsWindows())
         {
-            return;
+            return true;
         }
 
-        var nativeDirectory = GetNativeDirectory();
-        Directory.CreateDirectory(nativeDirectory);
-
-        var extractedLibraries = new List<string>(NativeLibraryNames.Length);
-        foreach (var libraryName in NativeLibraryNames)
+        try
         {
-            extractedLibraries.Add(ExtractLibrary(nativeDirectory, libraryName));
+            var nativeDirectory = GetNativeDirectory();
+            Directory.CreateDirectory(nativeDirectory);
+
+            var extractedLibraries = new List<string>(NativeLibraryNames.Length);
+            foreach (var libraryName in NativeLibraryNames)
+            {
+                extractedLibraries.Add(ExtractLibrary(nativeDirectory, libraryName));
+            }
+
+            AddToProcessDllSearchPath(nativeDirectory);
+
+            foreach (var libraryPath in extractedLibraries)
+            {
+                NativeLibrary.Load(libraryPath);
+            }
+
+            return true;
         }
-
-        AddToProcessDllSearchPath(nativeDirectory);
-
-        foreach (var libraryPath in extractedLibraries)
+        catch (Exception ex)
         {
-            NativeLibrary.Load(libraryPath);
+            System.Diagnostics.Debug.WriteLine($"[NativeDependencyBootstrapper] Failed to prepare native dependencies: {ex}");
+            return false;
         }
     }
 

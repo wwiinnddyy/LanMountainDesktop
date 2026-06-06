@@ -109,6 +109,10 @@ public sealed class DesktopComponentRuntimeDescriptor
 
     public string? DisplayNameLocalizationKey { get; }
 
+    public string? Description => Definition.Description;
+
+    public string? DescriptionLocalizationKey => Definition.DescriptionLocalizationKey;
+
     public Control CreateControl(
         double cellSize,
         TimeZoneService timeZoneService,

@@ -6,22 +6,37 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using LanMountainDesktop.Appearance;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Settings.Core;
 
 namespace LanMountainDesktop.Views;
 
 public partial class FusedDesktopComponentLibraryWindow : Window
 {
+    private static readonly LocalizationService LocalizationService = new();
+
     public FusedDesktopComponentLibraryWindow()
     {
         InitializeComponent();
         ApplyFluentCornerRadius();
+        ApplyLocalization();
 
         LibraryControl.AddComponentRequested += OnAddComponentRequested;
         KeyDown += OnWindowKeyDown;
 
         var mainWindow = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow as MainWindow;
         mainWindow?.RegisterFusedLibraryWindow(this);
+    }
+
+    private void ApplyLocalization()
+    {
+        var languageCode = HostSettingsFacadeProvider.GetOrCreate().Region.Get().LanguageCode;
+        var title = LocalizationService.GetString(
+            languageCode,
+            "fused_desktop.library.title",
+            "Add widgets");
+        Title = title;
+        WindowTitleTextBlock.Text = title;
     }
 
     private void ApplyFluentCornerRadius()

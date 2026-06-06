@@ -112,7 +112,9 @@ public static class DesktopComponentRegistryFactory
                 registration.AllowDesktopPlacement,
                 registration.ResizeMode == PluginDesktopComponentResizeMode.Free
                     ? DesktopComponentResizeMode.Free
-                    : DesktopComponentResizeMode.Proportional));
+                    : DesktopComponentResizeMode.Proportional,
+                Description: registration.Description,
+                DescriptionLocalizationKey: registration.DescriptionLocalizationKey));
         }
 
         return definitions;

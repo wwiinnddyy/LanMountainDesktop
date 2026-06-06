@@ -20,6 +20,12 @@ public sealed class PluginDesktopComponentRegistration
         DisplayNameLocalizationKey = string.IsNullOrWhiteSpace(options.DisplayNameLocalizationKey)
             ? null
             : options.DisplayNameLocalizationKey.Trim();
+        Description = string.IsNullOrWhiteSpace(options.Description)
+            ? null
+            : options.Description.Trim();
+        DescriptionLocalizationKey = string.IsNullOrWhiteSpace(options.DescriptionLocalizationKey)
+            ? null
+            : options.DescriptionLocalizationKey.Trim();
         ControlFactory = controlFactory;
         IconKey = options.IconKey.Trim();
         Category = options.Category.Trim();
@@ -44,6 +50,10 @@ public sealed class PluginDesktopComponentRegistration
     public string DisplayName { get; }
 
     public string? DisplayNameLocalizationKey { get; }
+
+    public string? Description { get; }
+
+    public string? DescriptionLocalizationKey { get; }
 
     public Func<IServiceProvider, PluginDesktopComponentContext, Control> ControlFactory { get; }
 

@@ -44,7 +44,7 @@ public sealed class JsonComponentExtensionProvider : IComponentExtensionProvider
         try
         {
             var json = File.ReadAllText(filePath);
-            var entries = JsonSerializer.Deserialize<List<ComponentExtensionEntry>>(json);
+            var entries = JsonSerializer.Deserialize<List<ComponentExtensionEntry>>(json, JsonOptions);
             if (entries is null || entries.Count == 0)
             {
                 return null;
@@ -67,7 +67,9 @@ public sealed class JsonComponentExtensionProvider : IComponentExtensionProvider
                     MinWidthCells: Math.Max(1, entry.MinWidthCells),
                     MinHeightCells: Math.Max(1, entry.MinHeightCells),
                     AllowStatusBarPlacement: entry.AllowStatusBarPlacement,
-                    AllowDesktopPlacement: entry.AllowDesktopPlacement));
+                    AllowDesktopPlacement: entry.AllowDesktopPlacement,
+                    Description: NormalizeOptional(entry.Description),
+                    DescriptionLocalizationKey: NormalizeOptional(entry.DescriptionLocalizationKey)));
             }
 
             return definitions.Count == 0 ? null : new JsonComponentExtensionProvider(definitions);
@@ -77,6 +79,16 @@ public sealed class JsonComponentExtensionProvider : IComponentExtensionProvider
             return null;
         }
     }
+
+    private static string? NormalizeOptional(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
 
     private sealed class ComponentExtensionEntry
     {
@@ -95,5 +107,9 @@ public sealed class JsonComponentExtensionProvider : IComponentExtensionProvider
         public bool AllowStatusBarPlacement { get; set; }
 
         public bool AllowDesktopPlacement { get; set; } = true;
+
+        public string? Description { get; set; }
+
+        public string? DescriptionLocalizationKey { get; set; }
     }
 }
