@@ -1,0 +1,21 @@
+{
+  "id": "com.example.LanMountainDesktop.AirApp.ComponentTemplate",
+  "name": "LanMountainDesktop.AirApp.ComponentTemplate",
+  "version": "1.0.0",
+  "apiVersion": "6.0.0",
+  "author": "Your Name",
+  "description": "A desktop component AirApp for LanMountainDesktop",
+  "entranceAssembly": "LanMountainDesktop.AirApp.ComponentTemplate.dll",
+  "runtime": {
+    "mode": "in-process",
+    "capabilities": ["desktop-component"]
+  },
+  "components": [
+    {
+      "id": "my-widget",
+      "name": "My Widget",
+      "defaultWidth": 2,
+      "defaultHeight": 2
+    }
+  ]
+}

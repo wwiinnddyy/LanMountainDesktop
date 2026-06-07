@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "LanMountainDesktop Team",
+  "classifications": ["LanMountainDesktop", "AirApp", "Component"],
+  "identity": "LanMountainDesktop.AirApp.Component",
+  "name": "LanMountainDesktop AirApp - Desktop Component",
+  "shortName": "lmd-airapp-component",
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "sourceName": "LanMountainDesktop.AirApp.ComponentTemplate",
+  "preferNameDirectory": true,
+  "symbols": {
+    "ComponentId": {
+      "type": "parameter",
+      "datatype": "string",
+      "defaultValue": "my-widget",
+      "replaces": "my-widget",
+      "description": "The unique identifier for the component"
+    },
+    "ComponentName": {
+      "type": "parameter",
+      "datatype": "string",
+      "defaultValue": "My Widget",
+      "replaces": "My Widget",
+      "description": "The display name for the component"
+    },
+    "AuthorName": {
+      "type": "parameter",
+      "datatype": "string",
+      "defaultValue": "Your Name",
+      "replaces": "Your Name",
+      "description": "The author name"
+    }
+  }
+}
