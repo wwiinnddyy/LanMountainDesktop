@@ -60,7 +60,7 @@ internal static class FusedDesktopLibraryPreviewLayout
 
         var cellSize = fitCellSize >= MinCellSize
             ? Math.Min(fitCellSize, MaxCellSize)
-            : Math.Max(1d, fitCellSize);
+            : MinCellSize;
 
         return new FusedDesktopLibraryPreviewMetrics(
             normalizedWidthCells,

@@ -63,4 +63,19 @@ public sealed class FusedDesktopLibraryPreviewLayoutTests
         Assert.True(metrics.Height > 0);
         Assert.Equal(2d, metrics.Width / metrics.Height, precision: 3);
     }
+
+    [Fact]
+    public void Calculate_RespectsMinCellSize()
+    {
+        // 测试非常小的 stage 尺寸，确保 cellSize 不会小于 MinCellSize
+        var metrics = FusedDesktopLibraryPreviewLayout.Calculate(
+            widthCells: 10,
+            heightCells: 10,
+            stageWidth: 50,
+            stageHeight: 50);
+
+        Assert.Equal(32d, metrics.CellSize, precision: 3);
+        Assert.Equal(320d, metrics.Width, precision: 3);
+        Assert.Equal(320d, metrics.Height, precision: 3);
+    }
 }

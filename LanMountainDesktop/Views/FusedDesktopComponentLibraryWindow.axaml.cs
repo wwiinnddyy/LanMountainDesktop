@@ -26,6 +26,9 @@ public partial class FusedDesktopComponentLibraryWindow : Window
 
         var mainWindow = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow as MainWindow;
         mainWindow?.RegisterFusedLibraryWindow(this);
+
+        FusedDesktopManagerServiceFactory.GetOrCreate().EnterEditMode();
+        AppLogger.Info("FusedDesktopLibrary", "Entered edit mode via library window open.");
     }
 
     private void ApplyLocalization()
@@ -107,6 +110,9 @@ public partial class FusedDesktopComponentLibraryWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        FusedDesktopManagerServiceFactory.GetOrCreate().ExitEditMode();
+        AppLogger.Info("FusedDesktopLibrary", "Exited edit mode via library window close.");
+
         LibraryControl.AddComponentRequested -= OnAddComponentRequested;
         KeyDown -= OnWindowKeyDown;
         base.OnClosed(e);

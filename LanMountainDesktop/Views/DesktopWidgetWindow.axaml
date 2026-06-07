@@ -14,10 +14,30 @@
         RenderOptions.BitmapInterpolationMode="HighQuality"
         CanResize="False">
 
-    <Border x:Name="ComponentContainer"
-            Background="Transparent"
-            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
-            ClipToBounds="True">
-        <!-- Component control will be injected here -->
-    </Border>
+    <Grid x:Name="RootGrid">
+        <Border x:Name="ComponentContainer"
+                Background="Transparent"
+                CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+                ClipToBounds="True">
+            <!-- Component control will be injected here -->
+        </Border>
+
+        <!-- Edit mode border overlay -->
+        <Border x:Name="EditModeBorder"
+                BorderThickness="2"
+                BorderBrush="#0078D4"
+                CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+                IsVisible="False"
+                IsHitTestVisible="False">
+            <Border.Effect>
+                <DropShadowEffect Color="#0078D4"
+                                  BlurRadius="8"
+                                  OffsetX="0"
+                                  OffsetY="0"
+                                  Opacity="0.5"/>
+            </Border.Effect>
+        </Border>
+
+        <!-- Resize adorner will be added programmatically -->
+    </Grid>
 </Window>
