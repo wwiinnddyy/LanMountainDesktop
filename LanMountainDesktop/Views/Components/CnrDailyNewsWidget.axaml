@@ -10,138 +10,200 @@
 
     <Border x:Name="RootBorder"
             CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
-            Background="Transparent"
-            ClipToBounds="True"
-            BorderThickness="0"
-            Padding="0">
-        <Grid>
-            <Border x:Name="CardBorder"
-                    Background="#FCFCFD"
-                    CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
-                    BorderBrush="Transparent"
-                    BorderThickness="0"
-                    Padding="16,14,16,14">
-                <Grid x:Name="ContentGrid"
-                      RowDefinitions="Auto,Auto,Auto,Auto"
-                      RowSpacing="8">
-                    <Grid Grid.Row="0"
-                          ColumnDefinitions="*,Auto"
-                          ColumnSpacing="10">
-                        <StackPanel Orientation="Horizontal"
-                                    Spacing="0"
-                                    VerticalAlignment="Center">
-                            <TextBlock x:Name="BrandPrimaryTextBlock"
-                                       Text="&#22830;&#24191;&#32593;"
-                                       Foreground="#D6272E"
-                                       FontSize="28"
-                                       FontWeight="Bold"
-                                       TextTrimming="CharacterEllipsis" />
-                            <TextBlock x:Name="BrandSecondaryTextBlock"
-                                       Text="&#183;&#22836;&#26465;"
-                                       Foreground="#202327"
-                                       FontSize="28"
-                                       FontWeight="Bold"
-                                       TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
+            Background="{DynamicResource CardBackgroundBrush}"
+            BorderBrush="{DynamicResource CardBorderBrush}"
+            BorderThickness="1"
+            BoxShadow="0 2 8 0 #1A000000"
+            ClipToBounds="False"
+            Padding="16">
+        <Grid x:Name="ContentGrid"
+              RowDefinitions="Auto,*,Auto"
+              RowSpacing="16">
 
-                        <Button x:Name="RefreshButton"
-                                Grid.Column="1"
-                                Width="116"
-                                Height="42"
-                                CornerRadius="21"
-                                Background="#F0F0F0"
-                                BorderBrush="Transparent"
-                                BorderThickness="0"
-                                Padding="10,0"
-                                Focusable="False">
-                            <StackPanel Orientation="Horizontal"
-                                        Spacing="4"
-                                        HorizontalAlignment="Center"
-                                        VerticalAlignment="Center">
-                                <fi:SymbolIcon x:Name="RefreshGlyphIcon"
-                                               Symbol="ArrowClockwise"
-                                               IconVariant="Regular"
-                                               Foreground="#52575F"
-                                               FontSize="19"
-                                               VerticalAlignment="Center" />
-                                <TextBlock x:Name="RefreshLabelTextBlock"
-                                           Text="&#25442;&#19968;&#25442;"
-                                           Foreground="#202327"
-                                           FontSize="25"
-                                           FontWeight="SemiBold"
-                                           VerticalAlignment="Center" />
-                            </StackPanel>
-                        </Button>
-                    </Grid>
+            <!-- 标题栏 -->
+            <Grid Grid.Row="0"
+                  ColumnDefinitions="*,Auto"
+                  ColumnSpacing="12">
+                <StackPanel Orientation="Horizontal"
+                            Spacing="0"
+                            VerticalAlignment="Center">
+                    <TextBlock x:Name="BrandPrimaryTextBlock"
+                               Text="央广网"
+                               Foreground="#D6272E"
+                               FontSize="24"
+                               FontWeight="Bold"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock x:Name="BrandSecondaryTextBlock"
+                               Text="·头条"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                               FontSize="24"
+                               FontWeight="Bold"
+                               TextTrimming="CharacterEllipsis" />
+                </StackPanel>
 
-                    <Grid x:Name="NewsItem1Grid"
-                          Grid.Row="1"
-                          ColumnDefinitions="*,Auto"
-                          ColumnSpacing="12"
-                          PointerPressed="OnNewsItem1PointerPressed">
-                        <TextBlock x:Name="News1TitleTextBlock"
-                                   Text="Headline"
-                                   Foreground="#202327"
-                                   FontSize="21"
-                                   FontWeight="SemiBold"
-                                   TextWrapping="Wrap"
-                                   TextTrimming="CharacterEllipsis"
-                                   MaxLines="2"
-                                   VerticalAlignment="Top"
-                                   LineHeight="24" />
-
-                        <Border x:Name="News1ImageHost"
-                                Grid.Column="1"
-                                Width="160"
-                                Height="90"
-                                CornerRadius="{DynamicResource DesignCornerRadiusSm}"
-                                ClipToBounds="True"
-                                Background="#E6E6E6">
-                            <Image x:Name="News1Image"
-                                   Stretch="UniformToFill" />
-                        </Border>
-                    </Grid>
-
-                    <Grid x:Name="NewsItem2Grid"
-                          Grid.Row="2"
-                          ColumnDefinitions="*,Auto"
-                          ColumnSpacing="12"
-                          PointerPressed="OnNewsItem2PointerPressed">
-                        <TextBlock x:Name="News2TitleTextBlock"
-                                   Text="Headline"
-                                   Foreground="#202327"
-                                   FontSize="21"
-                                   FontWeight="SemiBold"
-                                   TextWrapping="Wrap"
-                                   TextTrimming="CharacterEllipsis"
-                                   MaxLines="2"
-                                   VerticalAlignment="Top"
-                                   LineHeight="24" />
-
-                        <Border x:Name="News2ImageHost"
-                                Grid.Column="1"
-                                Width="160"
-                                Height="90"
-                                CornerRadius="{DynamicResource DesignCornerRadiusSm}"
-                                ClipToBounds="True"
-                                Background="#E6E6E6">
-                            <Image x:Name="News2Image"
-                                   Stretch="UniformToFill" />
-                        </Border>
-                    </Grid>
-
-                    <StackPanel x:Name="ExtraNewsItemsPanel"
-                                Grid.Row="3"
+                <Button x:Name="RefreshButton"
+                        Grid.Column="1"
+                        Padding="12,8"
+                        CornerRadius="20"
+                        Background="{DynamicResource CardBackgroundSecondaryBrush}"
+                        BorderBrush="Transparent"
+                        BorderThickness="0"
+                        Cursor="Hand">
+                    <StackPanel Orientation="Horizontal"
                                 Spacing="6"
-                                IsVisible="False" />
-                </Grid>
-            </Border>
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
+                        <fi:SymbolIcon x:Name="RefreshGlyphIcon"
+                                       Symbol="ArrowClockwise"
+                                       IconVariant="Regular"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       FontSize="16"
+                                       VerticalAlignment="Center" />
+                        <TextBlock x:Name="RefreshLabelTextBlock"
+                                   Text="换一换"
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
 
+                    <Button.Styles>
+                        <!-- 悬停状态 -->
+                        <Style Selector="Button:pointerover">
+                            <Style.Animations>
+                                <Animation Duration="0:0:0.15" Easing="CubicEaseOut">
+                                    <KeyFrame Cue="100%">
+                                        <Setter Property="Background" Value="{DynamicResource CardBackgroundHoverBrush}"/>
+                                    </KeyFrame>
+                                </Animation>
+                            </Style.Animations>
+                        </Style>
+
+                        <!-- 按下状态 -->
+                        <Style Selector="Button:pressed">
+                            <Style.Animations>
+                                <Animation Duration="0:0:0.1" Easing="CubicEaseOut">
+                                    <KeyFrame Cue="100%">
+                                        <Setter Property="Background" Value="{DynamicResource CardBackgroundPressedBrush}"/>
+                                        <Setter Property="RenderTransform">
+                                            <ScaleTransform ScaleX="0.98" ScaleY="0.98"/>
+                                        </Setter>
+                                    </KeyFrame>
+                                </Animation>
+                            </Style.Animations>
+                        </Style>
+                    </Button.Styles>
+                </Button>
+            </Grid>
+
+            <!-- 新闻列表 -->
+            <StackPanel Grid.Row="1" Spacing="12">
+
+                <!-- 新闻项 1 -->
+                <Grid x:Name="NewsItem1Grid"
+                      ColumnDefinitions="*,Auto"
+                      ColumnSpacing="12"
+                      Cursor="Hand">
+                    <TextBlock x:Name="News1TitleTextBlock"
+                               Text="Headline"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                               FontSize="16"
+                               FontWeight="SemiBold"
+                               TextWrapping="Wrap"
+                               TextTrimming="CharacterEllipsis"
+                               MaxLines="2"
+                               VerticalAlignment="Top"
+                               LineHeight="22" />
+
+                    <Border x:Name="News1ImageHost"
+                            Grid.Column="1"
+                            Width="140"
+                            Height="80"
+                            CornerRadius="8"
+                            ClipToBounds="True"
+                            Background="{DynamicResource CardBackgroundSecondaryBrush}">
+                        <Image x:Name="News1Image"
+                               Stretch="UniformToFill" />
+                    </Border>
+
+                    <Grid.Styles>
+                        <!-- 悬停状态 -->
+                        <Style Selector="Grid:pointerover">
+                            <Style.Animations>
+                                <Animation Duration="0:0:0.15" Easing="CubicEaseOut">
+                                    <KeyFrame Cue="100%">
+                                        <Setter Property="Opacity" Value="0.85"/>
+                                    </KeyFrame>
+                                </Animation>
+                            </Style.Animations>
+                        </Style>
+
+                        <!-- 按下状态 -->
+                        <Style Selector="Grid:pressed">
+                            <Setter Property="Opacity" Value="0.7"/>
+                        </Style>
+                    </Grid.Styles>
+                </Grid>
+
+                <!-- 新闻项 2 -->
+                <Grid x:Name="NewsItem2Grid"
+                      ColumnDefinitions="*,Auto"
+                      ColumnSpacing="12"
+                      Cursor="Hand">
+                    <TextBlock x:Name="News2TitleTextBlock"
+                               Text="Headline"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                               FontSize="16"
+                               FontWeight="SemiBold"
+                               TextWrapping="Wrap"
+                               TextTrimming="CharacterEllipsis"
+                               MaxLines="2"
+                               VerticalAlignment="Top"
+                               LineHeight="22" />
+
+                    <Border x:Name="News2ImageHost"
+                            Grid.Column="1"
+                            Width="140"
+                            Height="80"
+                            CornerRadius="8"
+                            ClipToBounds="True"
+                            Background="{DynamicResource CardBackgroundSecondaryBrush}">
+                        <Image x:Name="News2Image"
+                               Stretch="UniformToFill" />
+                    </Border>
+
+                    <Grid.Styles>
+                        <!-- 悬停状态 -->
+                        <Style Selector="Grid:pointerover">
+                            <Style.Animations>
+                                <Animation Duration="0:0:0.15" Easing="CubicEaseOut">
+                                    <KeyFrame Cue="100%">
+                                        <Setter Property="Opacity" Value="0.85"/>
+                                    </KeyFrame>
+                                </Animation>
+                            </Style.Animations>
+                        </Style>
+
+                        <!-- 按下状态 -->
+                        <Style Selector="Grid:pressed">
+                            <Setter Property="Opacity" Value="0.7"/>
+                        </Style>
+                    </Grid.Styles>
+                </Grid>
+
+                <!-- 额外新闻项容器 -->
+                <StackPanel x:Name="ExtraNewsItemsPanel"
+                            Spacing="12"
+                            IsVisible="False" />
+            </StackPanel>
+
+            <!-- 状态提示 -->
             <TextBlock x:Name="StatusTextBlock"
+                       Grid.Row="1"
                        IsVisible="False"
                        Text="Loading"
-                       Foreground="#6A6F77"
-                       FontSize="16"
+                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                       FontSize="14"
                        HorizontalAlignment="Center"
                        VerticalAlignment="Center" />
         </Grid>

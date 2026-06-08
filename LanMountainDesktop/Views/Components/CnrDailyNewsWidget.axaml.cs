@@ -89,27 +89,25 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
     private bool _isAttached;
     private bool _isRefreshing;
     private bool _autoRotateEnabled = true;
-    private bool _isNightVisual = true;
+    // 删除 _isNightVisual 字段，不再需要手动管理主题
 
     public CnrDailyNewsWidget()
     {
         InitializeComponent();
 
-        SizeChanged += OnSizeChanged;
-        ActualThemeVariantChanged += OnActualThemeVariantChanged;
         if (_isDesignModePreview)
         {
-            ApplyCellSize(_currentCellSize);
             ApplyDesignTimePreview();
             return;
         }
 
         _refreshTimer.Tick += OnRefreshTimerTick;
         RefreshButton.Click += OnRefreshButtonClick;
+        NewsItem1Grid.PointerPressed += OnNewsItem1PointerPressed;
+        NewsItem2Grid.PointerPressed += OnNewsItem2PointerPressed;
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
 
-        ApplyCellSize(_currentCellSize);
         UpdateLanguageCode();
         ApplyAutoRotateSettings();
         ApplyLoadingState();
@@ -119,7 +117,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
     public void ApplyCellSize(double cellSize)
     {
         _currentCellSize = Math.Max(1, cellSize);
-        UpdateAdaptiveLayout();
+        // 不再需要复杂的自适应逻辑，使用固定标准尺寸
     }
 
     public void SetRecommendationInfoService(IRecommendationInfoService recommendationInfoService)
@@ -159,70 +157,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         UpdateRefreshButtonState();
     }
 
-    private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
-    {
-        ApplyCellSize(_currentCellSize);
-    }
-
-    private void OnActualThemeVariantChanged(object? sender, EventArgs e)
-    {
-        _isNightVisual = ResolveNightMode();
-        UpdateAdaptiveLayout();
-    }
-
-    private bool ResolveNightMode()
-    {
-        if (ActualThemeVariant == ThemeVariant.Dark)
-        {
-            return true;
-        }
-
-        if (ActualThemeVariant == ThemeVariant.Light)
-        {
-            return false;
-        }
-
-        if (this.TryFindResource("AdaptiveSurfaceBaseBrush", out var value) &&
-            value is ISolidColorBrush brush)
-        {
-            return CalculateRelativeLuminance(brush.Color) < 0.45;
-        }
-
-        return true;
-    }
-
-    private static double CalculateRelativeLuminance(Color color)
-    {
-        static double ToLinear(double channel)
-        {
-            return channel <= 0.03928
-                ? channel / 12.92
-                : Math.Pow((channel + 0.055) / 1.055, 2.4);
-        }
-
-        var r = ToLinear(color.R / 255d);
-        var g = ToLinear(color.G / 255d);
-        var b = ToLinear(color.B / 255d);
-        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    }
-
-    private void ApplyNightModeVisual()
-    {
-        CardBorder.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#1B2129") : Color.Parse("#FCFCFD"));
-        RootBorder.BorderBrush = new SolidColorBrush(_isNightVisual ? Color.Parse("#33FFFFFF") : Color.Parse("#00000000"));
-
-        BrandPrimaryTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327"));
-        BrandSecondaryTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#6A6F77"));
-
-        RefreshButton.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#2D3440") : Color.Parse("#EFF1F5"));
-        RefreshGlyphIcon.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#5E6671"));
-        RefreshLabelTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#5E6671"));
-
-        News1TitleTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327"));
-        News2TitleTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327"));
-
-        StatusTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#8B95A5") : Color.Parse("#6A6F77"));
-    }
+    // 删除 OnSizeChanged 和 OnActualThemeVariantChanged，不再需要
 
     private async void OnRefreshButtonClick(object? sender, RoutedEventArgs e)
     {
@@ -382,7 +317,6 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         UpdateNewsInteractionState();
 
         StatusTextBlock.IsVisible = false;
-        UpdateAdaptiveLayout();
 
         var loadTasks = new[]
         {
@@ -413,7 +347,6 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         SetNewsBitmap(1, null);
         RenderExtraNewsRows([]);
         UpdateNewsInteractionState();
-        UpdateAdaptiveLayout();
     }
 
     private void ApplyFailedState()
@@ -429,12 +362,10 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         SetNewsBitmap(1, null);
         RenderExtraNewsRows([]);
         UpdateNewsInteractionState();
-        UpdateAdaptiveLayout();
     }
 
     private void ApplyDesignTimePreview()
     {
-        _isNightVisual = ResolveNightMode();
         _activeNewsItems =
         [
             new DailyNewsItemSnapshot(
@@ -475,10 +406,6 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
 
         RefreshButton.IsEnabled = false;
         RefreshButton.Opacity = 1.0;
-        RefreshGlyphIcon.Opacity = 0.82;
-        RefreshLabelTextBlock.Opacity = 0.82;
-
-        UpdateAdaptiveLayout();
     }
 
     private int ResolveDesiredNewsItemCount()
@@ -490,11 +417,10 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
     {
         var normalizedTitle = NormalizeCompactText(title);
         var hotLabel = L("cnrnews.widget.hot_label", "Hot");
-        var primaryForeground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327"));
+
         if (News1TitleTextBlock.Inlines is null)
         {
             News1TitleTextBlock.Text = $"{hotLabel} | {normalizedTitle}";
-            News1TitleTextBlock.Foreground = primaryForeground;
             return;
         }
 
@@ -506,7 +432,6 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         });
         News1TitleTextBlock.Inlines.Add(new Run(normalizedTitle)
         {
-            Foreground = primaryForeground,
             FontWeight = FontWeight.SemiBold
         });
     }
@@ -539,24 +464,39 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
             var textBlock = new TextBlock
             {
                 Text = NormalizeCompactText(item.Title),
-                Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327")),
+                FontSize = 16,
                 FontWeight = FontWeight.SemiBold,
                 TextWrapping = TextWrapping.Wrap,
                 TextTrimming = TextTrimming.CharacterEllipsis,
                 MaxLines = 2,
+                LineHeight = 22,
                 VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
                 IsHitTestVisible = false
             };
 
+            // 使用动态资源绑定文本颜色
+            textBlock.Bind(TextBlock.ForegroundProperty,
+                new Avalonia.Data.Binding("TextFillColorPrimaryBrush")
+                {
+                    Source = Application.Current!.Resources
+                });
+
             var imageHost = new Border
             {
-                Width = 160,
-                Height = 90,
-                CornerRadius = ComponentChromeCornerRadiusHelper.ScaleRadius(16, 8, 22),
+                Width = 140,
+                Height = 80,
+                CornerRadius = new CornerRadius(8),
                 ClipToBounds = true,
-                Background = new SolidColorBrush(Color.Parse("#E6E6E6")),
                 IsHitTestVisible = false
             };
+
+            // 使用动态资源绑定背景色
+            imageHost.Bind(Border.BackgroundProperty,
+                new Avalonia.Data.Binding("CardBackgroundSecondaryBrush")
+                {
+                    Source = Application.Current!.Resources
+                });
+
             var image = new Image
             {
                 Stretch = Stretch.UniformToFill,
@@ -612,124 +552,10 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         row.ImageControl.Source = bitmap;
     }
 
-    private void UpdateAdaptiveLayout()
-    {
-        var scale = ResolveScale();
-        var totalWidth = Bounds.Width > 1 ? Bounds.Width : _currentCellSize * BaseWidthCells;
-        var totalHeight = Bounds.Height > 1 ? Bounds.Height : _currentCellSize * BaseHeightCells;
-
-        var unifiedMainRectangle = ResolveUnifiedMainRectangle();
-        RootBorder.CornerRadius = unifiedMainRectangle;
-        RootBorder.Padding = new Thickness(0);
-
-        var horizontalPadding = Math.Clamp(16 * scale, 8, 24);
-        var verticalPadding = Math.Clamp(14 * scale, 7, 22);
-        CardBorder.CornerRadius = unifiedMainRectangle;
-        CardBorder.Padding = new Thickness(horizontalPadding, verticalPadding, horizontalPadding, verticalPadding);
-
-        var innerWidth = Math.Max(100, totalWidth - horizontalPadding * 2);
-
-        var headlineFont = Math.Clamp(24 * scale, 12, 34);
-        BrandPrimaryTextBlock.FontSize = headlineFont;
-        BrandSecondaryTextBlock.FontSize = headlineFont;
-
-        var refreshHeight = Math.Clamp(42 * scale, 24, 52);
-        var refreshWidth = Math.Clamp(116 * scale, 76, 152);
-        RefreshButton.Height = refreshHeight;
-        RefreshButton.Width = refreshWidth;
-        RefreshButton.CornerRadius = new CornerRadius(refreshHeight / 2d);
-        RefreshGlyphIcon.FontSize = Math.Clamp(19 * scale, 11, 24);
-        RefreshLabelTextBlock.FontSize = Math.Clamp(22 * scale, 11, 29);
-
-        var imageWidth = Math.Clamp(innerWidth * 0.22, 60, 170);
-        var imageHeight = Math.Clamp(imageWidth * 0.56, 38, 94);
-        News1ImageHost.Width = imageWidth;
-        News1ImageHost.Height = imageHeight;
-        News2ImageHost.Width = imageWidth;
-        News2ImageHost.Height = imageHeight;
-        News1ImageHost.CornerRadius = ComponentChromeCornerRadiusHelper.ScaleRadius(16 * scale, 8, 22);
-        News2ImageHost.CornerRadius = ComponentChromeCornerRadiusHelper.ScaleRadius(16 * scale, 8, 22);
-        News1ImageHost.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#3D4250") : Color.Parse("#E6E6E6"));
-        News2ImageHost.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#3D4250") : Color.Parse("#E6E6E6"));
-
-        var columnGap = Math.Clamp(12 * scale, 6, 18);
-        NewsItem1Grid.ColumnSpacing = columnGap;
-        NewsItem2Grid.ColumnSpacing = columnGap;
-        NewsItem1Grid.ColumnDefinitions[1].Width = new GridLength(imageWidth);
-        NewsItem2Grid.ColumnDefinitions[1].Width = new GridLength(imageWidth);
-
-        var availableTextWidth = Math.Max(80, innerWidth - imageWidth - columnGap);
-        News1TitleTextBlock.MaxWidth = availableTextWidth;
-        News2TitleTextBlock.MaxWidth = availableTextWidth;
-
-        var newsFont = Math.Clamp(21 * scale, 10.5, 28);
-        News1TitleTextBlock.FontSize = newsFont;
-        News2TitleTextBlock.FontSize = newsFont;
-        var mainNewsLineHeight = newsFont * 1.2;
-        News1TitleTextBlock.LineHeight = mainNewsLineHeight;
-        News2TitleTextBlock.LineHeight = mainNewsLineHeight;
-        var mainNewsMinHeight = mainNewsLineHeight * 2.2;
-        News1TitleTextBlock.MinHeight = mainNewsMinHeight;
-        News2TitleTextBlock.MinHeight = mainNewsMinHeight;
-        StatusTextBlock.FontSize = Math.Clamp(16 * scale, 9, 24);
-        News1TitleTextBlock.MaxLines = 2;
-        News2TitleTextBlock.MaxLines = 2;
-
-        var rowSpacing = Math.Clamp(8 * scale, 4, 14);
-        if (ContentGrid is Grid contentGrid && contentGrid.RowDefinitions.Count >= 4)
-        {
-            contentGrid.RowSpacing = rowSpacing;
-        }
-
-        foreach (var row in _extraNewsRows)
-        {
-            row.RootGrid.ColumnSpacing = columnGap;
-            if (row.RootGrid.ColumnDefinitions.Count > 1)
-            {
-                row.RootGrid.ColumnDefinitions[1].Width = new GridLength(imageWidth);
-            }
-
-            row.ImageHost.Width = imageWidth;
-            row.ImageHost.Height = imageHeight;
-            row.ImageHost.CornerRadius = ComponentChromeCornerRadiusHelper.ScaleRadius(16 * scale, 8, 22);
-            row.ImageHost.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#3D4250") : Color.Parse("#E6E6E6"));
-
-            row.TitleTextBlock.MaxWidth = availableTextWidth;
-            row.TitleTextBlock.FontSize = Math.Clamp(19 * scale, 10, 25);
-            row.TitleTextBlock.LineHeight = row.TitleTextBlock.FontSize * 1.2;
-            row.TitleTextBlock.MinHeight = row.TitleTextBlock.LineHeight * 2.2;
-            row.TitleTextBlock.MaxLines = 2;
-        }
-
-        ExtraNewsItemsPanel.Spacing = Math.Clamp(6 * scale, 3, 10);
-
-        ApplyNightModeVisual();
-
-        var headerHeight = refreshHeight;
-        var newsItemHeight = Math.Max(imageHeight, mainNewsMinHeight);
-
-        var requiredHeight = verticalPadding * 2
-                          + headerHeight
-                          + rowSpacing
-                          + newsItemHeight
-                          + rowSpacing
-                          + newsItemHeight;
-
-        if (_extraNewsRows.Count > 0)
-        {
-            var extraSpacing = ExtraNewsItemsPanel.Spacing * (_extraNewsRows.Count - 1);
-            requiredHeight += rowSpacing + extraSpacing + _extraNewsRows.Count * newsItemHeight;
-        }
-
-        this.MinHeight = requiredHeight;
-    }
-
     private void UpdateRefreshButtonState()
     {
-        RefreshButton.IsEnabled = !_isRefreshing;
-        RefreshButton.Opacity = _isAttached ? 1.0 : 0.85;
-        RefreshGlyphIcon.Opacity = _isRefreshing ? 0.56 : 1.0;
-        RefreshLabelTextBlock.Opacity = _isRefreshing ? 0.56 : 1.0;
+        RefreshButton.IsEnabled = !_isRefreshing && _isAttached;
+        RefreshButton.Opacity = _isAttached ? 1.0 : 0.6;
     }
 
     private void UpdateNewsInteractionState()
@@ -956,23 +782,6 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
     {
         return _localizationService.GetString(_languageCode, key, fallback);
     }
-
-    private double ResolveScale()
-    {
-        var cellScale = Math.Clamp(_currentCellSize / BaseCellSize, 0.56, 2.0);
-        var widthScale = Bounds.Width > 1
-            ? Math.Clamp(Bounds.Width / Math.Max(1, _currentCellSize * BaseWidthCells), 0.56, 2.0)
-            : 1;
-        var heightScale = Bounds.Height > 1
-            ? Math.Clamp(Bounds.Height / Math.Max(1, _currentCellSize * BaseHeightCells), 0.56, 2.0)
-            : 1;
-        return Math.Clamp(Math.Min(cellScale, Math.Min(widthScale, heightScale)), 0.56, 2.0);
-    }
-
-    private CornerRadius ResolveUnifiedMainRectangle() => new(ResolveUnifiedMainRadiusValue());
-
-    private static double ResolveUnifiedMainRadiusValue() =>
-        HostAppearanceThemeProvider.GetOrCreate().GetCurrent().CornerRadiusTokens.Lg.TopLeft;
 
     private static string NormalizeCompactText(string? text)
     {
