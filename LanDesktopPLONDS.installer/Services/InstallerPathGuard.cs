@@ -6,15 +6,13 @@ public static class InstallerPathGuard
 
     public static string GetDefaultInstallPath()
     {
-        var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-        if (string.IsNullOrWhiteSpace(programFiles))
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(localAppData))
         {
-            programFiles = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Programs");
+            localAppData = AppContext.BaseDirectory;
         }
 
-        return Path.Combine(programFiles, ApplicationDirectoryName);
+        return Path.Combine(localAppData, "Programs", ApplicationDirectoryName);
     }
 
     public static string GetInstallPathForSelectedFolder(string selectedFolder)

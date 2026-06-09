@@ -2,7 +2,6 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using FluentIcons.Common;
 using LanDesktopPLONDS.Installer.Models;
 using LanDesktopPLONDS.Installer.Services;
 using LanMountainDesktop.Shared.Contracts.Privacy;
@@ -81,11 +80,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _privacyConsentStore = privacyConsentStore ?? new InstallerPrivacyConsentStore();
         Steps =
         [
-            new InstallerStepViewModel(InstallerStepId.Welcome, "开始安装", Icon.Play),
-            new InstallerStepViewModel(InstallerStepId.InstallLocation, "安装位置", Icon.Folder),
-            new InstallerStepViewModel(InstallerStepId.PrivacyConfirm, "数据确认", Icon.Info),
-            new InstallerStepViewModel(InstallerStepId.Deploy, "开始部署", Icon.ArrowDownload),
-            new InstallerStepViewModel(InstallerStepId.Complete, "完成安装", Icon.Circle)
+            new InstallerStepViewModel(InstallerStepId.Welcome, "开始安装", "\uE768"),
+            new InstallerStepViewModel(InstallerStepId.InstallLocation, "安装位置", "\uE838"),
+            new InstallerStepViewModel(InstallerStepId.PrivacyConfirm, "数据确认", "\uE946"),
+            new InstallerStepViewModel(InstallerStepId.Deploy, "开始部署", "\uE896"),
+            new InstallerStepViewModel(InstallerStepId.Complete, "完成安装", "\uE73E")
         ];
         SyncSteps();
         DeviceIdPreview = _privacyIdentity.GetOrCreateDeviceId();

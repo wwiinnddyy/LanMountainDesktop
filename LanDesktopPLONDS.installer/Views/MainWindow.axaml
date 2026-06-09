@@ -1,6 +1,5 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:fi="using:FluentIcons.Avalonia"
         xmlns:vm="using:LanDesktopPLONDS.Installer.ViewModels"
         x:Class="LanDesktopPLONDS.Installer.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
@@ -62,7 +61,7 @@
     <Style Selector="Button.step-nav-item:disabled TextBlock.step-title">
       <Setter Property="Foreground" Value="{DynamicResource InstallerDisabledTextBrush}" />
     </Style>
-    <Style Selector="Button.step-nav-item:disabled fi|FluentIcon">
+    <Style Selector="Button.step-nav-item:disabled TextBlock.installer-icon">
       <Setter Property="Foreground" Value="{DynamicResource InstallerDisabledTextBrush}" />
     </Style>
     <Style Selector="Border.step-nav-selected-fill">
@@ -129,10 +128,10 @@
                   Height="28"
                   Background="{DynamicResource InstallerAccentBrush}"
                   CornerRadius="{DynamicResource DesignCornerRadiusSm}">
-            <fi:FluentIcon Icon="ArrowDownload"
-                           IconVariant="Regular"
-                           Foreground="{DynamicResource InstallerOnAccentBrush}"
-                           FontSize="16" />
+            <TextBlock Classes="installer-icon"
+                       Text="&#xE896;"
+                       Foreground="{DynamicResource InstallerOnAccentBrush}"
+                       FontSize="16" />
           </Border>
           <TextBlock Text="{Binding WindowTitle}"
                      FontSize="13"
@@ -148,16 +147,16 @@
           <Button Classes="titlebar-icon-button"
                   ToolTip.Tip="最小化"
                   Click="OnMinimizeClick">
-            <fi:FluentIcon Icon="Subtract"
-                           IconVariant="Regular"
-                           FontSize="14" />
+            <TextBlock Classes="installer-icon"
+                       Text="&#xE921;"
+                       FontSize="14" />
           </Button>
           <Button Classes="titlebar-icon-button"
                   ToolTip.Tip="关闭"
                   Click="OnCloseClick">
-            <fi:FluentIcon Icon="Dismiss"
-                           IconVariant="Regular"
-                           FontSize="14" />
+            <TextBlock Classes="installer-icon"
+                       Text="&#xE711;"
+                       FontSize="14" />
           </Button>
         </StackPanel>
       </Grid>
@@ -196,16 +195,16 @@
                           Margin="10,0">
                       <Grid Width="18"
                             VerticalAlignment="Center">
-                        <fi:FluentIcon Icon="{Binding Icon}"
-                                       IconVariant="Regular"
-                                       Foreground="{DynamicResource InstallerTextSecondaryBrush}"
-                                       FontSize="17"
-                                       IsVisible="{Binding !IsSelected}" />
-                        <fi:FluentIcon Icon="{Binding Icon}"
-                                       IconVariant="Filled"
-                                       Foreground="{DynamicResource InstallerTextPrimaryBrush}"
-                                       FontSize="17"
-                                       IsVisible="{Binding IsSelected}" />
+                        <TextBlock Classes="installer-icon"
+                                   Text="{Binding IconGlyph}"
+                                   Foreground="{DynamicResource InstallerTextSecondaryBrush}"
+                                   FontSize="17"
+                                   IsVisible="{Binding !IsSelected}" />
+                        <TextBlock Classes="installer-icon"
+                                   Text="{Binding IconGlyph}"
+                                   Foreground="{DynamicResource InstallerTextPrimaryBrush}"
+                                   FontSize="17"
+                                   IsVisible="{Binding IsSelected}" />
                       </Grid>
                       <Grid Grid.Column="1"
                             VerticalAlignment="Center">
@@ -257,9 +256,9 @@
                             Height="40"
                             Background="{DynamicResource InstallerSubtleFillBrush}"
                             CornerRadius="{DynamicResource DesignCornerRadiusMd}">
-                      <fi:FluentIcon Icon="CloudArrowDown"
-                                     IconVariant="Regular"
-                                     FontSize="20" />
+                      <TextBlock Classes="installer-icon"
+                                 Text="&#xE896;"
+                                 FontSize="20" />
                     </Border>
                     <StackPanel Grid.Column="1"
                                 Spacing="6">
@@ -302,8 +301,8 @@
                               Command="{Binding BrowseCommand}">
                         <StackPanel Orientation="Horizontal"
                                     Spacing="6">
-                          <fi:FluentIcon Icon="FolderOpen"
-                                         IconVariant="Regular" />
+                          <TextBlock Classes="installer-icon"
+                                     Text="&#xE838;" />
                           <TextBlock Text="浏览" />
                         </StackPanel>
                       </Button>
@@ -341,10 +340,10 @@
                     <Border Classes="info-panel">
                       <Grid ColumnDefinitions="Auto,*"
                             ColumnSpacing="10">
-                        <fi:FluentIcon Icon="Shield"
-                                       IconVariant="Regular"
-                                       Foreground="{DynamicResource InstallerAccentBrush}"
-                                       FontSize="18" />
+                        <TextBlock Classes="installer-icon"
+                                   Text="&#xEA18;"
+                                   Foreground="{DynamicResource InstallerAccentBrush}"
+                                   FontSize="18" />
                         <TextBlock Grid.Column="1"
                                    Text="安装器会发送匿名设备码、系统与架构信息、目标版本和请求 IP；不会上传用户名、机器名或安装目录。"
                                    Classes="muted" />
@@ -416,8 +415,8 @@
                               Command="{Binding StartInstallCommand}">
                         <StackPanel Orientation="Horizontal"
                                     Spacing="6">
-                          <fi:FluentIcon Icon="ArrowDownload"
-                                         IconVariant="Regular" />
+                          <TextBlock Classes="installer-icon"
+                                     Text="&#xE896;" />
                           <TextBlock Text="开始安装" />
                         </StackPanel>
                       </Button>
@@ -426,8 +425,8 @@
                               IsEnabled="{Binding IsInstalling}">
                         <StackPanel Orientation="Horizontal"
                                     Spacing="6">
-                          <fi:FluentIcon Icon="Dismiss"
-                                         IconVariant="Regular" />
+                          <TextBlock Classes="installer-icon"
+                                     Text="&#xE711;" />
                           <TextBlock Text="取消" />
                         </StackPanel>
                       </Button>
@@ -454,10 +453,10 @@
                             Height="40"
                             Background="{DynamicResource InstallerSubtleFillBrush}"
                             CornerRadius="{DynamicResource DesignCornerRadiusMd}">
-                      <fi:FluentIcon Icon="CheckmarkCircle"
-                                     IconVariant="Regular"
-                                     Foreground="{DynamicResource InstallerSuccessBrush}"
-                                     FontSize="22" />
+                      <TextBlock Classes="installer-icon"
+                                 Text="&#xE73E;"
+                                 Foreground="{DynamicResource InstallerSuccessBrush}"
+                                 FontSize="22" />
                     </Border>
                     <StackPanel Grid.Column="1"
                                 Spacing="12">
@@ -473,8 +472,8 @@
                               Command="{Binding LaunchCommand}">
                         <StackPanel Orientation="Horizontal"
                                     Spacing="6">
-                          <fi:FluentIcon Icon="Play"
-                                         IconVariant="Regular" />
+                          <TextBlock Classes="installer-icon"
+                                     Text="&#xE768;" />
                           <TextBlock Text="打开阑山桌面" />
                         </StackPanel>
                       </Button>
@@ -495,10 +494,10 @@
                     IsVisible="{Binding HasError}">
               <Grid ColumnDefinitions="Auto,*"
                     ColumnSpacing="10">
-                <fi:FluentIcon Icon="ErrorCircle"
-                               IconVariant="Regular"
-                               Foreground="{DynamicResource InstallerErrorBrush}"
-                               FontSize="18" />
+                <TextBlock Classes="installer-icon"
+                           Text="&#xE783;"
+                           Foreground="{DynamicResource InstallerErrorBrush}"
+                           FontSize="18" />
                 <TextBlock Grid.Column="1"
                            Text="{Binding ErrorMessage}"
                            Foreground="{DynamicResource InstallerErrorBrush}"
@@ -511,8 +510,8 @@
                     Command="{Binding BackCommand}">
               <StackPanel Orientation="Horizontal"
                           Spacing="6">
-                <fi:FluentIcon Icon="ArrowLeft"
-                               IconVariant="Regular" />
+                <TextBlock Classes="installer-icon"
+                           Text="&#xE72B;" />
                 <TextBlock Text="上一步" />
               </StackPanel>
             </Button>
@@ -522,8 +521,8 @@
               <StackPanel Orientation="Horizontal"
                           Spacing="6">
                 <TextBlock Text="下一步" />
-                <fi:FluentIcon Icon="ArrowRight"
-                               IconVariant="Regular" />
+                <TextBlock Classes="installer-icon"
+                           Text="&#xE72A;" />
               </StackPanel>
             </Button>
           </Grid>

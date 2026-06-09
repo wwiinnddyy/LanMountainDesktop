@@ -1,5 +1,4 @@
 using CommunityToolkit.Mvvm.ComponentModel;
-using FluentIcons.Common;
 using LanDesktopPLONDS.Installer.Models;
 
 namespace LanDesktopPLONDS.Installer.ViewModels;
@@ -7,7 +6,7 @@ namespace LanDesktopPLONDS.Installer.ViewModels;
 public sealed partial class InstallerStepViewModel(
     InstallerStepId stepId,
     string title,
-    Icon icon) : ObservableObject
+    string iconGlyph) : ObservableObject
 {
     [ObservableProperty]
     private bool _isUnlocked;
@@ -19,5 +18,5 @@ public sealed partial class InstallerStepViewModel(
 
     public string Title { get; } = title;
 
-    public Icon Icon { get; } = icon;
+    public string IconGlyph { get; } = iconGlyph;
 }

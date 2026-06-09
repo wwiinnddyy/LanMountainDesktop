@@ -683,18 +683,18 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
 
         var scale = ResolveScale();
         var cardRadius = ComponentChromeCornerRadiusHelper.Small();
-        var timeFontSize = Math.Clamp(11 * scale, 8, 14);
-        var courseNameFontSize = Math.Clamp(14 * scale, 10, 18);
-        var detailFontSize = Math.Clamp(11 * scale, 8, 14);
-        var progressFontSize = Math.Clamp(10 * scale, 7, 12);
+        var timeFontSize = Math.Clamp(16 * scale, 12, 22);
+        var courseNameFontSize = Math.Clamp(20 * scale, 16, 28);
+        var detailFontSize = Math.Clamp(15 * scale, 12, 20);
+        var progressFontSize = Math.Clamp(13 * scale, 10, 16);
         var cardPadding = new Thickness(
-            Math.Clamp(10 * scale, 6, 14),
-            Math.Clamp(8 * scale, 5, 12),
-            Math.Clamp(10 * scale, 6, 14),
-            Math.Clamp(8 * scale, 5, 12));
-        var timeColumnWidth = Math.Clamp(44 * scale, 30, 56);
-        var accentBarWidth = Math.Clamp(3 * scale, 2, 4);
-        var progressBarHeight = Math.Clamp(3 * scale, 2, 4);
+            Math.Clamp(14 * scale, 10, 20),
+            Math.Clamp(12 * scale, 8, 18),
+            Math.Clamp(14 * scale, 10, 20),
+            Math.Clamp(12 * scale, 8, 18));
+        var timeColumnWidth = Math.Clamp(60 * scale, 45, 80);
+        var accentBarWidth = Math.Clamp(4 * scale, 3, 6);
+        var progressBarHeight = Math.Clamp(4 * scale, 3, 6);
 
         for (var i = 0; i < _courseItems.Count; i++)
         {
@@ -894,10 +894,10 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         var itemBorder = new Border
         {
             Padding = new Thickness(
-                Math.Clamp(10 * scale, 6, 14),
-                Math.Clamp(2 * scale, 1, 4),
-                Math.Clamp(10 * scale, 6, 14),
-                Math.Clamp(2 * scale, 1, 4)),
+                Math.Clamp(14 * scale, 10, 20),
+                Math.Clamp(4 * scale, 2, 6),
+                Math.Clamp(14 * scale, 10, 20),
+                Math.Clamp(4 * scale, 2, 6)),
             Background = Brushes.Transparent,
             Child = itemGrid
         };
@@ -1022,11 +1022,11 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
 
         HeaderGrid.ColumnSpacing = Math.Clamp(8 * scale, 4, 14);
         DateGroup.Spacing = Math.Clamp(1.5 * scale, 0.5, 3);
-        CourseListPanel.Spacing = Math.Clamp(2 * scale, 0, 6);
+        CourseListPanel.Spacing = Math.Clamp(4 * scale, 2, 8);
 
-        var dateFontByScale = Math.Clamp(28 * scale, 14, 36);
-        var weekdayFontByScale = Math.Clamp(14 * scale, 10, 18);
-        var classCountFontByScale = Math.Clamp(12 * scale, 9, 15);
+        var dateFontByScale = Math.Clamp(36 * scale, 20, 48);
+        var weekdayFontByScale = Math.Clamp(18 * scale, 14, 24);
+        var classCountFontByScale = Math.Clamp(15 * scale, 12, 20);
 
         var availableWidth = Math.Max(1, Bounds.Width - headerPadding.Left - headerPadding.Right);
         var dateGroupEstimatedWidth = dateFontByScale * 0.6 * 3 + DateGroup.Spacing * 2;
