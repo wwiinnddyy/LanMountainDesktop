@@ -28,6 +28,7 @@ internal sealed class FilesPackageInstaller
         var sourceAppDirectory = ResolveFullPackageAppDirectory(package.ExtractDirectory, package.Version);
         var targetDeployment = BuildDeploymentDirectory(launcherRoot, package.Version);
 
+        InstallerElevation.EnsureCanInstall(launcherRoot);
         InstallerPathGuard.EnsureUsableInstallPath(launcherRoot, EstimateRequiredBytes(sourceAppDirectory));
         Directory.CreateDirectory(launcherRoot);
         await CopyLauncherRootPayloadAsync(package.ExtractDirectory, sourceAppDirectory, launcherRoot, package.Version, progress, cancellationToken)
@@ -299,7 +300,9 @@ internal sealed class FilesPackageInstaller
                 return;
             }
 
-            var startMenu = Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu);
+            var startMenu = InstallerElevation.IsRunningElevated()
+                ? Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu)
+                : Environment.GetFolderPath(Environment.SpecialFolder.StartMenu);
             if (string.IsNullOrWhiteSpace(startMenu))
             {
                 startMenu = Environment.GetFolderPath(Environment.SpecialFolder.StartMenu);

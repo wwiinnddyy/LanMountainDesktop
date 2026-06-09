@@ -213,6 +213,33 @@ public sealed class OnlineInstallerCoreTests : IDisposable
     }
 
     [Fact]
+    public void InstallerPathGuard_DefaultsToUserWritableProgramsFolder()
+    {
+        var path = InstallerPathGuard.GetDefaultInstallPath();
+
+        Assert.EndsWith(Path.Combine("Programs", InstallerPathGuard.ApplicationDirectoryName), path);
+        Assert.DoesNotContain("Program Files", path, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void InstallerElevation_DetectsProtectedProgramFilesPath()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+        if (string.IsNullOrWhiteSpace(programFiles))
+        {
+            return;
+        }
+
+        Assert.True(InstallerElevation.RequiresElevation(Path.Combine(programFiles, InstallerPathGuard.ApplicationDirectoryName)));
+        Assert.False(InstallerElevation.RequiresElevation(Path.Combine(_tempRoot, InstallerPathGuard.ApplicationDirectoryName)));
+    }
+
+    [Fact]
     public async Task FilesPackageInstaller_DeploysFullPackageWithCurrentMarker()
     {
         var packageRoot = Path.Combine(_tempRoot, "Files");

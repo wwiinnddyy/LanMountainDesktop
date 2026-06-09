@@ -1,12 +1,12 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:theme="using:Avalonia.Themes.Fluent"
-             xmlns:fi="using:FluentIcons.Avalonia"
              x:Class="LanDesktopPLONDS.Installer.App"
              RequestedThemeVariant="Default">
   <Application.Resources>
     <ResourceDictionary>
-      <FontFamily x:Key="AppFontFamily">Inter, Segoe UI, Microsoft YaHei UI</FontFamily>
+      <FontFamily x:Key="AppFontFamily">Segoe UI, Microsoft YaHei UI</FontFamily>
+      <FontFamily x:Key="InstallerIconFontFamily">Segoe MDL2 Assets</FontFamily>
       <CornerRadius x:Key="DesignCornerRadiusMicro">2</CornerRadius>
       <CornerRadius x:Key="DesignCornerRadiusXs">4</CornerRadius>
       <CornerRadius x:Key="DesignCornerRadiusSm">4</CornerRadius>
@@ -76,10 +76,12 @@
     <Style Selector="UserControl">
       <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}" />
     </Style>
-    <Style Selector="fi|FluentIcon">
+    <Style Selector="TextBlock.installer-icon">
       <Setter Property="Foreground" Value="{DynamicResource InstallerTextPrimaryBrush}" />
+      <Setter Property="FontFamily" Value="{DynamicResource InstallerIconFontFamily}" />
       <Setter Property="VerticalAlignment" Value="Center" />
       <Setter Property="HorizontalAlignment" Value="Center" />
+      <Setter Property="TextAlignment" Value="Center" />
     </Style>
     <Style Selector="TextBlock">
       <Setter Property="Foreground" Value="{DynamicResource InstallerTextPrimaryBrush}" />
@@ -142,13 +144,13 @@
       <Setter Property="Background" Value="{DynamicResource InstallerSubtleFillBrush}" />
       <Setter Property="Foreground" Value="{DynamicResource InstallerDisabledTextBrush}" />
     </Style>
-    <Style Selector="Button.primary-command fi|FluentIcon">
+    <Style Selector="Button.primary-command TextBlock.installer-icon">
       <Setter Property="Foreground" Value="{DynamicResource InstallerOnAccentBrush}" />
     </Style>
     <Style Selector="Button.primary-command TextBlock">
       <Setter Property="Foreground" Value="{DynamicResource InstallerOnAccentBrush}" />
     </Style>
-    <Style Selector="Button.primary-command:disabled fi|FluentIcon">
+    <Style Selector="Button.primary-command:disabled TextBlock.installer-icon">
       <Setter Property="Foreground" Value="{DynamicResource InstallerDisabledTextBrush}" />
     </Style>
     <Style Selector="Button.primary-command:disabled TextBlock">
@@ -174,13 +176,13 @@
     <Style Selector="Button.secondary-command TextBlock">
       <Setter Property="Foreground" Value="{DynamicResource InstallerTextPrimaryBrush}" />
     </Style>
-    <Style Selector="Button.secondary-command fi|FluentIcon">
+    <Style Selector="Button.secondary-command TextBlock.installer-icon">
       <Setter Property="Foreground" Value="{DynamicResource InstallerTextPrimaryBrush}" />
     </Style>
     <Style Selector="Button.secondary-command:disabled TextBlock">
       <Setter Property="Foreground" Value="{DynamicResource InstallerDisabledTextBrush}" />
     </Style>
-    <Style Selector="Button.secondary-command:disabled fi|FluentIcon">
+    <Style Selector="Button.secondary-command:disabled TextBlock.installer-icon">
       <Setter Property="Foreground" Value="{DynamicResource InstallerDisabledTextBrush}" />
     </Style>
     <Style Selector="TextBox">

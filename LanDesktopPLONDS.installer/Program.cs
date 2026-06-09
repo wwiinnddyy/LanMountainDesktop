@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Win32;
 
 namespace LanDesktopPLONDS.Installer;
 
@@ -7,17 +8,21 @@ public static class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        InstallerStartupDiagnostics.Initialize();
         try
         {
+            InstallerStartupDiagnostics.Log("Preparing native dependencies.");
             if (!NativeDependencyBootstrapper.TryPrepare())
             {
-                System.Diagnostics.Debug.WriteLine("[Program] Failed to prepare native dependencies, but continuing...");
+                throw new InvalidOperationException("Failed to prepare native dependencies.");
             }
+
+            InstallerStartupDiagnostics.Log("Starting Avalonia desktop lifetime.");
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[Program] Unhandled exception: {ex}");
+            InstallerStartupDiagnostics.ReportFatal("The installer failed to start.", ex);
         }
     }
 
@@ -25,7 +30,10 @@ public static class Program
     {
         return AppBuilder.Configure<App>()
             .UsePlatformDetect()
-            .WithInterFont()
-            .LogToTrace();
+            .With(new Win32PlatformOptions
+            {
+                RenderingMode = [Win32RenderingMode.Software],
+                CompositionMode = [Win32CompositionMode.RedirectionSurface]
+            });
     }
 }

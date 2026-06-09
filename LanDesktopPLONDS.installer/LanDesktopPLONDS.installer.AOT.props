@@ -8,7 +8,14 @@
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <OptimizationPreference>Size</OptimizationPreference>
+    <IlcOptimizationPreference>Size</IlcOptimizationPreference>
     <PublishReadyToRun>false</PublishReadyToRun>
+    <DebuggerSupport>false</DebuggerSupport>
+    <EventSourceSupport>false</EventSourceSupport>
+    <HttpActivityPropagationSupport>false</HttpActivityPropagationSupport>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <MetadataUpdaterSupport>false</MetadataUpdaterSupport>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -16,24 +23,11 @@
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
 
-  <ItemGroup Condition="'$(PublishAot)' == 'true'">
-    <TrimmerRootAssembly Include="Avalonia" />
-    <TrimmerRootAssembly Include="Avalonia.Desktop" />
-    <TrimmerRootAssembly Include="Avalonia.Themes.Fluent" />
-    <TrimmerRootAssembly Include="FluentIcons.Avalonia" />
-    <TrimmerRootAssembly Include="LanDesktopPLONDS.installer" />
-    <TrimmerRootAssembly Include="System.Text.Json" />
-  </ItemGroup>
-
   <Target
     Name="PrepareInstallerEmbeddedNativeLibraries"
     BeforeTargets="AssignTargetPaths"
     Condition="'$(PublishAot)' == 'true' and '$(RuntimeIdentifier)' == 'win-x64'">
     <ItemGroup>
-      <InstallerNativeLibrary
-        Include="$(PkgAvalonia_Angle_Windows_Natives)\runtimes\win-x64\native\av_libglesv2.dll"
-        CompressedName="av_libglesv2.dll.gz"
-        Condition="Exists('$(PkgAvalonia_Angle_Windows_Natives)\runtimes\win-x64\native\av_libglesv2.dll')" />
       <InstallerNativeLibrary
         Include="$(PkgHarfBuzzSharp_NativeAssets_Win32)\runtimes\win-x64\native\libHarfBuzzSharp.dll"
         CompressedName="libHarfBuzzSharp.dll.gz"
@@ -54,9 +48,6 @@
 
     <ItemGroup>
       <EmbeddedResource
-        Include="$(IntermediateOutputPath)embedded-native\$(RuntimeIdentifier)\av_libglesv2.dll.gz"
-        LogicalName="LanDesktopPLONDS.Installer.NativeLibraries.av_libglesv2.dll.gz" />
-      <EmbeddedResource
         Include="$(IntermediateOutputPath)embedded-native\$(RuntimeIdentifier)\libHarfBuzzSharp.dll.gz"
         LogicalName="LanDesktopPLONDS.Installer.NativeLibraries.libHarfBuzzSharp.dll.gz" />
       <EmbeddedResource
@@ -68,7 +59,7 @@
   <PropertyGroup Condition="'$(PublishAot)' == 'true'">
     <SuppressTrimAnalysisWarnings>false</SuppressTrimAnalysisWarnings>
     <TrimmerSingleWarn>false</TrimmerSingleWarn>
-    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+    <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
     <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 </Project>

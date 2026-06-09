@@ -13,7 +13,6 @@ internal static class NativeDependencyBootstrapper
 
     private static readonly string[] NativeLibraryNames =
     [
-        "av_libglesv2.dll",
         "libHarfBuzzSharp.dll",
         "libSkiaSharp.dll"
     ];
@@ -47,7 +46,7 @@ internal static class NativeDependencyBootstrapper
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[NativeDependencyBootstrapper] Failed to prepare native dependencies: {ex}");
+            InstallerStartupDiagnostics.Log($"Native dependency preparation failed: {ex}");
             return false;
         }
     }
