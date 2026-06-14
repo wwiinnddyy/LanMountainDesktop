@@ -87,31 +87,68 @@ internal sealed class DeploymentLocator
         var explicitAppRoot = context.ExplicitAppRoot;
         var devModeConfigIgnored = !context.IsDebugMode && Views.ErrorWindow.CheckDevModeEnabled();
 
+        Logger.Info($"=== HOST RESOLUTION START ===");
+        Logger.Info($"  AppRoot: {_appRoot}");
+        Logger.Info($"  Executable: {executable}");
+        Logger.Info($"  IsDebugMode: {context.IsDebugMode}");
+        Logger.Info($"  ExplicitAppRoot: {explicitAppRoot ?? "<none>"}");
+        Logger.Info($"  LauncherBaseDirectory: {AppContext.BaseDirectory}");
+
         string? resolvedPath;
         string? source;
 
         if (!string.IsNullOrWhiteSpace(explicitAppRoot))
         {
+            Logger.Info($"Trying explicit app root: {explicitAppRoot}");
             var explicitRoot = Path.GetFullPath(explicitAppRoot);
             resolvedPath = TryResolveExplicitAppRoot(explicitRoot, executable, searchedPaths, out source);
         }
         else
         {
+            Logger.Info("Trying published or portable host...");
             resolvedPath = TryResolvePublishedOrPortableHost(executable, searchedPaths, out source);
         }
 
         if (resolvedPath is null && context.IsDebugMode)
         {
+            Logger.Info("Debug mode: trying debug host paths...");
             resolvedPath = TryResolveDebugHost(executable, searchedPaths, out source);
         }
 
         if (resolvedPath is null)
         {
+            Logger.Warn("Standard resolution failed, trying legacy fallback...");
             resolvedPath = ResolveHostExecutablePathLegacy();
             if (!string.IsNullOrWhiteSpace(resolvedPath))
             {
                 searchedPaths.Add(Path.GetFullPath(resolvedPath));
                 source = "legacy_fallback";
+                Logger.Info($"Legacy fallback found: {resolvedPath}");
+            }
+        }
+
+        Logger.Info($"=== HOST RESOLUTION RESULT ===");
+        Logger.Info($"  Success: {!string.IsNullOrWhiteSpace(resolvedPath)}");
+        Logger.Info($"  ResolvedPath: {resolvedPath ?? "<NOT FOUND>"}");
+        Logger.Info($"  Source: {source ?? "<none>"}");
+        Logger.Info($"  SearchedPaths ({searchedPaths.Count}):");
+        foreach (var path in searchedPaths.Take(10))
+        {
+            Logger.Info($"    - {path}");
+        }
+        if (searchedPaths.Count > 10)
+        {
+            Logger.Info($"    ... and {searchedPaths.Count - 10} more");
+        }
+
+        if (string.IsNullOrWhiteSpace(resolvedPath))
+        {
+            Logger.Error("CRITICAL: Could not resolve host executable path!");
+            Console.Error.WriteLine("[CRITICAL] Could not find main application executable!");
+            Console.Error.WriteLine($"[CRITICAL] Searched {searchedPaths.Count} locations:");
+            foreach (var path in searchedPaths.Take(5))
+            {
+                Console.Error.WriteLine($"[CRITICAL]   - {path}");
             }
         }
 

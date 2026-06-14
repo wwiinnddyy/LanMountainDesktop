@@ -89,6 +89,14 @@ internal sealed class StartupAttemptRegistry
         ExecuteWithLock(() =>
         {
             var existing = LoadUnsafe();
+
+            // 清理过期的记录
+            if (existing is not null && IsStaleAttempt(existing))
+            {
+                Logger.Info($"Cleaning up stale startup attempt record. AttemptId='{existing.AttemptId}'; State='{existing.State}'; Age={(DateTimeOffset.UtcNow - existing.UpdatedAtUtc).TotalMinutes:0.1}min.");
+                existing = null;
+            }
+
             if (existing is not null && IsCoordinatorLive(existing))
             {
                 active = Clone(existing);
@@ -143,6 +151,34 @@ internal sealed class StartupAttemptRegistry
         reservedAttempt = reserved ?? new StartupAttemptRecord();
         activeCoordinatorAttempt = active;
         return reserved is not null;
+    }
+
+    private static bool IsStaleAttempt(StartupAttemptRecord record)
+    {
+        // 记录超过 10 分钟且状态为终结或非活跃状态
+        if (DateTimeOffset.UtcNow - record.UpdatedAtUtc > TimeSpan.FromMinutes(10))
+        {
+            return true;
+        }
+
+        // 进程已死且协调器心跳超时
+        if (record.CoordinatorPid > 0 &&
+            !TryGetLiveProcess(record.CoordinatorPid, out _) &&
+            DateTimeOffset.UtcNow - record.HeartbeatAtUtc > TimeSpan.FromMinutes(2))
+        {
+            return true;
+        }
+
+        // 主进程已死且协调器已死
+        if (record.HostPid > 0 &&
+            !TryGetLiveProcess(record.HostPid, out _) &&
+            record.CoordinatorPid > 0 &&
+            !TryGetLiveProcess(record.CoordinatorPid, out _))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     public StartupAttemptRecord? GetOwnedAttempt()

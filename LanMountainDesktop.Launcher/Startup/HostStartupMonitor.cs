@@ -86,7 +86,7 @@ internal sealed class HostStartupMonitor
             ]).ConfigureAwait(false);
         if (!connected)
         {
-            Logger.Info("Host public IPC is not ready yet. Launcher will keep monitoring the host process and retry.");
+            Logger.Info("Host public IPC is not ready yet after initial connection attempts. Launcher will keep monitoring the host process and retry periodically.");
         }
         else
         {
@@ -106,6 +106,8 @@ internal sealed class HostStartupMonitor
         var nextShellStatusPollAt = DateTimeOffset.UtcNow + StartupTimeoutPolicy.ShellStatusPollInterval;
         var ipcReconnectAttemptIndex = 0;
         var activationRetryAttempted = false;
+        var lastIpcConnectionFailureReported = DateTimeOffset.MinValue;
+        var ipcConnectionFailureCount = 0;
 
         while (true)
         {
@@ -224,12 +226,25 @@ internal sealed class HostStartupMonitor
                 if (connected)
                 {
                     ipcConnected = true;
+                    Logger.Info($"Host public IPC reconnected successfully after {ipcConnectionFailureCount} failed attempts.");
                     var shellSuccess = await RefreshShellStatusAsync("Host public IPC reconnected; waiting for desktop shell.")
                         .ConfigureAwait(false);
                     if (shellSuccess is not null)
                     {
                         request.SuccessTcs.TrySetResult(shellSuccess);
                         continue;
+                    }
+                }
+                else
+                {
+                    ipcConnectionFailureCount++;
+                    // 每 30 秒报告一次 IPC 连接失败
+                    if ((now - lastIpcConnectionFailureReported).TotalSeconds >= 30)
+                    {
+                        lastIpcConnectionFailureReported = now;
+                        var elapsed = (now - startedAt).TotalSeconds;
+                        Logger.Warn($"Host public IPC connection still unavailable after {elapsed:0}s and {ipcConnectionFailureCount} reconnect attempts. Host process is alive (PID={request.HostProcess.Id}).");
+                        request.Reporter.Report("diagnostic", $"正在等待主应用响应... (已尝试 {ipcConnectionFailureCount} 次)");
                     }
                 }
 
@@ -261,6 +276,16 @@ internal sealed class HostStartupMonitor
             if (!softTimeoutShown && softTimeoutAt < nextCheckpointAt)
             {
                 nextCheckpointAt = softTimeoutAt;
+            }
+
+            if (!ipcConnected && nextReconnectAttemptAt < nextCheckpointAt)
+            {
+                nextCheckpointAt = nextReconnectAttemptAt;
+            }
+
+            if (ipcConnected && nextShellStatusPollAt < nextCheckpointAt)
+            {
+                nextCheckpointAt = nextShellStatusPollAt;
             }
 
             var delay = nextCheckpointAt - now;
@@ -351,11 +376,11 @@ internal sealed class HostStartupMonitor
         if (!connected && !request.HostProcess.HasExited)
         {
             request.AttemptRegistry.MarkOwnedWaitingForShell("Host process is still running, but public IPC is not ready yet.");
-            request.PublishCoordinatorStatus(true, false, true);
+            request.PublishCoordinatorStatus(true, true, false);
             return new Outcome(
-                true,
-                "startup_pending",
-                "Host process is still running; Launcher will not start another process while public IPC finishes startup.",
+                false,
+                "ipc_connection_failed",
+                $"Host process is still running after {StartupTimeoutPolicy.HardTimeout.TotalSeconds:0} seconds, but public IPC connection could not be established. This may indicate the host is stuck during initialization.",
                 recoveryActivationAttempted,
                 request.ComposeLaunchDetails(true, recoveryActivationAttempted));
         }
