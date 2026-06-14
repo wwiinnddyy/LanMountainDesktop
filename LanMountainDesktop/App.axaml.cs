@@ -246,10 +246,46 @@ public partial class App : Application
                 ReportStartupProgress(StartupStage.Initializing, 10, "Initializing application...");
                 ReportStartupProgress(StartupStage.LoadingSettings, 20, "Loading settings...");
             }
+
+            // 启动心跳线程，确保启动器能检测到主应用的活跃状态
+            _ = StartLauncherHeartbeatAsync();
         }
         catch (Exception ex)
         {
             AppLogger.Warn("LauncherIpc", $"Failed to initialize Launcher IPC: {ex.Message}");
+        }
+    }
+
+    private async Task StartLauncherHeartbeatAsync()
+    {
+        try
+        {
+            // 每 5 秒发送一次心跳，防止启动器认为主应用已卡死
+            while (!IsShutdownInProgress && _publicIpcHostService is not null)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(5));
+
+                // 如果还未报告 Ready，发送心跳进度
+                if (!_mainWindowOpened && !IsShutdownInProgress)
+                {
+                    // 静默心跳，不记录日志
+                    QueueOrSendLauncherProgress(new StartupProgressMessage
+                    {
+                        Stage = StartupStage.Initializing,
+                        ProgressPercent = 15,
+                        Message = "Application is initializing...",
+                        Timestamp = DateTimeOffset.UtcNow
+                    }, logSuccess: false);
+                }
+                else
+                {
+                    break; // 主窗口已打开，停止心跳
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("LauncherIpc", $"Heartbeat thread failed: {ex.Message}");
         }
     }
 
@@ -1824,11 +1860,22 @@ public partial class App : Application
             _publicIpcHostService.Start();
             AppLogger.Info(
                 "PublicIpc",
-                $"Public IPC host started. PipeName='{IpcConstants.DefaultPipeName}'; Version='{versionInfo.Version}'; Codename='{versionInfo.Codename}'.");
+                $"Public IPC host started successfully. PipeName='{IpcConstants.DefaultPipeName}'; Version='{versionInfo.Version}'; Codename='{versionInfo.Codename}'.");
         }
         catch (Exception ex)
         {
-            AppLogger.Warn("PublicIpc", "Failed to initialize public IPC host.", ex);
+            AppLogger.Error("PublicIpc", "CRITICAL: Failed to initialize public IPC host. Launcher will not be able to connect to this process.", ex);
+
+            // 尝试通过标准错误输出告知启动器
+            try
+            {
+                Console.Error.WriteLine($"[CRITICAL] Public IPC host initialization failed: {ex.Message}");
+                Console.Error.WriteLine("[CRITICAL] The launcher will not be able to connect to this process.");
+            }
+            catch
+            {
+                // 忽略控制台写入失败
+            }
         }
     }
 

@@ -208,13 +208,15 @@ internal sealed class HostLaunchService
 
     private static async Task EnsureAirAppRuntimeStartedAsync(string appRoot, string? dataRoot)
     {
+        Logger.Info("HOST LAUNCH: Attempting to pre-start AirApp Runtime...");
         try
         {
             await new AirAppRuntimeBridge(appRoot, dataRoot).EnsureStartedAsync().ConfigureAwait(false);
+            Logger.Info("HOST LAUNCH: AirApp Runtime pre-start completed.");
         }
         catch (Exception ex)
         {
-            Logger.Warn($"AirApp Runtime pre-start failed; Host fallback remains available. Error='{ex.Message}'.");
+            Logger.Warn($"HOST LAUNCH: AirApp Runtime pre-start failed; Host fallback remains available. Error='{ex.Message}'");
         }
     }
 
@@ -249,6 +251,11 @@ internal sealed class HostLaunchService
 
         try
         {
+            Logger.Info($"ATTEMPTING HOST START: Path='{plan.HostPath}'; WorkingDir='{plan.WorkingDirectory}'; Mode='{startMode}'");
+            Logger.Info($"  Arguments: {HostLaunchPlanBuilder.FormatArgumentsForLog(plan.Arguments)}");
+            Logger.Info($"  File exists: {File.Exists(plan.HostPath)}");
+            Logger.Info($"  Working dir exists: {Directory.Exists(plan.WorkingDirectory)}");
+
             var process = Process.Start(startInfo);
             Logger.Info(
                 $"Host launch requested. Mode='{startMode}'; RetryTag='{retryTag ?? "<none>"}'; Path='{plan.HostPath}'; " +
@@ -257,15 +264,30 @@ internal sealed class HostLaunchService
 
             if (process is null)
             {
+                Logger.Error($"CRITICAL: Process.Start returned null! Path='{plan.HostPath}'; Mode='{startMode}'");
+                Console.Error.WriteLine($"[CRITICAL] Process.Start returned null for path: {plan.HostPath}");
                 return HostStartAttempt.StartFailed(startMode, "process_start_returned_null", plan);
             }
 
-            await Task.Yield();
+            // 等待一小段时间，检查进程是否立即退出
+            await Task.Delay(500).ConfigureAwait(false);
+
+            if (process.HasExited)
+            {
+                Logger.Error($"CRITICAL: Host process exited immediately! ExitCode={process.ExitCode}; Path='{plan.HostPath}'");
+                Console.Error.WriteLine($"[CRITICAL] Host process exited immediately with code {process.ExitCode}");
+                return HostStartAttempt.StartFailed(startMode, $"process_exited_immediately_code_{process.ExitCode}", plan);
+            }
+
+            Logger.Info($"Host process started successfully and is running. PID={process.Id}");
             return HostStartAttempt.Started(startMode, process, plan);
         }
         catch (Exception ex)
         {
-            Logger.Error($"Host start failed. Mode='{startMode}'.", ex);
+            Logger.Error($"CRITICAL: Host start exception! Path='{plan.HostPath}'; Mode='{startMode}'; Exception={ex.GetType().Name}; Message='{ex.Message}'", ex);
+            Console.Error.WriteLine($"[CRITICAL] Host start failed: {ex.Message}");
+            Console.Error.WriteLine($"[CRITICAL] Path: {plan.HostPath}");
+            Console.Error.WriteLine($"[CRITICAL] Exception: {ex}");
             return HostStartAttempt.StartFailed(startMode, ex.GetType().Name, plan);
         }
     }

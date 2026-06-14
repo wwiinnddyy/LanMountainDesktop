@@ -144,8 +144,18 @@ internal sealed class LauncherOrchestrator
                     return;
                 }
 
+                if (!softTimeoutShown)
+                {
+                    // 用户在软超时前关闭窗口，提示确认
+                    Logger.Info("Splash window was closed manually before soft timeout. Cancelling startup attempt.");
+                    _startupAttemptRegistry.MarkOwnedFailed(lastStage, "User cancelled startup before soft timeout.");
+                    // 取消后续监控
+                    successTcs.TrySetCanceled();
+                    return;
+                }
+
                 _startupAttemptRegistry.MarkOwnedDetachedWaiting();
-                Logger.Warn("Splash window was closed manually. Launcher will continue monitoring the current startup attempt.");
+                Logger.Warn("Splash window was closed manually after soft timeout. Launcher will continue monitoring the current startup attempt in detached mode.");
             };
             splashWindow.Closed += splashClosedHandler;
 
