@@ -184,8 +184,6 @@ internal sealed class SettingsPageRegistry : ISettingsPageRegistry, IDisposable
         services.AddSingleton(_localizationService);
         services.AddSingleton<ILocationService>(_ => HostLocationServiceProvider.GetOrCreate());
         services.AddSingleton<WeatherLocationRefreshService>();
-        services.AddSingleton<AirAppMarketIconService>();
-        services.AddSingleton<AirAppMarketReadmeService>();
 
         var pluginRuntime = _pluginRuntimeAccessor();
         if (pluginRuntime is not null)

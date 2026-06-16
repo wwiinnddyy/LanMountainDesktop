@@ -44,26 +44,39 @@ public partial class PluginCatalogSettingsPage : SettingsPageBase
         await ViewModel.InitializeAsync();
     }
 
+    protected override void OnDetachedFromVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        // The settings window may keep pages alive while navigating between them; release the
+        // icon bitmaps and HTTP clients held by the view model when this page leaves the tree.
+        if (!Design.IsDesignMode)
+        {
+            ViewModel.Dispose();
+        }
+    }
+
     private static PluginCatalogSettingsPageViewModel CreateDefaultViewModel()
     {
         var settingsFacade = HostSettingsFacadeProvider.GetOrCreate();
         var localizationService = new LocalizationService();
+        var assetCache = new PluginMarketAssetCacheService(AppDataPathProvider.GetPluginMarketDirectory());
         return new PluginCatalogSettingsPageViewModel(
             settingsFacade,
             localizationService,
-            new AirAppMarketIconService(),
-            new AirAppMarketReadmeService());
+            new AirAppMarketIconService(assetCache),
+            new AirAppMarketReadmeService(assetCache));
     }
 
     private static PluginCatalogSettingsPageViewModel CreateDesignTimeViewModel()
     {
         var settingsFacade = HostSettingsFacadeProvider.GetOrCreate();
         var localizationService = new LocalizationService();
+        var assetCache = new PluginMarketAssetCacheService(AppDataPathProvider.GetPluginMarketDirectory());
         var viewModel = new PluginCatalogSettingsPageViewModel(
             settingsFacade,
             localizationService,
-            new AirAppMarketIconService(),
-            new AirAppMarketReadmeService());
+            new AirAppMarketIconService(assetCache),
+            new AirAppMarketReadmeService(assetCache));
 
         var previewHostVersion = new Version(1, 2, 0);
         var items = new[]

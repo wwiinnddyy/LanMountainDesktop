@@ -24,7 +24,7 @@ public enum PluginCatalogPrimaryActionState
     Incompatible
 }
 
-public sealed partial class PluginCatalogItemViewModel : ViewModelBase
+public sealed partial class PluginCatalogItemViewModel : ViewModelBase, IDisposable
 {
     private readonly LocalizationService _localizationService;
     private readonly string _languageCode;
@@ -109,6 +109,11 @@ public sealed partial class PluginCatalogItemViewModel : ViewModelBase
     partial void OnIconBitmapChanged(Bitmap? value)
     {
         OnPropertyChanged(nameof(HasIcon));
+    }
+
+    public void Dispose()
+    {
+        IconBitmap = null;
     }
 
     public async Task EnsureIconLoadedAsync(AirAppMarketIconService iconService)
@@ -376,7 +381,7 @@ public sealed partial class PluginCatalogDetailViewModel : ViewModelBase
         => _localizationService.GetString(_languageCode, key, fallback);
 }
 
-public sealed partial class PluginCatalogSettingsPageViewModel : ViewModelBase
+public sealed partial class PluginCatalogSettingsPageViewModel : ViewModelBase, IDisposable
 {
     private readonly ISettingsFacadeService _settingsFacade;
     private readonly IPluginCatalogSettingsService _pluginCatalog;
@@ -454,6 +459,19 @@ public sealed partial class PluginCatalogSettingsPageViewModel : ViewModelBase
 
         _isInitialized = true;
         await RefreshAsync();
+    }
+
+    public void Dispose()
+    {
+        foreach (var item in CatalogPlugins)
+        {
+            item.Dispose();
+        }
+
+        CatalogPlugins.Clear();
+        FilteredPlugins.Clear();
+        _iconService.Dispose();
+        _readmeService.Dispose();
     }
 
     public PluginCatalogDetailViewModel CreateDetailViewModel(PluginCatalogItemViewModel item)

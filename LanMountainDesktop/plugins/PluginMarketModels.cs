@@ -5,8 +5,18 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using LanMountainDesktop.PluginSdk;
+using static LanMountainDesktop.Services.PluginMarket.AirAppMarketDefaults;
+using static LanMountainDesktop.Services.PluginMarket.AirAppMarketIndexDocument;
 
 namespace LanMountainDesktop.Services.PluginMarket;
+
+/// <summary>
+/// Market index schema version. The host only understands this single self-contained flat format.
+/// </summary>
+internal static class AirAppMarketSchema
+{
+    public const string Version = "3.0.0";
+}
 
 internal static class AirAppMarketDefaults
 {
@@ -213,15 +223,10 @@ internal static class AirAppMarketDefaults
     public static bool TryParsePackageSourceKind(string? value, out PluginPackageSourceKind kind)
     {
         kind = PluginPackageSourceKind.ReleaseAsset;
-        var normalized = AirAppMarketIndexDocument.NormalizeValue(value);
+        var normalized = NormalizeValue(value);
         if (string.IsNullOrWhiteSpace(normalized))
         {
             return false;
-        }
-
-        if (Enum.TryParse(normalized, ignoreCase: true, out kind))
-        {
-            return true;
         }
 
         switch (normalized)
@@ -278,6 +283,11 @@ internal static class AirAppMarketDefaults
         assetName = Uri.UnescapeDataString(segments[5]);
         return !string.IsNullOrWhiteSpace(repositoryName) && !string.IsNullOrWhiteSpace(assetName);
     }
+
+    internal static string? NormalizeValue(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
 }
 
 internal enum AirAppMarketLoadSource
@@ -285,14 +295,6 @@ internal enum AirAppMarketLoadSource
     Local = 0,
     Network = 1,
     Cache = 2
-}
-
-internal enum AirAppMarketInstallState
-{
-    NotInstalled = 0,
-    UpdateAvailable = 1,
-    Installed = 2,
-    RestartRequired = 3
 }
 
 internal sealed record AirAppMarketLoadResult(
@@ -309,6 +311,11 @@ internal sealed record AirAppMarketInstallResult(
     string? ErrorMessage,
     bool RestartRequired = false);
 
+/// <summary>
+/// The market index document. Self-contained flat schema (schemaVersion 3.0.0).
+/// Every plugin entry carries all of its display and acquisition metadata inline;
+/// the host never needs to call back to GitHub to enrich entries.
+/// </summary>
 internal sealed class AirAppMarketIndexDocument
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
@@ -349,11 +356,16 @@ internal sealed class AirAppMarketIndexDocument
 
     private AirAppMarketIndexDocument ValidateAndNormalize(string sourceName)
     {
-        var contracts = Contracts ?? [];
-        var normalizedContracts = new List<AirAppMarketSharedContractEntry>(contracts.Count);
-        var seenContracts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var schemaVersion = RequireValue(SchemaVersion, nameof(SchemaVersion), sourceName);
+        if (!string.Equals(schemaVersion, AirAppMarketSchema.Version, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Market index '{sourceName}' uses schemaVersion '{schemaVersion}', but the host only supports '{AirAppMarketSchema.Version}'.");
+        }
 
-        foreach (var contract in contracts)
+        var normalizedContracts = new List<AirAppMarketSharedContractEntry>((Contracts ?? []).Count);
+        var seenContracts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var contract in Contracts ?? [])
         {
             var normalizedContract = contract.ValidateAndNormalize(sourceName);
             var contractKey = $"{normalizedContract.Id}@{normalizedContract.Version}";
@@ -366,11 +378,9 @@ internal sealed class AirAppMarketIndexDocument
             normalizedContracts.Add(normalizedContract);
         }
 
-        var plugins = Plugins ?? [];
-        var normalizedPlugins = new List<AirAppMarketPluginEntry>(plugins.Count);
+        var normalizedPlugins = new List<AirAppMarketPluginEntry>((Plugins ?? []).Count);
         var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var plugin in plugins)
+        foreach (var plugin in Plugins ?? [])
         {
             var normalizedPlugin = plugin.ValidateAndNormalize(sourceName);
             if (!seenIds.Add(normalizedPlugin.Id))
@@ -384,7 +394,7 @@ internal sealed class AirAppMarketIndexDocument
 
         return new AirAppMarketIndexDocument
         {
-            SchemaVersion = RequireValue(SchemaVersion, nameof(SchemaVersion), sourceName),
+            SchemaVersion = AirAppMarketSchema.Version,
             SourceId = RequireValue(SourceId, nameof(SourceId), sourceName),
             SourceName = RequireValue(SourceName, nameof(SourceName), sourceName),
             GeneratedAt = GeneratedAt == default
@@ -400,7 +410,7 @@ internal sealed class AirAppMarketIndexDocument
         };
     }
 
-    private static string RequireValue(string? value, string propertyName, string sourceName)
+    internal static string RequireValue(string? value, string propertyName, string sourceName)
     {
         var normalized = NormalizeValue(value);
         if (string.IsNullOrWhiteSpace(normalized))
@@ -409,11 +419,6 @@ internal sealed class AirAppMarketIndexDocument
         }
 
         return normalized;
-    }
-
-    internal static string? NormalizeValue(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 
     internal static string NormalizeVersion(string? value, string propertyName, string sourceName)
@@ -526,7 +531,7 @@ internal sealed class AirAppMarketSharedContractEntry
 
     public AirAppMarketSharedContractEntry ValidateAndNormalize(string sourceName)
     {
-        var normalizedSha = AirAppMarketIndexDocument.NormalizeValue(Sha256)?.ToLowerInvariant()
+        var normalizedSha = NormalizeValue(Sha256)?.ToLowerInvariant()
             ?? throw new InvalidOperationException(
                 $"Market index '{sourceName}' is missing required property '{nameof(Sha256)}' for a shared contract.");
         if (normalizedSha.Length != 64 || normalizedSha.Any(ch => !Uri.IsHexDigit(ch)))
@@ -535,10 +540,10 @@ internal sealed class AirAppMarketSharedContractEntry
                 $"Market index '{sourceName}' declares invalid SHA-256 '{normalizedSha}' for shared contract '{Id}'.");
         }
 
-        var normalizedDownloadUrl = AirAppMarketIndexDocument.NormalizeValue(DownloadUrl)
+        var normalizedDownloadUrl = NormalizeValue(DownloadUrl)
             ?? throw new InvalidOperationException(
                 $"Market index '{sourceName}' is missing required property '{nameof(DownloadUrl)}' for shared contract '{Id}'.");
-        AirAppMarketIndexDocument.EnsureUrl(normalizedDownloadUrl, nameof(DownloadUrl), sourceName);
+        EnsureUrl(normalizedDownloadUrl, nameof(DownloadUrl), sourceName);
 
         if (PackageSizeBytes <= 0)
         {
@@ -548,10 +553,10 @@ internal sealed class AirAppMarketSharedContractEntry
 
         return new AirAppMarketSharedContractEntry
         {
-            Id = AirAppMarketIndexDocument.NormalizeValue(Id)
+            Id = NormalizeValue(Id)
                 ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing a shared contract id."),
-            Version = AirAppMarketIndexDocument.NormalizeVersion(Version, nameof(Version), sourceName),
-            AssemblyName = AirAppMarketIndexDocument.NormalizeValue(AssemblyName)
+            Version = NormalizeVersion(Version, nameof(Version), sourceName),
+            AssemblyName = NormalizeValue(AssemblyName)
                 ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing assemblyName for shared contract '{Id}'."),
             DownloadUrl = normalizedDownloadUrl,
             Sha256 = normalizedSha,
@@ -572,173 +577,13 @@ internal sealed class AirAppMarketPluginDependencyEntry
     {
         return new AirAppMarketPluginDependencyEntry
         {
-            Id = AirAppMarketIndexDocument.NormalizeValue(Id)
+            Id = NormalizeValue(Id)
                 ?? throw new InvalidOperationException(
                     $"Market index '{sourceName}' is missing dependency id for a plugin entry."),
-            Version = AirAppMarketIndexDocument.NormalizeVersion(Version, nameof(Version), sourceName),
-            AssemblyName = AirAppMarketIndexDocument.NormalizeValue(AssemblyName)
+            Version = NormalizeVersion(Version, nameof(Version), sourceName),
+            AssemblyName = NormalizeValue(AssemblyName)
                 ?? throw new InvalidOperationException(
                     $"Market index '{sourceName}' is missing assemblyName for dependency '{Id}'.")
-        };
-    }
-}
-
-internal sealed class AirAppMarketPluginManifestEntry
-{
-    public string Id { get; init; } = string.Empty;
-
-    public string Name { get; init; } = string.Empty;
-
-    public string Description { get; init; } = string.Empty;
-
-    public string Author { get; init; } = string.Empty;
-
-    public string Version { get; init; } = string.Empty;
-
-    public string ApiVersion { get; init; } = string.Empty;
-
-    public string EntranceAssembly { get; init; } = string.Empty;
-
-    public List<AirAppMarketPluginDependencyEntry> SharedContracts { get; init; } = [];
-
-    public AirAppMarketPluginManifestEntry ValidateAndNormalize(string sourceName)
-    {
-        return new AirAppMarketPluginManifestEntry
-        {
-            Id = AirAppMarketIndexDocument.NormalizeValue(Id)
-                ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing manifest.id."),
-            Name = AirAppMarketIndexDocument.NormalizeValue(Name)
-                ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing manifest.name."),
-            Description = AirAppMarketIndexDocument.NormalizeValue(Description)
-                ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing manifest.description."),
-            Author = AirAppMarketIndexDocument.NormalizeValue(Author)
-                ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing manifest.author."),
-            Version = AirAppMarketIndexDocument.NormalizeVersion(Version, nameof(Version), sourceName),
-            ApiVersion = AirAppMarketIndexDocument.NormalizeVersion(ApiVersion, nameof(ApiVersion), sourceName),
-            EntranceAssembly = AirAppMarketIndexDocument.NormalizeValue(EntranceAssembly) ?? string.Empty,
-            SharedContracts = NormalizeDependencies(sourceName, SharedContracts)
-        };
-    }
-
-    private static List<AirAppMarketPluginDependencyEntry> NormalizeDependencies(
-        string sourceName,
-        IReadOnlyList<AirAppMarketPluginDependencyEntry>? dependencies)
-    {
-        var normalizedDependencies = new List<AirAppMarketPluginDependencyEntry>((dependencies ?? []).Count);
-        var seenDependencies = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var dependency in dependencies ?? [])
-        {
-            var normalizedDependency = dependency.ValidateAndNormalize(sourceName);
-            var dependencyKey = $"{normalizedDependency.Id}@{normalizedDependency.Version}";
-            if (!seenDependencies.Add(dependencyKey))
-            {
-                throw new InvalidOperationException(
-                    $"Market index '{sourceName}' declares duplicate dependency '{dependencyKey}' in plugin manifest.");
-            }
-
-            normalizedDependencies.Add(normalizedDependency);
-        }
-
-        return normalizedDependencies;
-    }
-}
-
-internal sealed class AirAppMarketPluginCompatibilityEntry
-{
-    public string MinHostVersion { get; init; } = string.Empty;
-
-    public string ApiVersion { get; init; } = string.Empty;
-
-    public string PluginApiVersion { get; init; } = string.Empty;
-
-    public AirAppMarketPluginCompatibilityEntry ValidateAndNormalize(string sourceName)
-    {
-        return new AirAppMarketPluginCompatibilityEntry
-        {
-            MinHostVersion = AirAppMarketIndexDocument.NormalizeVersion(
-                MinHostVersion,
-                nameof(MinHostVersion),
-                sourceName),
-            ApiVersion = AirAppMarketIndexDocument.NormalizeVersion(
-                AirAppMarketIndexDocument.NormalizeValue(PluginApiVersion) ?? ApiVersion,
-                nameof(ApiVersion),
-                sourceName),
-            PluginApiVersion = AirAppMarketIndexDocument.NormalizeVersion(
-                AirAppMarketIndexDocument.NormalizeValue(PluginApiVersion) ?? ApiVersion,
-                nameof(ApiVersion),
-                sourceName)
-        };
-    }
-}
-
-internal sealed class AirAppMarketPluginRepositoryEntry
-{
-    public string IconUrl { get; init; } = string.Empty;
-
-    public string ProjectUrl { get; init; } = string.Empty;
-
-    public string ReadmeUrl { get; init; } = string.Empty;
-
-    public string HomepageUrl { get; init; } = string.Empty;
-
-    public string RepositoryUrl { get; init; } = string.Empty;
-
-    public List<string> Tags { get; init; } = [];
-
-    public string ReleaseNotes { get; init; } = string.Empty;
-
-    public AirAppMarketPluginRepositoryEntry ValidateAndNormalize(string sourceName)
-    {
-        var normalizedRepositoryUrl = AirAppMarketIndexDocument.NormalizeGitHubRepositoryUrl(
-            AirAppMarketIndexDocument.NormalizeValue(RepositoryUrl)
-            ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing repository.repositoryUrl."),
-            nameof(RepositoryUrl),
-            sourceName);
-
-        var normalizedIconUrl = AirAppMarketIndexDocument.NormalizeValue(IconUrl) ?? string.Empty;
-        if (!string.IsNullOrWhiteSpace(normalizedIconUrl))
-        {
-            AirAppMarketIndexDocument.EnsureUrl(normalizedIconUrl, nameof(IconUrl), sourceName);
-        }
-
-        var normalizedProjectUrl = AirAppMarketIndexDocument.NormalizeValue(ProjectUrl) ?? string.Empty;
-        if (!string.IsNullOrWhiteSpace(normalizedProjectUrl))
-        {
-            AirAppMarketIndexDocument.NormalizeGitHubRepositoryUrl(
-                normalizedProjectUrl,
-                nameof(ProjectUrl),
-                sourceName);
-        }
-
-        var normalizedReadmeUrl = AirAppMarketIndexDocument.NormalizeValue(ReadmeUrl) ?? string.Empty;
-        if (!string.IsNullOrWhiteSpace(normalizedReadmeUrl))
-        {
-            AirAppMarketIndexDocument.EnsureUrl(normalizedReadmeUrl, nameof(ReadmeUrl), sourceName);
-        }
-
-        var normalizedHomepageUrl = AirAppMarketIndexDocument.NormalizeValue(HomepageUrl) ?? string.Empty;
-        if (!string.IsNullOrWhiteSpace(normalizedHomepageUrl))
-        {
-            AirAppMarketIndexDocument.EnsureUrl(normalizedHomepageUrl, nameof(HomepageUrl), sourceName);
-        }
-
-        var normalizedTags = (Tags ?? [])
-            .Select(AirAppMarketIndexDocument.NormalizeValue)
-            .Where(tag => !string.IsNullOrWhiteSpace(tag))
-            .Select(tag => tag!)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        return new AirAppMarketPluginRepositoryEntry
-        {
-            IconUrl = normalizedIconUrl,
-            ProjectUrl = normalizedProjectUrl,
-            ReadmeUrl = normalizedReadmeUrl,
-            HomepageUrl = normalizedHomepageUrl,
-            RepositoryUrl = normalizedRepositoryUrl,
-            Tags = normalizedTags,
-            ReleaseNotes = AirAppMarketIndexDocument.NormalizeValue(ReleaseNotes) ?? string.Empty
         };
     }
 }
@@ -749,13 +594,11 @@ internal sealed class AirAppMarketPluginPackageSourceEntry
 
     public string Url { get; init; } = string.Empty;
 
-    public string Path { get; init; } = string.Empty;
-
     public PluginPackageSourceKind SourceKind { get; init; } = PluginPackageSourceKind.ReleaseAsset;
 
     public AirAppMarketPluginPackageSourceEntry ValidateAndNormalize(string sourceName, string pluginId)
     {
-        var normalizedKind = AirAppMarketIndexDocument.NormalizeValue(Kind)
+        var normalizedKind = NormalizeValue(Kind)
             ?? throw new InvalidOperationException(
                 $"Market index '{sourceName}' is missing package source kind for plugin '{pluginId}'.");
         if (!AirAppMarketDefaults.TryParsePackageSourceKind(normalizedKind, out var sourceKind))
@@ -764,11 +607,9 @@ internal sealed class AirAppMarketPluginPackageSourceEntry
                 $"Market index '{sourceName}' declares invalid package source kind '{normalizedKind}' for plugin '{pluginId}'.");
         }
 
-        var normalizedPath = AirAppMarketIndexDocument.NormalizeValue(Path);
-        var normalizedUrl = AirAppMarketIndexDocument.NormalizeValue(Url)
-            ?? normalizedPath
+        var normalizedUrl = NormalizeValue(Url)
             ?? throw new InvalidOperationException(
-                $"Market index '{sourceName}' is missing package source url/path for plugin '{pluginId}'.");
+                $"Market index '{sourceName}' is missing package source url for plugin '{pluginId}'.");
         EnsurePackageSourceUrl(normalizedUrl, sourceName, pluginId);
 
         return new AirAppMarketPluginPackageSourceEntry
@@ -781,7 +622,6 @@ internal sealed class AirAppMarketPluginPackageSourceEntry
                 _ => normalizedKind
             },
             Url = normalizedUrl,
-            Path = normalizedPath ?? string.Empty,
             SourceKind = sourceKind
         };
     }
@@ -790,11 +630,6 @@ internal sealed class AirAppMarketPluginPackageSourceEntry
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
         {
-            if (File.Exists(url))
-            {
-                return;
-            }
-
             throw new InvalidOperationException(
                 $"Market index '{sourceName}' declares invalid package source url '{url}' for plugin '{pluginId}'.");
         }
@@ -812,64 +647,202 @@ internal sealed class AirAppMarketPluginPackageSourceEntry
     }
 }
 
-internal sealed class AirAppMarketPluginPublicationEntry
+/// <summary>
+/// A single market plugin entry in the self-contained flat schema.
+/// All display and acquisition metadata lives directly on this object; there are no
+/// nested manifest/compatibility/repository/publication fallback objects.
+/// </summary>
+internal sealed class AirAppMarketPluginEntry
 {
+    public string PluginId { get; init; } = string.Empty;
+
+    public string Id { get; init; } = string.Empty;
+
+    public string Name { get; init; } = string.Empty;
+
+    public string Description { get; init; } = string.Empty;
+
+    public string Author { get; init; } = string.Empty;
+
+    public string Version { get; init; } = string.Empty;
+
+    public string ApiVersion { get; init; } = string.Empty;
+
+    public string MinHostVersion { get; init; } = string.Empty;
+
+    public string EntranceAssembly { get; init; } = string.Empty;
+
+    public string IconUrl { get; init; } = string.Empty;
+
+    public string ReadmeUrl { get; init; } = string.Empty;
+
+    public string ProjectUrl { get; init; } = string.Empty;
+
+    public string HomepageUrl { get; init; } = string.Empty;
+
+    public string RepositoryUrl { get; init; } = string.Empty;
+
     public string ReleaseTag { get; init; } = string.Empty;
 
     public string ReleaseAssetName { get; init; } = string.Empty;
-
-    public DateTimeOffset PublishedAt { get; init; }
-
-    public DateTimeOffset UpdatedAt { get; init; }
-
-    public long PackageSizeBytes { get; init; }
 
     public string Sha256 { get; init; } = string.Empty;
 
     public string Md5 { get; init; } = string.Empty;
 
+    public long PackageSizeBytes { get; init; }
+
+    public DateTimeOffset PublishedAt { get; init; }
+
+    public DateTimeOffset UpdatedAt { get; init; }
+
+    public string ReleaseNotes { get; init; } = string.Empty;
+
+    public List<string> Tags { get; init; } = [];
+
+    public List<AirAppMarketPluginDependencyEntry> SharedContracts { get; init; } = [];
+
     public List<AirAppMarketPluginPackageSourceEntry> PackageSources { get; init; } = [];
 
-    public AirAppMarketPluginPublicationEntry ValidateAndNormalize(string sourceName, string pluginId)
+    public List<string> DesktopComponents { get; init; } = [];
+
+    public List<string> SettingsSections { get; init; } = [];
+
+    public List<string> Exports { get; init; } = [];
+
+    public List<string> MessageTypes { get; init; } = [];
+
+    public string DownloadUrl => PackageSources
+        .OrderBy(source => AirAppMarketDefaults.GetPackageSourceOrder(source.SourceKind))
+        .FirstOrDefault()?.Url ?? string.Empty;
+
+    public bool HasReleaseDownloadMetadata =>
+        !string.IsNullOrWhiteSpace(ReleaseTag) &&
+        !string.IsNullOrWhiteSpace(ReleaseAssetName);
+
+    public AirAppMarketPluginEntry ValidateAndNormalize(string sourceName)
     {
-        var normalizedPackageSources = NormalizePackageSources(PackageSources, sourceName, pluginId);
-        var normalizedReleaseTag = AirAppMarketIndexDocument.NormalizeValue(ReleaseTag) ?? string.Empty;
-        if (!string.IsNullOrWhiteSpace(normalizedReleaseTag))
+        var resolvedId = NormalizeValue(PluginId) ?? NormalizeValue(Id)
+            ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing plugin id.");
+
+        var resolvedName = NormalizeValue(Name)
+            ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing plugin name for '{resolvedId}'.");
+
+        var resolvedDescription = NormalizeValue(Description)
+            ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing plugin description for '{resolvedId}'.");
+
+        var resolvedAuthor = NormalizeValue(Author)
+            ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing plugin author for '{resolvedId}'.");
+
+        var resolvedVersion = NormalizeVersion(Version, nameof(Version), sourceName);
+        var resolvedApiVersion = NormalizeVersion(ApiVersion, nameof(ApiVersion), sourceName);
+        var resolvedMinHostVersion = NormalizeValue(MinHostVersion) ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(resolvedMinHostVersion))
         {
-            normalizedReleaseTag = AirAppMarketIndexDocument.NormalizeReleaseTag(
-                normalizedReleaseTag,
-                nameof(ReleaseTag),
-                sourceName);
+            resolvedMinHostVersion = NormalizeVersion(resolvedMinHostVersion, nameof(MinHostVersion), sourceName);
         }
 
-        var normalizedReleaseAssetName = AirAppMarketIndexDocument.NormalizeValue(ReleaseAssetName) ?? string.Empty;
-        var normalizedSha256 = AirAppMarketIndexDocument.NormalizeValue(Sha256)?.ToLowerInvariant() ?? string.Empty;
-        if (!string.IsNullOrWhiteSpace(normalizedSha256) &&
-            (normalizedSha256.Length != 64 || normalizedSha256.Any(ch => !Uri.IsHexDigit(ch))))
+        var resolvedRepositoryUrl = NormalizeGitHubRepositoryUrl(
+            NormalizeValue(RepositoryUrl)
+            ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing repositoryUrl for plugin '{resolvedId}'."),
+            nameof(RepositoryUrl),
+            sourceName);
+
+        var resolvedIconUrl = NormalizeValue(IconUrl) ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(resolvedIconUrl))
+        {
+            EnsureUrl(resolvedIconUrl, nameof(IconUrl), sourceName);
+        }
+
+        var resolvedReadmeUrl = NormalizeValue(ReadmeUrl) ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(resolvedReadmeUrl))
+        {
+            EnsureUrl(resolvedReadmeUrl, nameof(ReadmeUrl), sourceName);
+        }
+
+        var resolvedProjectUrl = NormalizeValue(ProjectUrl) ?? string.Empty;
+        var resolvedHomepageUrl = NormalizeValue(HomepageUrl) ?? string.Empty;
+
+        var resolvedReleaseTag = NormalizeValue(ReleaseTag) ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(resolvedReleaseTag))
+        {
+            resolvedReleaseTag = NormalizeReleaseTag(resolvedReleaseTag, nameof(ReleaseTag), sourceName);
+        }
+
+        var resolvedReleaseAssetName = NormalizeValue(ReleaseAssetName) ?? string.Empty;
+
+        var resolvedSha256 = NormalizeValue(Sha256)?.ToLowerInvariant() ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(resolvedSha256) &&
+            (resolvedSha256.Length != 64 || resolvedSha256.Any(ch => !Uri.IsHexDigit(ch))))
         {
             throw new InvalidOperationException(
-                $"Market index '{sourceName}' declares invalid SHA-256 '{normalizedSha256}' for plugin '{pluginId}'.");
+                $"Market index '{sourceName}' declares invalid SHA-256 '{resolvedSha256}' for plugin '{resolvedId}'.");
         }
 
-        var normalizedMd5 = AirAppMarketIndexDocument.NormalizeValue(Md5)?.ToLowerInvariant() ?? string.Empty;
-        if (!string.IsNullOrWhiteSpace(normalizedMd5) &&
-            (normalizedMd5.Length != 32 || normalizedMd5.Any(ch => !Uri.IsHexDigit(ch))))
+        var resolvedMd5 = NormalizeValue(Md5)?.ToLowerInvariant() ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(resolvedMd5) &&
+            (resolvedMd5.Length != 32 || resolvedMd5.Any(ch => !Uri.IsHexDigit(ch))))
         {
             throw new InvalidOperationException(
-                $"Market index '{sourceName}' declares invalid MD5 '{normalizedMd5}' for plugin '{pluginId}'.");
+                $"Market index '{sourceName}' declares invalid MD5 '{resolvedMd5}' for plugin '{resolvedId}'.");
         }
 
-        return new AirAppMarketPluginPublicationEntry
+        var normalizedPackageSources = NormalizePackageSources(PackageSources, sourceName, resolvedId);
+        if (normalizedPackageSources.Count == 0)
         {
-            ReleaseTag = normalizedReleaseTag,
-            ReleaseAssetName = normalizedReleaseAssetName,
+            throw new InvalidOperationException(
+                $"Market index '{sourceName}' is missing package sources for plugin '{resolvedId}'.");
+        }
+
+        return new AirAppMarketPluginEntry
+        {
+            PluginId = resolvedId,
+            Id = resolvedId,
+            Name = resolvedName,
+            Description = resolvedDescription,
+            Author = resolvedAuthor,
+            Version = resolvedVersion,
+            ApiVersion = resolvedApiVersion,
+            MinHostVersion = resolvedMinHostVersion,
+            EntranceAssembly = NormalizeValue(EntranceAssembly) ?? string.Empty,
+            IconUrl = resolvedIconUrl,
+            ReadmeUrl = resolvedReadmeUrl,
+            ProjectUrl = resolvedProjectUrl,
+            HomepageUrl = resolvedHomepageUrl,
+            RepositoryUrl = resolvedRepositoryUrl,
+            ReleaseTag = resolvedReleaseTag,
+            ReleaseAssetName = resolvedReleaseAssetName,
+            Sha256 = resolvedSha256,
+            Md5 = resolvedMd5,
+            PackageSizeBytes = PackageSizeBytes,
             PublishedAt = PublishedAt,
             UpdatedAt = UpdatedAt,
-            PackageSizeBytes = PackageSizeBytes,
-            Sha256 = normalizedSha256,
-            Md5 = normalizedMd5,
-            PackageSources = normalizedPackageSources
+            ReleaseNotes = NormalizeValue(ReleaseNotes) ?? string.Empty,
+            Tags = NormalizeValues(Tags),
+            SharedContracts = NormalizeDependencies(SharedContracts, sourceName, resolvedId),
+            PackageSources = normalizedPackageSources,
+            DesktopComponents = NormalizeValues(DesktopComponents),
+            SettingsSections = NormalizeValues(SettingsSections),
+            Exports = NormalizeValues(Exports),
+            MessageTypes = NormalizeValues(MessageTypes)
         };
+    }
+
+    public string GetVersionSummary()
+    {
+        return string.Format(
+            CultureInfo.InvariantCulture,
+            "v{0} | API {1} | Host >= {2}",
+            string.IsNullOrWhiteSpace(Version) ? "?" : Version,
+            string.IsNullOrWhiteSpace(ApiVersion) ? "?" : ApiVersion,
+            string.IsNullOrWhiteSpace(MinHostVersion) ? "?" : MinHostVersion);
+    }
+
+    public IReadOnlyList<AirAppMarketPluginPackageSourceEntry> GetPackageSourcesInInstallOrder()
+    {
+        return PackageSources
+            .OrderBy(source => AirAppMarketDefaults.GetPackageSourceOrder(source.SourceKind))
+            .ToList();
     }
 
     private static List<AirAppMarketPluginPackageSourceEntry> NormalizePackageSources(
@@ -902,385 +875,6 @@ internal sealed class AirAppMarketPluginPublicationEntry
 
         return normalizedSources;
     }
-}
-
-internal sealed class AirAppMarketPluginCapabilitiesEntry
-{
-    public List<AirAppMarketPluginDependencyEntry> SharedContracts { get; init; } = [];
-
-    public List<string> DesktopComponents { get; init; } = [];
-
-    public List<string> SettingsSections { get; init; } = [];
-
-    public List<string> Exports { get; init; } = [];
-
-    public List<string> MessageTypes { get; init; } = [];
-
-    public AirAppMarketPluginCapabilitiesEntry ValidateAndNormalize(string sourceName)
-    {
-        return new AirAppMarketPluginCapabilitiesEntry
-        {
-            SharedContracts = NormalizeDependencies(sourceName, SharedContracts),
-            DesktopComponents = NormalizeValues(DesktopComponents),
-            SettingsSections = NormalizeValues(SettingsSections),
-            Exports = NormalizeValues(Exports),
-            MessageTypes = NormalizeValues(MessageTypes)
-        };
-    }
-
-    private static List<AirAppMarketPluginDependencyEntry> NormalizeDependencies(
-        string sourceName,
-        IReadOnlyList<AirAppMarketPluginDependencyEntry>? dependencies)
-    {
-        var normalizedDependencies = new List<AirAppMarketPluginDependencyEntry>((dependencies ?? []).Count);
-        var seenDependencies = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var dependency in dependencies ?? [])
-        {
-            var normalizedDependency = dependency.ValidateAndNormalize(sourceName);
-            var key = $"{normalizedDependency.Id}@{normalizedDependency.Version}";
-            if (!seenDependencies.Add(key))
-            {
-                throw new InvalidOperationException(
-                    $"Market index '{sourceName}' declares duplicate capability dependency '{key}'.");
-            }
-
-            normalizedDependencies.Add(normalizedDependency);
-        }
-
-        return normalizedDependencies;
-    }
-
-    private static List<string> NormalizeValues(IReadOnlyList<string>? values)
-    {
-        return (values ?? [])
-            .Select(AirAppMarketIndexDocument.NormalizeValue)
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Select(value => value!)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
-}
-
-internal sealed class AirAppMarketPluginEntry
-{
-    public string PluginId { get; init; } = string.Empty;
-
-    public AirAppMarketPluginManifestEntry? Manifest { get; init; }
-
-    public AirAppMarketPluginCompatibilityEntry? Compatibility { get; init; }
-
-    public AirAppMarketPluginRepositoryEntry? Repository { get; init; }
-
-    public AirAppMarketPluginPublicationEntry? Publication { get; init; }
-
-    public AirAppMarketPluginCapabilitiesEntry? Capabilities { get; init; }
-
-    public string Id { get; init; } = string.Empty;
-
-    public string Name { get; init; } = string.Empty;
-
-    public string Description { get; init; } = string.Empty;
-
-    public string Author { get; init; } = string.Empty;
-
-    public string Version { get; init; } = string.Empty;
-
-    public string ApiVersion { get; init; } = string.Empty;
-
-    public string MinHostVersion { get; init; } = string.Empty;
-
-    public string DownloadUrl { get; init; } = string.Empty;
-
-    public string Sha256 { get; init; } = string.Empty;
-
-    public long PackageSizeBytes { get; init; }
-
-    public string IconUrl { get; init; } = string.Empty;
-
-    public string ReleaseTag { get; init; } = string.Empty;
-
-    public string ReleaseAssetName { get; init; } = string.Empty;
-
-    public string ProjectUrl { get; init; } = string.Empty;
-
-    public string ReadmeUrl { get; init; } = string.Empty;
-
-    public string HomepageUrl { get; init; } = string.Empty;
-
-    public string RepositoryUrl { get; init; } = string.Empty;
-
-    public List<string> Tags { get; init; } = [];
-
-    public List<AirAppMarketPluginDependencyEntry> SharedContracts { get; init; } = [];
-
-    public List<AirAppMarketPluginPackageSourceEntry> PackageSources { get; init; } = [];
-
-    public string Md5 { get; init; } = string.Empty;
-
-    public DateTimeOffset PublishedAt { get; init; }
-
-    public DateTimeOffset UpdatedAt { get; init; }
-
-    public string ReleaseNotes { get; init; } = string.Empty;
-
-    public bool HasReleaseDownloadMetadata =>
-        !string.IsNullOrWhiteSpace(ReleaseTag) &&
-        !string.IsNullOrWhiteSpace(ReleaseAssetName);
-
-    public AirAppMarketPluginEntry ValidateAndNormalize(string sourceName)
-    {
-        var normalizedManifest = HasManifestData(Manifest)
-            ? Manifest!.ValidateAndNormalize(sourceName)
-            : null;
-        var normalizedCompatibility = HasCompatibilityData(Compatibility)
-            ? Compatibility!.ValidateAndNormalize(sourceName)
-            : null;
-        var normalizedRepository = HasRepositoryData(Repository)
-            ? Repository!.ValidateAndNormalize(sourceName)
-            : null;
-        var normalizedCapabilities = HasCapabilitiesData(Capabilities)
-            ? Capabilities!.ValidateAndNormalize(sourceName)
-            : null;
-        var resolvedPluginId = FirstNonEmpty(
-            normalizedManifest?.Id,
-            AirAppMarketIndexDocument.NormalizeValue(PluginId),
-            AirAppMarketIndexDocument.NormalizeValue(Id))
-            ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing plugin id.");
-        var normalizedPublication = HasPublicationData(Publication)
-            ? Publication!.ValidateAndNormalize(sourceName, resolvedPluginId)
-            : null;
-
-        var resolvedPackageSources = NormalizePackageSources(
-            normalizedPublication?.PackageSources ?? PackageSources,
-            sourceName,
-            resolvedPluginId,
-            AirAppMarketIndexDocument.NormalizeValue(DownloadUrl));
-        if (resolvedPackageSources.Count == 0)
-        {
-            throw new InvalidOperationException(
-                $"Market index '{sourceName}' is missing package sources for plugin '{resolvedPluginId}'.");
-        }
-
-        var resolvedRepositoryUrl = FirstNonEmpty(
-            normalizedRepository?.RepositoryUrl,
-            AirAppMarketIndexDocument.NormalizeValue(RepositoryUrl));
-        if (string.IsNullOrWhiteSpace(resolvedRepositoryUrl))
-        {
-            throw new InvalidOperationException($"Market index '{sourceName}' is missing plugin repositoryUrl.");
-        }
-
-        var resolvedDownloadUrl = FirstNonEmpty(
-            resolvedPackageSources.FirstOrDefault()?.Url,
-            AirAppMarketIndexDocument.NormalizeValue(DownloadUrl))
-            ?? string.Empty;
-
-        var resolvedName = FirstNonEmpty(
-            normalizedManifest?.Name,
-            AirAppMarketIndexDocument.NormalizeValue(Name))
-            ?? string.Empty;
-        var resolvedDescription = FirstNonEmpty(
-            normalizedManifest?.Description,
-            AirAppMarketIndexDocument.NormalizeValue(Description))
-            ?? string.Empty;
-        var resolvedAuthor = FirstNonEmpty(
-            normalizedManifest?.Author,
-            AirAppMarketIndexDocument.NormalizeValue(Author))
-            ?? string.Empty;
-        var resolvedVersion = FirstNonEmpty(
-            normalizedManifest?.Version,
-            AirAppMarketIndexDocument.NormalizeValue(Version))
-            ?? string.Empty;
-        var resolvedApiVersion = FirstNonEmpty(
-            normalizedCompatibility?.PluginApiVersion,
-            normalizedManifest?.ApiVersion,
-            AirAppMarketIndexDocument.NormalizeValue(ApiVersion))
-            ?? string.Empty;
-        var resolvedMinHostVersion = FirstNonEmpty(
-            normalizedCompatibility?.MinHostVersion,
-            AirAppMarketIndexDocument.NormalizeValue(MinHostVersion))
-            ?? string.Empty;
-
-        var resolvedIconUrl = FirstNonEmpty(
-            normalizedRepository?.IconUrl,
-            AirAppMarketIndexDocument.NormalizeValue(IconUrl))
-            ?? string.Empty;
-        var resolvedProjectUrl = FirstNonEmpty(
-            normalizedRepository?.ProjectUrl,
-            AirAppMarketIndexDocument.NormalizeValue(ProjectUrl))
-            ?? string.Empty;
-        var resolvedReadmeUrl = FirstNonEmpty(
-            normalizedRepository?.ReadmeUrl,
-            AirAppMarketIndexDocument.NormalizeValue(ReadmeUrl))
-            ?? string.Empty;
-        var resolvedHomepageUrl = FirstNonEmpty(
-            normalizedRepository?.HomepageUrl,
-            AirAppMarketIndexDocument.NormalizeValue(HomepageUrl))
-            ?? string.Empty;
-
-        var resolvedReleaseTag = FirstNonEmpty(
-            normalizedPublication?.ReleaseTag,
-            AirAppMarketIndexDocument.NormalizeValue(ReleaseTag))
-            ?? string.Empty;
-        var resolvedReleaseAssetName = FirstNonEmpty(
-            normalizedPublication?.ReleaseAssetName,
-            AirAppMarketIndexDocument.NormalizeValue(ReleaseAssetName))
-            ?? string.Empty;
-        var resolvedPackageSize = normalizedPublication?.PackageSizeBytes ?? PackageSizeBytes;
-        var resolvedSha256 = FirstNonEmpty(
-            normalizedPublication?.Sha256,
-            AirAppMarketIndexDocument.NormalizeValue(Sha256)?.ToLowerInvariant())
-            ?? string.Empty;
-        var resolvedMd5 = FirstNonEmpty(
-            normalizedPublication?.Md5,
-            AirAppMarketIndexDocument.NormalizeValue(Md5)?.ToLowerInvariant())
-            ?? string.Empty;
-        var resolvedPublishedAt = normalizedPublication?.PublishedAt ?? PublishedAt;
-        var resolvedUpdatedAt = normalizedPublication?.UpdatedAt ?? UpdatedAt;
-
-        var resolvedDependencies = NormalizeDependencies(
-            normalizedManifest?.SharedContracts ?? SharedContracts,
-            sourceName,
-            resolvedPluginId);
-        var resolvedTags = (normalizedRepository?.Tags ?? Tags ?? [])
-            .Select(AirAppMarketIndexDocument.NormalizeValue)
-            .Where(tag => !string.IsNullOrWhiteSpace(tag))
-            .Select(tag => tag!)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-        var resolvedReleaseNotes = FirstNonEmpty(
-            normalizedRepository?.ReleaseNotes,
-            AirAppMarketIndexDocument.NormalizeValue(ReleaseNotes))
-            ?? string.Empty;
-
-        return new AirAppMarketPluginEntry
-        {
-            PluginId = resolvedPluginId,
-            Manifest = normalizedManifest,
-            Compatibility = normalizedCompatibility,
-            Repository = normalizedRepository,
-            Publication = normalizedPublication,
-            Capabilities = normalizedCapabilities,
-            Id = resolvedPluginId,
-            Name = resolvedName,
-            Description = resolvedDescription,
-            Author = resolvedAuthor,
-            Version = resolvedVersion,
-            ApiVersion = resolvedApiVersion,
-            MinHostVersion = resolvedMinHostVersion,
-            DownloadUrl = resolvedDownloadUrl,
-            Sha256 = resolvedSha256,
-            Md5 = resolvedMd5,
-            PackageSizeBytes = resolvedPackageSize,
-            IconUrl = resolvedIconUrl,
-            ReleaseTag = resolvedReleaseTag ?? string.Empty,
-            ReleaseAssetName = resolvedReleaseAssetName ?? string.Empty,
-            ProjectUrl = resolvedProjectUrl,
-            ReadmeUrl = resolvedReadmeUrl,
-            HomepageUrl = resolvedHomepageUrl,
-            RepositoryUrl = resolvedRepositoryUrl,
-            Tags = resolvedTags,
-            SharedContracts = resolvedDependencies,
-            PackageSources = resolvedPackageSources,
-            PublishedAt = resolvedPublishedAt,
-            UpdatedAt = resolvedUpdatedAt,
-            ReleaseNotes = resolvedReleaseNotes
-        };
-    }
-
-    public string GetVersionSummary()
-    {
-        if (string.IsNullOrWhiteSpace(Version) &&
-            string.IsNullOrWhiteSpace(ApiVersion) &&
-            string.IsNullOrWhiteSpace(MinHostVersion))
-        {
-            return "Unknown";
-        }
-
-        return string.Format(
-            CultureInfo.InvariantCulture,
-            "v{0} | API {1} | Host >= {2}",
-            Version,
-            ApiVersion,
-            MinHostVersion);
-    }
-
-    public IReadOnlyList<AirAppMarketPluginPackageSourceEntry> GetPackageSourcesInInstallOrder()
-    {
-        if (PackageSources.Count > 0)
-        {
-            return PackageSources
-                .OrderBy(source => AirAppMarketDefaults.GetPackageSourceOrder(source.SourceKind))
-                .ToList();
-        }
-
-        if (string.IsNullOrWhiteSpace(DownloadUrl))
-        {
-            return [];
-        }
-
-        var sourceKind = HasReleaseDownloadMetadata
-            ? PluginPackageSourceKind.ReleaseAsset
-            : PluginPackageSourceKind.RawFallback;
-        return
-        [
-            new AirAppMarketPluginPackageSourceEntry
-            {
-                Kind = sourceKind switch
-                {
-                    PluginPackageSourceKind.ReleaseAsset => "releaseAsset",
-                    PluginPackageSourceKind.RawFallback => "rawFallback",
-                    PluginPackageSourceKind.WorkspaceLocal => "workspaceLocal",
-                    _ => "rawFallback"
-                },
-                Url = DownloadUrl,
-                SourceKind = sourceKind
-            }
-        ];
-    }
-
-    private static bool HasManifestData(AirAppMarketPluginManifestEntry? manifest)
-    {
-        return manifest is not null &&
-               (!string.IsNullOrWhiteSpace(manifest.Id) ||
-                !string.IsNullOrWhiteSpace(manifest.Name) ||
-                !string.IsNullOrWhiteSpace(manifest.Version));
-    }
-
-    private static bool HasCompatibilityData(AirAppMarketPluginCompatibilityEntry? compatibility)
-    {
-        return compatibility is not null &&
-               (!string.IsNullOrWhiteSpace(compatibility.MinHostVersion) ||
-                !string.IsNullOrWhiteSpace(compatibility.ApiVersion) ||
-                !string.IsNullOrWhiteSpace(compatibility.PluginApiVersion));
-    }
-
-    private static bool HasRepositoryData(AirAppMarketPluginRepositoryEntry? repository)
-    {
-        return repository is not null &&
-               (!string.IsNullOrWhiteSpace(repository.IconUrl) ||
-                !string.IsNullOrWhiteSpace(repository.ProjectUrl) ||
-                !string.IsNullOrWhiteSpace(repository.RepositoryUrl));
-    }
-
-    private static bool HasPublicationData(AirAppMarketPluginPublicationEntry? publication)
-    {
-        return publication is not null &&
-               (!string.IsNullOrWhiteSpace(publication.ReleaseTag) ||
-                !string.IsNullOrWhiteSpace(publication.ReleaseAssetName) ||
-                publication.PackageSources.Count > 0);
-    }
-
-    private static bool HasCapabilitiesData(AirAppMarketPluginCapabilitiesEntry? capabilities)
-    {
-        return capabilities is not null &&
-               (capabilities.SharedContracts.Count > 0 ||
-                capabilities.DesktopComponents.Count > 0 ||
-                capabilities.SettingsSections.Count > 0 ||
-                capabilities.Exports.Count > 0 ||
-                capabilities.MessageTypes.Count > 0);
-    }
 
     private static List<AirAppMarketPluginDependencyEntry> NormalizeDependencies(
         IReadOnlyList<AirAppMarketPluginDependencyEntry>? dependencies,
@@ -1305,52 +899,14 @@ internal sealed class AirAppMarketPluginEntry
         return normalizedDependencies;
     }
 
-    private static List<AirAppMarketPluginPackageSourceEntry> NormalizePackageSources(
-        IReadOnlyList<AirAppMarketPluginPackageSourceEntry>? packageSources,
-        string sourceName,
-        string pluginId,
-        string? legacyDownloadUrl)
+    private static List<string> NormalizeValues(IReadOnlyList<string>? values)
     {
-        var normalizedSources = new List<AirAppMarketPluginPackageSourceEntry>((packageSources ?? []).Count + 1);
-        foreach (var source in packageSources ?? [])
-        {
-            normalizedSources.Add(source.ValidateAndNormalize(sourceName, pluginId));
-        }
-
-        if (normalizedSources.Count > 0)
-        {
-            return normalizedSources
-                .OrderBy(source => AirAppMarketDefaults.GetPackageSourceOrder(source.SourceKind))
-                .ToList();
-        }
-
-        var normalizedLegacyDownloadUrl = AirAppMarketIndexDocument.NormalizeValue(legacyDownloadUrl);
-        if (!string.IsNullOrWhiteSpace(normalizedLegacyDownloadUrl))
-        {
-            var legacySource = new AirAppMarketPluginPackageSourceEntry
-            {
-                Kind = "rawFallback",
-                Url = normalizedLegacyDownloadUrl,
-                SourceKind = PluginPackageSourceKind.RawFallback
-            };
-            normalizedSources.Add(legacySource.ValidateAndNormalize(sourceName, pluginId));
-            return normalizedSources;
-        }
-
-        return normalizedSources;
-    }
-
-    private static string? FirstNonEmpty(params string?[] values)
-    {
-        foreach (var value in values)
-        {
-            var normalized = AirAppMarketIndexDocument.NormalizeValue(value);
-            if (!string.IsNullOrWhiteSpace(normalized))
-            {
-                return normalized;
-            }
-        }
-
-        return null;
+        return (values ?? [])
+            .Select(NormalizeValue)
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 }
