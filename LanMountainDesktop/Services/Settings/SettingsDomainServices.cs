@@ -1830,7 +1830,7 @@ internal sealed class PluginCatalogSettingsService : IPluginCatalogSettingsServi
             entry.Author,
             entry.Version,
             entry.ApiVersion,
-            string.Empty,
+            entry.EntranceAssembly,
             entry.SharedContracts
                 .Select(contract => new PluginCatalogSharedContractInfo(
                     contract.Id,
@@ -1858,7 +1858,7 @@ internal sealed class PluginCatalogSettingsService : IPluginCatalogSettingsServi
             entry.UpdatedAt,
             entry.PackageSizeBytes,
             entry.Sha256,
-            null);
+            entry.Md5);
 
         var sources = BuildPackageSources(entry);
 
@@ -1873,21 +1873,16 @@ internal sealed class PluginCatalogSettingsService : IPluginCatalogSettingsServi
 
     private static IReadOnlyList<PluginCapabilityInfo> BuildCapabilities(AirAppMarketPluginEntry entry)
     {
-        if (entry.Capabilities is null)
-        {
-            return [];
-        }
-
         var capabilities = new List<PluginCapabilityInfo>();
-        capabilities.AddRange(entry.Capabilities.SharedContracts.Select(contract =>
+        capabilities.AddRange(entry.SharedContracts.Select(contract =>
             new PluginCapabilityInfo(contract.Id, contract.Version, contract.AssemblyName)));
-        capabilities.AddRange(entry.Capabilities.DesktopComponents.Select(id =>
+        capabilities.AddRange(entry.DesktopComponents.Select(id =>
             new PluginCapabilityInfo(id, null, null)));
-        capabilities.AddRange(entry.Capabilities.SettingsSections.Select(id =>
+        capabilities.AddRange(entry.SettingsSections.Select(id =>
             new PluginCapabilityInfo(id, null, null)));
-        capabilities.AddRange(entry.Capabilities.Exports.Select(id =>
+        capabilities.AddRange(entry.Exports.Select(id =>
             new PluginCapabilityInfo(id, null, null)));
-        capabilities.AddRange(entry.Capabilities.MessageTypes.Select(id =>
+        capabilities.AddRange(entry.MessageTypes.Select(id =>
             new PluginCapabilityInfo(id, null, null)));
 
         return capabilities

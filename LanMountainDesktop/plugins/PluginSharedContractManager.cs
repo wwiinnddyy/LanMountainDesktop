@@ -22,14 +22,15 @@ internal sealed class PluginSharedContractManager : IDisposable
     private readonly Dictionary<string, LoadedSharedContract> _loadedContracts =
         new(StringComparer.OrdinalIgnoreCase);
 
-    public PluginSharedContractManager(string cacheDirectory)
+    public PluginSharedContractManager(string dataDirectory)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(cacheDirectory);
+        ArgumentException.ThrowIfNullOrWhiteSpace(dataDirectory);
 
-        _contractsDirectory = Path.Combine(
-            GetSharedContractRootDirectory(),
-            "SharedContracts");
-        _indexService = new AirAppMarketIndexService(new AirAppMarketCacheService(cacheDirectory));
+        // Shared contracts live alongside the rest of the plugin market data so that a single
+        // storage location (driven by AppDataPathProvider.GetDataRoot() / the OOBE-chosen path)
+        // owns every plugin asset: index cache, downloads, and shared contracts.
+        _contractsDirectory = Path.Combine(dataDirectory, "SharedContracts");
+        _indexService = new AirAppMarketIndexService(new AirAppMarketCacheService(dataDirectory));
         _httpClient = new HttpClient
         {
             Timeout = TimeSpan.FromMinutes(2)
@@ -253,11 +254,6 @@ internal sealed class PluginSharedContractManager : IDisposable
             Sanitize(reference.Id),
             Sanitize(reference.Version),
             reference.AssemblyName);
-    }
-
-    private static string GetSharedContractRootDirectory()
-    {
-        return AppDataPathProvider.GetDataRoot();
     }
 
     private static string Sanitize(string value)

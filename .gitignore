@@ -519,3 +519,62 @@ nul
 /velopack-output-local
 /test-aot-publish
 /.claude/worktrees
+
+## ============================================================================
+## 以下为补充的忽略规则 - 清理杂乱文件
+## ============================================================================
+
+# AI 工具配置目录（本地开发工具配置，不应上传到 GitHub）
+.codex/
+.comate/
+.cursor/
+.kilo/
+
+# 临时调试/分析脚本（一次性使用，不属于项目构建脚本）
+/test-launcher.ps1
+/size_analysis.ps1
+/size_analysis2.ps1
+/analyze_commits.ps1
+/get_commits.ps1
+/get_commits.bat
+/analyze_commits.py
+/run_analysis.py
+/parse_git_log.py
+/get_git_log.py
+/settings_extractor.py
+/test-omo-resolve.js
+
+# 临时测试项目（本地调试用，不属于正式项目）
+/testicon/
+/TestFluentIcons/
+/CheckIpcAot/
+
+# 临时代码片段和测试文件
+/test_fluenticons.cs
+/check_ipc.cs
+
+# 临时文档和笔记（不属于正式项目文档）
+/noise.md
+/design.md
+/phainon.yml
+/SECURITY_AUDIT_REPORT.md
+/SECURITY_AUDIT_REPORT_2026-05-24.md
+/SECURITY_AUDIT_REPORT_2026-06-01.md
+/CODE_WIKI.md
+
+# 临时数据文件
+/_b.txt
+/diff.txt
+/tmp.json
+/misans.zip
+/mockup-noise-level.html
+
+# Mock/原型文件
+/mocks/
+
+# Git 命令误输出文件（文件名含空格的异常文件）
+/ago*
+
+# 临时 AXAML 备份文件
+/temp_old_main.axaml
+/temp_old_main_utf8.axaml

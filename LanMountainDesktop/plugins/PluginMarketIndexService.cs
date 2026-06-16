@@ -10,7 +10,6 @@ namespace LanMountainDesktop.Services.PluginMarket;
 internal sealed class AirAppMarketIndexService : IDisposable
 {
     private readonly AirAppMarketCacheService _cacheService;
-    private readonly AirAppMarketMetadataResolverService _metadataResolver;
     private readonly HttpClient _httpClient;
 
     public AirAppMarketIndexService(AirAppMarketCacheService cacheService)
@@ -23,20 +22,19 @@ internal sealed class AirAppMarketIndexService : IDisposable
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("LanMountainDesktop-PluginMarketplace/1.0");
         _httpClient.DefaultRequestHeaders.Accept.Add(
             new MediaTypeWithQualityHeaderValue("application/json"));
-        _metadataResolver = new AirAppMarketMetadataResolverService(_httpClient);
     }
 
     public async Task<AirAppMarketLoadResult> LoadAsync(CancellationToken cancellationToken = default)
     {
         Exception? networkError = null;
 
+        // The index is self-contained, so there is no per-plugin enrichment step anymore.
         if (AirAppMarketDefaults.TryGetWorkspaceIndexPath() is { } localIndexPath)
         {
             try
             {
                 var json = await File.ReadAllTextAsync(localIndexPath, cancellationToken).ConfigureAwait(false);
                 var document = AirAppMarketIndexDocument.Load(json, localIndexPath);
-                document = await _metadataResolver.EnrichAsync(document, cancellationToken).ConfigureAwait(false);
                 _cacheService.SaveIndexJson(json);
                 return new AirAppMarketLoadResult(
                     true,
@@ -69,7 +67,6 @@ internal sealed class AirAppMarketIndexService : IDisposable
             response.EnsureSuccessStatusCode();
 
             var document = AirAppMarketIndexDocument.Load(json, AirAppMarketDefaults.DefaultIndexUrl);
-            document = await _metadataResolver.EnrichAsync(document, cancellationToken).ConfigureAwait(false);
             _cacheService.SaveIndexJson(json);
             return new AirAppMarketLoadResult(
                 true,
@@ -97,7 +94,6 @@ internal sealed class AirAppMarketIndexService : IDisposable
             try
             {
                 var cachedDocument = AirAppMarketIndexDocument.Load(cachedJson, _cacheService.CacheFilePath);
-                cachedDocument = await _metadataResolver.EnrichAsync(cachedDocument, cancellationToken).ConfigureAwait(false);
                 return new AirAppMarketLoadResult(
                     true,
                     cachedDocument,
@@ -129,7 +125,6 @@ internal sealed class AirAppMarketIndexService : IDisposable
 
     public void Dispose()
     {
-        _metadataResolver.Dispose();
         _httpClient.Dispose();
     }
 }
