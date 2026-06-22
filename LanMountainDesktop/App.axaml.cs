@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -1861,10 +1862,16 @@ public partial class App : Application
             AppLogger.Info(
                 "PublicIpc",
                 $"Public IPC host started successfully. PipeName='{IpcConstants.DefaultPipeName}'; Version='{versionInfo.Version}'; Codename='{versionInfo.Codename}'.");
+
+            // IPC 初始化成功后清除失败标记文件
+            TryClearIpcFailureMarker();
         }
         catch (Exception ex)
         {
             AppLogger.Error("PublicIpc", "CRITICAL: Failed to initialize public IPC host. Launcher will not be able to connect to this process.", ex);
+
+            // 写入 IPC 失败标记文件，启动器可检测该文件感知 IPC 失败
+            TryWriteIpcFailureMarker(ex);
 
             // 尝试通过标准错误输出告知启动器
             try
@@ -1876,6 +1883,54 @@ public partial class App : Application
             {
                 // 忽略控制台写入失败
             }
+        }
+    }
+
+    /// <summary>
+    /// 写入 IPC 初始化失败标记文件，供启动器检测主程序 IPC 不可用的情况。
+    /// </summary>
+    private static void TryWriteIpcFailureMarker(Exception ex)
+    {
+        try
+        {
+            var markerDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "LanMountainDesktop", "diagnostics");
+            Directory.CreateDirectory(markerDir);
+            var markerPath = Path.Combine(markerDir, ".ipc-init-failed");
+            var content = $"{DateTime.Now:O}\nPID={Environment.ProcessId}\nException={ex.GetType().FullName}\nMessage={ex.Message}\nStackTrace={ex.StackTrace}";
+            File.WriteAllText(markerPath, content, System.Text.Encoding.UTF8);
+            AppLogger.Info("PublicIpc", $"IPC failure marker written to {markerPath}");
+        }
+        catch (Exception markerEx)
+        {
+            try
+            {
+                AppLogger.Warn("PublicIpc", "Failed to write IPC failure marker.", markerEx);
+            }
+            catch { /* best effort */ }
+        }
+    }
+
+    /// <summary>
+    /// IPC 初始化成功后清除失败标记文件。
+    /// </summary>
+    private static void TryClearIpcFailureMarker()
+    {
+        try
+        {
+            var markerPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "LanMountainDesktop", "diagnostics", ".ipc-init-failed");
+            if (File.Exists(markerPath))
+            {
+                File.Delete(markerPath);
+                AppLogger.Info("PublicIpc", "Cleared stale IPC failure marker.");
+            }
+        }
+        catch
+        {
+            // 清除失败不影响主流程
         }
     }
 
