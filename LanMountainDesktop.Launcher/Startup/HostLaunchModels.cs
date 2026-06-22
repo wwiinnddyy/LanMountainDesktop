@@ -19,11 +19,12 @@ internal sealed record HostStartAttempt(
     string? FailureReason,
     string? PackageRoot,
     string? WorkingDirectory,
-    string? Arguments)
+    string? Arguments,
+    string? StderrOutput = null)
 {
     public int? ProcessId => Process?.Id;
 
-    public static HostStartAttempt Started(HostStartMode startMode, Process process, HostLaunchPlan plan) =>
+    public static HostStartAttempt Started(HostStartMode startMode, Process process, HostLaunchPlan plan, string? stderrOutput = null) =>
         new(
             startMode,
             true,
@@ -33,9 +34,10 @@ internal sealed record HostStartAttempt(
             null,
             plan.PackageRoot,
             plan.WorkingDirectory,
-            HostLaunchPlanBuilder.FormatArgumentsForLog(plan.Arguments));
+            HostLaunchPlanBuilder.FormatArgumentsForLog(plan.Arguments),
+            stderrOutput);
 
-    public static HostStartAttempt EarlyExit(HostStartMode startMode, Process process, int exitCode, HostLaunchPlan plan) =>
+    public static HostStartAttempt EarlyExit(HostStartMode startMode, Process process, int exitCode, HostLaunchPlan plan, string? stderrOutput = null) =>
         new(
             startMode,
             true,
@@ -45,9 +47,10 @@ internal sealed record HostStartAttempt(
             null,
             plan.PackageRoot,
             plan.WorkingDirectory,
-            HostLaunchPlanBuilder.FormatArgumentsForLog(plan.Arguments));
+            HostLaunchPlanBuilder.FormatArgumentsForLog(plan.Arguments),
+            stderrOutput);
 
-    public static HostStartAttempt StartFailed(HostStartMode startMode, string failureReason, HostLaunchPlan? plan = null) =>
+    public static HostStartAttempt StartFailed(HostStartMode startMode, string failureReason, HostLaunchPlan? plan = null, string? stderrOutput = null) =>
         new(
             startMode,
             false,
@@ -57,7 +60,8 @@ internal sealed record HostStartAttempt(
             failureReason,
             plan?.PackageRoot,
             plan?.WorkingDirectory,
-            plan is null ? null : HostLaunchPlanBuilder.FormatArgumentsForLog(plan.Arguments));
+            plan is null ? null : HostLaunchPlanBuilder.FormatArgumentsForLog(plan.Arguments),
+            stderrOutput);
 }
 
 internal sealed record HostLaunchOutcome(

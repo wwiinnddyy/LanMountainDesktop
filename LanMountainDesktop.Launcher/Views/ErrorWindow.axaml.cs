@@ -1,9 +1,12 @@
 using System.Diagnostics;
+using System.IO;
+using System.Text;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using FluentAvalonia.UI.Controls;
 using LanMountainDesktop.Launcher.Resources;
 using LanMountainDesktop.Launcher.Infrastructure;
@@ -235,6 +238,27 @@ public partial class ErrorWindow : Window
     {
         try
         {
+            // 优先打开主程序崩溃转储目录（最有诊断价值）
+            var crashDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "LanMountainDesktop", "crashes");
+            if (Directory.Exists(crashDir) && Directory.GetFiles(crashDir, "crash-*.txt").Length > 0)
+            {
+                OpenPath(crashDir);
+                return;
+            }
+
+            // 其次打开主程序日志目录
+            var hostLogDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "LanMountainDesktop", "log");
+            if (Directory.Exists(hostLogDir) && Directory.GetFiles(hostLogDir).Length > 0)
+            {
+                OpenPath(hostLogDir);
+                return;
+            }
+
+            // 回退到启动器日志文件
             var logFilePath = Logger.GetLogFilePath();
             if (!string.IsNullOrWhiteSpace(logFilePath) && File.Exists(logFilePath))
             {
@@ -251,6 +275,7 @@ public partial class ErrorWindow : Window
                 return;
             }
 
+            // 最后回退到配置目录
             var configDirectory = GetConfigBaseDirectory();
             if (Directory.Exists(configDirectory))
             {
@@ -259,7 +284,7 @@ public partial class ErrorWindow : Window
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[ErrorWindow] Failed to open log path: {ex}");
+            Logger.Warn($"Failed to open log path: {ex.Message}");
         }
 
         await Task.CompletedTask;
@@ -267,23 +292,105 @@ public partial class ErrorWindow : Window
 
     private async void OnCopyDetailsClick(object? sender, RoutedEventArgs e)
     {
+        var button = sender as Button;
+        var originalContent = button?.Content;
         try
         {
-            var details = this.FindControl<TextBox>("ErrorDetailsTextBox")?.Text;
+            var details = GetDetailsText();
             if (string.IsNullOrWhiteSpace(details))
             {
-                details = this.FindControl<TextBlock>("ErrorMessageText")?.Text;
+                ShowCopyFeedback(button, originalContent, false, "No content to copy");
+                return;
             }
 
             var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
-            if (clipboard is not null && !string.IsNullOrWhiteSpace(details))
+            if (clipboard is null)
+            {
+                // 剪贴板不可用（窗口未激活/会话限制），写入临时文件作为兜底
+                var filePath = await WriteToTempFileAsync(details).ConfigureAwait(true);
+                ShowCopyFeedback(button, originalContent, true, $"Saved to {Path.GetFileName(filePath)}");
+                return;
+            }
+
+            try
             {
                 await clipboard.SetTextAsync(details);
+                ShowCopyFeedback(button, originalContent, true, "Copied");
+            }
+            catch (Exception clipboardEx)
+            {
+                // 剪贴板服务异常（组策略/RDP 限制等），写入临时文件兜底
+                Logger.Warn($"Clipboard SetTextAsync failed: {clipboardEx.Message}. Falling back to temp file.");
+                var filePath = await WriteToTempFileAsync(details).ConfigureAwait(true);
+                ShowCopyFeedback(button, originalContent, true, $"Saved to {Path.GetFileName(filePath)}");
             }
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[ErrorWindow] Failed to copy diagnostics: {ex}");
+            Logger.Error("Failed to copy diagnostics.", ex);
+            try
+            {
+                var details = GetDetailsText();
+                if (!string.IsNullOrWhiteSpace(details))
+                {
+                    await WriteToTempFileAsync(details).ConfigureAwait(true);
+                }
+            }
+            catch (Exception fallbackEx)
+            {
+                Logger.Warn($"Temp file fallback also failed: {fallbackEx.Message}");
+            }
+            ShowCopyFeedback(button, originalContent, false, "Copy failed");
+        }
+    }
+
+    private string GetDetailsText()
+    {
+        var details = this.FindControl<TextBox>("ErrorDetailsTextBox")?.Text;
+        if (string.IsNullOrWhiteSpace(details))
+        {
+            details = this.FindControl<TextBlock>("ErrorMessageText")?.Text;
+        }
+        return details ?? string.Empty;
+    }
+
+    private static async Task<string> WriteToTempFileAsync(string content)
+    {
+        var tempDir = Path.GetTempPath();
+        var fileName = $"LanDesktopError_{DateTime.Now:yyyyMMdd_HHmmss}.txt";
+        var path = Path.Combine(tempDir, fileName);
+        await File.WriteAllTextAsync(path, content, Encoding.UTF8).ConfigureAwait(false);
+        Logger.Info($"Error details written to temp file: {path}");
+        return path;
+    }
+
+    private void ShowCopyFeedback(Button? button, object? originalContent, bool success, string message)
+    {
+        if (button is null)
+        {
+            return;
+        }
+
+        try
+        {
+            button.Content = message;
+            button.IsEnabled = false;
+            DispatcherTimer.RunOnce(() =>
+            {
+                try
+                {
+                    button.Content = originalContent;
+                    button.IsEnabled = true;
+                }
+                catch
+                {
+                    // 窗口可能已关闭，忽略
+                }
+            }, TimeSpan.FromSeconds(2));
+        }
+        catch
+        {
+            // 忽略反馈失败
         }
     }
 

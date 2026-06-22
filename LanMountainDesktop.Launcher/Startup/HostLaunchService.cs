@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 using LanMountainDesktop.Launcher.Models;
 using LanMountainDesktop.Launcher.Shell;
 using LanMountainDesktop.Launcher.Views;
@@ -232,8 +233,13 @@ internal sealed class HostLaunchService
             UseShellExecute = startMode == HostStartMode.ShellExecute
         };
 
+        // Direct 模式下重定向 stderr，捕获主程序崩溃时输出的诊断信息
+        var stderrBuilder = new StringBuilder();
         if (startMode == HostStartMode.Direct)
         {
+            startInfo.RedirectStandardError = true;
+            startInfo.RedirectStandardOutput = false;
+
             foreach (var argument in plan.Arguments)
             {
                 startInfo.ArgumentList.Add(argument);
@@ -269,18 +275,37 @@ internal sealed class HostLaunchService
                 return HostStartAttempt.StartFailed(startMode, "process_start_returned_null", plan);
             }
 
+            // Direct 模式下异步读取 stderr，避免死锁并捕获主程序输出
+            if (startMode == HostStartMode.Direct)
+            {
+                process.ErrorDataReceived += (_, dataArgs) =>
+                {
+                    if (!string.IsNullOrEmpty(dataArgs.Data))
+                    {
+                        stderrBuilder.AppendLine(dataArgs.Data);
+                        Logger.Warn($"Host stderr: {dataArgs.Data}");
+                    }
+                };
+                process.BeginErrorReadLine();
+            }
+
             // 等待一小段时间，检查进程是否立即退出
             await Task.Delay(500).ConfigureAwait(false);
 
             if (process.HasExited)
             {
+                var stderrOutput = stderrBuilder.ToString();
                 Logger.Error($"CRITICAL: Host process exited immediately! ExitCode={process.ExitCode}; Path='{plan.HostPath}'");
                 Console.Error.WriteLine($"[CRITICAL] Host process exited immediately with code {process.ExitCode}");
-                return HostStartAttempt.StartFailed(startMode, $"process_exited_immediately_code_{process.ExitCode}", plan);
+                if (!string.IsNullOrWhiteSpace(stderrOutput))
+                {
+                    Logger.Error($"Host stderr captured before exit:\n{stderrOutput}");
+                }
+                return HostStartAttempt.StartFailed(startMode, $"process_exited_immediately_code_{process.ExitCode}", plan, stderrOutput);
             }
 
             Logger.Info($"Host process started successfully and is running. PID={process.Id}");
-            return HostStartAttempt.Started(startMode, process, plan);
+            return HostStartAttempt.Started(startMode, process, plan, stderrBuilder.ToString());
         }
         catch (Exception ex)
         {
@@ -288,7 +313,7 @@ internal sealed class HostLaunchService
             Console.Error.WriteLine($"[CRITICAL] Host start failed: {ex.Message}");
             Console.Error.WriteLine($"[CRITICAL] Path: {plan.HostPath}");
             Console.Error.WriteLine($"[CRITICAL] Exception: {ex}");
-            return HostStartAttempt.StartFailed(startMode, ex.GetType().Name, plan);
+            return HostStartAttempt.StartFailed(startMode, ex.GetType().Name, plan, stderrBuilder.ToString());
         }
     }
 
@@ -319,6 +344,10 @@ internal sealed class HostLaunchService
             details["arguments"] = firstAttempt.Arguments ?? string.Empty;
             details["firstAttemptFailureReason"] = firstAttempt.FailureReason ?? string.Empty;
             details["firstAttemptExitCode"] = firstAttempt.ExitCode?.ToString() ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(firstAttempt.StderrOutput))
+            {
+                details["firstAttemptStderr"] = firstAttempt.StderrOutput;
+            }
         }
 
         if (secondAttempt is not null)
@@ -331,6 +360,10 @@ internal sealed class HostLaunchService
             details["fallbackArguments"] = secondAttempt.Arguments ?? string.Empty;
             details["fallbackFailureReason"] = secondAttempt.FailureReason ?? string.Empty;
             details["fallbackExitCode"] = secondAttempt.ExitCode?.ToString() ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(secondAttempt.StderrOutput))
+            {
+                details["fallbackAttemptStderr"] = secondAttempt.StderrOutput;
+            }
         }
 
         return details;

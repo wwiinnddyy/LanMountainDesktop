@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Avalonia;
 using LanMountainDesktop.Launcher.Models;
 using LanMountainDesktop.Launcher.Shell;
@@ -8,6 +9,9 @@ public static class Program
     [STAThread]
     public static async Task<int> Main(string[] args)
     {
+        // 注册全局异常处理器，防止 async void / 未观察任务异常导致启动器崩溃并显示堆栈对话框
+        RegisterGlobalExceptionHandlers();
+
         var commandContext = CommandContext.FromArgs(args);
         var execution = LauncherExecutionContext.Capture();
         Logger.Initialize();
@@ -77,5 +81,39 @@ public static class Program
             .UsePlatformDetect()
             .WithInterFont()
             .LogToTrace();
+    }
+
+    /// <summary>
+    /// 注册全局异常处理器，避免 async void（如 ErrorWindow 的复制按钮）抛出未捕获异常时
+    /// 触发 Windows 崩溃对话框显示堆栈跟踪，从而让用户看到无法理解的报错。
+    /// </summary>
+    private static void RegisterGlobalExceptionHandlers()
+    {
+        AppDomain.CurrentDomain.UnhandledException += (_, eventArgs) =>
+        {
+            try
+            {
+                var exception = eventArgs.ExceptionObject as Exception
+                    ?? new Exception(eventArgs.ExceptionObject?.ToString() ?? "Unhandled exception.");
+                Logger.Error($"Launcher unhandled exception. IsTerminating={eventArgs.IsTerminating}.", exception);
+            }
+            catch
+            {
+                // 全局处理器本身不能再抛出异常
+            }
+        };
+
+        TaskScheduler.UnobservedTaskException += (_, eventArgs) =>
+        {
+            try
+            {
+                Logger.Error("Launcher unobserved task exception.", eventArgs.Exception);
+            }
+            catch
+            {
+                // 忽略日志写入失败
+            }
+            eventArgs.SetObserved();
+        };
     }
 }

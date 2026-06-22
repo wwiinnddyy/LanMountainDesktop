@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using LanMountainDesktop.Launcher.Models;
@@ -424,6 +425,12 @@ internal static class LauncherGuiCoordinator
             ? parsedPid
             : (int?)null;
 
+        // 读取主程序崩溃转储，获取真实崩溃原因
+        var crashDump = ReadLatestHostCrashDump();
+
+        // 读取主程序 stderr 输出（来自启动器捕获）
+        var stderrOutput = ExtractHostStderr(result);
+
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
             try
@@ -438,8 +445,19 @@ internal static class LauncherGuiCoordinator
                     errorWindow.ConfigureForGenericFailure(allowRetry: true);
                 }
 
-                errorWindow.SetErrorMessage(
-                    $"Failed to start LanMountainDesktop.\n\nStage: {result.Stage}\nCode: {result.Code}\n\n{result.Message}");
+                var fullMessage = $"Failed to start LanMountainDesktop.\n\nStage: {result.Stage}\nCode: {result.Code}\n\n{result.Message}";
+
+                if (!string.IsNullOrWhiteSpace(stderrOutput))
+                {
+                    fullMessage += $"\n\n--- Host Output ---\n{stderrOutput}";
+                }
+
+                if (!string.IsNullOrWhiteSpace(crashDump))
+                {
+                    fullMessage += $"\n\n--- Host Crash Details ---\n{crashDump}";
+                }
+
+                errorWindow.SetErrorMessage(fullMessage);
                 errorWindow.Show();
             }
             catch (Exception ex)
@@ -461,6 +479,94 @@ internal static class LauncherGuiCoordinator
         {
             Logger.Error("Failure window closed unexpectedly.", ex);
             return ErrorWindowResult.Exit;
+        }
+    }
+
+    /// <summary>
+    /// 从 LauncherResult.Details 中提取主程序的 stderr 输出。
+    /// 启动器在 Direct 模式下会重定向主程序的 stderr 并存入 details。
+    /// </summary>
+    private static string? ExtractHostStderr(LauncherResult result)
+    {
+        // 优先使用 fallback 尝试的 stderr（因为 fallback 通常是 ShellExecute，stderr 不可用）
+        // 所以优先使用 firstAttemptStderr
+        var stderrKeys = new[] { "firstAttemptStderr", "fallbackAttemptStderr" };
+        foreach (var key in stderrKeys)
+        {
+            if (result.Details.TryGetValue(key, out var stderr) && !string.IsNullOrWhiteSpace(stderr))
+            {
+                // 限制长度避免错误窗口过长
+                var trimmed = stderr.Trim();
+                if (trimmed.Length > 2000)
+                {
+                    trimmed = trimmed.Substring(0, 2000) + "\n... (truncated)";
+                }
+                return trimmed;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// 读取主程序最新的崩溃转储文件内容。
+    /// 主程序在崩溃时会写入 LocalApplicationData/LanMountainDesktop/crashes/ 目录。
+    /// 启动器读取最近 5 分钟内的崩溃转储，避免显示过时的崩溃信息。
+    /// </summary>
+    private static string? ReadLatestHostCrashDump()
+    {
+        try
+        {
+            var crashDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "LanMountainDesktop", "crashes");
+
+            if (!Directory.Exists(crashDir))
+            {
+                return null;
+            }
+
+            // 优先读取 latest.txt 标记文件指向的崩溃转储
+            var latestMarker = Path.Combine(crashDir, "latest.txt");
+            string? targetCrashFile = null;
+
+            if (File.Exists(latestMarker))
+            {
+                var referencedPath = File.ReadAllText(latestMarker).Trim();
+                if (File.Exists(referencedPath))
+                {
+                    var fileInfo = new FileInfo(referencedPath);
+                    if (fileInfo.CreationTime > DateTime.Now.AddMinutes(-5))
+                    {
+                        targetCrashFile = referencedPath;
+                    }
+                }
+            }
+
+            // 回退：查找最近 5 分钟内的崩溃转储文件
+            if (targetCrashFile is null)
+            {
+                var recentCrash = Directory.GetFiles(crashDir, "crash-*.txt")
+                    .Select(f => new FileInfo(f))
+                    .Where(f => f.CreationTime > DateTime.Now.AddMinutes(-5))
+                    .OrderByDescending(f => f.CreationTime)
+                    .FirstOrDefault();
+
+                targetCrashFile = recentCrash?.FullName;
+            }
+
+            if (string.IsNullOrWhiteSpace(targetCrashFile) || !File.Exists(targetCrashFile))
+            {
+                return null;
+            }
+
+            var content = File.ReadAllText(targetCrashFile);
+            Logger.Info($"Read host crash dump: {targetCrashFile}");
+            return content;
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Failed to read host crash dump: {ex.Message}");
+            return null;
         }
     }
 
