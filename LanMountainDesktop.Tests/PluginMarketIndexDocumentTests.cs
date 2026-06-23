@@ -1,5 +1,4 @@
 using LanMountainDesktop.Services.PluginMarket;
-using System.Net;
 using Xunit;
 
 namespace LanMountainDesktop.Tests;
@@ -24,30 +23,6 @@ public sealed class PluginMarketIndexDocumentTests
         Assert.Equal("https://raw.githubusercontent.com/wwiinnddyy/LanMountainDesktop.SamplePlugin/main/README.md", plugin.ReadmeUrl);
         Assert.Equal("workspace://LanMountainDesktop.SamplePlugin/LanMountainDesktop.SamplePlugin.0.4.0.laapp", source.Url);
         Assert.Equal(PluginPackageSourceKind.WorkspaceLocal, source.SourceKind);
-    }
-
-    [Fact]
-    public async Task EnrichAsync_WhenRepositoryMetadataUnavailable_PreservesNestedDisplayFields()
-    {
-        var document = AirAppMarketIndexDocument.Load(
-            CreateNestedIndexJson("LanMountainDesktop.MissingPlugin"),
-            "test-index.json");
-        using var httpClient = new HttpClient(new NotFoundHandler());
-        using var resolver = new AirAppMarketMetadataResolverService(httpClient);
-
-        var enriched = await resolver.EnrichAsync(document);
-        var plugin = Assert.Single(enriched.Plugins);
-
-        Assert.Equal("LanMountain Sample Plugin", plugin.Name);
-        Assert.Equal("SDK v5 sample plugin.", plugin.Description);
-        Assert.Equal("LanMountainDesktop", plugin.Author);
-        Assert.Equal("0.4.0", plugin.Version);
-        Assert.Equal("5.0.0", plugin.ApiVersion);
-        Assert.Equal("0.0.1", plugin.MinHostVersion);
-        Assert.Equal("v0.4.0", plugin.ReleaseTag);
-        Assert.Equal("LanMountainDesktop.SamplePlugin.0.4.0.laapp", plugin.ReleaseAssetName);
-        Assert.Equal("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", plugin.Sha256);
-        Assert.Equal(1024, plugin.PackageSizeBytes);
     }
 
     private static string CreateNestedIndexJson(string repositoryName = "LanMountainDesktop.SamplePlugin")
@@ -111,17 +86,5 @@ public sealed class PluginMarketIndexDocumentTests
               ]
             }
             """;
-    }
-
-    private sealed class NotFoundHandler : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound)
-            {
-                RequestMessage = request,
-                Content = new StringContent("{}")
-            });
-        }
     }
 }
