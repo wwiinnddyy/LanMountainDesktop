@@ -55,7 +55,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           submodules: recursive
@@ -95,7 +95,7 @@ jobs:
           echo "HASH_ALGORITHM=${HASH_ALGORITHM}" >> "$GITHUB_ENV"
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
           dotnet-quality: preview
@@ -248,7 +248,7 @@ jobs:
           printf '%s' "$COMPARE_METHOD" > plonds-run-metadata/compare-method.txt
 
       - name: Upload run metadata artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: plonds-run-metadata
           path: |

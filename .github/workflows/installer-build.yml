@@ -35,13 +35,13 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           submodules: recursive
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
           dotnet-quality: preview
@@ -129,7 +129,7 @@ jobs:
 
       - name: Upload online installer artifact
         if: matrix.configuration == 'Release'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: LanDesktopPLONDS-online-installer-${{ env.INSTALLER_RUNTIME }}
           path: ${{ env.INSTALLER_ARTIFACT_DIR }}/**
