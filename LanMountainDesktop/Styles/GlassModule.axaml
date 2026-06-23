@@ -26,6 +26,7 @@
         <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
         <Setter Property="FontSize" Value="14" />
         <Setter Property="Padding" Value="16,10" />
+        <Setter Property="RenderTransform" Value="scale(1)" />
         <Setter Property="Transitions">
             <Transitions>
                 <TransformOperationsTransition Property="RenderTransform" Duration="{StaticResource FluttermotionToken.Duration.Fast}" />
