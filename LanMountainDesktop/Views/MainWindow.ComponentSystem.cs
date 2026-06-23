@@ -3655,90 +3655,40 @@ public partial class MainWindow : Window
         for (var i = 0; i < componentCount; i++)
         {
             var component = _componentLibraryActiveComponents[i];
-
-            var page = new Grid
-            {
-                Width = _componentLibraryComponentPageWidth,
-                Height = viewportHeight,
-                Background = Brushes.Transparent
-            };
-
-            // Fit the preview to the page while preserving component cell span proportions.
-            var previewMaxWidth = _componentLibraryComponentPageWidth * 0.94;
-            var previewMaxHeight = viewportHeight * 0.86;
             var previewSpan = NormalizeComponentCellSpan(
                 component.ComponentId,
                 (component.MinWidthCells, component.MinHeightCells));
-            var previewCellSize = Math.Min(
-                previewMaxWidth / Math.Max(1, previewSpan.WidthCells),
-                previewMaxHeight / Math.Max(1, previewSpan.HeightCells));
-            previewCellSize = Math.Clamp(previewCellSize, 24, 96);
-
-            var previewWidth = previewSpan.WidthCells * previewCellSize;
-            var previewHeight = previewSpan.HeightCells * previewCellSize;
-            var previewControl = CreateStaticComponentLibraryPreview(
-                component.ComponentId,
-                previewCellSize,
-                previewWidth,
-                previewHeight);
-
-            var previewSurface = new Border
-            {
-                Width = previewWidth,
-                Height = previewHeight,
-                Background = Brushes.Transparent,
-                ClipToBounds = false,
-                Child = previewControl,
-                IsHitTestVisible = false
-            };
-
-            var previewBorder = new Border
-            {
-                Width = previewWidth,
-                Height = previewHeight,
-                ClipToBounds = false,
-                Background = Brushes.Transparent,
-                BorderThickness = new Thickness(0),
-                Child = previewSurface,
-                Tag = component.ComponentId
-            };
-            previewBorder.PointerPressed += OnComponentLibraryComponentPreviewPointerPressed;
-
-            var label = new TextBlock
-            {
-                Text = GetLocalizedComponentDisplayName(component),
-                FontSize = 14,
-                FontWeight = FontWeight.SemiBold,
-                Foreground = GetThemeBrush("AdaptiveTextPrimaryBrush"),
-                HorizontalAlignment = HorizontalAlignment.Center
-            };
-
-            var hint = new TextBlock
-            {
-                Text = L("component_library.drag_hint", "Drag to place"),
-                FontSize = 12,
-                Foreground = GetThemeBrush("AdaptiveTextSecondaryBrush"),
-                HorizontalAlignment = HorizontalAlignment.Center
-            };
-
-            var stack = new StackPanel
-            {
-                Spacing = 8,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-                Children =
-                {
-                    previewBorder,
-                    label,
-                    hint
-                }
-            };
-
-            page.Children.Add(stack);
+            var page = CreateComponentLibraryComponentPage(
+                component,
+                previewSpan,
+                _componentLibraryComponentPageWidth,
+                viewportHeight);
 
             Grid.SetRow(page, 0);
             Grid.SetColumn(page, i);
-            ComponentLibraryComponentPagesContainer.Children.Add(page);
+
+            try
+            {
+                ComponentLibraryComponentPagesContainer.Children.Add(page);
+            }
+            catch (Exception ex) when (!UiExceptionGuard.IsFatalException(ex))
+            {
+                AppLogger.Warn(
+                    "ComponentLibrary",
+                    $"Failed to attach component library preview page for component '{component.ComponentId}'. Falling back to placeholder.",
+                    ex);
+
+                DisposeStaticComponentLibraryPreviews([page]);
+                var fallbackPage = CreateComponentLibraryComponentPage(
+                    component,
+                    previewSpan,
+                    _componentLibraryComponentPageWidth,
+                    viewportHeight,
+                    forceFallback: true);
+                Grid.SetRow(fallbackPage, 0);
+                Grid.SetColumn(fallbackPage, i);
+                ComponentLibraryComponentPagesContainer.Children.Add(fallbackPage);
+            }
         }
 
         _componentLibraryComponentHostTransform = ComponentLibraryComponentPagesHost.RenderTransform as TranslateTransform;
@@ -3750,6 +3700,128 @@ public partial class MainWindow : Window
 
         ApplyComponentLibraryComponentOffset();
         UpdateComponentLibraryComponentNavigationButtons();
+    }
+
+    private Grid CreateComponentLibraryComponentPage(
+        ComponentLibraryComponentEntry component,
+        (int WidthCells, int HeightCells) previewSpan,
+        double pageWidth,
+        double pageHeight,
+        bool forceFallback = false)
+    {
+        var page = new Grid
+        {
+            Width = pageWidth,
+            Height = pageHeight,
+            Background = Brushes.Transparent
+        };
+
+        try
+        {
+            var stack = CreateComponentLibraryComponentPageContent(
+                component,
+                previewSpan,
+                pageWidth,
+                pageHeight,
+                forceFallback);
+            page.Children.Add(stack);
+        }
+        catch (Exception ex) when (!UiExceptionGuard.IsFatalException(ex) && !forceFallback)
+        {
+            AppLogger.Warn(
+                "ComponentLibrary",
+                $"Failed to build component library preview page for component '{component.ComponentId}'. Falling back to placeholder.",
+                ex);
+
+            page.Children.Clear();
+            var stack = CreateComponentLibraryComponentPageContent(
+                component,
+                previewSpan,
+                pageWidth,
+                pageHeight,
+                forceFallback: true);
+            page.Children.Add(stack);
+        }
+
+        return page;
+    }
+
+    private StackPanel CreateComponentLibraryComponentPageContent(
+        ComponentLibraryComponentEntry component,
+        (int WidthCells, int HeightCells) previewSpan,
+        double pageWidth,
+        double pageHeight,
+        bool forceFallback)
+    {
+        // Fit the preview to the page while preserving component cell span proportions.
+        var previewMaxWidth = pageWidth * 0.94;
+        var previewMaxHeight = pageHeight * 0.86;
+        var previewCellSize = Math.Min(
+            previewMaxWidth / Math.Max(1, previewSpan.WidthCells),
+            previewMaxHeight / Math.Max(1, previewSpan.HeightCells));
+        previewCellSize = Math.Clamp(previewCellSize, 24, 96);
+
+        var previewWidth = previewSpan.WidthCells * previewCellSize;
+        var previewHeight = previewSpan.HeightCells * previewCellSize;
+        var previewControl = forceFallback
+            ? CreateStaticComponentPreviewFallback(previewWidth, previewHeight)
+            : CreateStaticComponentLibraryPreview(
+                component.ComponentId,
+                previewCellSize,
+                previewWidth,
+                previewHeight);
+
+        var previewSurface = new Border
+        {
+            Width = previewWidth,
+            Height = previewHeight,
+            Background = Brushes.Transparent,
+            ClipToBounds = false,
+            Child = previewControl,
+            IsHitTestVisible = false
+        };
+
+        var previewBorder = new Border
+        {
+            Width = previewWidth,
+            Height = previewHeight,
+            ClipToBounds = false,
+            Background = Brushes.Transparent,
+            BorderThickness = new Thickness(0),
+            Child = previewSurface,
+            Tag = component.ComponentId
+        };
+        previewBorder.PointerPressed += OnComponentLibraryComponentPreviewPointerPressed;
+
+        var label = new TextBlock
+        {
+            Text = GetLocalizedComponentDisplayName(component),
+            FontSize = 14,
+            FontWeight = FontWeight.SemiBold,
+            Foreground = GetThemeBrush("AdaptiveTextPrimaryBrush"),
+            HorizontalAlignment = HorizontalAlignment.Center
+        };
+
+        var hint = new TextBlock
+        {
+            Text = L("component_library.drag_hint", "Drag to place"),
+            FontSize = 12,
+            Foreground = GetThemeBrush("AdaptiveTextSecondaryBrush"),
+            HorizontalAlignment = HorizontalAlignment.Center
+        };
+
+        return new StackPanel
+        {
+            Spacing = 8,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Children =
+            {
+                previewBorder,
+                label,
+                hint
+            }
+        };
     }
 
     private void ClearComponentLibraryPreviewControls()

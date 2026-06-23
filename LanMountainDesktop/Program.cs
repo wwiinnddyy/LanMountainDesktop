@@ -54,7 +54,7 @@ public sealed class Program
             WriteCrashDump(ex, StartupRenderMode);
 
             // 渲染模式安全降级：若失败且未禁用重试，且当前不是软件渲染，则用软件渲染重试一次
-            if (ShouldRetryWithSoftwareRendering(StartupRenderMode, ex) &&
+            if (ShouldRetryWithSoftwareRendering(StartupRenderMode, ex, isAvaloniaLifetimeStarted: Application.Current is not null) &&
                 !attemptedRenderModes.Contains(AppRenderingModeHelper.Software))
             {
                 AppLogger.Warn("Startup", $"Retrying startup with Software rendering mode (previous='{StartupRenderMode}').");
@@ -195,8 +195,16 @@ public sealed class Program
     /// 判断是否应该用软件渲染重试。当异常看起来与渲染相关（GPU/驱动/平台初始化），
     /// 且当前渲染模式不是软件渲染，且未通过环境变量禁用重试时返回 true。
     /// </summary>
-    private static bool ShouldRetryWithSoftwareRendering(string currentRenderMode, Exception ex)
+    internal static bool ShouldRetryWithSoftwareRendering(
+        string currentRenderMode,
+        Exception ex,
+        bool isAvaloniaLifetimeStarted = false)
     {
+        if (isAvaloniaLifetimeStarted)
+        {
+            return false;
+        }
+
         if (string.Equals(currentRenderMode, AppRenderingModeHelper.Software, StringComparison.OrdinalIgnoreCase))
         {
             return false;
