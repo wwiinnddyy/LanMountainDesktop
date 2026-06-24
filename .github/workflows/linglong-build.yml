@@ -1,0 +1,274 @@
+name: Linglong Package Build
+
+on:
+  release:
+    types:
+      - published
+      - prereleased
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to build Linglong package for'
+        required: true
+        type: string
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  Solution_Name: LanMountainDesktop.slnx
+  LINGLONG_APP_ID: com.lanmountain.desktop
+
+jobs:
+  build-linglong:
+    runs-on: ubuntu-latest
+    name: Build_Linglong_Package
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Resolve release version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            TAG="${{ github.event.release.tag_name }}"
+          else
+            RAW_TAG="${{ github.event.inputs.tag }}"
+            if [[ "$RAW_TAG" == v* ]]; then
+              TAG="$RAW_TAG"
+            else
+              TAG="v$RAW_TAG"
+            fi
+          fi
+          VERSION="${TAG#v}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libfontconfig1 libfreetype6 \
+            libx11-6 libxrandr2 libxinerama1 \
+            libxi6 libxcursor1 libxext6 \
+            libxrender1 libxkbcommon-x11-0 \
+            clang zlib1g-dev
+
+          sudo apt-get install -y libasound2t64 || sudo apt-get install -y libasound2
+          sudo apt-get install -y libportaudio2t64 || sudo apt-get install -y libportaudio2
+          sudo apt-get install -y libwebkit2gtk-4.1-dev || sudo apt-get install -y libwebkit2gtk-4.0-dev
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: 'preview'
+
+      - name: Install Linglong build tools
+        run: |
+          # Install Linglong builder tools
+          # Reference: https://linyaps.org.cn/guide/ll-builder/install.html
+          curl -fsSL https://deepin-community.github.io/linglong-tools/install.sh | bash
+          
+          # Verify installation
+          ll-builder --version || echo "ll-builder installation failed"
+          ll-cli --version || echo "ll-cli installation failed"
+
+      - name: Stamp release version metadata
+        shell: pwsh
+        run: |
+          ./scripts/Set-ReleaseVersion.ps1 `
+            -Version "${{ steps.version.outputs.version }}" `
+            -AssemblyVersion "${{ steps.version.outputs.version }}"
+
+      - name: Restore
+        run: dotnet restore ${{ env.Solution_Name }}
+
+      - name: Build
+        run: >
+          dotnet build ${{ env.Solution_Name }} -c Release --no-restore -v minimal
+          -p:Version=${{ steps.version.outputs.version }}
+          -p:AssemblyVersion=${{ steps.version.outputs.version }}
+          -p:FileVersion=${{ steps.version.outputs.version }}
+          -p:InformationalVersion=${{ steps.version.outputs.version }}
+
+      - name: Publish Launcher (AOT)
+        run: |
+          dotnet publish LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj \
+            -c Release \
+            -o ./publish/launcher-linux-x64 \
+            --self-contained \
+            -r linux-x64 \
+            -p:PublishAot=true \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:EnableCompressionInSingleFile=true \
+            -p:DebugType=none \
+            -p:DebugSymbols=false \
+            -p:Version=${{ steps.version.outputs.version }} \
+            -p:AssemblyVersion=${{ steps.version.outputs.version }} \
+            -p:FileVersion=${{ steps.version.outputs.version }} \
+            -p:InformationalVersion=${{ steps.version.outputs.version }}
+
+      - name: Publish Main App
+        run: |
+          dotnet publish LanMountainDesktop/LanMountainDesktop.csproj \
+            -c Release \
+            -o ./publish/linux-x64-app \
+            --self-contained \
+            -r linux-x64 \
+            -p:PublishSingleFile=false \
+            -p:SelfContained=true \
+            -p:DebugType=none \
+            -p:DebugSymbols=false \
+            -p:SkipAirAppHostBuild=true \
+            -p:PublishTrimmed=false \
+            -p:PublishReadyToRun=false \
+            -p:Version=${{ steps.version.outputs.version }} \
+            -p:AssemblyVersion=${{ steps.version.outputs.version }} \
+            -p:FileVersion=${{ steps.version.outputs.version }} \
+            -p:InformationalVersion=${{ steps.version.outputs.version }}
+
+      - name: Publish AirAppRuntime
+        run: |
+          dotnet publish LanMountainDesktop.AirAppRuntime/LanMountainDesktop.AirAppRuntime.csproj \
+            -c Release \
+            -o ./publish/airapp-runtime-linux-x64 \
+            --self-contained false \
+            -r linux-x64 \
+            -p:SelfContained=false \
+            -p:PublishAot=false \
+            -p:PublishSingleFile=false \
+            -p:PublishTrimmed=false \
+            -p:PublishReadyToRun=false \
+            -p:DebugType=none \
+            -p:DebugSymbols=false \
+            -p:Version=${{ steps.version.outputs.version }} \
+            -p:AssemblyVersion=${{ steps.version.outputs.version }} \
+            -p:FileVersion=${{ steps.version.outputs.version }} \
+            -p:InformationalVersion=${{ steps.version.outputs.version }}
+
+      - name: Restructure for Launcher
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          publishDir="publish/linux-x64"
+          appDir="app-$version"
+          launcherDir="publish/launcher-linux-x64"
+          runtimeDir="publish/airapp-runtime-linux-x64"
+
+          mkdir -p "$publishDir"
+          mv "publish/linux-x64-app" "$publishDir/$appDir"
+
+          if [ -d "$launcherDir" ]; then
+            cp -r "$launcherDir"/* "$publishDir/"
+            chmod +x "$publishDir/LanMountainDesktop.Launcher" 2>/dev/null || true
+          fi
+
+          if [ -d "$runtimeDir" ]; then
+            # Move the DLL to the publish directory
+            cp "$runtimeDir/LanMountainDesktop.AirAppRuntime.dll" "$publishDir/"
+            
+            # Create a wrapper script that uses the shared .NET runtime from the main app
+            printf '%s\n' '#!/bin/sh' > "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '# LanMountainDesktop AirAppRuntime wrapper script' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '# This script sets DOTNET_ROOT to use the shared .NET runtime from the main app' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' 'SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '# Find the main app directory (contains the .NET runtime)' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' 'APP_DIR=""' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' 'for dir in "$SCRIPT_DIR"/app-*; do' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '  if [ -d "$dir" ] && [ -f "$dir/LanMountainDesktop.dll" ]; then' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '    APP_DIR="$dir"' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '    break' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '  fi' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' 'done' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' 'if [ -z "$APP_DIR" ]; then' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '  echo "Error: Could not find main application directory with .NET runtime"' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '  exit 1' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' 'fi' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '# Set DOTNET_ROOT to use the shared runtime' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' 'export DOTNET_ROOT="$APP_DIR"' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' 'export PATH="$DOTNET_ROOT:$PATH"' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '# Run the AirAppRuntime using the shared runtime' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' 'exec dotnet "$SCRIPT_DIR/LanMountainDesktop.AirAppRuntime.dll" "$@"' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            chmod +x "$publishDir/LanMountainDesktop.AirAppRuntime"
+          fi
+
+          touch "$publishDir/$appDir/.current"
+
+      - name: Update Linglong version in config
+        run: |
+          # Update version in linglong.yaml
+          sed -i "s/version: .*/version: ${{ steps.version.outputs.version }}/" packaging/linglong/linglong.yaml
+          
+          # Update version in package section
+          sed -i "/^package:/,/^  version:/s/version: .*/version: ${{ steps.version.outputs.version }}/" packaging/linglong/linglong.yaml
+
+      - name: Build Linglong package
+        run: |
+          # Create linglong build directory
+          mkdir -p linglong-build
+          cp packaging/linglong/linglong.yaml linglong-build/
+          
+          # Copy source files to build directory
+          cp -r . linglong-build/project/
+          
+          # Build the Linglong package
+          cd linglong-build
+          ll-builder build
+          
+          # Check if build was successful
+          if [ $? -eq 0 ]; then
+            echo "Linglong build completed successfully"
+          else
+            echo "Linglong build failed"
+            exit 1
+          fi
+
+      - name: Validate Linglong package
+        run: |
+          # Find the generated Linglong package
+          LINGLONG_PKG=$(find . -name "*.uab" -o -name "*.linglong" 2>/dev/null | head -1)
+          
+          if [ -z "$LINGLONG_PKG" ]; then
+            echo "Warning: No Linglong package found, checking linglong-build directory"
+            LINGLONG_PKG=$(find linglong-build -name "*.uab" -o -name "*.linglong" 2>/dev/null | head -1)
+          fi
+          
+          if [ -z "$LINGLONG_PKG" ]; then
+            echo "Error: Linglong package not generated"
+            exit 1
+          fi
+          
+          echo "Found Linglong package: $LINGLONG_PKG"
+          
+          # Validate package structure
+          ll-cli info "$LINGLONG_PKG" || echo "Warning: Could not validate package info"
+          
+          # Copy to release directory
+          mkdir -p release-assets
+          cp "$LINGLONG_PKG" "release-assets/LanMountainDesktop-${{ steps.version.outputs.version }}-linux-x64.linglong"
+
+      - name: Upload Linglong artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: linglong-package
+          path: release-assets/*.linglong
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload to GitHub Release
+        if: github.event_name == 'release'
+        uses: ncipollo/release-action@v1.21.0
+        with:
+          tag: ${{ steps.version.outputs.tag }}
+          allowUpdates: true
+          artifacts: 'release-assets/*.linglong'
+          token: ${{ secrets.GITHUB_TOKEN }}

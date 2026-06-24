@@ -1,0 +1,78 @@
+version: '1'
+
+package:
+  id: com.lanmountain.desktop
+  name: LanMountainDesktop
+  version: 0.8.8.4
+  kind: app
+  description: |
+    LanMountainDesktop - A modern desktop shell for education.
+    Features include schedule management, notifications, plugins, and more.
+
+command:
+  - /opt/apps/com.lanmountain.desktop/files/bin/LanMountainDesktop.Launcher
+
+base: org.deepin.foundation/23.0.0
+
+sources:
+  - kind: local
+    name: "LanMountainDesktop"
+
+build: |
+  # Create directory structure following Linglong conventions
+  mkdir -p ${PREFIX}/bin
+  mkdir -p ${PREFIX}/lib
+  mkdir -p ${PREFIX}/share/applications
+  mkdir -p ${PREFIX}/share/icons/hicolor/128x128/apps
+  mkdir -p ${PREFIX}/share/icons/hicolor/256x256/apps
+  mkdir -p ${PREFIX}/share/icons/hicolor/scalable/apps
+  
+  # Copy the pre-built application files
+  # The build artifacts should be in /project/publish/linux-x64
+  if [ -d "/project/publish/linux-x64" ]; then
+    # Copy main application (includes .NET runtime)
+    cp -r /project/publish/linux-x64/app-*/* ${PREFIX}/lib/
+    
+    # Copy Launcher (AOT compiled, independent)
+    cp /project/publish/linux-x64/LanMountainDesktop.Launcher ${PREFIX}/bin/
+    chmod +x ${PREFIX}/bin/LanMountainDesktop.Launcher
+    
+    # Copy AirAppRuntime wrapper and DLL
+    cp /project/publish/linux-x64/LanMountainDesktop.AirAppRuntime ${PREFIX}/bin/
+    cp /project/publish/linux-x64/LanMountainDesktop.AirAppRuntime.dll ${PREFIX}/lib/
+    chmod +x ${PREFIX}/bin/LanMountainDesktop.AirAppRuntime
+    
+    # Copy AirAppHost
+    if [ -d "/project/publish/linux-x64/AirAppHost" ]; then
+      cp -r /project/publish/linux-x64/AirAppHost ${PREFIX}/lib/
+    fi
+  else
+    echo "Error: Build artifacts not found at /project/publish/linux-x64"
+    exit 1
+  fi
+  
+  # Create desktop file using printf to avoid heredoc issues
+  printf '%s\n' '[Desktop Entry]' > ${PREFIX}/share/applications/com.lanmountain.desktop.desktop
+  printf '%s\n' 'Type=Application' >> ${PREFIX}/share/applications/com.lanmountain.desktop.desktop
+  printf '%s\n' 'Version=1.0' >> ${PREFIX}/share/applications/com.lanmountain.desktop.desktop
+  printf '%s\n' 'Name=LanMountainDesktop' >> ${PREFIX}/share/applications/com.lanmountain.desktop.desktop
+  printf '%s\n' 'Comment=LanMountainDesktop desktop shell' >> ${PREFIX}/share/applications/com.lanmountain.desktop.desktop
+  printf '%s\n' 'Exec=/opt/apps/com.lanmountain.desktop/files/bin/LanMountainDesktop.Launcher %U' >> ${PREFIX}/share/applications/com.lanmountain.desktop.desktop
+  printf '%s\n' 'Icon=lanmountaindesktop' >> ${PREFIX}/share/applications/com.lanmountain.desktop.desktop
+  printf '%s\n' 'Terminal=false' >> ${PREFIX}/share/applications/com.lanmountain.desktop.desktop
+  printf '%s\n' 'Categories=Utility;Education;' >> ${PREFIX}/share/applications/com.lanmountain.desktop.desktop
+  printf '%s\n' 'StartupWMClass=LanMountainDesktop' >> ${PREFIX}/share/applications/com.lanmountain.desktop.desktop
+  
+  # Copy icon files
+  if [ -f "/project/LanMountainDesktop/packaging/linux/lanmountaindesktop.png" ]; then
+    cp /project/LanMountainDesktop/packaging/linux/lanmountaindesktop.png \
+       ${PREFIX}/share/icons/hicolor/256x256/apps/
+    cp /project/LanMountainDesktop/packaging/linux/lanmountaindesktop.png \
+       ${PREFIX}/share/icons/hicolor/128x128/apps/
+  fi
+  
+  # Set executable permissions
+  chmod +x ${PREFIX}/bin/*
+  chmod +x ${PREFIX}/lib/LanMountainDesktop.AirAppRuntime 2>/dev/null || true
+  
+  echo "Linglong build completed successfully"
