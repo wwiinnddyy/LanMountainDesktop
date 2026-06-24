@@ -618,6 +618,58 @@ jobs:
 
           dpkg-deb --build "build-deb" "${package_name}_${package_version}_${arch}.deb"
 
+      - name: Install Linglong build tools
+        run: |
+          # Install Linglong builder tools
+          curl -fsSL https://deepin-community.github.io/linglong-tools/install.sh | bash || {
+            echo "Warning: Failed to install Linglong tools, skipping Linglong build"
+            echo "LINGLONG_AVAILABLE=false" >> $GITHUB_ENV
+          }
+          
+          # Verify installation
+          if command -v ll-builder &> /dev/null; then
+            ll-builder --version
+            echo "LINGLONG_AVAILABLE=true" >> $GITHUB_ENV
+          else
+            echo "LINGLONG_AVAILABLE=false" >> $GITHUB_ENV
+          fi
+
+      - name: Package as Linglong
+        if: env.LINGLONG_AVAILABLE == 'true'
+        run: |
+          version="${{ needs.prepare.outputs.version }}"
+          publishDir="publish/linux-x64"
+          linglongDir="build-linglong"
+          
+          # Create Linglong build directory
+          mkdir -p "$linglongDir"
+          
+          # Copy linglong.yaml and update version
+          cp packaging/linglong/linglong.yaml "$linglongDir/"
+          sed -i "s/version: .*/version: ${version}/" "$linglongDir/linglong.yaml"
+          
+          # Create project structure for Linglong build
+          mkdir -p "$linglongDir/project"
+          cp -r "$publishDir" "$linglongDir/project/"
+          cp -r LanMountainDesktop/packaging "$linglongDir/project/LanMountainDesktop/"
+          
+          # Build Linglong package
+          cd "$linglongDir"
+          ll-builder build || {
+            echo "Warning: Linglong build failed"
+            exit 0
+          }
+          
+          # Find and copy the generated package
+          LINGLONG_PKG=$(find . -name "*.uab" -o -name "*.linglong" 2>/dev/null | head -1)
+          if [ -n "$LINGLONG_PKG" ]; then
+            mkdir -p "$PWD/../release-assets"
+            cp "$LINGLONG_PKG" "$PWD/../release-assets/LanMountainDesktop-${version}-linux-x64.linglong"
+            echo "Linglong package created successfully"
+          else
+            echo "Warning: Linglong package not found after build"
+          fi
+
       - name: Package Payload Zip
         run: |
           version="${{ needs.prepare.outputs.version }}"
@@ -649,6 +701,7 @@ jobs:
           name: release-linux-x64
           path: |
             release-assets/files-linux-x64.zip
+            release-assets/*.linglong
             *.deb
           if-no-files-found: error
           retention-days: 30
