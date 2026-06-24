@@ -528,8 +528,37 @@ jobs:
           fi
 
           if [ -d "$runtimeDir" ]; then
-            cp -r "$runtimeDir"/* "$publishDir/"
-            chmod +x "$publishDir/LanMountainDesktop.AirAppRuntime" 2>/dev/null || true
+            # Move the DLL to the publish directory
+            cp "$runtimeDir/LanMountainDesktop.AirAppRuntime.dll" "$publishDir/"
+            
+            # Create a wrapper script that uses the shared .NET runtime from the main app
+            printf '%s\n' '#!/bin/sh' > "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '# LanMountainDesktop AirAppRuntime wrapper script' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '# This script sets DOTNET_ROOT to use the shared .NET runtime from the main app' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' 'SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '# Find the main app directory (contains the .NET runtime)' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' 'APP_DIR=""' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' 'for dir in "$SCRIPT_DIR"/app-*; do' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '  if [ -d "$dir" ] && [ -f "$dir/LanMountainDesktop.dll" ]; then' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '    APP_DIR="$dir"' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '    break' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '  fi' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' 'done' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' 'if [ -z "$APP_DIR" ]; then' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '  echo "Error: Could not find main application directory with .NET runtime"' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '  exit 1' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' 'fi' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '# Set DOTNET_ROOT to use the shared runtime' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' 'export DOTNET_ROOT="$APP_DIR"' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' 'export PATH="$DOTNET_ROOT:$PATH"' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' '# Run the AirAppRuntime using the shared runtime' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            printf '%s\n' 'exec dotnet "$SCRIPT_DIR/LanMountainDesktop.AirAppRuntime.dll" "$@"' >> "$publishDir/LanMountainDesktop.AirAppRuntime"
+            chmod +x "$publishDir/LanMountainDesktop.AirAppRuntime"
           fi
 
           touch "$publishDir/$appDir/.current"
