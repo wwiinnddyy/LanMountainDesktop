@@ -507,6 +507,7 @@ public sealed class PlondsClientServiceTests : IDisposable
     private static PlondsClientDownloads CreateDownloads(string? changedUrl, string? filesUrl)
     {
         return new PlondsClientDownloads(
+            ReleaseTag: "v1.4.0",
             GitHub: null,
             S3: new PlondsS3Downloads(
                 Bucket: "bucket",
