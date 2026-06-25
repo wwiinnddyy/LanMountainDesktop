@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=LanMountainDesktop
+Comment=LanMountainDesktop desktop shell
+Exec=LanMountainDesktop.Launcher %U
+Icon=com.lanmountain.desktop
+Terminal=false
+Categories=Utility;Education;
+StartupWMClass=LanMountainDesktop

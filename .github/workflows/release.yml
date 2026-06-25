@@ -670,6 +670,164 @@ jobs:
             echo "Warning: Linglong package not found after build"
           fi
 
+      - name: Build AppImage
+        run: |
+          version="${{ needs.prepare.outputs.version }}"
+          publishDir="publish/linux-x64"
+          appimageDir="build-appimage"
+          release_dir="$PWD/release-assets"
+          
+          mkdir -p "$appimageDir" "$release_dir"
+          
+          # Download linuxdeploy
+          wget -q "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage" -O linuxdeploy
+          chmod +x linuxdeploy
+          
+          # Prepare AppDir structure
+          mkdir -p "$appimageDir/AppDir/usr/bin"
+          mkdir -p "$appimageDir/AppDir/usr/share/applications"
+          mkdir -p "$appimageDir/AppDir/usr/share/icons/hicolor/256x256/apps"
+          
+          # Copy application files
+          cp -r "$publishDir"/* "$appimageDir/AppDir/usr/bin/"
+          
+          # Create desktop file
+          cat > "$appimageDir/AppDir/LanMountainDesktop.desktop" << EOF
+          [Desktop Entry]
+          Type=Application
+          Version=1.0
+          Name=LanMountainDesktop
+          Comment=LanMountainDesktop desktop shell
+          Exec=LanMountainDesktop.Launcher %U
+          Icon=lanmountaindesktop
+          Terminal=false
+          Categories=Utility;Education;
+          StartupWMClass=LanMountainDesktop
+          EOF
+          
+          # Copy icon
+          cp LanMountainDesktop/packaging/linux/lanmountaindesktop.png "$appimageDir/AppDir/"
+          cp LanMountainDesktop/packaging/linux/lanmountaindesktop.png \
+             "$appimageDir/AppDir/usr/share/icons/hicolor/256x256/apps/"
+          
+          # Create AppRun script
+          cat > "$appimageDir/AppDir/AppRun" << 'APPRUN'
+          #!/bin/bash
+          SELF=$(readlink -f "$0")
+          HERE="${SELF%/*}"
+          
+          # Find the app directory with .NET runtime
+          APP_DIR=""
+          for dir in "$HERE/usr/bin"/app-*; do
+            if [ -d "$dir" ] && [ -f "$dir/LanMountainDesktop.dll" ]; then
+              APP_DIR="$dir"
+              break
+            fi
+          done
+          
+          if [ -n "$APP_DIR" ]; then
+            export DOTNET_ROOT="$APP_DIR"
+            export PATH="$DOTNET_ROOT:$PATH"
+          fi
+          
+          exec "$HERE/usr/bin/LanMountainDesktop.Launcher" "$@"
+          APPRUN
+          chmod +x "$appimageDir/AppDir/AppRun"
+          
+          # Build AppImage
+          cd "$appimageDir"
+          ../linuxdeploy --appdir AppDir --output appimage || {
+            echo "Warning: AppImage build failed"
+            exit 0
+          }
+          
+          # Move to release assets
+          mv LanMountainDesktop-*.AppImage "$release_dir/" 2>/dev/null || \
+            echo "Warning: AppImage not found after build"
+
+      - name: Build Flatpak
+        run: |
+          version="${{ needs.prepare.outputs.version }}"
+          publishDir="publish/linux-x64"
+          flatpakDir="build-flatpak"
+          release_dir="$PWD/release-assets"
+          
+          mkdir -p "$flatpakDir" "$release_dir"
+          
+          # Install Flatpak tools
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+          
+          # Add Flathub repository
+          flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || true
+          
+          # Create Flatpak manifest
+          cat > "$flatpakDir/com.lanmountain.desktop.yml" << EOF
+          app-id: com.lanmountain.desktop
+          runtime: org.freedesktop.Platform
+          runtime-version: '23.08'
+          sdk: org.freedesktop.Sdk
+          command: LanMountainDesktop.Launcher
+          
+          finish-args:
+            - --share=ipc
+            - --socket=x11
+            - --socket=wayland
+            - --socket=pulseaudio
+            - --share=network
+            - --device=dri
+            - --filesystem=home
+          
+          modules:
+            - name: LanMountainDesktop
+              buildsystem: simple
+              build-commands:
+                - mkdir -p /app/bin
+                - cp -r * /app/bin/
+                - install -Dm755 LanMountainDesktop.Launcher /app/bin/LanMountainDesktop.Launcher
+                - install -Dm644 LanMountainDesktop.desktop /app/share/applications/com.lanmountain.desktop.desktop
+                - install -Dm644 lanmountaindesktop.png /app/share/icons/hicolor/256x256/apps/com.lanmountain.desktop.png
+              sources:
+                - type: dir
+                  path: .
+          EOF
+          
+          # Prepare source directory
+          mkdir -p "$flatpakDir/source"
+          cp -r "$publishDir"/* "$flatpakDir/source/"
+          
+          # Create desktop file
+          cat > "$flatpakDir/source/LanMountainDesktop.desktop" << EOF
+          [Desktop Entry]
+          Type=Application
+          Version=1.0
+          Name=LanMountainDesktop
+          Comment=LanMountainDesktop desktop shell
+          Exec=LanMountainDesktop.Launcher %U
+          Icon=com.lanmountain.desktop
+          Terminal=false
+          Categories=Utility;Education;
+          StartupWMClass=LanMountainDesktop
+          EOF
+          
+          # Copy icon
+          cp LanMountainDesktop/packaging/linux/lanmountaindesktop.png \
+             "$flatpakDir/source/"
+          
+          # Build Flatpak
+          cd "$flatpakDir"
+          flatpak-builder --force-clean --repo=repo build com.lanmountain.desktop.yml || {
+            echo "Warning: Flatpak build failed"
+            exit 0
+          }
+          
+          # Create Flatpak bundle
+          flatpak build-bundle repo "$release_dir/LanMountainDesktop-${version}-linux-x64.flatpak" \
+            com.lanmountain.desktop || {
+            echo "Warning: Flatpak bundle creation failed"
+            exit 0
+          }
+
       - name: Package Payload Zip
         run: |
           version="${{ needs.prepare.outputs.version }}"
@@ -702,6 +860,8 @@ jobs:
           path: |
             release-assets/files-linux-x64.zip
             release-assets/*.linglong
+            release-assets/*.AppImage
+            release-assets/*.flatpak
             *.deb
           if-no-files-found: error
           retention-days: 30

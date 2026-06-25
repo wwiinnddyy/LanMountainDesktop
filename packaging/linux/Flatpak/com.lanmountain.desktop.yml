@@ -1,0 +1,54 @@
+app-id: com.lanmountain.desktop
+runtime: org.freedesktop.Platform
+runtime-version: '23.08'
+sdk: org.freedesktop.Sdk
+command: LanMountainDesktop.Launcher
+
+finish-args:
+  # X11 + XShm access
+  - --share=ipc
+  - --socket=x11
+  # Wayland access
+  - --socket=wayland
+  # GPU acceleration
+  - --device=dri
+  # Audio access
+  - --socket=pulseaudio
+  # Network access
+  - --share=network
+  # Home directory access
+  - --filesystem=home
+  # D-Bus access for desktop integration
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.kde.StatusNotifierWatcher
+
+modules:
+  - name: LanMountainDesktop
+    buildsystem: simple
+    build-commands:
+      # Create directory structure
+      - mkdir -p /app/bin
+      - mkdir -p /app/lib
+      - mkdir -p /app/share/applications
+      - mkdir -p /app/share/icons/hicolor/256x256/apps
+      
+      # Copy application files
+      - cp -r publish/linux-x64/app-*/* /app/lib/
+      - cp publish/linux-x64/LanMountainDesktop.Launcher /app/bin/
+      - cp publish/linux-x64/LanMountainDesktop.AirAppRuntime /app/bin/
+      - cp publish/linux-x64/LanMountainDesktop.AirAppRuntime.dll /app/lib/
+      
+      # Copy AirAppHost if exists
+      - if [ -d "publish/linux-x64/AirAppHost" ]; then cp -r publish/linux-x64/AirAppHost /app/lib/; fi
+      
+      # Set permissions
+      - chmod +x /app/bin/*
+      
+      # Install desktop file
+      - install -Dm644 packaging/linux/Flatpak/com.lanmountain.desktop.desktop /app/share/applications/com.lanmountain.desktop.desktop
+      
+      # Install icon
+      - install -Dm644 packaging/linux/lanmountaindesktop.png /app/share/icons/hicolor/256x256/apps/com.lanmountain.desktop.png
+    sources:
+      - type: dir
+        path: ../../..
