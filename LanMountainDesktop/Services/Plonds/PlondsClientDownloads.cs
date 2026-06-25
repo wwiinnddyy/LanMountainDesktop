@@ -1,6 +1,7 @@
 namespace LanMountainDesktop.Services.Plonds;
 
 internal sealed record PlondsClientDownloads(
+    string? ReleaseTag,
     PlondsGitHubDownloads? GitHub,
     PlondsS3Downloads? S3);
 
