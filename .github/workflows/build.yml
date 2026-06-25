@@ -11,6 +11,8 @@ env:
   DOTNET_VERSION: '10.0.x'
   Solution_Name: LanMountainDesktop.slnx
   DOTNET_gcServer: 1
+  # Use system default NuGet cache to avoid path issues
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
 
 jobs:
   build-windows:
@@ -34,11 +36,22 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
           dotnet-quality: 'preview'
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/Directory.Packages.props') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
       - name: Restore
         run: dotnet restore ${{ env.Solution_Name }}
 
       - name: Build
         run: dotnet build ${{ env.Solution_Name }} --no-restore -c ${{ matrix.configuration }} -v minimal
+        env:
+          # Skip AirAppHost build to avoid recursive build issues
+          SkipAirAppHostBuild: true
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
@@ -82,11 +95,22 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
           dotnet-quality: 'preview'
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/Directory.Packages.props') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
       - name: Restore
         run: dotnet restore ${{ env.Solution_Name }}
 
       - name: Build
         run: dotnet build ${{ env.Solution_Name }} --no-restore -c Release -v minimal
+        env:
+          # Skip AirAppHost build to avoid recursive build issues
+          SkipAirAppHostBuild: true
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
@@ -116,11 +140,22 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
           dotnet-quality: 'preview'
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/Directory.Packages.props') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
       - name: Restore
         run: dotnet restore ${{ env.Solution_Name }}
 
       - name: Build
         run: dotnet build ${{ env.Solution_Name }} --no-restore -c Release -v minimal
+        env:
+          # Skip AirAppHost build to avoid recursive build issues
+          SkipAirAppHostBuild: true
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
@@ -146,6 +181,14 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
           dotnet-quality: 'preview'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/Directory.Packages.props') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
 
       - name: Pack SDK and template packages
         shell: pwsh

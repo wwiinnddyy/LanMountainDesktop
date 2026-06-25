@@ -20,6 +20,8 @@ env:
   DOTNET_VERSION: '10.0.x'
   Solution_Name: LanMountainDesktop.slnx
   DOTNET_gcServer: 1
+  # Use absolute path for NuGet cache to avoid path resolution issues
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
 
 jobs:
   prepare:
@@ -436,6 +438,14 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
           dotnet-quality: 'preview'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/Directory.Packages.props') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
 
       - name: Stamp release version metadata
         shell: pwsh
