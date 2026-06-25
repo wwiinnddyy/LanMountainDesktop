@@ -1,0 +1,22 @@
+#!/bin/bash
+# AppImage entry point for LanMountainDesktop
+
+SELF=$(readlink -f "$0")
+HERE="${SELF%/*}"
+
+# Find the app directory with .NET runtime
+APP_DIR=""
+for dir in "$HERE/usr/bin"/app-*; do
+  if [ -d "$dir" ] && [ -f "$dir/LanMountainDesktop.dll" ]; then
+    APP_DIR="$dir"
+    break
+  fi
+done
+
+if [ -n "$APP_DIR" ]; then
+  export DOTNET_ROOT="$APP_DIR"
+  export PATH="$DOTNET_ROOT:$PATH"
+fi
+
+# Launch the application
+exec "$HERE/usr/bin/LanMountainDesktop.Launcher" "$@"
