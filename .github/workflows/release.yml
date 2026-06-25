@@ -634,40 +634,58 @@ jobs:
             echo "LINGLONG_AVAILABLE=false" >> $GITHUB_ENV
           fi
 
-      - name: Package as Linglong
+      - name: Build Linglong package
         if: env.LINGLONG_AVAILABLE == 'true'
         run: |
           version="${{ needs.prepare.outputs.version }}"
           publishDir="publish/linux-x64"
           linglongDir="build-linglong"
+          release_dir="$PWD/release-assets"
           
-          # Create Linglong build directory
-          mkdir -p "$linglongDir"
+          mkdir -p "$linglongDir" "$release_dir"
           
           # Copy linglong.yaml and update version
           cp packaging/linglong/linglong.yaml "$linglongDir/"
           sed -i "s/version: .*/version: ${version}/" "$linglongDir/linglong.yaml"
           
           # Create project structure for Linglong build
-          mkdir -p "$linglongDir/project"
-          cp -r "$publishDir" "$linglongDir/project/"
-          cp -r LanMountainDesktop/packaging "$linglongDir/project/LanMountainDesktop/"
+          # ll-builder expects the project files in /project inside the container
+          mkdir -p "$linglongDir/publish"
+          cp -r "$publishDir"/* "$linglongDir/publish/"
+          cp -r LanMountainDesktop "$linglongDir/LanMountainDesktop"
           
-          # Build Linglong package
+          # Copy linglong.yaml to the build directory
+          cp "$linglongDir/linglong.yaml" "$linglongDir/"
+          
+          # Build using ll-builder
           cd "$linglongDir"
           ll-builder build || {
-            echo "Warning: Linglong build failed"
+            echo "::warning::Linglong build failed"
             exit 0
           }
           
-          # Find and copy the generated package
-          LINGLONG_PKG=$(find . -name "*.uab" -o -name "*.linglong" 2>/dev/null | head -1)
-          if [ -n "$LINGLONG_PKG" ]; then
-            mkdir -p "$PWD/../release-assets"
-            cp "$LINGLONG_PKG" "$PWD/../release-assets/LanMountainDesktop-${version}-linux-x64.linglong"
-            echo "Linglong package created successfully"
+          # List available refs
+          ll-builder list
+          
+          # Export the layer
+          # Get the first available ref
+          REF=$(ll-builder list | head -1 | awk '{print $1}')
+          if [ -n "$REF" ]; then
+            ll-builder export --ref "$REF" || {
+              echo "::warning::Linglong export failed"
+              exit 0
+            }
+            
+            # Find and copy the generated layer file
+            LINGLONG_PKG=$(find . -name "*.layer" 2>/dev/null | head -1)
+            if [ -n "$LINGLONG_PKG" ]; then
+              cp "$LINGLONG_PKG" "$release_dir/LanMountainDesktop-${version}-linux-x64.layer"
+              echo "✓ Linglong package created: LanMountainDesktop-${version}-linux-x64.layer"
+            else
+              echo "::warning::Linglong layer file not found after export"
+            fi
           else
-            echo "Warning: Linglong package not found after build"
+            echo "::warning::No refs available for export"
           fi
 
       - name: Build AppImage
@@ -859,7 +877,7 @@ jobs:
           name: release-linux-x64
           path: |
             release-assets/files-linux-x64.zip
-            release-assets/*.linglong
+            release-assets/*.layer
             release-assets/*.AppImage
             release-assets/*.flatpak
             *.deb
