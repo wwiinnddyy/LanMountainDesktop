@@ -25,7 +25,6 @@ build: |
   mkdir -p $PREFIX/share/applications
   mkdir -p $PREFIX/share/icons/hicolor/128x128/apps
   mkdir -p $PREFIX/share/icons/hicolor/256x256/apps
-  mkdir -p $PREFIX/share/icons/hicolor/scalable/apps
   
   # Copy the pre-built application files
   # The build artifacts should be in /project/publish/linux-x64
@@ -51,19 +50,17 @@ build: |
     exit 1
   fi
   
-  # Create desktop file
-  cat > $PREFIX/share/applications/com.lanmountain.desktop.desktop << EOF
-  [Desktop Entry]
-  Type=Application
-  Version=1.0
-  Name=LanMountainDesktop
-  Comment=LanMountainDesktop desktop shell
-  Exec=/opt/apps/com.lanmountain.desktop/files/bin/LanMountainDesktop.Launcher %U
-  Icon=lanmountaindesktop
-  Terminal=false
-  Categories=Utility;Education;
-  StartupWMClass=LanMountainDesktop
-  EOF
+  # Create desktop file using printf to avoid heredoc issues in YAML
+  printf '%s\n' '[Desktop Entry]' > $PREFIX/share/applications/com.lanmountain.desktop.desktop
+  printf '%s\n' 'Type=Application' >> $PREFIX/share/applications/com.lanmountain.desktop.desktop
+  printf '%s\n' 'Version=1.0' >> $PREFIX/share/applications/com.lanmountain.desktop.desktop
+  printf '%s\n' 'Name=LanMountainDesktop' >> $PREFIX/share/applications/com.lanmountain.desktop.desktop
+  printf '%s\n' 'Comment=LanMountainDesktop desktop shell' >> $PREFIX/share/applications/com.lanmountain.desktop.desktop
+  printf '%s\n' 'Exec=/opt/apps/com.lanmountain.desktop/files/bin/LanMountainDesktop.Launcher %U' >> $PREFIX/share/applications/com.lanmountain.desktop.desktop
+  printf '%s\n' 'Icon=lanmountaindesktop' >> $PREFIX/share/applications/com.lanmountain.desktop.desktop
+  printf '%s\n' 'Terminal=false' >> $PREFIX/share/applications/com.lanmountain.desktop.desktop
+  printf '%s\n' 'Categories=Utility;Education;' >> $PREFIX/share/applications/com.lanmountain.desktop.desktop
+  printf '%s\n' 'StartupWMClass=LanMountainDesktop' >> $PREFIX/share/applications/com.lanmountain.desktop.desktop
   
   # Copy icon files
   if [ -f "/project/LanMountainDesktop/packaging/linux/lanmountaindesktop.png" ]; then
@@ -75,6 +72,5 @@ build: |
   
   # Set executable permissions
   chmod +x $PREFIX/bin/*
-  chmod +x $PREFIX/lib/LanMountainDesktop.AirAppRuntime 2>/dev/null || true
   
   echo "Linglong build completed successfully"
