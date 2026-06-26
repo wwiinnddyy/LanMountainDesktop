@@ -630,17 +630,24 @@ jobs:
 
       - name: Install Linglong build tools
         run: |
-          # Install Linglong builder tools
-          curl -fsSL https://deepin-community.github.io/linglong-tools/install.sh | bash || {
-            echo "Warning: Failed to install Linglong tools, skipping Linglong build"
+          # Add Linglong repository for Ubuntu 24.04
+          echo "deb [trusted=yes] https://ci.deepin.com/repo/obs/linglong:/CI:/release/xUbuntu_24.04/ ./" | sudo tee /etc/apt/sources.list.d/linglong.list
+          sudo apt-get update
+          
+          # Install Linglong builder and CLI
+          sudo apt-get install -y linglong-bin linglong-builder || {
+            echo "::warning::Failed to install Linglong tools, skipping Linglong build"
             echo "LINGLONG_AVAILABLE=false" >> $GITHUB_ENV
+            exit 0
           }
           
           # Verify installation
           if command -v ll-builder &> /dev/null; then
             ll-builder --version
+            ll-cli --version
             echo "LINGLONG_AVAILABLE=true" >> $GITHUB_ENV
           else
+            echo "::warning::ll-builder not found after installation"
             echo "LINGLONG_AVAILABLE=false" >> $GITHUB_ENV
           fi
 
@@ -655,32 +662,32 @@ jobs:
           mkdir -p "$linglongDir" "$release_dir"
           
           # Copy linglong.yaml and update version
-          cp packaging/linglong/linglong.yaml "$linglongDir/"
+          cp packaging/linglong/linglong.yaml "$linglongDir/linglong.yaml"
           sed -i "s/version: .*/version: ${version}/" "$linglongDir/linglong.yaml"
           
           # Create project structure for Linglong build
-          # ll-builder expects the project files in /project inside the container
+          # ll-builder mounts the project directory to /project inside the container
           mkdir -p "$linglongDir/publish"
           cp -r "$publishDir"/* "$linglongDir/publish/"
           cp -r LanMountainDesktop "$linglongDir/LanMountainDesktop"
           
-          # Copy linglong.yaml to the build directory
-          cp "$linglongDir/linglong.yaml" "$linglongDir/"
-          
           # Build using ll-builder
           cd "$linglongDir"
-          ll-builder build || {
+          echo "=== Starting ll-builder build ==="
+          ll-builder build --skip-output-check || {
             echo "::warning::Linglong build failed"
             exit 0
           }
           
-          # List available refs
-          ll-builder list
+          echo "=== Listing available refs ==="
+          ll-builder list || true
           
           # Export the layer
+          echo "=== Exporting layer ==="
           # Get the first available ref
-          REF=$(ll-builder list | head -1 | awk '{print $1}')
+          REF=$(ll-builder list 2>/dev/null | grep -E "^com\." | head -1 | awk '{print $1}')
           if [ -n "$REF" ]; then
+            echo "Exporting ref: $REF"
             ll-builder export --ref "$REF" || {
               echo "::warning::Linglong export failed"
               exit 0
@@ -693,6 +700,8 @@ jobs:
               echo "✓ Linglong package created: LanMountainDesktop-${version}-linux-x64.layer"
             else
               echo "::warning::Linglong layer file not found after export"
+              # List files for debugging
+              find . -type f -name "*.layer" -o -name "*.uab" 2>/dev/null || true
             fi
           else
             echo "::warning::No refs available for export"
