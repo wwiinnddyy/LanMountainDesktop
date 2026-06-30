@@ -49,38 +49,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
     private readonly LocalizationService _localizationService = new();
     private readonly Bitmap?[] _newsBitmaps = new Bitmap?[2];
     private readonly List<string?> _newsUrls = [];
-    private readonly List<ExtraNewsRowVisual> _extraNewsRows = [];
     private IReadOnlyList<DailyNewsItemSnapshot> _activeNewsItems = [];
-    private int _renderedNewsCount = 2;
-
-    private sealed class ExtraNewsRowVisual
-    {
-        public ExtraNewsRowVisual(
-            Grid rootGrid,
-            TextBlock titleTextBlock,
-            Border imageHost,
-            Image imageControl,
-            int newsIndex)
-        {
-            RootGrid = rootGrid;
-            TitleTextBlock = titleTextBlock;
-            ImageHost = imageHost;
-            ImageControl = imageControl;
-            NewsIndex = newsIndex;
-        }
-
-        public Grid RootGrid { get; }
-
-        public TextBlock TitleTextBlock { get; }
-
-        public Border ImageHost { get; }
-
-        public Image ImageControl { get; }
-
-        public int NewsIndex { get; }
-
-        public Bitmap? Bitmap { get; set; }
-    }
 
     private IRecommendationInfoService _recommendationService = DefaultRecommendationService;
     private CancellationTokenSource? _refreshCts;
@@ -89,7 +58,6 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
     private bool _isAttached;
     private bool _isRefreshing;
     private bool _autoRotateEnabled = true;
-    // 删除 _isNightVisual 字段，不再需要手动管理主题
 
     public CnrDailyNewsWidget()
     {
@@ -103,8 +71,8 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
 
         _refreshTimer.Tick += OnRefreshTimerTick;
         RefreshButton.Click += OnRefreshButtonClick;
-        NewsItem1Grid.PointerPressed += OnNewsItem1PointerPressed;
-        NewsItem2Grid.PointerPressed += OnNewsItem2PointerPressed;
+        NewsItem1Card.PointerPressed += OnNewsItem1PointerPressed;
+        NewsItem2Card.PointerPressed += OnNewsItem2PointerPressed;
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
 
@@ -117,7 +85,6 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
     public void ApplyCellSize(double cellSize)
     {
         _currentCellSize = Math.Max(1, cellSize);
-        // 不再需要复杂的自适应逻辑，使用固定标准尺寸
     }
 
     public void SetRecommendationInfoService(IRecommendationInfoService recommendationInfoService)
@@ -153,11 +120,8 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         _refreshTimer.Stop();
         CancelRefreshRequest();
         DisposeNewsBitmaps();
-        ClearExtraNewsRows();
         UpdateRefreshButtonState();
     }
-
-    // 删除 OnSizeChanged 和 OnActualThemeVariantChanged，不再需要
 
     private async void OnRefreshButtonClick(object? sender, RoutedEventArgs e)
     {
@@ -212,25 +176,6 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         }
 
         TryOpenNewsUrl(1);
-        e.Handled = true;
-    }
-
-    private void OnExtraNewsItemPointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (_isDesignModePreview)
-        {
-            e.Handled = true;
-            return;
-        }
-
-        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed ||
-            sender is not Control control ||
-            control.Tag is not int index)
-        {
-            return;
-        }
-
-        TryOpenNewsUrl(index);
         e.Handled = true;
     }
 
@@ -313,7 +258,6 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
             _newsUrls.Add(NormalizeHttpUrl(item.Url));
         }
 
-        RenderExtraNewsRows([]);
         UpdateNewsInteractionState();
 
         StatusTextBlock.IsVisible = false;
@@ -345,7 +289,6 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         StatusTextBlock.IsVisible = true;
         SetNewsBitmap(0, null);
         SetNewsBitmap(1, null);
-        RenderExtraNewsRows([]);
         UpdateNewsInteractionState();
     }
 
@@ -360,7 +303,6 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         StatusTextBlock.IsVisible = true;
         SetNewsBitmap(0, null);
         SetNewsBitmap(1, null);
-        RenderExtraNewsRows([]);
         UpdateNewsInteractionState();
     }
 
@@ -379,13 +321,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
                 null,
                 "https://example.com/news/preview-2",
                 null,
-                "09:10"),
-            new DailyNewsItemSnapshot(
-                "Design-time mocks make isolated widget layout tuning much faster.",
-                null,
-                "https://example.com/news/preview-3",
-                null,
-                "08:55")
+                "09:10")
         ];
 
         _newsUrls.Clear();
@@ -401,7 +337,6 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
 
         SetNewsBitmap(0, null);
         SetNewsBitmap(1, null);
-        RenderExtraNewsRows(_activeNewsItems.Skip(2).ToArray());
         UpdateNewsInteractionState();
 
         RefreshButton.IsEnabled = false;
@@ -436,122 +371,6 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         });
     }
 
-    private void RenderExtraNewsRows(IReadOnlyList<DailyNewsItemSnapshot> extraItems)
-    {
-        ClearExtraNewsRows();
-        if (extraItems.Count == 0)
-        {
-            ExtraNewsItemsPanel.IsVisible = false;
-            _renderedNewsCount = 2;
-            return;
-        }
-
-        for (var i = 0; i < extraItems.Count; i++)
-        {
-            var item = extraItems[i];
-            var itemIndex = i + 2;
-            var rowGrid = new Grid
-            {
-                ColumnSpacing = 12,
-                Tag = itemIndex,
-                Cursor = new Cursor(StandardCursorType.Hand),
-                IsHitTestVisible = true
-            };
-            rowGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1, GridUnitType.Star)));
-            rowGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-            rowGrid.PointerPressed += OnExtraNewsItemPointerPressed;
-
-            var textBlock = new TextBlock
-            {
-                Text = NormalizeCompactText(item.Title),
-                FontSize = 16,
-                FontWeight = FontWeight.SemiBold,
-                TextWrapping = TextWrapping.Wrap,
-                TextTrimming = TextTrimming.CharacterEllipsis,
-                MaxLines = 2,
-                LineHeight = 22,
-                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
-                IsHitTestVisible = false
-            };
-
-            // 使用动态资源绑定文本颜色
-            textBlock.Bind(TextBlock.ForegroundProperty,
-                new Avalonia.Data.Binding("TextFillColorPrimaryBrush")
-                {
-                    Source = Application.Current!.Resources
-                });
-
-            var imageHost = new Border
-            {
-                Width = 140,
-                Height = 80,
-                CornerRadius = new CornerRadius(8),
-                ClipToBounds = true,
-                IsHitTestVisible = false
-            };
-
-            // 使用动态资源绑定背景色
-            imageHost.Bind(Border.BackgroundProperty,
-                new Avalonia.Data.Binding("CardBackgroundSecondaryBrush")
-                {
-                    Source = Application.Current!.Resources
-                });
-
-            var image = new Image
-            {
-                Stretch = Stretch.UniformToFill,
-                IsHitTestVisible = false
-            };
-            imageHost.Child = image;
-            Grid.SetColumn(imageHost, 1);
-
-            rowGrid.Children.Add(textBlock);
-            rowGrid.Children.Add(imageHost);
-            ExtraNewsItemsPanel.Children.Add(rowGrid);
-            _extraNewsRows.Add(new ExtraNewsRowVisual(rowGrid, textBlock, imageHost, image, itemIndex));
-        }
-
-        ExtraNewsItemsPanel.IsVisible = true;
-        _renderedNewsCount = 2 + extraItems.Count;
-    }
-
-    private void ClearExtraNewsRows()
-    {
-        foreach (var row in _extraNewsRows)
-        {
-            row.RootGrid.PointerPressed -= OnExtraNewsItemPointerPressed;
-            if (ReferenceEquals(row.ImageControl.Source, row.Bitmap))
-            {
-                row.ImageControl.Source = null;
-            }
-
-            row.Bitmap?.Dispose();
-            row.Bitmap = null;
-        }
-
-        _extraNewsRows.Clear();
-        ExtraNewsItemsPanel.Children.Clear();
-    }
-
-    private void SetExtraNewsBitmap(int rowIndex, Bitmap? bitmap)
-    {
-        if (rowIndex < 0 || rowIndex >= _extraNewsRows.Count)
-        {
-            bitmap?.Dispose();
-            return;
-        }
-
-        var row = _extraNewsRows[rowIndex];
-        if (ReferenceEquals(row.ImageControl.Source, row.Bitmap))
-        {
-            row.ImageControl.Source = null;
-        }
-
-        row.Bitmap?.Dispose();
-        row.Bitmap = bitmap;
-        row.ImageControl.Source = bitmap;
-    }
-
     private void UpdateRefreshButtonState()
     {
         RefreshButton.IsEnabled = !_isRefreshing && _isAttached;
@@ -560,23 +379,12 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
 
     private void UpdateNewsInteractionState()
     {
-        var item1Enabled = _newsUrls.Count > 0 && !string.IsNullOrWhiteSpace(_newsUrls[0]);
-        var item2Enabled = _newsUrls.Count > 1 && !string.IsNullOrWhiteSpace(_newsUrls[1]);
-
-        NewsItem1Grid.IsHitTestVisible = item1Enabled;
-        NewsItem2Grid.IsHitTestVisible = item2Enabled;
-        NewsItem1Grid.Opacity = item1Enabled ? 1.0 : 0.72;
-        NewsItem2Grid.Opacity = item2Enabled ? 1.0 : 0.72;
-
-        foreach (var row in _extraNewsRows)
+        var cards = new[] { NewsItem1Card, NewsItem2Card };
+        for (var i = 0; i < cards.Length; i++)
         {
-            var index = row.NewsIndex;
-            var enabled = index >= 0 && index < _newsUrls.Count && !string.IsNullOrWhiteSpace(_newsUrls[index]);
-            row.RootGrid.IsHitTestVisible = enabled;
-            row.RootGrid.Opacity = enabled ? 1.0 : 0.72;
-            row.RootGrid.Cursor = enabled
-                ? new Cursor(StandardCursorType.Hand)
-                : new Cursor(StandardCursorType.Arrow);
+            var enabled = i < _newsUrls.Count && !string.IsNullOrWhiteSpace(_newsUrls[i]);
+            cards[i].IsHitTestVisible = enabled;
+            cards[i].Opacity = enabled ? 1.0 : 0.72;
         }
     }
 
@@ -676,7 +484,19 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
             return;
         }
 
-        var imageControl = index == 0 ? News1Image : News2Image;
+        var imageControl = index switch
+        {
+            0 => News1Image,
+            1 => News2Image,
+            _ => null
+        };
+
+        if (imageControl is null)
+        {
+            bitmap?.Dispose();
+            return;
+        }
+
         var oldBitmap = _newsBitmaps[index];
         if (ReferenceEquals(imageControl.Source, oldBitmap))
         {
@@ -695,8 +515,10 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
 
     private void DisposeNewsBitmaps()
     {
-        SetNewsBitmap(0, null);
-        SetNewsBitmap(1, null);
+        for (var i = 0; i < _newsBitmaps.Length; i++)
+        {
+            SetNewsBitmap(i, null);
+        }
     }
 
     private void UpdateLanguageCode()

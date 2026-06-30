@@ -94,7 +94,7 @@
             <StackPanel Grid.Row="1" Spacing="12">
 
                 <!-- 新闻项 1 -->
-                <Grid x:Name="NewsItem1Grid"
+                <Grid x:Name="NewsItem1Card"
                       ColumnDefinitions="*,Auto"
                       ColumnSpacing="12"
                       Cursor="Hand">
@@ -102,18 +102,18 @@
                                Text="Headline"
                                Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                FontSize="16"
-                               FontWeight="SemiBold"
+                               FontWeight="Bold"
                                TextWrapping="Wrap"
                                TextTrimming="CharacterEllipsis"
                                MaxLines="2"
                                VerticalAlignment="Top"
-                               LineHeight="22" />
+                               LineHeight="24" />
 
                     <Border x:Name="News1ImageHost"
                             Grid.Column="1"
                             Width="140"
                             Height="80"
-                            CornerRadius="8"
+                            CornerRadius="{DynamicResource DesignCornerRadiusXs}"
                             ClipToBounds="True"
                             Background="{DynamicResource CardBackgroundSecondaryBrush}">
                         <Image x:Name="News1Image"
@@ -140,7 +140,7 @@
                 </Grid>
 
                 <!-- 新闻项 2 -->
-                <Grid x:Name="NewsItem2Grid"
+                <Grid x:Name="NewsItem2Card"
                       ColumnDefinitions="*,Auto"
                       ColumnSpacing="12"
                       Cursor="Hand">
@@ -148,18 +148,18 @@
                                Text="Headline"
                                Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                FontSize="16"
-                               FontWeight="SemiBold"
+                               FontWeight="Bold"
                                TextWrapping="Wrap"
                                TextTrimming="CharacterEllipsis"
                                MaxLines="2"
                                VerticalAlignment="Top"
-                               LineHeight="22" />
+                               LineHeight="24" />
 
                     <Border x:Name="News2ImageHost"
                             Grid.Column="1"
                             Width="140"
                             Height="80"
-                            CornerRadius="8"
+                            CornerRadius="{DynamicResource DesignCornerRadiusXs}"
                             ClipToBounds="True"
                             Background="{DynamicResource CardBackgroundSecondaryBrush}">
                         <Image x:Name="News2Image"
@@ -184,11 +184,6 @@
                         </Style>
                     </Grid.Styles>
                 </Grid>
-
-                <!-- 额外新闻项容器 -->
-                <StackPanel x:Name="ExtraNewsItemsPanel"
-                            Spacing="12"
-                            IsVisible="False" />
             </StackPanel>
 
             <!-- 状态提示 -->
