@@ -77,11 +77,13 @@ public class InkCanvas : Control
         }
 
         var args = ToArgs(e);
+        var wasDuringInput = IsDuringInput;
         _inputDictionary[e.Pointer.Id] = new InputInfo(args.StylusPoint);
+        e.Pointer.Capture(this);
 
         if (EditingMode == InkCanvasEditingMode.Ink)
         {
-            if (!IsDuringInput)
+            if (!wasDuringInput)
             {
                 AvaloniaSkiaInkCanvas.WritingStart();
             }
@@ -110,7 +112,6 @@ public class InkCanvas : Control
         }
 
         var args = ToArgs(e, inputInfo);
-        inputInfo.LastStylusPoint = args.StylusPoint;
 
         if (EditingMode == InkCanvasEditingMode.Ink)
         {
@@ -121,6 +122,7 @@ public class InkCanvas : Control
             EraserMode.EraserMove(in args);
         }
 
+        inputInfo.LastStylusPoint = args.StylusPoint;
         base.OnPointerMoved(e);
     }
 
@@ -137,7 +139,7 @@ public class InkCanvas : Control
             return;
         }
 
-        var args = ToArgs(e);
+        var args = ToArgs(e, inputInfo);
         inputInfo.LastStylusPoint = args.StylusPoint;
 
         if (EditingMode == InkCanvasEditingMode.Ink)
@@ -154,7 +156,31 @@ public class InkCanvas : Control
             EraserMode.EraserUp(in args);
         }
 
+        e.Pointer.Capture(null);
         base.OnPointerReleased(e);
+    }
+
+    protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e)
+    {
+        if (_inputDictionary.Remove(e.Pointer.Id, out var inputInfo))
+        {
+            var args = new InkingModeInputArgs(e.Pointer.Id, inputInfo.LastStylusPoint, 0);
+            if (EditingMode == InkCanvasEditingMode.Ink)
+            {
+                AvaloniaSkiaInkCanvas.WritingUp(in args);
+
+                if (!IsDuringInput)
+                {
+                    AvaloniaSkiaInkCanvas.WritingCompleted();
+                }
+            }
+            else if (EditingMode == InkCanvasEditingMode.EraseByPoint)
+            {
+                EraserMode.EraserUp(in args);
+            }
+        }
+
+        base.OnPointerCaptureLost(e);
     }
 
     class InputInfo
@@ -173,42 +199,55 @@ public class InkCanvas : Control
     private InkingModeInputArgs ToArgs(PointerEventArgs args, InputInfo? inputInfo = null)
     {
         PointerPoint currentPoint = args.GetCurrentPoint(AvaloniaSkiaInkCanvas);
-        var inkStylusPoint = ToInkStylusPoint(currentPoint);
+        InkStylusPoint? lastStylusPoint = inputInfo?.LastStylusPoint;
 
-        IReadOnlyList<InkStylusPoint>? stylusPointList = null;
-        var list = args.GetIntermediatePoints(AvaloniaSkiaInkCanvas);
-        if (list.Count > 1)
+        List<InkStylusPoint>? stylusPointList = null;
+        var intermediatePointList = args.GetIntermediatePoints(AvaloniaSkiaInkCanvas);
+        if (intermediatePointList.Count > 0)
         {
-            stylusPointList = list.Select(ToInkStylusPoint)
-                .ToList();
+            var orderedIntermediatePointList = OrderIntermediatePoints(intermediatePointList, lastStylusPoint);
+            stylusPointList = new List<InkStylusPoint>(orderedIntermediatePointList.Count + 1);
+
+            foreach (var intermediatePoint in orderedIntermediatePointList)
+            {
+                var stylusPoint = ToInkStylusPoint(intermediatePoint, lastStylusPoint);
+                AddDistinctPoint(stylusPointList, stylusPoint);
+                lastStylusPoint = stylusPoint;
+            }
+        }
+
+        var inkStylusPoint = ToInkStylusPoint(currentPoint, lastStylusPoint);
+        if (stylusPointList is not null)
+        {
+            AddDistinctPoint(stylusPointList, inkStylusPoint);
         }
 
         return new InkingModeInputArgs(args.Pointer.Id, inkStylusPoint, args.Timestamp)
         {
-            StylusPointList = stylusPointList,
+            StylusPointList = stylusPointList is { Count: > 0 } ? stylusPointList : null,
         };
 
-        InkStylusPoint ToInkStylusPoint(PointerPoint point)
+        InkStylusPoint ToInkStylusPoint(PointerPoint point, InkStylusPoint? previousPoint)
         {
-            var pressure = EnsurePressure(currentPoint.Properties.Pressure);
-            var contactRect = currentPoint.Properties.ContactRect;
+            var pressure = EnsurePressure(point.Properties.Pressure, previousPoint);
+            var contactRect = point.Properties.ContactRect;
             var width = contactRect.Width;
             var height = contactRect.Height;
 
-            if (inputInfo is not null)
+            if (previousPoint is not null)
             {
-                if (width == 0 && inputInfo.LastStylusPoint.Width is { } lastWidth)
+                if (width == 0 && previousPoint.Value.Width is { } lastWidth)
                 {
                     width = lastWidth;
                 }
 
-                if (height == 0 && inputInfo.LastStylusPoint.Height is { } lastHeight)
+                if (height == 0 && previousPoint.Value.Height is { } lastHeight)
                 {
                     height = lastHeight;
                 }
             }
 
-            var stylusPoint = new InkStylusPoint(currentPoint.Position.ToPoint2D(), pressure)
+            var stylusPoint = new InkStylusPoint(point.Position.ToPoint2D(), pressure)
             {
                 Width = width != 0 ? width : null,
                 Height = height != 0 ? height : null,
@@ -217,18 +256,63 @@ public class InkCanvas : Control
             return stylusPoint;
         }
 
-        float EnsurePressure(float pressure)
+        float EnsurePressure(float pressure, InkStylusPoint? previousPoint)
         {
             // 这是一个修复补丁。在 Linux X11 上，如果前后两个点的压力是相同的，则后点将不会报告压力，此时 Avalonia 上将使用默认压力值 0.5 来填充压力值
             // 为了避免压力值抖动，将压力值修正为上一个点的压力值
             const float defaultPressure = InkStylusPoint.DefaultPressure;
-            if (inputInfo != null && (pressure == 0 || Math.Abs(pressure - defaultPressure) < 0.00001))
+            if (previousPoint is not null && (pressure == 0 || Math.Abs(pressure - defaultPressure) < 0.00001))
             {
-                return inputInfo.LastStylusPoint.Pressure;
+                return previousPoint.Value.Pressure;
             }
 
             return pressure;
         }
+    }
+
+    private static IReadOnlyList<PointerPoint> OrderIntermediatePoints(
+        IReadOnlyList<PointerPoint> intermediatePointList,
+        InkStylusPoint? previousPoint)
+    {
+        if (previousPoint is null || intermediatePointList.Count <= 1)
+        {
+            return intermediatePointList;
+        }
+
+        var firstDistance = GetDistanceSquared(previousPoint.Value, intermediatePointList[0]);
+        var lastDistance = GetDistanceSquared(previousPoint.Value, intermediatePointList[^1]);
+        if (lastDistance >= firstDistance)
+        {
+            return intermediatePointList;
+        }
+
+        var orderedList = intermediatePointList.ToList();
+        orderedList.Reverse();
+        return orderedList;
+    }
+
+    private static double GetDistanceSquared(InkStylusPoint point, PointerPoint pointerPoint)
+    {
+        var dx = point.X - pointerPoint.Position.X;
+        var dy = point.Y - pointerPoint.Position.Y;
+        return dx * dx + dy * dy;
+    }
+
+    private static void AddDistinctPoint(List<InkStylusPoint> pointList, InkStylusPoint point)
+    {
+        if (pointList.Count > 0 && AreSamePosition(pointList[^1], point))
+        {
+            return;
+        }
+
+        pointList.Add(point);
+    }
+
+    private static bool AreSamePosition(InkStylusPoint first, InkStylusPoint second)
+    {
+        const double tolerance = 0.001d;
+        return Math.Abs(first.X - second.X) < tolerance &&
+               Math.Abs(first.Y - second.Y) < tolerance;
     }
 
     #endregion
@@ -279,4 +363,3 @@ public class InkCanvas : Control
 
 
 }
-
