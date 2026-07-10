@@ -281,8 +281,8 @@ internal sealed class InkBitmapCache : IDisposable
         {
             using var paint = new SKPaint();
             paint.IsAntialias = true;
-            paint.FilterQuality = SKFilterQuality.High;
-            canvas.DrawBitmap(data.Bitmap, 0, 0, paint);
+            var sampling = new SKSamplingOptions(SKCubicResampler.Mitchell);
+            canvas.DrawBitmap(data.Bitmap, 0, 0, sampling, paint);
         }
         finally
         {

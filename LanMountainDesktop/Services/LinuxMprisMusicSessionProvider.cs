@@ -229,7 +229,7 @@ internal sealed class LinuxMprisMusicSessionProvider : IMusicSessionProvider
                 "NameOwnerChanged",
                 ex =>
                 {
-                    if (ex is null || !ActionException.IsObserverDisposed(ex))
+                    if (ex is null || !ObserverHandler.IsObserverDisposed(ex))
                     {
                         SessionsChanged?.Invoke(this, EventArgs.Empty);
                     }

@@ -15,64 +15,77 @@ class Program
 
         // 开发模式命令
         var devCommand = new Command("dev", "启动开发服务器（支持热重载）");
-        var projectPathOption = new Option<string>(
-            aliases: new[] { "--project", "-p" },
-            description: "AirApp 项目路径",
-            getDefaultValue: () => Directory.GetCurrentDirectory());
-        var portOption = new Option<int>(
-            aliases: new[] { "--port" },
-            description: "开发服务器端口",
-            getDefaultValue: () => 5000);
-        var verboseOption = new Option<bool>(
-            aliases: new[] { "--verbose", "-v" },
-            description: "显示详细日志");
-
-        devCommand.AddOption(projectPathOption);
-        devCommand.AddOption(portOption);
-        devCommand.AddOption(verboseOption);
-
-        devCommand.SetHandler(async (projectPath, port, verbose) =>
+        var projectPathOption = new Option<string>("--project", "-p")
         {
-            await RunDevServerAsync(projectPath, port, verbose);
-        }, projectPathOption, portOption, verboseOption);
+            Description = "AirApp 项目路径",
+            DefaultValueFactory = _ => Directory.GetCurrentDirectory(),
+            Recursive = true
+        };
+        var portOption = new Option<int>("--port")
+        {
+            Description = "开发服务器端口",
+            DefaultValueFactory = _ => 5000
+        };
+        var verboseOption = new Option<bool>("--verbose", "-v")
+        {
+            Description = "显示详细日志"
+        };
+
+        rootCommand.Options.Add(projectPathOption);
+        devCommand.Options.Add(portOption);
+        devCommand.Options.Add(verboseOption);
+
+        devCommand.SetAction(async parseResult =>
+        {
+            await RunDevServerAsync(
+                parseResult.GetValue(projectPathOption) ?? Directory.GetCurrentDirectory(),
+                parseResult.GetValue(portOption),
+                parseResult.GetValue(verboseOption));
+        });
 
         // 预览命令
         var previewCommand = new Command("preview", "预览 AirApp（无需安装到宿主）");
-        var componentOption = new Option<string?>(
-            aliases: new[] { "--component", "-c" },
-            description: "要预览的组件 ID");
-        var windowOption = new Option<string?>(
-            aliases: new[] { "--window", "-w" },
-            description: "要预览的窗口 ID");
-
-        previewCommand.AddOption(projectPathOption);
-        previewCommand.AddOption(componentOption);
-        previewCommand.AddOption(windowOption);
-
-        previewCommand.SetHandler(async (projectPath, component, window) =>
+        var componentOption = new Option<string?>("--component", "-c")
         {
-            await RunPreviewAsync(projectPath, component, window);
-        }, projectPathOption, componentOption, windowOption);
+            Description = "要预览的组件 ID"
+        };
+        var windowOption = new Option<string?>("--window", "-w")
+        {
+            Description = "要预览的窗口 ID"
+        };
+
+        previewCommand.Options.Add(componentOption);
+        previewCommand.Options.Add(windowOption);
+
+        previewCommand.SetAction(async parseResult =>
+        {
+            await RunPreviewAsync(
+                parseResult.GetValue(projectPathOption) ?? Directory.GetCurrentDirectory(),
+                parseResult.GetValue(componentOption),
+                parseResult.GetValue(windowOption));
+        });
 
         // 打包命令
         var packageCommand = new Command("package", "打包 AirApp 为 .laapp 文件");
-        var outputOption = new Option<string?>(
-            aliases: new[] { "--output", "-o" },
-            description: "输出路径");
-
-        packageCommand.AddOption(projectPathOption);
-        packageCommand.AddOption(outputOption);
-
-        packageCommand.SetHandler(async (projectPath, output) =>
+        var outputOption = new Option<string?>("--output", "-o")
         {
-            await PackageAirAppAsync(projectPath, output);
-        }, projectPathOption, outputOption);
+            Description = "输出路径"
+        };
 
-        rootCommand.AddCommand(devCommand);
-        rootCommand.AddCommand(previewCommand);
-        rootCommand.AddCommand(packageCommand);
+        packageCommand.Options.Add(outputOption);
 
-        return await rootCommand.InvokeAsync(args);
+        packageCommand.SetAction(async parseResult =>
+        {
+            await PackageAirAppAsync(
+                parseResult.GetValue(projectPathOption) ?? Directory.GetCurrentDirectory(),
+                parseResult.GetValue(outputOption));
+        });
+
+        rootCommand.Subcommands.Add(devCommand);
+        rootCommand.Subcommands.Add(previewCommand);
+        rootCommand.Subcommands.Add(packageCommand);
+
+        return await rootCommand.Parse(args).InvokeAsync();
     }
 
     static async Task RunDevServerAsync(string projectPath, int port, bool verbose)

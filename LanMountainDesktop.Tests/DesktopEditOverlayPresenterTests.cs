@@ -1,6 +1,7 @@
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Headless.XUnit;
 using LanMountainDesktop.DesktopEditing;
 using Xunit;
 
@@ -8,7 +9,7 @@ namespace LanMountainDesktop.Tests;
 
 public sealed class DesktopEditOverlayPresenterTests
 {
-    [Fact]
+    [AvaloniaFact]
     public void CompositionOffsetHelperFallsBackWhenVisualIsUnavailable()
     {
         var service = new CompositionVisualAnimationService(_ => null);
@@ -21,7 +22,7 @@ public sealed class DesktopEditOverlayPresenterTests
         Assert.False(service.TrySetUniformScale(target, 1.05));
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void PreviewRectUsesCanvasPlacementWhenCompositionIsUnavailable()
     {
         var presenter = new DesktopEditOverlayPresenter(new CompositionVisualAnimationService(_ => null));
@@ -36,7 +37,7 @@ public sealed class DesktopEditOverlayPresenterTests
         Assert.Equal(120, ghost.Height);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void CandidateRectUsesCanvasPlacement()
     {
         var presenter = new DesktopEditOverlayPresenter(new CompositionVisualAnimationService(_ => null));
@@ -51,7 +52,7 @@ public sealed class DesktopEditOverlayPresenterTests
         Assert.Equal(160, candidate.Height);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ShowPreservesPreviewAndCandidateCanvasPlacement()
     {
         var presenter = new DesktopEditOverlayPresenter(new CompositionVisualAnimationService(_ => null));

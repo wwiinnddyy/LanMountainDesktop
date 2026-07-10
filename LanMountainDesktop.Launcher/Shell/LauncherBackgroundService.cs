@@ -1,4 +1,5 @@
 using Avalonia.Media.Imaging;
+using SkiaSharp;
 
 namespace LanMountainDesktop.Launcher.Shell;
 
@@ -21,6 +22,8 @@ internal static class LauncherBackgroundService
     private static string? _cachedPath;
     private static long _cachedLength;
     private static DateTime _cachedLastWriteTimeUtc;
+    private static int _cachedWidth;
+    private static int _cachedHeight;
 
     internal static string? LauncherDataDirectoryOverride { get; set; }
 
@@ -79,18 +82,37 @@ internal static class LauncherBackgroundService
                     IsValid = true,
                     FilePath = imagePath,
                     Bitmap = _cachedBitmap,
-                    Width = _cachedBitmap!.PixelSize.Width,
-                    Height = _cachedBitmap.PixelSize.Height,
-                    AspectRatio = (double)_cachedBitmap.PixelSize.Width / _cachedBitmap.PixelSize.Height
+                    Width = _cachedWidth,
+                    Height = _cachedHeight,
+                    AspectRatio = (double)_cachedWidth / _cachedHeight
                 };
             }
 
             DisposeCache();
 
+            if (!TryInspectImage(imagePath, out var decodedWidth, out var decodedHeight, out var decodeError))
+            {
+                return new BackgroundImageInfo
+                {
+                    Exists = true,
+                    IsValid = false,
+                    FilePath = imagePath,
+                    ErrorMessage = $"Image could not be decoded: {decodeError}"
+                };
+            }
+
             Bitmap bitmap;
             try
             {
-                bitmap = new Bitmap(imagePath);
+                // Decode from a stream instead of the path-based constructor. Avalonia/Skia may
+                // retain a path-backed image source, which can return stale pixels when a file is
+                // replaced in place.
+                using var imageStream = new FileStream(
+                    imagePath,
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.ReadWrite | FileShare.Delete);
+                bitmap = new Bitmap(imageStream);
             }
             catch (Exception ex)
             {
@@ -103,14 +125,16 @@ internal static class LauncherBackgroundService
                 };
             }
 
-            var width = bitmap.PixelSize.Width;
-            var height = bitmap.PixelSize.Height;
+            var width = decodedWidth;
+            var height = decodedHeight;
             var aspectRatio = height == 0 ? 0d : (double)width / height;
 
             _cachedBitmap = bitmap;
             _cachedPath = imagePath;
             _cachedLength = fileInfo.Length;
             _cachedLastWriteTimeUtc = fileInfo.LastWriteTimeUtc;
+            _cachedWidth = width;
+            _cachedHeight = height;
 
             Logger.Info($"[LauncherBackground] Background image loaded: {imagePath} ({width}x{height}).");
 
@@ -164,14 +188,9 @@ internal static class LauncherBackgroundService
                 return FailMutation($"Image file is too large ({sourceInfo.Length / 1024 / 1024}MB > 10MB).");
             }
 
-            try
+            if (!TryInspectImage(fullSourcePath, out _, out _, out var decodeError))
             {
-                using var bitmap = new Bitmap(fullSourcePath);
-                _ = bitmap.PixelSize;
-            }
-            catch (Exception ex)
-            {
-                return FailMutation($"The selected image could not be decoded: {ex.Message}");
+                return FailMutation($"The selected image could not be decoded: {decodeError}");
             }
 
             var launcherPath = ResolveLauncherDataPath();
@@ -235,6 +254,8 @@ internal static class LauncherBackgroundService
         _cachedPath = null;
         _cachedLength = 0;
         _cachedLastWriteTimeUtc = DateTime.MinValue;
+        _cachedWidth = 0;
+        _cachedHeight = 0;
     }
 
     internal static string? FindManagedImageFile()
@@ -259,6 +280,56 @@ internal static class LauncherBackgroundService
                string.Equals(_cachedPath, imagePath, StringComparison.OrdinalIgnoreCase) &&
                _cachedLength == fileInfo.Length &&
                _cachedLastWriteTimeUtc == fileInfo.LastWriteTimeUtc;
+    }
+
+    private static bool TryInspectImage(
+        string path,
+        out int width,
+        out int height,
+        out string? error)
+    {
+        width = 0;
+        height = 0;
+        error = null;
+
+        try
+        {
+            using var stream = new FileStream(
+                path,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.ReadWrite | FileShare.Delete);
+            using var codec = SKCodec.Create(stream);
+            if (codec is null)
+            {
+                error = "The file is not a recognized image.";
+                return false;
+            }
+
+            var info = codec.Info;
+            if (info.Width <= 0 || info.Height <= 0)
+            {
+                error = "The image has invalid dimensions.";
+                return false;
+            }
+
+            using var pixels = new SKBitmap(info);
+            var result = codec.GetPixels(info, pixels.GetPixels());
+            if (result is not (SKCodecResult.Success or SKCodecResult.IncompleteInput))
+            {
+                error = $"The decoder returned {result}.";
+                return false;
+            }
+
+            width = info.Width;
+            height = info.Height;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
     }
 
     private static string? FindImageFile(string directory)
