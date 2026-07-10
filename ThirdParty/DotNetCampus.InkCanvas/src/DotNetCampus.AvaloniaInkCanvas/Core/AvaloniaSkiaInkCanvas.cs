@@ -17,6 +17,7 @@ using SkiaSharp;
 
 using System.Diagnostics;
 using DotNetCampus.Inking.Interactives;
+using DotNetCampus.Inking.Primitive;
 using DotNetCampus.Inking.Utils;
 using InkTransformContext = (DotNetCampus.Numerics.Geometry.BoundingBox2D VisibleBounds, DotNetCampus.Numerics.Geometry.SimilarityTransformation2D TransformToRoot);
 
@@ -134,7 +135,7 @@ public class AvaloniaSkiaInkCanvas : Control
 
         if (_contextDictionary.TryGetValue(args.Id, out var context))
         {
-            context.Stroke.AddPoint(args.StylusPoint);
+            context.Stroke.AddPoints(EnumerateStylusPoints(args));
             InvalidateVisual();
         }
     }
@@ -145,7 +146,7 @@ public class AvaloniaSkiaInkCanvas : Control
 
         if (_contextDictionary.Remove(args.Id, out var context))
         {
-            context.Stroke.AddPoint(args.StylusPoint);
+            context.Stroke.AddPoints(EnumerateStylusPoints(args));
             //_staticStrokeDictionary[context.Stroke.Id] = context.Stroke;
             context.Stroke.SetAsStatic();
             _staticStrokeList.Add(context.Stroke);
@@ -153,6 +154,21 @@ public class AvaloniaSkiaInkCanvas : Control
             StrokeCollected?.Invoke(this, new AvaloniaSkiaInkCanvasStrokeCollectedEventArgs(args.Id, context.Stroke));
         }
         InvalidateVisual();
+    }
+
+    private static IEnumerable<InkStylusPoint> EnumerateStylusPoints(InkingModeInputArgs args)
+    {
+        if (args.StylusPointList is { Count: > 0 } stylusPointList)
+        {
+            foreach (var stylusPoint in stylusPointList)
+            {
+                yield return stylusPoint;
+            }
+        }
+        else
+        {
+            yield return args.StylusPoint;
+        }
     }
 
     public event EventHandler<AvaloniaSkiaInkCanvasStrokeCollectedEventArgs>? StrokeCollected;
