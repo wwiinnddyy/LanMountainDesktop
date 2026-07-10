@@ -31,6 +31,7 @@
     <PackageReference Include="ClassIsland.Markdown.Avalonia" />
     <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="SkiaSharp" />
     <PackageReference Include="Tmds.DBus.Protocol" />
   </ItemGroup>
 

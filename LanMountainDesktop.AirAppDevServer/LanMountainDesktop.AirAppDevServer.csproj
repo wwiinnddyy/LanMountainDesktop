@@ -8,10 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
-    <PackageReference Include="Microsoft.Build.Locator" Version="1.7.8" />
-    <PackageReference Include="Microsoft.Build" Version="17.11.4" />
-    <PackageReference Include="Microsoft.Build.Framework" Version="17.11.4" />
+    <PackageReference Include="System.CommandLine" />
+    <PackageReference Include="Microsoft.Build.Locator" />
+    <PackageReference Include="Microsoft.Build" ExcludeAssets="runtime" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Build.Framework" ExcludeAssets="runtime" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>

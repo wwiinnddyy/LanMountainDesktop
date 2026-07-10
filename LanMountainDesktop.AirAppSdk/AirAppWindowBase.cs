@@ -72,23 +72,22 @@ public abstract class AirAppWindowBase : Window, IAirAppWindow
         MinHeight = descriptor.MinHeight;
         CanResize = descriptor.CanResize;
         ShowInTaskbar = descriptor.ShowInTaskbar;
-        ShowAsDialog = descriptor.ShowAsDialog;
 
         // Apply chrome mode
         switch (descriptor.ChromeMode)
         {
             case AirAppWindowChromeMode.Standard:
-                SystemDecorations = SystemDecorations.Full;
+                WindowDecorations = Avalonia.Controls.WindowDecorations.Full;
                 break;
             case AirAppWindowChromeMode.Borderless:
-                SystemDecorations = SystemDecorations.BorderOnly;
+                WindowDecorations = Avalonia.Controls.WindowDecorations.BorderOnly;
                 break;
             case AirAppWindowChromeMode.FullScreen:
-                SystemDecorations = SystemDecorations.None;
+                WindowDecorations = Avalonia.Controls.WindowDecorations.None;
                 WindowState = WindowState.FullScreen;
                 break;
             case AirAppWindowChromeMode.Tool:
-                SystemDecorations = SystemDecorations.Full;
+                WindowDecorations = Avalonia.Controls.WindowDecorations.Full;
                 ShowInTaskbar = false;
                 break;
         }

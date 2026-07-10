@@ -1,4 +1,4 @@
-using Avalonia;
+using Avalonia.Headless.XUnit;
 using LanMountainDesktop.Launcher.Shell;
 using Xunit;
 
@@ -17,13 +17,8 @@ public sealed class LauncherBackgroundServiceTests : IDisposable
 
     private readonly string _tempDirectory;
     private readonly string _launcherDataDirectory;
-    private static readonly object AvaloniaGate = new();
-    private static bool _avaloniaInitialized;
-
     public LauncherBackgroundServiceTests()
     {
-        EnsureAvaloniaInitialized();
-
         _tempDirectory = Path.Combine(
             Path.GetTempPath(),
             "LanMountainDesktop.BackgroundImageTests",
@@ -34,28 +29,7 @@ public sealed class LauncherBackgroundServiceTests : IDisposable
         LauncherBackgroundService.ClearCache();
     }
 
-    private static void EnsureAvaloniaInitialized()
-    {
-        lock (AvaloniaGate)
-        {
-            if (_avaloniaInitialized)
-            {
-                return;
-            }
-
-            if (Application.Current is null)
-            {
-                AppBuilder
-                    .Configure<Application>()
-                    .UsePlatformDetect()
-                    .SetupWithoutStarting();
-            }
-
-            _avaloniaInitialized = true;
-        }
-    }
-
-    [Fact]
+    [AvaloniaFact]
     public void SaveBackgroundImage_CopiesSelectedImageToLauncherDataDirectory()
     {
         var sourcePath = WriteImage("selected.png", RedPng1x1);
@@ -68,7 +42,7 @@ public sealed class LauncherBackgroundServiceTests : IDisposable
         Assert.Equal(File.ReadAllBytes(sourcePath), File.ReadAllBytes(result.FilePath));
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SaveBackgroundImage_ReplacesPreviousManagedExtension()
     {
         var pngSourcePath = WriteImage("first.png", RedPng1x1);
@@ -83,7 +57,7 @@ public sealed class LauncherBackgroundServiceTests : IDisposable
         Assert.True(File.Exists(Path.Combine(_launcherDataDirectory, "Launcher Picture.jpg")));
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void LoadBackgroundImage_AcceptsNonSevenByFiveImage()
     {
         var sourcePath = WriteImage("square.png", RedPng1x1);
@@ -97,7 +71,7 @@ public sealed class LauncherBackgroundServiceTests : IDisposable
         Assert.Equal(1, imageInfo.Height);
     }
 
-    [Theory]
+    [AvaloniaTheory]
     [InlineData("oversized.png", InvalidImageKind.Oversized)]
     [InlineData("unknown.txt", InvalidImageKind.UnknownExtension)]
     [InlineData("broken.png", InvalidImageKind.BrokenImage)]
@@ -118,7 +92,7 @@ public sealed class LauncherBackgroundServiceTests : IDisposable
         Assert.Equal(originalBytes, File.ReadAllBytes(managedPath));
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void LoadBackgroundImage_WhenFileChangesAtSamePath_RefreshesCachedBitmap()
     {
         var sourcePath = WriteImage("source.png", RedPng1x1);
