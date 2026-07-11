@@ -10,6 +10,11 @@ internal static class AirAppInstanceKey
             return $"{normalizedAppId}:clock-suite:global";
         }
 
+        if (string.Equals(normalizedAppId, "rss-reader", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"{normalizedAppId}:global";
+        }
+
         var normalizedComponentId = Normalize(sourceComponentId, "none");
         var normalizedPlacementId = Normalize(sourcePlacementId, "none");
         return $"{normalizedAppId}:{normalizedComponentId}:{normalizedPlacementId}";

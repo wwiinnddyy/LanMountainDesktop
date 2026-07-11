@@ -71,6 +71,12 @@ public sealed class ComponentSettingsSnapshot
 
     public string Stcn24ForumSourceType { get; set; } = Stcn24ForumSourceTypes.LatestCreated;
 
+    public string RssReaderSourceId { get; set; } = string.Empty;
+
+    public bool RssReaderUnreadFirst { get; set; } = true;
+
+    public int RssReaderDisplayCount { get; set; } = 20;
+
     public List<string>? OfficeRecentDocumentsEnabledSources { get; set; }
 
     // 智教Hub组件配置

@@ -38,6 +38,7 @@ public static class BuiltInComponentIds
     public const string DesktopBilibiliHotSearch = "DesktopBilibiliHotSearch";
     public const string DesktopBaiduHotSearch = "DesktopBaiduHotSearch";
     public const string DesktopStcn24Forum = "DesktopStcn24Forum";
+    public const string DesktopRssReader = "DesktopRssReader";
     public const string DesktopExchangeRateCalculator = "DesktopExchangeRateCalculator";
     public const string DesktopWhiteboard = "DesktopWhiteboard";
     public const string DesktopBlackboardLandscape = "DesktopBlackboardLandscape";

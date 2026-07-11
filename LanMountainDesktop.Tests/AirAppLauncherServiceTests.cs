@@ -96,6 +96,22 @@ public sealed class AirAppLauncherServiceTests
     }
 
     [Fact]
+    public void RssReaderRequest_CarriesEntryAndUsesGlobalInstance()
+    {
+        var request = AirAppLauncherService.BuildOpenRequest(
+            AirAppLauncherService.RssReaderAppId,
+            BuiltInComponentIds.DesktopRssReader,
+            "rss-placement",
+            88,
+            "entry-42");
+
+        Assert.Equal("rss-reader", request.AppId);
+        Assert.Equal("entry-42", request.TargetEntryId);
+        Assert.Equal("rss-reader:global", AirAppLauncherService.BuildSingleInstanceKey(
+            request.AppId, request.SourceComponentId, request.SourcePlacementId));
+    }
+
+    [Fact]
     public void CreateRuntimeStartInfo_UsesAirAppRuntimeAndRequesterPid()
     {
         var startInfo = AirAppLauncherService.CreateRuntimeStartInfo(

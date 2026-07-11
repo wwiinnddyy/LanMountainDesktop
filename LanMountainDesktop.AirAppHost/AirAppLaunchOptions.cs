@@ -7,10 +7,12 @@ public sealed record AirAppLaunchOptions(
     string? SourcePlacementId,
     string? LauncherPipeName,
     string? InstanceKey,
-    string? DataRoot)
+    string? DataRoot,
+    string? TargetEntryId)
 {
     public const string WorldClockAppId = "world-clock";
     public const string WhiteboardAppId = "whiteboard";
+    public const string RssReaderAppId = "rss-reader";
 
     public static AirAppLaunchOptions Parse(IReadOnlyList<string> args)
     {
@@ -60,7 +62,8 @@ public sealed record AirAppLaunchOptions(
             GetOptionalValue(values, "source-placement-id"),
             GetOptionalValue(values, "launcher-pipe"),
             GetOptionalValue(values, "instance-key"),
-            GetOptionalValue(values, "data-root"));
+            GetOptionalValue(values, "data-root"),
+            GetOptionalValue(values, "target-entry-id"));
     }
 
     private static string GetValue(IReadOnlyDictionary<string, string> values, string key, string fallback)

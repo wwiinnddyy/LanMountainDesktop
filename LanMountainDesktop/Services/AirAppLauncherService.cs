@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Shared.IPC;
 using LanMountainDesktop.Shared.IPC.Abstractions.Services;
+using LanMountainDesktop.Services.RssReader;
 
 namespace LanMountainDesktop.Services;
 
@@ -15,12 +16,15 @@ public interface IAirAppLauncherService
     void OpenWorldClock(string sourceComponentId, string? sourcePlacementId);
 
     void OpenWhiteboard(string componentId, string? sourcePlacementId);
+
+    void OpenRssReader(string componentId, string? sourcePlacementId, string? targetEntryId = null);
 }
 
 internal sealed class AirAppLauncherService : IAirAppLauncherService
 {
     public const string WorldClockAppId = "world-clock";
     public const string WhiteboardAppId = "whiteboard";
+    public const string RssReaderAppId = "rss-reader";
 
     private const int RuntimeIpcRetryCount = 4;
 
@@ -48,17 +52,30 @@ internal sealed class AirAppLauncherService : IAirAppLauncherService
         _ = OpenAsync(WhiteboardAppId, componentId, sourcePlacementId);
     }
 
+    public void OpenRssReader(string componentId, string? sourcePlacementId, string? targetEntryId = null)
+    {
+        AppLogger.Info("AirAppLauncher", $"RSS Reader Air APP requested. EntryId='{targetEntryId ?? string.Empty}'.");
+        if (!string.IsNullOrWhiteSpace(targetEntryId))
+        {
+            using var service = new RssReaderService();
+            service.SetPendingEntryId(targetEntryId);
+        }
+        _ = OpenAsync(RssReaderAppId, componentId, sourcePlacementId, targetEntryId);
+    }
+
     internal static AirAppOpenRequest BuildOpenRequest(
         string appId,
         string? sourceComponentId,
         string? sourcePlacementId,
-        int requesterProcessId)
+        int requesterProcessId,
+        string? targetEntryId = null)
     {
         return new AirAppOpenRequest(
             appId.Trim(),
             string.IsNullOrWhiteSpace(sourceComponentId) ? null : sourceComponentId.Trim(),
             string.IsNullOrWhiteSpace(sourcePlacementId) ? null : sourcePlacementId.Trim(),
-            requesterProcessId);
+            requesterProcessId,
+            string.IsNullOrWhiteSpace(targetEntryId) ? null : targetEntryId.Trim());
     }
 
     internal static string BuildSingleInstanceKey(string appId, string? sourceComponentId, string? sourcePlacementId)
@@ -68,15 +85,19 @@ internal sealed class AirAppLauncherService : IAirAppLauncherService
         {
             return $"{normalizedAppId}:clock-suite:global";
         }
+        if (string.Equals(normalizedAppId, RssReaderAppId, StringComparison.OrdinalIgnoreCase))
+        {
+            return $"{normalizedAppId}:global";
+        }
 
         var normalizedComponentId = string.IsNullOrWhiteSpace(sourceComponentId) ? "none" : sourceComponentId.Trim();
         var normalizedPlacementId = string.IsNullOrWhiteSpace(sourcePlacementId) ? "none" : sourcePlacementId.Trim();
         return $"{normalizedAppId}:{normalizedComponentId}:{normalizedPlacementId}";
     }
 
-    private static async Task OpenAsync(string appId, string sourceComponentId, string? sourcePlacementId)
+    private static async Task OpenAsync(string appId, string sourceComponentId, string? sourcePlacementId, string? targetEntryId = null)
     {
-        var request = BuildOpenRequest(appId, sourceComponentId, sourcePlacementId, Environment.ProcessId);
+        var request = BuildOpenRequest(appId, sourceComponentId, sourcePlacementId, Environment.ProcessId, targetEntryId);
         try
         {
             var result = await SendOpenRequestAsync(request).ConfigureAwait(false);

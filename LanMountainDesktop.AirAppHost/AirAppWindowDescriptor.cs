@@ -43,6 +43,20 @@ public sealed record AirAppWindowDescriptor(
                 "Air APP");
         }
 
+        if (string.Equals(options.AppId, AirAppLaunchOptions.RssReaderAppId, StringComparison.OrdinalIgnoreCase))
+        {
+            return Standard(
+                "RSS Reader - Air APP",
+                "RSS Reader",
+                "Air APP",
+                width: 1100,
+                height: 720,
+                minWidth: 760,
+                minHeight: 520,
+                canResize: true,
+                showAsDialog: false);
+        }
+
         return Standard(
             "Air APP",
             "Air APP",

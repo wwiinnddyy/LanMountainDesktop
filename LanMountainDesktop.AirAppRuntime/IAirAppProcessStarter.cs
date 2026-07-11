@@ -5,7 +5,7 @@ namespace LanMountainDesktop.AirAppRuntime;
 
 internal interface IAirAppProcessStarter
 {
-    Process? Start(string appId, string sessionId, string instanceKey, string? sourceComponentId, string? sourcePlacementId);
+    Process? Start(string appId, string sessionId, string instanceKey, string? sourceComponentId, string? sourcePlacementId, string? targetEntryId = null);
 }
 
 internal sealed class AirAppProcessStarter : IAirAppProcessStarter
@@ -32,7 +32,8 @@ internal sealed class AirAppProcessStarter : IAirAppProcessStarter
         string sessionId,
         string instanceKey,
         string? sourceComponentId,
-        string? sourcePlacementId)
+        string? sourcePlacementId,
+        string? targetEntryId = null)
     {
         var hostPath = _locator.Resolve(_packageRootProvider(), _hostPathProvider());
         var startInfo = CreateStartInfo(hostPath);
@@ -55,6 +56,11 @@ internal sealed class AirAppProcessStarter : IAirAppProcessStarter
         if (!string.IsNullOrWhiteSpace(sourcePlacementId))
         {
             AddArgument(startInfo, "--source-placement-id", sourcePlacementId.Trim());
+        }
+
+        if (!string.IsNullOrWhiteSpace(targetEntryId))
+        {
+            AddArgument(startInfo, "--target-entry-id", targetEntryId.Trim());
         }
 
         AirAppRuntimeLogger.Info(

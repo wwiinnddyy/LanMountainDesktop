@@ -453,6 +453,12 @@ public sealed class DesktopComponentRuntimeRegistry
                     "component.stcn24_forum",
                     () => new Stcn24ForumWidget()),
                 new DesktopComponentRuntimeRegistration(
+                    BuiltInComponentIds.DesktopRssReader,
+                    "component.rss_reader",
+                    (Func<DesktopComponentControlFactoryContext, Control>)(context =>
+                        new RssReaderWidget(context.ComponentSettingsAccessor, context.PlacementId)),
+                    cornerRadiusResolver: (Func<double, double>?)null),
+                new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopExchangeRateCalculator,
                     "component.exchange_rate_converter",
                     () => new ExchangeRateCalculatorWidget()),
