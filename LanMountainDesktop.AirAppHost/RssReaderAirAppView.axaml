@@ -1,0 +1,64 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="LanMountainDesktop.AirAppHost.RssReaderAirAppView">
+  <Grid ColumnDefinitions="250,*" Background="{DynamicResource ApplicationPageBackgroundThemeBrush}">
+    <Border Grid.Column="0" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="0,0,1,0" Padding="14">
+      <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Button x:Name="AddButton" Content="Add source"/>
+          <Button x:Name="RefreshButton" Content="Refresh"/>
+        </StackPanel>
+        <StackPanel Grid.Row="1" Spacing="4">
+          <Button x:Name="AllButton" HorizontalContentAlignment="Left" Content="All articles"/>
+          <Button x:Name="UnreadButton" HorizontalContentAlignment="Left" Content="Unread"/>
+          <Button x:Name="FavoritesButton" HorizontalContentAlignment="Left" Content="Favorites"/>
+        </StackPanel>
+        <Grid Grid.Row="2" RowDefinitions="*,Auto" RowSpacing="6">
+          <ListBox x:Name="SourcesList"/>
+          <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="6">
+            <Button x:Name="EditSourceButton" Content="Edit" IsEnabled="False"/>
+            <Button x:Name="DeleteSourceButton" Content="Delete" IsEnabled="False"/>
+          </StackPanel>
+        </Grid>
+        <StackPanel Grid.Row="3" Spacing="6">
+          <Button x:Name="ImportButton" Content="Import OPML" HorizontalContentAlignment="Left"/>
+          <Button x:Name="ExportButton" Content="Export OPML" HorizontalContentAlignment="Left"/>
+          <Button x:Name="SettingsButton" Content="Settings" HorizontalContentAlignment="Left"/>
+          <TextBlock x:Name="StatusText" FontSize="11" Opacity="0.65" TextWrapping="Wrap"/>
+        </StackPanel>
+      </Grid>
+    </Border>
+    <Grid Grid.Column="1" ColumnDefinitions="330,*">
+      <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="0,0,1,0" Padding="12">
+        <Grid RowDefinitions="Auto,*" RowSpacing="10">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock x:Name="ListTitle" Text="All articles" FontSize="20" FontWeight="SemiBold"/>
+            <Button x:Name="MarkAllReadButton" Grid.Column="1" Content="Mark all read"/>
+          </Grid>
+          <ListBox x:Name="EntriesList" Grid.Row="1">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:CompileBindings="False">
+                <StackPanel Margin="4,8" Spacing="4">
+                  <TextBlock Text="{Binding DisplayTitle}" FontWeight="{Binding Weight}" TextWrapping="Wrap" MaxLines="3"/>
+                  <TextBlock Text="{Binding Metadata}" FontSize="11" Opacity="0.6"/>
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+      </Border>
+      <Grid Grid.Column="1" Margin="22" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
+        <TextBlock x:Name="ArticleTitle" Text="Select an article" FontSize="26" FontWeight="SemiBold" TextWrapping="Wrap"/>
+        <TextBlock x:Name="ArticleMeta" Grid.Row="1" Opacity="0.6"/>
+        <ScrollViewer x:Name="ArticleTextScroller" Grid.Row="2">
+          <TextBlock x:Name="ArticleBody" Text="Your RSS articles will appear here." TextWrapping="Wrap" FontSize="15" LineHeight="24"/>
+        </ScrollViewer>
+        <Grid x:Name="ArticleHtmlHost" Grid.Row="2" IsVisible="False"/>
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8">
+          <Button x:Name="FavoriteButton" Content="☆ Favorite" IsEnabled="False"/>
+          <Button x:Name="OpenOriginalButton" Content="Open original" IsEnabled="False"/>
+        </StackPanel>
+      </Grid>
+    </Grid>
+  </Grid>
+</UserControl>

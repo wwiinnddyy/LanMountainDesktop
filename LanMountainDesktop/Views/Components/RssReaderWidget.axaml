@@ -1,0 +1,76 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:fi="using:FluentIcons.Avalonia"
+             x:Class="LanMountainDesktop.Views.Components.RssReaderWidget">
+  <UserControl.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Light">
+          <SolidColorBrush x:Key="RssSurfaceBrush" Color="#FCFCFD"/>
+          <SolidColorBrush x:Key="RssSubtleBrush" Color="#F1F3F6"/>
+          <SolidColorBrush x:Key="RssBorderBrush" Color="#16000000"/>
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Dark">
+          <SolidColorBrush x:Key="RssSurfaceBrush" Color="#1B2129"/>
+          <SolidColorBrush x:Key="RssSubtleBrush" Color="#2A313C"/>
+          <SolidColorBrush x:Key="RssBorderBrush" Color="#28FFFFFF"/>
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
+  </UserControl.Resources>
+
+  <Border x:Name="RootBorder"
+          Background="{DynamicResource RssSurfaceBrush}"
+          BorderBrush="{DynamicResource RssBorderBrush}"
+          BorderThickness="1"
+          CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+          ClipToBounds="True"
+          Padding="18">
+    <Grid ColumnDefinitions="164,*" ColumnSpacing="18">
+      <Grid RowDefinitions="Auto,*" RowSpacing="12">
+        <StackPanel Spacing="7">
+          <TextBlock x:Name="TitleText" Text="RSS Reader" FontSize="21" FontWeight="SemiBold"/>
+          <TextBlock x:Name="UnreadText" Text="0 unread" FontSize="12" Opacity="0.66"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" VerticalAlignment="Bottom" Spacing="8">
+          <Button x:Name="RefreshButton" HorizontalContentAlignment="Left"
+                  Background="{DynamicResource RssSubtleBrush}" BorderThickness="0">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <fi:SymbolIcon Symbol="ArrowSync" FontSize="14"/>
+              <TextBlock x:Name="RefreshButtonText" Text="Refresh" VerticalAlignment="Center"/>
+            </StackPanel>
+          </Button>
+          <Button x:Name="MarkAllReadButton" HorizontalContentAlignment="Left"
+                  Background="{DynamicResource RssSubtleBrush}" BorderThickness="0">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <fi:SymbolIcon Symbol="Checkmark" FontSize="14"/>
+              <TextBlock x:Name="MarkAllReadButtonText" Text="Mark all read" VerticalAlignment="Center"/>
+            </StackPanel>
+          </Button>
+          <Button x:Name="OpenReaderButton" HorizontalContentAlignment="Left"
+                  Background="{DynamicResource RssSubtleBrush}" BorderThickness="0">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <fi:SymbolIcon Symbol="ArrowRight" FontSize="14"/>
+              <TextBlock x:Name="OpenReaderButtonText" Text="Open reader" VerticalAlignment="Center"/>
+            </StackPanel>
+          </Button>
+        </StackPanel>
+      </Grid>
+
+      <Grid Grid.Column="1" RowDefinitions="Auto,*" RowSpacing="8">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock x:Name="LatestText" Text="Latest articles" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+          <TextBlock x:Name="ErrorText" Grid.Column="1" IsVisible="False" Foreground="#D13438"
+                     FontSize="11" TextTrimming="CharacterEllipsis" MaxWidth="240"/>
+        </Grid>
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <WrapPanel x:Name="EntriesPanel" Orientation="Horizontal" ItemWidth="220" ItemHeight="88"/>
+        </ScrollViewer>
+        <Button x:Name="EmptyButton" Grid.Row="1" IsVisible="False" HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch" Background="{DynamicResource RssSubtleBrush}" BorderThickness="0"
+                Content="Import OPML or add your first RSS source"/>
+      </Grid>
+    </Grid>
+  </Border>
+</UserControl>
