@@ -4,6 +4,7 @@ using Avalonia.Threading;
 using FluentAvalonia.UI.Windowing;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Shared.IPC;
 using LanMountainDesktop.Shared.IPC.Abstractions.Services;
 using LanMountainDesktop.Views.Components;
@@ -25,9 +26,37 @@ public sealed partial class AirAppWindow : FAAppWindow
     public AirAppWindow(AirAppLaunchOptions options)
     {
         _options = options;
-        _descriptor = AirAppWindowDescriptor.Create(options);
+        _descriptor = LocalizeDescriptor(AirAppWindowDescriptor.Create(options), options);
         InitializeComponent();
         ConfigureWindow();
+    }
+
+    private static AirAppWindowDescriptor LocalizeDescriptor(
+        AirAppWindowDescriptor descriptor,
+        AirAppLaunchOptions options)
+    {
+        if (!string.Equals(options.AppId, AirAppLaunchOptions.RssReaderAppId, StringComparison.OrdinalIgnoreCase))
+            return descriptor;
+
+        var localization = new LocalizationService();
+        string languageCode;
+        try
+        {
+            languageCode = localization.NormalizeLanguageCode(new AppSettingsService().Load().LanguageCode);
+        }
+        catch
+        {
+            languageCode = "zh-CN";
+        }
+
+        var title = localization.GetString(languageCode, "component.rss_reader", "RSS Reader");
+        var airApp = localization.GetString(languageCode, "rss.air_app", "Air APP");
+        return descriptor with
+        {
+            WindowTitle = $"{title} - {airApp}",
+            TitleBarTitle = title,
+            TitleBarSubtitle = airApp
+        };
     }
 
     private void ConfigureWindow()
@@ -43,6 +72,12 @@ public sealed partial class AirAppWindow : FAAppWindow
         if (string.Equals(_options.AppId, AirAppLaunchOptions.WhiteboardAppId, StringComparison.OrdinalIgnoreCase))
         {
             ConfigureWhiteboardWindow();
+            return;
+        }
+
+        if (string.Equals(_options.AppId, AirAppLaunchOptions.RssReaderAppId, StringComparison.OrdinalIgnoreCase))
+        {
+            ContentHost.Content = new RssReaderAirAppView(_options);
             return;
         }
 
@@ -261,6 +296,11 @@ public sealed partial class AirAppWindow : FAAppWindow
         if (string.Equals(_options.AppId, AirAppLaunchOptions.WorldClockAppId, StringComparison.OrdinalIgnoreCase))
         {
             return $"{AirAppLaunchOptions.WorldClockAppId}:clock-suite:global";
+        }
+
+        if (string.Equals(_options.AppId, AirAppLaunchOptions.RssReaderAppId, StringComparison.OrdinalIgnoreCase))
+        {
+            return $"{AirAppLaunchOptions.RssReaderAppId}:global";
         }
 
         var componentId = string.IsNullOrWhiteSpace(_options.SourceComponentId)

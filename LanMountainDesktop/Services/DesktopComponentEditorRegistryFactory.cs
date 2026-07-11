@@ -263,6 +263,11 @@ public static class DesktopComponentEditorRegistryFactory
                             nameof(ComponentSettingsSnapshot.Stcn24ForumSourceType)
                         ]
                     })),
+            [BuiltInComponentIds.DesktopRssReader] = new(
+                BuiltInComponentIds.DesktopRssReader,
+                context => new RssReaderComponentEditor(context),
+                preferredWidth: 480d,
+                preferredHeight: 480d),
             [BuiltInComponentIds.DesktopZhiJiaoHub] = new(
                 BuiltInComponentIds.DesktopZhiJiaoHub,
                 context => new ZhiJiaoHubComponentEditor(context),

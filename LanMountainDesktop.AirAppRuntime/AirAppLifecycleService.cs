@@ -42,7 +42,8 @@ internal sealed class AirAppLifecycleService : IAirAppLifecycleService
                     sessionId,
                     instanceKey,
                     request.SourceComponentId,
-                    request.SourcePlacementId);
+                    request.SourcePlacementId,
+                    request.TargetEntryId);
                 if (process is null)
                 {
                     return Task.FromResult(BuildResult(false, "start_failed", "AirAppHost process was not created.", null));

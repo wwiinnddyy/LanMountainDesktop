@@ -308,6 +308,18 @@ public sealed class ComponentRegistry
                 AllowStatusBarPlacement: false,
                 AllowDesktopPlacement: true),
             new DesktopComponentDefinition(
+                BuiltInComponentIds.DesktopRssReader,
+                "RSS Reader",
+                "Rss",
+                "Info",
+                MinWidthCells: 8,
+                MinHeightCells: 4,
+                AllowStatusBarPlacement: false,
+                AllowDesktopPlacement: true,
+                ResizeMode: DesktopComponentResizeMode.Free,
+                Description: "A synchronized RSS and Atom reading inbox.",
+                DescriptionLocalizationKey: "component.rss_reader.description"),
+            new DesktopComponentDefinition(
                 BuiltInComponentIds.DesktopExchangeRateCalculator,
                 "Exchange Rate Converter",
                 "Calculator",

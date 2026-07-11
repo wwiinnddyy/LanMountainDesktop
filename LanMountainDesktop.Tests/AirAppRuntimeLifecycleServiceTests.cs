@@ -183,7 +183,8 @@ public sealed class AirAppRuntimeLifecycleServiceTests
             string sessionId,
             string instanceKey,
             string? sourceComponentId,
-            string? sourcePlacementId)
+            string? sourcePlacementId,
+            string? targetEntryId = null)
         {
             StartCount++;
             return _process;

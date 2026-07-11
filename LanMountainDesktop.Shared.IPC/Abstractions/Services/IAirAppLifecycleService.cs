@@ -22,7 +22,8 @@ public sealed record AirAppOpenRequest(
     string AppId,
     string? SourceComponentId,
     string? SourcePlacementId,
-    int RequesterProcessId);
+    int RequesterProcessId,
+    string? TargetEntryId = null);
 
 public sealed record AirAppRegistrationRequest(
     string InstanceKey,

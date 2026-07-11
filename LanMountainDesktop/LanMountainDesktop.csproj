@@ -75,6 +75,7 @@
     <PackageReference Include="Sentry" />
     <PackageReference Include="SkiaSharp" />
     <PackageReference Include="System.Runtime.WindowsRuntime" />
+    <PackageReference Include="System.ServiceModel.Syndication" />
     <PackageReference Include="System.Drawing.Common" />
 
     <PackageReference Include="YamlDotNet" />
