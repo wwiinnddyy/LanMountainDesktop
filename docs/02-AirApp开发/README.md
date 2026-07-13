@@ -1,253 +1,93 @@
-# Air APP 开发完整指南
+# Air APP 现状与开发预览
 
-欢迎来到阑山桌面 Air APP 开发指南！Air APP 是运行在阑山桌面环境中的独立窗口应用。
+> [!IMPORTANT]
+> 当前生产版本只支持编译内置的 `world-clock`、`whiteboard` 和 `rss-reader` 窗口链路。`LanMountainDesktop.AirAppSdk`、`LanMountainDesktop.AirAppTemplate` 与 `LanMountainDesktop.AirAppDevServer` 是尚未接入生产 Host/Runtime 的原型，不能据此宣称第三方 Air APP 会被桌面自动发现、安装或加载。
 
-## 什么是 Air APP？
+## 当前已上线的内置链路
 
-**Air APP** 是阑山桌面生态中的独立应用形态，与桌面组件（Widget）不同：
-
-### 对比：Air APP vs 桌面组件
-
-| 特性 | Air APP | 桌面组件 |
-|------|---------|---------|
-| **窗口形式** | 独立窗口，可移动、缩放 | 固定在桌面上 |
-| **生命周期** | 独立进程，按需启动 | 随宿主启动 |
-| **UI 复杂度** | 适合复杂界面 | 适合简单信息展示 |
-| **资源占用** | 按需运行，不用时退出 | 始终运行 |
-| **典型案例** | 白板、世界时钟、计算器 | 天气组件、时钟组件 |
-
-### Air APP 架构
+桌面轻应用入口本身是主 `LanMountainDesktop` Host 内的桌面组件，不在 Launcher、AirAppRuntime 或 AirAppSdk 中运行：
 
 ```
-┌──────────────────────────────────────┐
-│   LanMountainDesktop (桌面宿主)       │
-│                                      │
-│  ┌────────────────────────────────┐ │
-│  │ LanMountainDesktop.AirAppRuntime│ │
-│  │    (Air APP 运行时容器)          │ │
-│  │                                  │ │
-│  │  管理所有 Air APP 进程           │ │
-│  │  - 启动/停止                     │ │
-│  │  - 实例去重                      │ │
-│  │  - 生命周期跟踪                  │ │
-│  └─────────┬────────────────────────┘ │
-└────────────┼───────────────────────────┘
-             │ IPC 通信
-             │
-    ┌────────▼──────────┐
-    │  Air APP Process  │
-    │                   │
-    │  ┌─────────────┐  │
-    │  │ AirAppHost  │  │
-    │  │  (渲染容器) │  │
-    │  └─────────────┘  │
-    │                   │
-    │  你的 Air APP     │
-    │  - UI            │
-    │  - 业务逻辑      │
-    │  - 数据管理      │
-    └──────────────────┘
+主 Host 内置桌面组件
+  世界时钟 / 白板 / RSS 阅读器
+         ↓ 点击
+Host 内 AirAppLauncherService
+         ↓ AirAppOpenRequest（IPC）
+独立 LanMountainDesktop.AirAppRuntime
+         ↓ 启动或激活
+独立 LanMountainDesktop.AirAppHost 进程
+         ↓
+按 appId 渲染编译内置的窗口视图
 ```
 
-## 📚 学习路径
+各进程职责如下：
 
-### 快速上手
+| 进程/模块 | 当前生产职责 |
+|----------|--------------|
+| `LanMountainDesktop` Host | 承载桌面入口组件；点击后构造请求并调用 Runtime IPC |
+| `LanMountainDesktop.Launcher` | OOBE、Splash、版本选择、预启动 Runtime、启动 Host；执行有界的 `AttachHost(hostPid)` 交接后退出 |
+| `LanMountainDesktop.AirAppRuntime` | 提供生命周期与控制 IPC、实例去重、启动/激活/关闭 AirAppHost |
+| `LanMountainDesktop.AirAppHost` | 独立进程渲染一个内置 Air APP 窗口，并向 Runtime 注册/注销 |
 
-1. **[Air APP 介绍](01-Air-APP介绍.md)** - 理解 Air APP 是什么
-2. **[创建第一个 Air APP](02-创建第一个AirApp.md)** - Hello World
-3. **[架构与生命周期](03-架构与生命周期.md)** - 理解运行机制
+Launcher 不承载轻应用 UI，也不需要跟随 Host 常驻。正常启动中，它尝试把存活的 Host PID 交给 Runtime，成功时由 Host 接管 Runtime 生命周期；交接失败则记录诊断并依靠 Host 的按需启动兜底。两种情况下 Launcher 都不会等待 Host 退出。稳定运行期是 `Host ↔ AirAppRuntime ↔ AirAppHost`，不存在必须保留的透明 Launcher 窗口。
 
-### 深入学习
+### 当前内置应用与实例规则
 
-4. **[IPC 通信](04-IPC通信.md)** - 与宿主和其他 APP 通信
-5. **[窗口管理](05-窗口管理.md)** - 窗口模式、大小、位置
-6. **[数据持久化](06-数据持久化.md)** - 保存应用数据
-7. **[主题适配](07-主题适配.md)** - 适配亮色/暗色模式
+| `appId` | 入口位置 | AirAppHost 内容 | 实例规则 |
+|---------|----------|----------------|----------|
+| `world-clock` | Host 内的世界时钟/模拟时钟等组件 | 编译内置的时钟视图 | 全局共用 `world-clock:clock-suite:global` |
+| `whiteboard` | Host 内的白板组件 | 编译内置的白板组件视图 | 按组件 ID 与放置 ID 区分 |
+| `rss-reader` | Host 内的 RSS 阅读器组件 | 编译内置的 RSS 视图 | 全局共用 `rss-reader:global` |
 
-### 实战案例
+Host 会把 `sourceComponentId`、`sourcePlacementId`（以及 RSS 的目标条目）经 Runtime 透传给 AirAppHost。若点击时 Runtime 管道不可用，Host 会直接启动 AirAppRuntime 并重试；这条兜底不依赖 Launcher 常驻。
 
-8. **[世界时钟 APP](08-实战-世界时钟.md)** - 完整示例
-9. **[白板 APP](09-实战-白板.md)** - 全屏交互应用
-10. **[打包与发布](10-打包与发布.md)** - 发布到市场
+## 第三方 AirAppSdk：Preview，尚未接入生产
 
-## 🎯 快速开始
+仓库中存在一组第三方 Air APP 开发原型，但它们不是上述生产链路的一部分：
 
-### 创建 Air APP 项目
+| 原型项目 | 已有内容 | 当前缺口 |
+|----------|----------|----------|
+| `LanMountainDesktop.AirAppSdk` | API、清单、窗口与组件抽象 | 生产 Host/Runtime/AirAppHost/Launcher 没有项目引用，也没有 SDK 程序集加载器 |
+| `LanMountainDesktop.AirAppTemplate` | 基于 AirAppSdk 的模板草案 | 模板输出不会被生产桌面自动发现或加载 |
+| `LanMountainDesktop.AirAppDevServer` | 文件监视、构建与打包原型 | 预览宿主仍是 TODO；没有连接生产 Runtime/Host 的调试加载协议 |
+
+当前 `LanMountainDesktop.slnx` 不包含这三个原型项目；生产 AirAppHost 直接判断三个内置 `appId` 并创建内置视图，没有扫描 `airapp.json`、加载第三方程序集、寻找 `[AirAppEntrance]` 或调用 AirAppSdk 生命周期。
+
+### `.laapp` 包格式冲突
+
+不要把 AirAppDevServer 生成的 `.laapp` 复制到生产插件目录，也不要交给 Launcher 的插件安装命令：
+
+- 生产代码当前把 `.laapp` 作为插件包扩展名，并要求 ZIP 中存在 `plugin.json`。
+- AirAppDevServer 原型把构建输出打成同扩展名，并由 AirAppSdk/模板使用 `airapp.json` 语义。
+- 两条路径尚未统一；只有 `airapp.json` 的原型包会被现有插件安装/发现链路拒绝，也不会被 AirAppRuntime 加载。
+
+在确定独立扩展名或兼容的清单/安装路由，并实现生产加载器以前，`.laapp + airapp.json` 只能视为设计原型，不能视为可发布格式。
+
+## 原型文档的使用方式
+
+当前目录只保留这份状态说明。第三方 API、模板和工具的设计草案位于仓库中的 `LanMountainDesktop.AirAppSdk`、`LanMountainDesktop.AirAppTemplate` 与 `LanMountainDesktop.AirAppDevServer` 项目；其中关于模板安装、`airapp.json` 自动发现、第三方代码加载、预览、热重载、市场安装、窗口模式或 IPC 的内容都必须按 Preview 理解。若与生产源码冲突，以当前 Host → Runtime → AirAppHost 的内置链路为准。
+
+可以单独构建这些项目来研究 API 或验证原型代码，但这不会让输出自动进入生产桌面：
 
 ```powershell
-# 安装模板
-dotnet new install LanMountainDesktop.AirAppTemplate
-
-# 创建项目
-dotnet new lmd-airapp -n MyAirApp
-
-# 构建
-cd MyAirApp
-dotnet build
+dotnet build LanMountainDesktop.AirAppSdk/LanMountainDesktop.AirAppSdk.csproj
+dotnet build LanMountainDesktop.AirAppTemplate/LanMountainDesktop.AirAppTemplate.csproj
+dotnet build LanMountainDesktop.AirAppDevServer/LanMountainDesktop.AirAppDevServer.csproj
 ```
 
-### 项目结构
+## 第三方能力转为生产支持的最低条件
 
-```
-MyAirApp/
-├── MyAirApp.csproj                 # 项目文件
-├── Program.cs                      # 程序入口
-├── App.axaml                       # 应用定义
-├── App.axaml.cs                    # 应用代码
-├── Views/                          # 视图目录
-│   └── MainWindow.axaml            # 主窗口
-├── ViewModels/                     # 视图模型
-│   └── MainWindowViewModel.cs
-├── Models/                         # 数据模型
-├── Services/                       # 业务服务
-├── Assets/                         # 资源文件
-│   └── icon.png
-└── airapp.json                     # Air APP 清单
-```
+在文档重新标记为“已支持”前，至少需要同时完成：
 
-### Air APP 清单 (airapp.json)
+- 定义不与插件 `plugin.json` 路由冲突的包格式、安装位置和发现规则。
+- 在生产 Host/Runtime/AirAppHost 中实现并引用受支持的 SDK 契约与程序集加载路径。
+- 实现 DevServer 到真实预览/运行宿主的协议，而不是只监视并重新构建文件。
+- 增加第三方包安装、清单校验、加载、窗口打开、卸载和版本兼容的端到端测试。
 
-```json
-{
-  "Id": "com.example.myairapp",
-  "Name": "My Air APP",
-  "Version": "1.0.0",
-  "Author": "Your Name",
-  "Description": "My first Air APP",
-  "MinHostVersion": "1.0.0",
-  "Icon": "Assets/icon.png",
-  "WindowMode": "Standard",
-  "DefaultSize": {
-    "Width": 800,
-    "Height": 600
-  },
-  "AllowMultipleInstances": false
-}
-```
+这些工作不属于当前内置 Air APP Runtime 容器与 Launcher 生命周期修复。
 
-### 窗口模式
+## 相关资源
 
-| 模式 | 说明 | 适用场景 |
-|------|------|---------|
-| `Standard` | 标准窗口，带标题栏和边框 | 大多数应用 |
-| `Borderless` | 无边框窗口，自定义标题栏 | 自定义 UI |
-| `FullScreen` | 全屏窗口 | 白板、游戏 |
-| `Tool` | 工具窗口，始终置顶 | 小工具 |
-
-## 核心概念
-
-### 生命周期
-
-```
-用户点击启动
-    ↓
-AirAppRuntime 检查是否已运行
-    ↓
-否 → 启动新进程
-是 → 激活现有窗口（如果 AllowMultipleInstances=false）
-    ↓
-AirAppHost 初始化
-    ↓
-加载 Air APP 代码
-    ↓
-显示主窗口
-    ↓
-应用运行中...
-    ↓
-用户关闭窗口
-    ↓
-AirAppHost 清理资源
-    ↓
-进程退出
-    ↓
-AirAppRuntime 清理注册
-```
-
-### IPC 通信
-
-Air APP 可以通过 IPC 与桌面宿主通信：
-
-```csharp
-// 获取宿主设置
-var theme = await ipcClient.InvokeAsync<string>(
-    "LanMountainDesktop.Host.v1",
-    "GetCurrentTheme"
-);
-
-// 订阅宿主事件
-ipcClient.OnNotify("lanmountain.theme.changed", (themeData) =>
-{
-    // 主题变更，更新 UI
-    ApplyTheme(themeData);
-});
-```
-
-## 📖 章节目录
-
-### [01-Air-APP介绍.md](01-Air-APP介绍.md)
-什么是 Air APP，与桌面组件的区别，应用场景
-
-### [02-创建第一个AirApp.md](02-创建第一个AirApp.md)
-从零创建一个简单的 Air APP，运行和调试
-
-### [03-架构与生命周期.md](03-架构与生命周期.md)
-Air APP 架构、运行时、生命周期管理
-
-### [04-IPC通信.md](04-IPC通信.md)
-与桌面宿主通信、调用服务、订阅事件
-
-### [05-窗口管理.md](05-窗口管理.md)
-窗口模式、大小调整、位置记忆
-
-### [06-数据持久化.md](06-数据持久化.md)
-保存应用状态和用户数据
-
-### [07-主题适配.md](07-主题适配.md)
-适配亮色/暗色主题、圆角系统
-
-### [08-实战-世界时钟.md](08-实战-世界时钟.md)
-完整案例：世界时钟应用
-
-### [09-实战-白板.md](09-实战-白板.md)
-完整案例：全屏白板应用
-
-### [10-打包与发布.md](10-打包与发布.md)
-打包、签名、发布到市场
-
-## 💡 最佳实践
-
-### 性能优化
-
-- ✅ 使用虚拟化列表处理大量数据
-- ✅ 图片和资源延迟加载
-- ✅ 避免复杂的布局嵌套
-- ✅ 使用 `RenderTransform` 而非 `Margin` 做动画
-- ✅ 及时取消不需要的异步操作
-
-### 用户体验
-
-- ✅ 记住窗口位置和大小
-- ✅ 提供键盘快捷键
-- ✅ 优雅处理错误和异常
-- ✅ 适配不同屏幕分辨率和 DPI
-- ✅ 响应主题变更
-
-### 安全性
-
-- ✅ 验证用户输入
-- ✅ 使用 HTTPS 进行网络请求
-- ✅ 敏感数据加密存储
-- ✅ 避免路径遍历漏洞
-- ✅ 遵循最小权限原则
-
-## 🔗 相关资源
-
-- [插件开发指南](../01-插件开发/) - 如果需要桌面组件
-- [整体架构](../04-架构与实现/01-整体架构.md) - 系统架构
-- [设计规范](../03-组件设计规范/) - UI 设计指南
-
-## 🎯 下一步
-
-- [Air APP 介绍](01-Air-APP介绍.md) - 了解 Air APP
-- [创建第一个 Air APP](02-创建第一个AirApp.md) - 动手实践
-- [架构与生命周期](03-架构与生命周期.md) - 理解原理
+- [整体架构](../04-架构与实现/01-整体架构.md) - 当前生产进程职责与启动/IPC 链路
+- [插件开发指南](../01-插件开发/) - 当前已有生产加载路径的扩展方式
+- [设计规范](../03-组件设计规范/) - UI 与桌面组件设计约束

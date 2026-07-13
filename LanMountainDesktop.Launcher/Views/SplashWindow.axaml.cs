@@ -16,10 +16,11 @@ public partial class SplashWindow : Window, ISplashStageReporter
     private const int DebugModeClickThreshold = 5;
     private static readonly TimeSpan FadeAnimationDuration = TimeSpan.FromMilliseconds(160);
 
+    private readonly object _dismissSync = new();
     private int _versionTextClickCount;
     private bool _isDebugModeOpened;
     private bool _isOpened;
-    private bool _dismissed;
+    private Task? _dismissTask;
 
     public SplashWindow()
     {
@@ -90,23 +91,84 @@ public partial class SplashWindow : Window, ISplashStageReporter
         await AnimateOpacityAsync(0d, 1d, FadeAnimationDuration).ConfigureAwait(false);
     }
 
-    public async Task DismissAsync()
+    public Task DismissAsync()
     {
-        if (_dismissed)
+        lock (_dismissSync)
         {
-            return;
+            return _dismissTask ??= DismissCoreAsync();
+        }
+    }
+
+    private async Task DismissCoreAsync()
+    {
+        try
+        {
+            var animationState = await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                IsHitTestVisible = false;
+
+                if (!IsVisible)
+                {
+                    HideAndCloseOnUiThread();
+                    return (ShouldAnimate: false, StartOpacity: 0d);
+                }
+
+                return (ShouldAnimate: true, StartOpacity: Opacity);
+            });
+
+            if (!animationState.ShouldAnimate)
+            {
+                return;
+            }
+
+            await AnimateOpacityAsync(
+                    animationState.StartOpacity,
+                    0d,
+                    FadeAnimationDuration,
+                    HideAndCloseOnUiThread)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"[SplashWindow] Fade-out failed; closing immediately: {ex.Message}");
+            await Dispatcher.UIThread.InvokeAsync(HideAndCloseOnUiThread);
+        }
+    }
+
+    private void HideAndCloseOnUiThread()
+    {
+        Dispatcher.UIThread.VerifyAccess();
+        IsHitTestVisible = false;
+
+        try
+        {
+            Hide();
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"[SplashWindow] Failed to hide splash window: {ex.Message}");
         }
 
-        _dismissed = true;
-
-        if (!Dispatcher.UIThread.CheckAccess())
+        try
         {
-            await Dispatcher.UIThread.InvokeAsync(async () => await DismissAsync());
-            return;
+            Close();
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"[SplashWindow] Failed to close splash window: {ex.Message}");
         }
 
-        await AnimateOpacityAsync(Opacity, 0d, FadeAnimationDuration).ConfigureAwait(false);
-        Close();
+        try
+        {
+            if (IsVisible)
+            {
+                Hide();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"[SplashWindow] Failed to enforce hidden splash state: {ex.Message}");
+        }
     }
 
     public void Report(string stage, string message)
@@ -252,19 +314,27 @@ public partial class SplashWindow : Window, ISplashStageReporter
         }
     }
 
-    private async Task AnimateOpacityAsync(double from, double to, TimeSpan duration)
+    private async Task AnimateOpacityAsync(
+        double from,
+        double to,
+        TimeSpan duration,
+        Action? completed = null)
     {
         await AnimateAsync(progress =>
         {
             Opacity = from + ((to - from) * progress);
-        }, duration, EaseOutCubic).ConfigureAwait(false);
+        }, duration, EaseOutCubic, completed).ConfigureAwait(false);
     }
 
-    private async Task AnimateAsync(Action<double> update, TimeSpan duration, Func<double, double> easing)
+    private async Task AnimateAsync(
+        Action<double> update,
+        TimeSpan duration,
+        Func<double, double> easing,
+        Action? completed)
     {
         if (duration <= TimeSpan.Zero)
         {
-            await Dispatcher.UIThread.InvokeAsync(() => update(1d));
+            await Dispatcher.UIThread.InvokeAsync(() => ApplyFinalFrame(update, completed));
             return;
         }
 
@@ -277,7 +347,19 @@ public partial class SplashWindow : Window, ISplashStageReporter
             await Task.Delay(16).ConfigureAwait(false);
         }
 
-        await Dispatcher.UIThread.InvokeAsync(() => update(1d));
+        await Dispatcher.UIThread.InvokeAsync(() => ApplyFinalFrame(update, completed));
+    }
+
+    private static void ApplyFinalFrame(Action<double> update, Action? completed)
+    {
+        try
+        {
+            update(1d);
+        }
+        finally
+        {
+            completed?.Invoke();
+        }
     }
 
     private static int ResolveProgress(string stage)
