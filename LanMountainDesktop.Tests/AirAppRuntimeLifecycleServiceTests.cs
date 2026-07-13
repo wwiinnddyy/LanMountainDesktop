@@ -165,6 +165,7 @@ public sealed class AirAppRuntimeLifecycleServiceTests
         Assert.True(result.Accepted);
         Assert.Equal(Environment.ProcessId, result.Status.HostProcessId);
         Assert.True(result.Status.HostProcessAlive);
+        Assert.True(lifetime.ShouldKeepAlive());
     }
 
     private sealed class TestAirAppProcessStarter : IAirAppProcessStarter

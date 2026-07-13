@@ -1,6 +1,9 @@
-# LanMountainDesktop.AirApp.ComponentTemplate
+# LanMountainDesktop.AirApp.ComponentTemplate (Preview)
 
-A desktop component AirApp for LanMountainDesktop.
+> [!IMPORTANT]
+> This template is an API prototype. The production LanMountainDesktop Host, AirAppRuntime, and AirAppHost do not discover `airapp.json` or load assemblies produced by this template.
+
+A prototype desktop-component AirApp project for exploring `LanMountainDesktop.AirAppSdk`.
 
 ## Build
 
@@ -8,21 +11,15 @@ A desktop component AirApp for LanMountainDesktop.
 dotnet build -c Release
 ```
 
-This will produce a `.laapp` package in `bin/Release/net10.0/`.
+This compiles the prototype project. The template project itself does not create a production-installable `.laapp` package.
 
 ## Install
 
-Copy the `.laapp` file to LanMountainDesktop's plugins directory or install via the AirApp Market.
+There is currently no supported production install path for this output. Do not copy it to the plugins directory or submit it to the AirApp Market: production `.laapp` handling is the plugin package path and expects `plugin.json`, while this template uses `airapp.json`.
 
 ## Development
 
-To test your component during development:
-
-1. Build the project
-2. Run LanMountainDesktop with debug mode:
-   ```bash
-   dotnet run --project path/to/LanMountainDesktop.csproj -- --debug-airapp path/to/your/bin/Debug/net10.0
-   ```
+You can build the project to validate prototype API usage. An integrated preview/production loader is not implemented yet; `LanMountainDesktop.AirAppDevServer` also does not currently launch a real preview host.
 
 ## Customize
 

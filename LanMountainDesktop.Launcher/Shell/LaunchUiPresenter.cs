@@ -22,27 +22,74 @@ internal static class LaunchUiPresenter
     {
         try
         {
-            await Dispatcher.UIThread.InvokeAsync(() => splashWindow.DismissAsync());
+            await splashWindow.DismissAsync().ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             Logger.Error("Failed to dismiss splash window.", ex);
+            await ForceHideAndCloseSplashAsync(splashWindow).ConfigureAwait(false);
         }
 
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
+            if (loadingDetailsWindow is null)
+            {
+                return;
+            }
+
+            loadingDetailsWindow.IsHitTestVisible = false;
+
             try
             {
-                if (loadingDetailsWindow is not null && loadingDetailsWindow.IsVisible)
-                {
-                    loadingDetailsWindow.Close();
-                }
+                loadingDetailsWindow.Hide();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Failed to hide loading details window.", ex);
+            }
+
+            try
+            {
+                loadingDetailsWindow.Close();
             }
             catch (Exception ex)
             {
                 Logger.Error("Failed to close loading details window.", ex);
             }
         });
+    }
+
+    private static async Task ForceHideAndCloseSplashAsync(SplashWindow splashWindow)
+    {
+        try
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                splashWindow.IsHitTestVisible = false;
+
+                try
+                {
+                    splashWindow.Hide();
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error("Failed to force-hide splash window.", ex);
+                }
+
+                try
+                {
+                    splashWindow.Close();
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error("Failed to force-close splash window.", ex);
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Failed to dispatch forced splash cleanup.", ex);
+        }
     }
 
     public static async Task<(ErrorWindowResult Result, string? CustomPath)> ShowHostNotFoundErrorAsync()

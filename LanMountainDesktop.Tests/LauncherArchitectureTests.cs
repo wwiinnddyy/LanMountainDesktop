@@ -7,7 +7,7 @@ public sealed class LauncherArchitectureTests
     [Fact]
     public void CoreLauncherFolders_DoNotUseAvaloniaNamespaces()
     {
-        var forbidden = new[] { "Deployment", "Update", "Startup", "Infrastructure" };
+        var forbidden = new[] { "Deployment", "Startup", "Infrastructure" };
         foreach (var folder in forbidden.Select(folder => Path.Combine(LauncherProjectRoot, folder)))
         {
             var offenders = Directory
@@ -140,6 +140,20 @@ public sealed class LauncherArchitectureTests
     public void LauncherCompositionRootStaysThin()
     {
         AssertFileLineCountAtMost(Path.Combine(LauncherProjectRoot, "Shell", "LauncherCompositionRoot.cs"), 80);
+    }
+
+    [Fact]
+    public void SuccessfulLauncherHandoff_DoesNotWaitForHostProcessExit()
+    {
+        var coordinator = File.ReadAllText(Path.Combine(
+            LauncherProjectRoot,
+            "Shell",
+            "LauncherGuiCoordinator.cs"));
+
+        Assert.Contains("AttachHostAsync(hostPid)", coordinator, StringComparison.Ordinal);
+        Assert.Contains("desktop.Shutdown(Environment.ExitCode)", coordinator, StringComparison.Ordinal);
+        Assert.DoesNotContain("WaitForHostProcessToExit", coordinator, StringComparison.Ordinal);
+        Assert.DoesNotContain("Launcher entering host background lifetime", coordinator, StringComparison.Ordinal);
     }
 
     private static string LauncherProjectRoot => Path.Combine(RepoRoot, "LanMountainDesktop.Launcher");

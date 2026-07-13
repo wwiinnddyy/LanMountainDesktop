@@ -116,17 +116,31 @@ internal static class LauncherGuiCoordinator
         }
 
         Logger.Info($"Coordinator completed. Success={result.Success}; Stage='{result.Stage}'; Code='{result.Code}'.");
-        await WriteLauncherResultAsync(context, result).ConfigureAwait(false);
-
         Environment.ExitCode = result.Success ? 0 : 1;
         if (result.Success)
         {
             var hostPid = ResolveManagedHostPid(result, startupAttemptRegistry.GetOwnedAttempt()?.HostPid ?? 0);
-            var airAppRuntimeBridge = new AirAppRuntimeBridge(appRoot, dataLocationResolver.ResolveDataRoot());
-            await airAppRuntimeBridge.AttachHostAsync(hostPid).ConfigureAwait(false);
-            await WaitForHostProcessToExitAsync(hostPid).ConfigureAwait(false);
+            try
+            {
+                var airAppRuntimeBridge = new AirAppRuntimeBridge(appRoot, dataLocationResolver.ResolveDataRoot());
+                var handoff = await airAppRuntimeBridge.AttachHostAsync(hostPid).ConfigureAwait(false);
+                RecordAirAppRuntimeHandoff(result, handoff);
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn(
+                    $"AIRAPP: Unexpected runtime ownership handoff failure; Host fallback remains available. " +
+                    $"HostPid={hostPid}; Error='{ex.Message}'.");
+                result.Details["airAppRuntimeHandoffAccepted"] = bool.FalseString;
+                result.Details["airAppRuntimeHandoffCode"] = "handoff_exception";
+                result.Details["airAppRuntimeHandoffMessage"] = ex.Message;
+                result.Details["airAppRuntimeHostPid"] = hostPid.ToString();
+                result.Details["airAppRuntimeAttachAttempts"] = "0";
+            }
         }
 
+        await WriteLauncherResultAsync(context, result).ConfigureAwait(false);
+        Logger.Info("Launcher coordination is complete; shutting down without extending the Host process lifetime.");
         await Dispatcher.UIThread.InvokeAsync(() => desktop.Shutdown(Environment.ExitCode), DispatcherPriority.Background);
     }
 
@@ -168,15 +182,16 @@ internal static class LauncherGuiCoordinator
         return fallbackHostPid;
     }
 
-    private static async Task WaitForHostProcessToExitAsync(int hostPid)
+    private static void RecordAirAppRuntimeHandoff(
+        LauncherResult result,
+        AirAppRuntimeHandoffResult handoff)
     {
-        Logger.Info($"Launcher entering host background lifetime. HostPid={hostPid}.");
-        while (TryGetLiveProcess(hostPid))
-        {
-            await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
-        }
-
-        Logger.Info("Launcher host background lifetime completed; host process is gone.");
+        result.Details["airAppRuntimeHandoffAccepted"] = handoff.Accepted.ToString();
+        result.Details["airAppRuntimeHandoffCode"] = handoff.Code;
+        result.Details["airAppRuntimeHandoffMessage"] = handoff.Message;
+        result.Details["airAppRuntimeHostPid"] = handoff.HostProcessId.ToString();
+        result.Details["airAppRuntimeAttachAttempts"] = handoff.Attempts.ToString();
+        result.Details["airAppRuntimeProcessId"] = handoff.Status?.ProcessId.ToString() ?? string.Empty;
     }
 
     private static async Task<LauncherResult> AttachToExistingCoordinatorAsync(
