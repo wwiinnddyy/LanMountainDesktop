@@ -11,7 +11,9 @@
         WindowStartupLocation="CenterScreen"
         WindowDecorations="None"
         ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="-1"
         Background="Transparent"
+        TransparencyLevelHint="Transparent"
         Title="Add Component">
 
     <Grid x:Name="RootGrid"
@@ -21,9 +23,10 @@
                 Classes="surface-translucent-strong"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
-                Margin="10"
+                Margin="0"
                 Padding="0"
                 CornerRadius="{DynamicResource DesignCornerRadiusLg}"
+                BoxShadow="none"
                 ClipToBounds="True">
             <Grid RowDefinitions="Auto,*">
                 <Border Height="64"

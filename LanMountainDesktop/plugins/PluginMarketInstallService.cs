@@ -149,52 +149,8 @@ internal sealed class AirAppMarketInstallService : IDisposable
             string.Equals(entry.Manifest.Id, pluginId, StringComparison.OrdinalIgnoreCase));
     }
 
-    private string? ValidateCompatibility(AirAppMarketPluginEntry plugin)
-    {
-        if (_hostVersion is null)
-        {
-            return null;
-        }
-
-        if (!string.IsNullOrWhiteSpace(plugin.MinHostVersion))
-        {
-            if (!AirAppMarketIndexDocument.TryParseVersion(plugin.MinHostVersion, out var minHostVersion) ||
-                minHostVersion is null)
-            {
-                return $"Plugin '{plugin.Id}' declares invalid minimum host version '{plugin.MinHostVersion}'.";
-            }
-
-            if (_hostVersion < minHostVersion)
-            {
-                return $"Plugin '{plugin.Id}' requires host version {plugin.MinHostVersion} or newer. Current host version is {_hostVersion}.";
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(plugin.ApiVersion))
-        {
-            if (!AirAppMarketIndexDocument.TryParseVersion(plugin.ApiVersion, out var pluginApiVersion) ||
-                pluginApiVersion is null)
-            {
-                return $"Plugin '{plugin.Id}' declares invalid API version '{plugin.ApiVersion}'.";
-            }
-
-            var hostApiVersion = PluginSdkInfo.ApiVersion;
-            if (hostApiVersion is not null)
-            {
-                if (!AirAppMarketIndexDocument.TryParseVersion(hostApiVersion, out var hostApiVersionParsed) ||
-                    hostApiVersionParsed is null)
-                {
-                    AppLogger.Warn("PluginMarket", $"Host API version '{hostApiVersion}' could not be parsed. Skipping API version check.");
-                }
-                else if (pluginApiVersion.Major != hostApiVersionParsed.Major)
-                {
-                    return $"Plugin '{plugin.Id}' uses incompatible API version {plugin.ApiVersion}. Host API version is {hostApiVersion}. Major version must match.";
-                }
-            }
-        }
-
-        return null;
-    }
+    private string? ValidateCompatibility(AirAppMarketPluginEntry plugin) =>
+        AirAppMarketCompatibility.Validate(plugin, _hostVersion, PluginSdkInfo.ApiVersion);
 
     private async Task<AirAppMarketAcquisitionResult> AcquirePackageAsync(
         AirAppMarketPluginEntry plugin,
@@ -400,4 +356,54 @@ internal sealed class AirAppMarketInstallService : IDisposable
         bool Success,
         string? PackagePath,
         string? ErrorMessage);
+}
+
+internal static class AirAppMarketCompatibility
+{
+    public static string? Validate(
+        AirAppMarketPluginEntry plugin,
+        Version? hostVersion,
+        string? hostApiVersion)
+    {
+        ArgumentNullException.ThrowIfNull(plugin);
+
+        if (hostVersion is not null && !string.IsNullOrWhiteSpace(plugin.MinHostVersion))
+        {
+            if (!AirAppMarketIndexDocument.TryParseVersion(plugin.MinHostVersion, out var minHostVersion) ||
+                minHostVersion is null)
+            {
+                return $"Plugin '{plugin.Id}' declares invalid minimum host version '{plugin.MinHostVersion}'.";
+            }
+
+            if (hostVersion < minHostVersion)
+            {
+                return $"Plugin '{plugin.Id}' requires host version {plugin.MinHostVersion} or newer. Current host version is {hostVersion}.";
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(plugin.ApiVersion))
+        {
+            return null;
+        }
+
+        if (!AirAppMarketIndexDocument.TryParseVersion(plugin.ApiVersion, out var pluginApiVersion) ||
+            pluginApiVersion is null)
+        {
+            return $"Plugin '{plugin.Id}' declares invalid API version '{plugin.ApiVersion}'.";
+        }
+
+        if (string.IsNullOrWhiteSpace(hostApiVersion) ||
+            !AirAppMarketIndexDocument.TryParseVersion(hostApiVersion, out var hostApiVersionParsed) ||
+            hostApiVersionParsed is null)
+        {
+            AppLogger.Warn(
+                "PluginMarket",
+                $"Host API version '{hostApiVersion ?? string.Empty}' could not be parsed. Skipping API version check.");
+            return null;
+        }
+
+        return pluginApiVersion.Major != hostApiVersionParsed.Major
+            ? $"Plugin '{plugin.Id}' uses incompatible API version {plugin.ApiVersion}. Host API version is {hostApiVersion}. Major version must match."
+            : null;
+    }
 }
