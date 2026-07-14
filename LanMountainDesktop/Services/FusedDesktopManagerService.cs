@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform;
+using Avalonia.Threading;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.DesktopEditing;
+using LanMountainDesktop.Host.Abstractions;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services.Settings;
@@ -26,11 +29,16 @@ public interface IFusedDesktopManagerService
     bool IsEditMode { get; }
 }
 
+internal readonly record struct FusedDesktopScreenWorkArea(PixelRect WorkingArea, double Scaling);
+
 internal sealed class FusedDesktopManagerService : IFusedDesktopManagerService
 {
     private readonly IFusedDesktopLayoutService _layoutService;
     private readonly ISettingsFacadeService _settingsFacade;
+    private readonly IWindowBottomMostService _bottomMostService;
+    private readonly IAppearanceThemeService _appearanceThemeService;
     private readonly Dictionary<string, DesktopWidgetWindow> _widgetWindows = [];
+    private readonly HashSet<string> _positioningFailures = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly IWeatherInfoService _weatherDataService;
     private readonly TimeZoneService _timeZoneService;
@@ -39,7 +47,10 @@ internal sealed class FusedDesktopManagerService : IFusedDesktopManagerService
 
     private ComponentRegistry? _componentRegistry;
     private DesktopComponentRuntimeRegistry? _componentRuntimeRegistry;
+    private Screens? _screens;
     private bool _isEditMode;
+    private bool _isAppearanceSubscribed;
+    private int _screenTopologyUpdatePending;
 
     private const double DefaultCellSize = 100;
 
@@ -51,6 +62,8 @@ internal sealed class FusedDesktopManagerService : IFusedDesktopManagerService
     {
         _layoutService = layoutService;
         _settingsFacade = settingsFacade;
+        _bottomMostService = WindowBottomMostServiceFactory.GetOrCreate();
+        _appearanceThemeService = HostAppearanceThemeProvider.GetOrCreate();
 
         _weatherDataService = _settingsFacade.Weather.GetWeatherInfoService();
         _timeZoneService = _settingsFacade.Region.GetTimeZoneService();
@@ -67,8 +80,20 @@ internal sealed class FusedDesktopManagerService : IFusedDesktopManagerService
             return;
         }
 
+        EnsureAppearanceSubscription();
         EnsureRegistries();
         ReloadWidgets();
+    }
+
+    private void EnsureAppearanceSubscription()
+    {
+        if (_isAppearanceSubscribed)
+        {
+            return;
+        }
+
+        _appearanceThemeService.Changed += OnAppearanceThemeChanged;
+        _isAppearanceSubscribed = true;
     }
 
     private void EnsureRegistries()
@@ -81,6 +106,340 @@ internal sealed class FusedDesktopManagerService : IFusedDesktopManagerService
             _componentRegistry,
             pluginRuntimeService,
             _settingsFacade);
+    }
+
+    private void EnsureScreenTopologySubscription(DesktopWidgetWindow window)
+    {
+        var screens = window.Screens;
+        if (ReferenceEquals(_screens, screens))
+        {
+            return;
+        }
+
+        if (_screens is not null)
+        {
+            _screens.Changed -= OnScreensChanged;
+        }
+
+        _screens = screens;
+        _screens.Changed += OnScreensChanged;
+    }
+
+    private void OnScreensChanged(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        if (Interlocked.Exchange(ref _screenTopologyUpdatePending, 1) != 0)
+        {
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            try
+            {
+                RevalidateWidgetsForScreenTopology();
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("FusedDesktopMgr", "Failed to revalidate widgets after screen topology changed.", ex);
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _screenTopologyUpdatePending, 0);
+            }
+        }, DispatcherPriority.Background);
+    }
+
+    private void RevalidateWidgetsForScreenTopology()
+    {
+        if (_screens is null || _widgetWindows.Count == 0)
+        {
+            return;
+        }
+
+        var layout = _layoutService.Load();
+        var placements = new Dictionary<string, FusedDesktopComponentPlacementSnapshot>(
+            StringComparer.OrdinalIgnoreCase);
+        foreach (var placement in layout.ComponentPlacements)
+        {
+            placements[placement.PlacementId] = placement;
+        }
+
+        var appearanceSnapshot = _appearanceThemeService.GetCurrent();
+        var layoutChanged = false;
+        foreach (var (placementId, window) in _widgetWindows)
+        {
+            if (!placements.TryGetValue(placementId, out var placement))
+            {
+                continue;
+            }
+
+            var logicalSize = new Size(
+                placement.Width > 0 ? placement.Width : Math.Max(1d, window.Bounds.Width),
+                placement.Height > 0 ? placement.Height : Math.Max(1d, window.Bounds.Height));
+            var currentPosition = _bottomMostService.GetScreenPosition(window);
+            if (_positioningFailures.Contains(placementId))
+            {
+                var persistedPosition = new PixelPoint((int)placement.X, (int)placement.Y);
+                var retryPosition = CoerceToValidWorkingArea(
+                    persistedPosition,
+                    logicalSize,
+                    _screens.All);
+                if (!_bottomMostService.SetScreenPosition(
+                        window,
+                        retryPosition,
+                        queueOnFailure: true))
+                {
+                    UpdateWidgetChrome(window, placement, appearanceSnapshot);
+                    continue;
+                }
+
+                _positioningFailures.Remove(placementId);
+                currentPosition = _bottomMostService.GetScreenPosition(window);
+            }
+
+            var validPosition = CoerceToValidWorkingArea(
+                currentPosition,
+                logicalSize,
+                _screens.All);
+
+            var finalPosition = currentPosition;
+            if (validPosition != currentPosition)
+            {
+                if (_bottomMostService.SetScreenPosition(
+                        window,
+                        validPosition,
+                        queueOnFailure: true))
+                {
+                    _positioningFailures.Remove(placementId);
+                    finalPosition = _bottomMostService.GetScreenPosition(window);
+                }
+                else
+                {
+                    _positioningFailures.Add(placementId);
+                }
+            }
+
+            var finalValidPosition = CoerceToValidWorkingArea(
+                finalPosition,
+                logicalSize,
+                _screens.All);
+            if (finalPosition == finalValidPosition &&
+                (placement.X != finalPosition.X || placement.Y != finalPosition.Y))
+            {
+                placement.X = finalPosition.X;
+                placement.Y = finalPosition.Y;
+                layoutChanged = true;
+            }
+
+            UpdateWidgetChrome(window, placement, appearanceSnapshot);
+        }
+
+        if (layoutChanged)
+        {
+            _layoutService.Save(layout);
+        }
+    }
+
+    private static PixelPoint CoerceToValidWorkingArea(
+        PixelPoint position,
+        Size logicalSize,
+        IReadOnlyList<Screen> screens)
+    {
+        if (screens.Count == 0)
+        {
+            return position;
+        }
+
+        var workAreas = new FusedDesktopScreenWorkArea[screens.Count];
+        for (var i = 0; i < screens.Count; i++)
+        {
+            workAreas[i] = new FusedDesktopScreenWorkArea(
+                screens[i].WorkingArea,
+                screens[i].Scaling);
+        }
+
+        return CoerceToValidWorkingArea(position, logicalSize, workAreas);
+    }
+
+    internal static PixelPoint CoerceToValidWorkingArea(
+        PixelPoint position,
+        Size logicalSize,
+        IReadOnlyList<FusedDesktopScreenWorkArea> screens)
+    {
+        if (screens.Count == 0)
+        {
+            return position;
+        }
+
+        var targetIndex = -1;
+        for (var i = 0; i < screens.Count; i++)
+        {
+            if (screens[i].WorkingArea.Contains(position))
+            {
+                targetIndex = i;
+                break;
+            }
+        }
+
+        if (targetIndex < 0)
+        {
+            long nearestDistance = long.MaxValue;
+            for (var i = 0; i < screens.Count; i++)
+            {
+                var distance = SquaredDistanceToRect(position, screens[i].WorkingArea);
+                if (distance < nearestDistance)
+                {
+                    nearestDistance = distance;
+                    targetIndex = i;
+                }
+            }
+        }
+
+        var targetScreen = screens[Math.Max(0, targetIndex)];
+        var workArea = targetScreen.WorkingArea;
+        var scaling = double.IsFinite(targetScreen.Scaling)
+            ? Math.Max(0.1, targetScreen.Scaling)
+            : 1d;
+        var widthPixels = ScaleLogicalSizeToPixels(logicalSize.Width, scaling);
+        var heightPixels = ScaleLogicalSizeToPixels(logicalSize.Height, scaling);
+        var maxX = Math.Max(workArea.X, workArea.Right - Math.Min(widthPixels, workArea.Width));
+        var maxY = Math.Max(workArea.Y, workArea.Bottom - Math.Min(heightPixels, workArea.Height));
+
+        return new PixelPoint(
+            Math.Clamp(position.X, workArea.X, maxX),
+            Math.Clamp(position.Y, workArea.Y, maxY));
+    }
+
+    private static int ScaleLogicalSizeToPixels(double logicalSize, double scaling)
+    {
+        if (!double.IsFinite(logicalSize) || logicalSize <= 0d)
+        {
+            return 1;
+        }
+
+        var pixels = Math.Ceiling(logicalSize * scaling);
+        return pixels >= int.MaxValue ? int.MaxValue : Math.Max(1, (int)pixels);
+    }
+
+    private static long SquaredDistanceToRect(PixelPoint point, PixelRect rect)
+    {
+        var deltaX = point.X < rect.X
+            ? (long)rect.X - point.X
+            : point.X >= rect.Right
+                ? (long)point.X - rect.Right + 1
+                : 0L;
+        var deltaY = point.Y < rect.Y
+            ? (long)rect.Y - point.Y
+            : point.Y >= rect.Bottom
+                ? (long)point.Y - rect.Bottom + 1
+                : 0L;
+        return deltaX * deltaX + deltaY * deltaY;
+    }
+
+    private void OnAppearanceThemeChanged(object? sender, AppearanceThemeSnapshot snapshot)
+    {
+        _ = sender;
+
+        // Components receive the same appearance event themselves. Scheduling the host
+        // contour refresh after those handlers ensures a component cannot restore an outer
+        // shadow or a stale radius during its own theme update.
+        Dispatcher.UIThread.Post(
+            () =>
+            {
+                try
+                {
+                    RefreshWidgetChrome(snapshot);
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Warn("FusedDesktopMgr", "Failed to refresh widget chrome after appearance change.", ex);
+                }
+            },
+            DispatcherPriority.Render);
+    }
+
+    private void RefreshWidgetChrome(AppearanceThemeSnapshot snapshot)
+    {
+        if (_widgetWindows.Count == 0)
+        {
+            return;
+        }
+
+        EnsureRegistries();
+        var layout = _layoutService.Load();
+        var placements = new Dictionary<string, FusedDesktopComponentPlacementSnapshot>(
+            StringComparer.OrdinalIgnoreCase);
+        foreach (var placement in layout.ComponentPlacements)
+        {
+            placements[placement.PlacementId] = placement;
+        }
+
+        foreach (var (placementId, window) in _widgetWindows)
+        {
+            if (placements.TryGetValue(placementId, out var placement))
+            {
+                UpdateWidgetChrome(window, placement, snapshot);
+            }
+        }
+    }
+
+    private void UpdateWidgetChrome(
+        DesktopWidgetWindow window,
+        FusedDesktopComponentPlacementSnapshot placement,
+        AppearanceThemeSnapshot snapshot)
+    {
+        if (_componentRuntimeRegistry is null ||
+            !_componentRuntimeRegistry.TryGetDescriptor(placement.ComponentId, out var descriptor))
+        {
+            return;
+        }
+
+        var cellSize = ResolveCellSize(placement);
+        window.UpdateComponentChrome(ResolveCornerRadiusSafely(
+            descriptor,
+            placement,
+            cellSize,
+            snapshot));
+    }
+
+    private static double ResolveCornerRadiusSafely(
+        DesktopComponentRuntimeDescriptor descriptor,
+        FusedDesktopComponentPlacementSnapshot placement,
+        double cellSize,
+        AppearanceThemeSnapshot snapshot)
+    {
+        var cornerRadius = Math.Max(0d, snapshot.CornerRadiusTokens.Component.TopLeft);
+        try
+        {
+            cornerRadius = ResolveCornerRadius(descriptor, placement, cellSize, snapshot);
+        }
+        catch (Exception ex)
+        {
+            // A third-party descriptor must not prevent the remaining fused components from
+            // receiving an appearance update. Keep this placement on the current global token.
+            AppLogger.Warn(
+                "FusedDesktopMgr",
+                $"Failed to resolve component chrome. ComponentId='{placement.ComponentId}'; " +
+                $"PlacementId='{placement.PlacementId}'.",
+                ex);
+        }
+
+        return cornerRadius;
+    }
+
+    private static double ResolveCornerRadius(
+        DesktopComponentRuntimeDescriptor descriptor,
+        FusedDesktopComponentPlacementSnapshot placement,
+        double cellSize,
+        AppearanceThemeSnapshot snapshot)
+    {
+        return descriptor.ResolveCornerRadius(new ComponentChromeContext(
+            placement.ComponentId,
+            placement.PlacementId,
+            cellSize,
+            snapshot.CornerRadiusTokens));
     }
 
     public void EnterEditMode()
@@ -141,13 +500,25 @@ internal sealed class FusedDesktopManagerService : IFusedDesktopManagerService
                 }
 
                 window.Show();
-                window.Position = new PixelPoint((int)placement.X, (int)placement.Y);
+                EnsureScreenTopologySubscription(window);
+                if (_bottomMostService.SetScreenPosition(
+                        window,
+                        new PixelPoint((int)placement.X, (int)placement.Y),
+                        queueOnFailure: true))
+                {
+                    _positioningFailures.Remove(placement.PlacementId);
+                }
+                else
+                {
+                    _positioningFailures.Add(placement.PlacementId);
+                }
                 window.RefreshDesktopLayer();
             }
         }
         catch (Exception ex)
         {
             AppLogger.Warn("FusedDesktopMgr", $"Failed to create widget window for {componentId}", ex);
+            _positioningFailures.Remove(placement.PlacementId);
             _layoutService.RemoveComponentPlacement(placement.PlacementId);
         }
 
@@ -158,6 +529,7 @@ internal sealed class FusedDesktopManagerService : IFusedDesktopManagerService
 
     public void RemoveComponent(string placementId)
     {
+        _positioningFailures.Remove(placementId);
         if (_widgetWindows.Remove(placementId, out var windowToRemove))
         {
             windowToRemove.Close();
@@ -169,7 +541,9 @@ internal sealed class FusedDesktopManagerService : IFusedDesktopManagerService
 
     public void ReloadWidgets()
     {
+        EnsureAppearanceSubscription();
         var layout = _layoutService.Load();
+        var appearanceSnapshot = _appearanceThemeService.GetCurrent();
         var existingIds = new HashSet<string>(_widgetWindows.Keys);
 
         foreach (var placement in layout.ComponentPlacements)
@@ -178,13 +552,25 @@ internal sealed class FusedDesktopManagerService : IFusedDesktopManagerService
 
             if (_widgetWindows.TryGetValue(placement.PlacementId, out var existingWindow))
             {
-                existingWindow.Position = new PixelPoint((int)placement.X, (int)placement.Y);
                 existingWindow.UpdateComponentLayout(placement.Width, placement.Height);
+                UpdateWidgetChrome(existingWindow, placement, appearanceSnapshot);
                 if (existingWindow.IsVisible == false)
                 {
                     existingWindow.Show();
                 }
 
+                EnsureScreenTopologySubscription(existingWindow);
+                if (_bottomMostService.SetScreenPosition(
+                        existingWindow,
+                        new PixelPoint((int)placement.X, (int)placement.Y),
+                        queueOnFailure: true))
+                {
+                    _positioningFailures.Remove(placement.PlacementId);
+                }
+                else
+                {
+                    _positioningFailures.Add(placement.PlacementId);
+                }
                 existingWindow.RefreshDesktopLayer();
             }
             else
@@ -201,7 +587,18 @@ internal sealed class FusedDesktopManagerService : IFusedDesktopManagerService
                         }
 
                         window.Show();
-                        window.Position = new PixelPoint((int)placement.X, (int)placement.Y);
+                        EnsureScreenTopologySubscription(window);
+                        if (_bottomMostService.SetScreenPosition(
+                                window,
+                                new PixelPoint((int)placement.X, (int)placement.Y),
+                                queueOnFailure: true))
+                        {
+                            _positioningFailures.Remove(placement.PlacementId);
+                        }
+                        else
+                        {
+                            _positioningFailures.Add(placement.PlacementId);
+                        }
                         window.RefreshDesktopLayer();
                     }
                 }
@@ -214,22 +611,41 @@ internal sealed class FusedDesktopManagerService : IFusedDesktopManagerService
 
         foreach (var id in existingIds)
         {
+            _positioningFailures.Remove(id);
             if (_widgetWindows.Remove(id, out var windowToRemove))
             {
                 windowToRemove.Close();
             }
         }
+
+        // A monitor may have been removed while the app was not running, in which case no
+        // Screens.Changed event will arrive for the stale persisted coordinates.
+        RevalidateWidgetsForScreenTopology();
     }
 
     public void Shutdown()
     {
         _isEditMode = false;
+        if (_screens is not null)
+        {
+            _screens.Changed -= OnScreensChanged;
+            _screens = null;
+        }
+
+        Interlocked.Exchange(ref _screenTopologyUpdatePending, 0);
+        if (_isAppearanceSubscribed)
+        {
+            _appearanceThemeService.Changed -= OnAppearanceThemeChanged;
+            _isAppearanceSubscribed = false;
+        }
+
         foreach (var window in _widgetWindows.Values)
         {
             window.Close();
         }
 
         _widgetWindows.Clear();
+        _positioningFailures.Clear();
         AppLogger.Info("FusedDesktop", "Fused desktop manager shut down.");
     }
 
@@ -255,7 +671,14 @@ internal sealed class FusedDesktopManagerService : IFusedDesktopManagerService
         control.Width = placement.Width;
         control.Height = placement.Height;
 
-        var window = new DesktopWidgetWindow(control, placement.PlacementId);
+        var appearanceSnapshot = _appearanceThemeService.GetCurrent();
+        var cornerRadius = ResolveCornerRadiusSafely(
+            descriptor,
+            placement,
+            cellSize,
+            appearanceSnapshot);
+        var window = new DesktopWidgetWindow(control, placement.PlacementId, cornerRadius);
+        window.UpdateComponentLayout(placement.Width, placement.Height);
         return window;
     }
 

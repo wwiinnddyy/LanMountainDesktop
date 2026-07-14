@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Media;
 using Avalonia.Threading;
 using LanMountainDesktop.DesktopEditing;
 using LanMountainDesktop.Models;
@@ -20,14 +21,24 @@ public partial class DesktopWidgetWindow : Window
     private bool _isEditMode;
     private bool _isDragging;
     private PixelPoint _dragStartWindowPosition;
-    private Point _dragStartPointerPosition;
+    private PixelPoint _dragStartPointerScreenPosition;
 
     private DesktopWidgetResizeAdorner? _resizeAdorner;
     private bool _isResizing;
-    private Size _resizeStartSize;
+    private Size _resizeStartPhysicalSize;
     private PixelPoint _resizeStartPosition;
     private int _resizeStartWidthCells;
     private int _resizeStartHeightCells;
+    private double _componentCornerRadius;
+    private Border? _componentRootBorder;
+    private Control? _interactiveRegionTarget;
+    private Transform? _interactiveRegionTransform;
+    private Transform? _componentContentTransform;
+    private bool _interactiveRegionUpdatePending;
+    private bool _isApplyingComponentChrome;
+    private bool _componentChromeApplyPending;
+    private bool _componentChromeDeferredApplyPending;
+    private bool _isClosing;
 
     public string? PlacementId { get; }
 
@@ -42,21 +53,26 @@ public partial class DesktopWidgetWindow : Window
         }
     }
 
-    public DesktopWidgetWindow(Control componentContent, string? placementId = null) : this()
+    public DesktopWidgetWindow(
+        Control componentContent,
+        string? placementId = null,
+        double cornerRadius = 0d) : this()
     {
         PlacementId = placementId;
         ComponentContainer.Child = componentContent;
+        componentContent.Loaded += OnComponentContentLoaded;
+        componentContent.PropertyChanged += OnComponentContentPropertyChanged;
+        SetComponentContentTransform(componentContent.RenderTransform as Transform);
         SetupResizeAdorner();
+        UpdateComponentChrome(cornerRadius);
     }
 
     private void SetupResizeAdorner()
     {
         _resizeAdorner = new DesktopWidgetResizeAdorner
         {
-            Width = ComponentContainer.Width,
-            Height = ComponentContainer.Height,
-            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch,
             IsVisible = false
         };
 
@@ -100,6 +116,165 @@ public partial class DesktopWidgetWindow : Window
         }
 
         AppLogger.Info("DesktopWidgetWindow", $"Edit mode set to {editMode}. PlacementId='{PlacementId}'.");
+
+        if (OperatingSystem.IsWindows() && IsVisible)
+        {
+            ScheduleInteractiveRegionUpdate();
+        }
+    }
+
+    public void UpdateComponentChrome(double cornerRadius)
+    {
+        _componentCornerRadius = double.IsFinite(cornerRadius)
+            ? Math.Max(0d, cornerRadius)
+            : 0d;
+
+        ApplyComponentChrome();
+
+        if (OperatingSystem.IsWindows() && IsVisible)
+        {
+            ScheduleInteractiveRegionUpdate();
+        }
+    }
+
+    private void OnComponentContentLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        ApplyComponentChrome();
+    }
+
+    private void OnComponentContentPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+    {
+        if (sender is UserControl && e.Property == ContentControl.ContentProperty)
+        {
+            ApplyComponentChrome();
+            ScheduleInteractiveRegionUpdate();
+            return;
+        }
+
+        if (e.Property == Visual.RenderTransformProperty && sender is Control componentContent)
+        {
+            SetComponentContentTransform(componentContent.RenderTransform as Transform);
+        }
+
+        if (e.Property == Visual.IsVisibleProperty ||
+            e.Property == Visual.BoundsProperty ||
+            e.Property == Visual.RenderTransformProperty ||
+            e.Property == Visual.RenderTransformOriginProperty)
+        {
+            ScheduleInteractiveRegionUpdate();
+        }
+    }
+
+    private void SetComponentContentTransform(Transform? transform)
+    {
+        if (ReferenceEquals(_componentContentTransform, transform))
+        {
+            return;
+        }
+
+        if (_componentContentTransform is not null)
+        {
+            _componentContentTransform.Changed -= OnComponentContentTransformChanged;
+        }
+
+        _componentContentTransform = transform;
+        if (_componentContentTransform is not null)
+        {
+            _componentContentTransform.Changed += OnComponentContentTransformChanged;
+        }
+    }
+
+    private void OnComponentContentTransformChanged(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        ScheduleInteractiveRegionUpdate();
+    }
+
+    private void ApplyComponentChrome()
+    {
+        if (_isClosing)
+        {
+            return;
+        }
+
+        if (_isApplyingComponentChrome)
+        {
+            _componentChromeApplyPending = true;
+            return;
+        }
+
+        var passCount = 0;
+        do
+        {
+            passCount++;
+            _componentChromeApplyPending = false;
+            _isApplyingComponentChrome = true;
+            try
+            {
+                var cornerRadius = new CornerRadius(_componentCornerRadius);
+                _componentRootBorder = TryGetDirectRootBorder(ComponentContainer.Child as Control);
+
+                if (_componentRootBorder is not null)
+                {
+                    // The direct component surface owns the single outer contour. A local empty
+                    // BoxShadow value is intentional: ClearValue would fall back to the global
+                    // component-surface style and recreate an out-of-window shadow.
+                    _componentRootBorder.CornerRadius = cornerRadius;
+                    _componentRootBorder.ClipToBounds = true;
+                    _componentRootBorder.BoxShadow = default;
+
+                    ComponentContainer.CornerRadius = default;
+                    ComponentContainer.ClipToBounds = false;
+                }
+                else
+                {
+                    ComponentContainer.CornerRadius = cornerRadius;
+                    ComponentContainer.ClipToBounds = true;
+                }
+
+                SetInteractiveRegionTarget(
+                    _componentRootBorder ??
+                    ComponentContainer.Child as Control ??
+                    ComponentContainer);
+
+                if (EditModeBorder is not null)
+                {
+                    EditModeBorder.CornerRadius = cornerRadius;
+                }
+            }
+            finally
+            {
+                _isApplyingComponentChrome = false;
+            }
+        } while (_componentChromeApplyPending && passCount < 3);
+
+        if (_componentChromeApplyPending && !_componentChromeDeferredApplyPending)
+        {
+            _componentChromeDeferredApplyPending = true;
+            Dispatcher.UIThread.Post(() =>
+            {
+                _componentChromeDeferredApplyPending = false;
+                if (!_isClosing)
+                {
+                    ApplyComponentChrome();
+                }
+            }, DispatcherPriority.Render);
+        }
+    }
+
+    private static Border? TryGetDirectRootBorder(Control? componentContent)
+    {
+        if (componentContent is Border border)
+        {
+            return border;
+        }
+
+        return componentContent is UserControl { Content: Border contentBorder }
+            ? contentBorder
+            : null;
     }
 
     public void UpdateComponentLayout(double width, double height)
@@ -121,7 +296,7 @@ public partial class DesktopWidgetWindow : Window
 
         if (OperatingSystem.IsWindows() && IsVisible)
         {
-            Dispatcher.UIThread.Post(UpdateInteractiveRegion, DispatcherPriority.Render);
+            ScheduleInteractiveRegionUpdate();
         }
     }
 
@@ -133,7 +308,7 @@ public partial class DesktopWidgetWindow : Window
         }
 
         _bottomMostService.SendToBottom(this);
-        Dispatcher.UIThread.Post(UpdateInteractiveRegion, DispatcherPriority.Render);
+        ScheduleInteractiveRegionUpdate();
         AppLogger.Info("DesktopWidgetWindow", "Refreshed desktop layer. WindowRole=DesktopSurface.");
     }
 
@@ -182,12 +357,13 @@ public partial class DesktopWidgetWindow : Window
     {
         if (_isDragging)
         {
-            var currentPointer = e.GetPosition(this);
-            var delta = currentPointer - _dragStartPointerPosition;
+            var currentPointerScreenPosition = this.PointToScreen(e.GetPosition(this));
+            var deltaX = currentPointerScreenPosition.X - _dragStartPointerScreenPosition.X;
+            var deltaY = currentPointerScreenPosition.Y - _dragStartPointerScreenPosition.Y;
 
-            Position = new PixelPoint(
-                _dragStartWindowPosition.X + (int)delta.X,
-                _dragStartWindowPosition.Y + (int)delta.Y);
+            SetScreenPosition(new PixelPoint(
+                _dragStartWindowPosition.X + deltaX,
+                _dragStartWindowPosition.Y + deltaY));
 
             e.Handled = true;
             return;
@@ -211,8 +387,8 @@ public partial class DesktopWidgetWindow : Window
     private void BeginDrag(PointerPressedEventArgs e)
     {
         _isDragging = true;
-        _dragStartWindowPosition = Position;
-        _dragStartPointerPosition = e.GetPosition(this);
+        _dragStartWindowPosition = GetScreenPosition();
+        _dragStartPointerScreenPosition = this.PointToScreen(e.GetPosition(this));
         e.Pointer.Capture(this);
     }
 
@@ -238,17 +414,31 @@ public partial class DesktopWidgetWindow : Window
 
     private void ApplySnappedDragPlacement(FusedDesktopComponentPlacementSnapshot placement)
     {
-        if (!TrySnapToCurrentScreenGrid(placement, Position, out var snappedPosition) ||
+        var originalPlacement = placement.Clone();
+        var currentPosition = GetScreenPosition();
+        if (!TrySnapToCurrentScreenGrid(placement, currentPosition, out var snappedPosition) ||
             !snappedPosition.HasValue)
         {
-            placement.X = Position.X;
-            placement.Y = Position.Y;
+            placement.X = currentPosition.X;
+            placement.Y = currentPosition.Y;
             return;
         }
 
         placement.X = snappedPosition.Value.X;
         placement.Y = snappedPosition.Value.Y;
-        Position = snappedPosition.Value;
+        if (SetScreenPosition(snappedPosition.Value))
+        {
+            var actualPosition = GetScreenPosition();
+            placement.X = actualPosition.X;
+            placement.Y = actualPosition.Y;
+        }
+        else
+        {
+            RestorePlacementLayout(placement, originalPlacement);
+            placement.X = currentPosition.X;
+            placement.Y = currentPosition.Y;
+            UpdateComponentLayout(placement.Width, placement.Height);
+        }
     }
 
     private bool TrySnapToCurrentScreenGrid(
@@ -327,14 +517,201 @@ public partial class DesktopWidgetWindow : Window
 
     private void UpdateInteractiveRegion()
     {
-        _regionPassthroughService.SetInteractiveRegions(this, new List<Rect>
+        var width = Math.Max(0d, RootGrid.Bounds.Width > 0 ? RootGrid.Bounds.Width : Bounds.Width);
+        var height = Math.Max(0d, RootGrid.Bounds.Height > 0 ? RootGrid.Bounds.Height : Bounds.Height);
+        if (width <= 0d || height <= 0d)
         {
-            new(0, 0, Bounds.Width, Bounds.Height)
+            _regionPassthroughService.ClearInteractiveRegions(this);
+            return;
+        }
+
+        var interactiveRegion = _isEditMode
+            ? new WindowInteractiveRegion(new Rect(0, 0, width, height), 0d)
+            : ResolveLiveInteractiveRegion(new Rect(0, 0, width, height));
+        if (!interactiveRegion.HasValue)
+        {
+            _regionPassthroughService.ClearInteractiveRegions(this);
+            return;
+        }
+
+        _regionPassthroughService.SetInteractiveRegions(this, new List<WindowInteractiveRegion>
+        {
+            interactiveRegion.Value
         });
+    }
+
+    private void SetInteractiveRegionTarget(Control target)
+    {
+        if (ReferenceEquals(_interactiveRegionTarget, target))
+        {
+            return;
+        }
+
+        if (_interactiveRegionTarget is not null)
+        {
+            _interactiveRegionTarget.LayoutUpdated -= OnInteractiveRegionTargetLayoutUpdated;
+            _interactiveRegionTarget.PropertyChanged -= OnInteractiveRegionTargetPropertyChanged;
+        }
+
+        SetInteractiveRegionTransform(null);
+
+        _interactiveRegionTarget = target;
+        _interactiveRegionTarget.LayoutUpdated += OnInteractiveRegionTargetLayoutUpdated;
+        _interactiveRegionTarget.PropertyChanged += OnInteractiveRegionTargetPropertyChanged;
+        SetInteractiveRegionTransform(_interactiveRegionTarget.RenderTransform as Transform);
+    }
+
+    private void OnInteractiveRegionTargetLayoutUpdated(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        ScheduleInteractiveRegionUpdate();
+    }
+
+    private void OnInteractiveRegionTargetPropertyChanged(
+        object? sender,
+        AvaloniaPropertyChangedEventArgs e)
+    {
+        if (!_isApplyingComponentChrome &&
+            ReferenceEquals(sender, _componentRootBorder) &&
+            (e.Property == Border.BoxShadowProperty ||
+             e.Property == Border.CornerRadiusProperty ||
+             e.Property == Visual.ClipToBoundsProperty))
+        {
+            ApplyComponentChrome();
+        }
+
+        if (e.Property == Visual.RenderTransformProperty && sender is Control target)
+        {
+            SetInteractiveRegionTransform(target.RenderTransform as Transform);
+        }
+
+        if (e.Property == Visual.BoundsProperty ||
+            e.Property == Visual.RenderTransformProperty ||
+            e.Property == Visual.RenderTransformOriginProperty ||
+            e.Property == Visual.IsVisibleProperty)
+        {
+            ScheduleInteractiveRegionUpdate();
+        }
+    }
+
+    private void SetInteractiveRegionTransform(Transform? transform)
+    {
+        if (ReferenceEquals(_interactiveRegionTransform, transform))
+        {
+            return;
+        }
+
+        if (_interactiveRegionTransform is not null)
+        {
+            _interactiveRegionTransform.Changed -= OnInteractiveRegionTransformChanged;
+        }
+
+        _interactiveRegionTransform = transform;
+        if (_interactiveRegionTransform is not null)
+        {
+            _interactiveRegionTransform.Changed += OnInteractiveRegionTransformChanged;
+        }
+    }
+
+    private void OnInteractiveRegionTransformChanged(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        ScheduleInteractiveRegionUpdate();
+    }
+
+    private void ScheduleInteractiveRegionUpdate()
+    {
+        if (!OperatingSystem.IsWindows() || !IsVisible || _interactiveRegionUpdatePending)
+        {
+            return;
+        }
+
+        _interactiveRegionUpdatePending = true;
+        Dispatcher.UIThread.Post(() =>
+        {
+            _interactiveRegionUpdatePending = false;
+            if (IsVisible)
+            {
+                UpdateInteractiveRegion();
+            }
+        }, DispatcherPriority.Render);
+    }
+
+    private WindowInteractiveRegion? ResolveLiveInteractiveRegion(Rect fallback)
+    {
+        if (ComponentContainer.Child is Control componentContent &&
+            !componentContent.IsEffectivelyVisible)
+        {
+            return null;
+        }
+
+        Visual target = _interactiveRegionTarget ?? ComponentContainer;
+        if (!target.IsEffectivelyVisible || target.Bounds.Width <= 0 || target.Bounds.Height <= 0)
+        {
+            return null;
+        }
+
+        var transform = target.TransformToVisual(RootGrid);
+        if (transform is null)
+        {
+            return null;
+        }
+
+        if (!transform.Value.TryInvert(out var clientToTarget))
+        {
+            return null;
+        }
+
+        var topLeft = transform.Value.Transform(new Point(0, 0));
+        var topRight = transform.Value.Transform(new Point(target.Bounds.Width, 0));
+        var bottomLeft = transform.Value.Transform(new Point(0, target.Bounds.Height));
+        var bottomRight = transform.Value.Transform(new Point(target.Bounds.Width, target.Bounds.Height));
+        var left = Math.Min(Math.Min(topLeft.X, topRight.X), Math.Min(bottomLeft.X, bottomRight.X));
+        var top = Math.Min(Math.Min(topLeft.Y, topRight.Y), Math.Min(bottomLeft.Y, bottomRight.Y));
+        var right = Math.Max(Math.Max(topLeft.X, topRight.X), Math.Max(bottomLeft.X, bottomRight.X));
+        var bottom = Math.Max(Math.Max(topLeft.Y, topRight.Y), Math.Max(bottomLeft.Y, bottomRight.Y));
+        var visibleBounds = new Rect(left, top, right - left, bottom - top).Intersect(fallback);
+        if (visibleBounds.Width <= 0 || visibleBounds.Height <= 0)
+        {
+            return null;
+        }
+
+        var rootBorderOwnsContour = ReferenceEquals(target, _componentRootBorder);
+        var hostOwnsContour = !rootBorderOwnsContour && !ReferenceEquals(target, ComponentContainer);
+        return new WindowInteractiveRegion(
+            new Rect(0, 0, target.Bounds.Width, target.Bounds.Height),
+            rootBorderOwnsContour || ReferenceEquals(target, ComponentContainer)
+                ? _componentCornerRadius
+                : 0d,
+            clientToTarget,
+            hostOwnsContour ? fallback : null,
+            hostOwnsContour ? _componentCornerRadius : 0d);
     }
 
     protected override void OnClosing(WindowClosingEventArgs e)
     {
+        base.OnClosing(e);
+        if (e.Cancel)
+        {
+            return;
+        }
+
+        _isClosing = true;
+        if (_interactiveRegionTarget is not null)
+        {
+            _interactiveRegionTarget.LayoutUpdated -= OnInteractiveRegionTargetLayoutUpdated;
+            _interactiveRegionTarget.PropertyChanged -= OnInteractiveRegionTargetPropertyChanged;
+            _interactiveRegionTarget = null;
+        }
+
+        SetInteractiveRegionTransform(null);
+        SetComponentContentTransform(null);
+
+        _interactiveRegionUpdatePending = false;
+        _componentChromeApplyPending = false;
+        _componentChromeDeferredApplyPending = false;
         if (_resizeAdorner is not null)
         {
             _resizeAdorner.ResizeStarted -= OnResizeStarted;
@@ -342,12 +719,18 @@ public partial class DesktopWidgetWindow : Window
             _resizeAdorner.ResizeCompleted -= OnResizeCompleted;
         }
 
+        if (ComponentContainer.Child is Control componentContent)
+        {
+            componentContent.Loaded -= OnComponentContentLoaded;
+            componentContent.PropertyChanged -= OnComponentContentPropertyChanged;
+        }
+
         if (ComponentContainer.Child is IDisposable disposable)
         {
             disposable.Dispose();
         }
+        _regionPassthroughService.ClearInteractiveRegions(this);
         ComponentContainer.Child = null;
-        base.OnClosing(e);
     }
 
     private void OnResizeStarted(object? sender, ResizeStartedEventArgs e)
@@ -355,8 +738,11 @@ public partial class DesktopWidgetWindow : Window
         if (PlacementId is null) return;
 
         _isResizing = true;
-        _resizeStartSize = new Size(ComponentContainer.Width, ComponentContainer.Height);
-        _resizeStartPosition = Position;
+        var startScaling = Math.Max(0.1, RenderScaling);
+        _resizeStartPhysicalSize = new Size(
+            ComponentContainer.Width * startScaling,
+            ComponentContainer.Height * startScaling);
+        _resizeStartPosition = GetScreenPosition();
 
         var layoutService = FusedDesktopLayoutServiceProvider.GetOrCreate();
         var layout = layoutService.Load();
@@ -378,28 +764,17 @@ public partial class DesktopWidgetWindow : Window
         var (newWidth, newHeight, newX, newY) = CalculateResizedBounds(
             e.Handle,
             e.Delta,
-            _resizeStartSize,
-            _resizeStartPosition);
+            _resizeStartPhysicalSize,
+            _resizeStartPosition,
+            RenderScaling);
 
-        ComponentContainer.Width = newWidth;
-        ComponentContainer.Height = newHeight;
-
-        if (ComponentContainer.Child is Control child)
-        {
-            child.Width = newWidth;
-            child.Height = newHeight;
-        }
-
-        if (_resizeAdorner is not null)
-        {
-            _resizeAdorner.Width = newWidth;
-            _resizeAdorner.Height = newHeight;
-        }
+        UpdateComponentLayout(newWidth, newHeight);
 
         if (e.Handle is ResizeHandlePosition.TopLeft or ResizeHandlePosition.Top or
-            ResizeHandlePosition.TopRight or ResizeHandlePosition.Left)
+            ResizeHandlePosition.TopRight or ResizeHandlePosition.BottomLeft or
+            ResizeHandlePosition.Left)
         {
-            Position = new PixelPoint((int)newX, (int)newY);
+            SetScreenPosition(new PixelPoint((int)Math.Round(newX), (int)Math.Round(newY)));
         }
     }
 
@@ -426,65 +801,74 @@ public partial class DesktopWidgetWindow : Window
         AppLogger.Info("DesktopWidget", $"Resize completed. PlacementId='{PlacementId}'");
     }
 
-    private (double width, double height, double x, double y) CalculateResizedBounds(
+    internal static (double width, double height, double x, double y) CalculateResizedBounds(
         ResizeHandlePosition handle,
-        Point delta,
-        Size startSize,
-        PixelPoint startPosition)
+        Point physicalDelta,
+        Size startPhysicalSize,
+        PixelPoint startPosition,
+        double currentScaling)
     {
-        var newWidth = startSize.Width;
-        var newHeight = startSize.Height;
+        var scaling = double.IsFinite(currentScaling) ? Math.Max(0.1, currentScaling) : 1d;
+        var minimumPhysicalSize = 50d * scaling;
+        var newPhysicalWidth = startPhysicalSize.Width;
+        var newPhysicalHeight = startPhysicalSize.Height;
         var newX = (double)startPosition.X;
         var newY = (double)startPosition.Y;
 
         switch (handle)
         {
             case ResizeHandlePosition.TopLeft:
-                newWidth = Math.Max(50, startSize.Width - delta.X);
-                newHeight = Math.Max(50, startSize.Height - delta.Y);
-                newX = startPosition.X + (startSize.Width - newWidth);
-                newY = startPosition.Y + (startSize.Height - newHeight);
+                newPhysicalWidth = Math.Max(minimumPhysicalSize, startPhysicalSize.Width - physicalDelta.X);
+                newPhysicalHeight = Math.Max(minimumPhysicalSize, startPhysicalSize.Height - physicalDelta.Y);
+                newX = startPosition.X + startPhysicalSize.Width - newPhysicalWidth;
+                newY = startPosition.Y + startPhysicalSize.Height - newPhysicalHeight;
                 break;
             case ResizeHandlePosition.Top:
-                newHeight = Math.Max(50, startSize.Height - delta.Y);
-                newY = startPosition.Y + (startSize.Height - newHeight);
+                newPhysicalHeight = Math.Max(minimumPhysicalSize, startPhysicalSize.Height - physicalDelta.Y);
+                newY = startPosition.Y + startPhysicalSize.Height - newPhysicalHeight;
                 break;
             case ResizeHandlePosition.TopRight:
-                newWidth = Math.Max(50, startSize.Width + delta.X);
-                newHeight = Math.Max(50, startSize.Height - delta.Y);
-                newY = startPosition.Y + (startSize.Height - newHeight);
+                newPhysicalWidth = Math.Max(minimumPhysicalSize, startPhysicalSize.Width + physicalDelta.X);
+                newPhysicalHeight = Math.Max(minimumPhysicalSize, startPhysicalSize.Height - physicalDelta.Y);
+                newY = startPosition.Y + startPhysicalSize.Height - newPhysicalHeight;
                 break;
             case ResizeHandlePosition.Right:
-                newWidth = Math.Max(50, startSize.Width + delta.X);
+                newPhysicalWidth = Math.Max(minimumPhysicalSize, startPhysicalSize.Width + physicalDelta.X);
                 break;
             case ResizeHandlePosition.BottomRight:
-                newWidth = Math.Max(50, startSize.Width + delta.X);
-                newHeight = Math.Max(50, startSize.Height + delta.Y);
+                newPhysicalWidth = Math.Max(minimumPhysicalSize, startPhysicalSize.Width + physicalDelta.X);
+                newPhysicalHeight = Math.Max(minimumPhysicalSize, startPhysicalSize.Height + physicalDelta.Y);
                 break;
             case ResizeHandlePosition.Bottom:
-                newHeight = Math.Max(50, startSize.Height + delta.Y);
+                newPhysicalHeight = Math.Max(minimumPhysicalSize, startPhysicalSize.Height + physicalDelta.Y);
                 break;
             case ResizeHandlePosition.BottomLeft:
-                newWidth = Math.Max(50, startSize.Width - delta.X);
-                newHeight = Math.Max(50, startSize.Height + delta.Y);
-                newX = startPosition.X + (startSize.Width - newWidth);
+                newPhysicalWidth = Math.Max(minimumPhysicalSize, startPhysicalSize.Width - physicalDelta.X);
+                newPhysicalHeight = Math.Max(minimumPhysicalSize, startPhysicalSize.Height + physicalDelta.Y);
+                newX = startPosition.X + startPhysicalSize.Width - newPhysicalWidth;
                 break;
             case ResizeHandlePosition.Left:
-                newWidth = Math.Max(50, startSize.Width - delta.X);
-                newX = startPosition.X + (startSize.Width - newWidth);
+                newPhysicalWidth = Math.Max(minimumPhysicalSize, startPhysicalSize.Width - physicalDelta.X);
+                newX = startPosition.X + startPhysicalSize.Width - newPhysicalWidth;
                 break;
         }
 
-        return (newWidth, newHeight, newX, newY);
+        return (
+            newPhysicalWidth / scaling,
+            newPhysicalHeight / scaling,
+            newX,
+            newY);
     }
 
     private void ApplySnappedResizePlacement(FusedDesktopComponentPlacementSnapshot placement)
     {
+        var originalPlacement = placement.Clone();
+        var currentPosition = GetScreenPosition();
         var screen = Screens.ScreenFromWindow(this) ?? Screens.Primary;
         if (screen is null)
         {
-            placement.X = Position.X;
-            placement.Y = Position.Y;
+            placement.X = currentPosition.X;
+            placement.Y = currentPosition.Y;
             placement.Width = ComponentContainer.Width;
             placement.Height = ComponentContainer.Height;
             return;
@@ -496,16 +880,16 @@ public partial class DesktopWidgetWindow : Window
         var adapter = new FusedDesktopEditGridAdapter(_settingsFacade);
         if (!adapter.TryCreate(viewportSize, out var context))
         {
-            placement.X = Position.X;
-            placement.Y = Position.Y;
+            placement.X = currentPosition.X;
+            placement.Y = currentPosition.Y;
             placement.Width = ComponentContainer.Width;
             placement.Height = ComponentContainer.Height;
             return;
         }
 
         var requestedLocalOrigin = new Point(
-            (Position.X - workArea.X) / scaling,
-            (Position.Y - workArea.Y) / scaling);
+            (currentPosition.X - workArea.X) / scaling,
+            (currentPosition.Y - workArea.Y) / scaling);
         var requestedLocalWidth = ComponentContainer.Width;
         var requestedLocalHeight = ComponentContainer.Height;
 
@@ -539,8 +923,52 @@ public partial class DesktopWidgetWindow : Window
         placement.X = snappedPosition.X;
         placement.Y = snappedPosition.Y;
 
-        Position = snappedPosition;
+        if (SetScreenPosition(snappedPosition))
+        {
+            var actualPosition = GetScreenPosition();
+            placement.X = actualPosition.X;
+            placement.Y = actualPosition.Y;
+        }
+        else
+        {
+            RestorePlacementLayout(placement, originalPlacement);
+            placement.X = currentPosition.X;
+            placement.Y = currentPosition.Y;
+        }
+
         UpdateComponentLayout(placement.Width, placement.Height);
+    }
+
+    private static void RestorePlacementLayout(
+        FusedDesktopComponentPlacementSnapshot target,
+        FusedDesktopComponentPlacementSnapshot source)
+    {
+        target.X = source.X;
+        target.Y = source.Y;
+        target.Width = source.Width;
+        target.Height = source.Height;
+        target.GridRow = source.GridRow;
+        target.GridColumn = source.GridColumn;
+        target.GridWidthCells = source.GridWidthCells;
+        target.GridHeightCells = source.GridHeightCells;
+    }
+
+    private PixelPoint GetScreenPosition()
+    {
+        return OperatingSystem.IsWindows()
+            ? _bottomMostService.GetScreenPosition(this)
+            : Position;
+    }
+
+    private bool SetScreenPosition(PixelPoint position)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return _bottomMostService.SetScreenPosition(this, position);
+        }
+
+        Position = position;
+        return true;
     }
 
     private static int EstimateCellSpan(double pixelSize, DesktopGridGeometry grid)

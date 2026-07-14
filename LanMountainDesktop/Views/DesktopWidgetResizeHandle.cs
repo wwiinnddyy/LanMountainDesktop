@@ -118,7 +118,7 @@ internal sealed class DesktopWidgetResizeAdorner : Canvas
 
     private ResizeHandlePosition _activeHandle;
     private bool _isResizing;
-    private Point _resizeStartPoint;
+    private PixelPoint _resizeStartScreenPoint;
     private Rect _resizeStartBounds;
 
     public DesktopWidgetResizeAdorner()
@@ -143,7 +143,7 @@ internal sealed class DesktopWidgetResizeAdorner : Canvas
         }
     }
 
-    public new void Show()
+    public void Show()
     {
         if (_isVisible) return;
         _isVisible = true;
@@ -155,7 +155,7 @@ internal sealed class DesktopWidgetResizeAdorner : Canvas
         UpdateHandlePositions();
     }
 
-    public new void Hide()
+    public void Hide()
     {
         if (!_isVisible) return;
         _isVisible = false;
@@ -181,31 +181,32 @@ internal sealed class DesktopWidgetResizeAdorner : Canvas
 
         var width = Bounds.Width;
         var height = Bounds.Height;
-        const double offset = -6d;
 
-        SetLeft(_handles[0], offset);
-        SetTop(_handles[0], offset);
+        foreach (var handle in _handles)
+        {
+            var size = handle.GetHandleSize(handle.Position);
+            handle.Width = size.Width;
+            handle.Height = size.Height;
 
-        SetLeft(_handles[1], width / 2 - 6);
-        SetTop(_handles[1], offset);
+            var (left, top) = handle.Position switch
+            {
+                ResizeHandlePosition.TopLeft => (0d, 0d),
+                ResizeHandlePosition.Top => ((width - size.Width) / 2d, 0d),
+                ResizeHandlePosition.TopRight => (width - size.Width, 0d),
+                ResizeHandlePosition.Right => (width - size.Width, (height - size.Height) / 2d),
+                ResizeHandlePosition.BottomRight => (width - size.Width, height - size.Height),
+                ResizeHandlePosition.Bottom => ((width - size.Width) / 2d, height - size.Height),
+                ResizeHandlePosition.BottomLeft => (0d, height - size.Height),
+                ResizeHandlePosition.Left => (0d, (height - size.Height) / 2d),
+                _ => (0d, 0d)
+            };
 
-        SetLeft(_handles[2], width - 10);
-        SetTop(_handles[2], offset);
-
-        SetLeft(_handles[3], width - 10);
-        SetTop(_handles[3], height / 2 - 6);
-
-        SetLeft(_handles[4], width - 10);
-        SetTop(_handles[4], height - 10);
-
-        SetLeft(_handles[5], width / 2 - 6);
-        SetTop(_handles[5], height - 10);
-
-        SetLeft(_handles[6], offset);
-        SetTop(_handles[6], height - 10);
-
-        SetLeft(_handles[7], offset);
-        SetTop(_handles[7], height / 2 - 6);
+            // A resize affordance must never extend beyond the native window. Transparent
+            // pixels outside an HWND cannot be composed or hit-tested reliably after the
+            // window is attached to Explorer's desktop host.
+            SetLeft(handle, Math.Clamp(left, 0d, Math.Max(0d, width - size.Width)));
+            SetTop(handle, Math.Clamp(top, 0d, Math.Max(0d, height - size.Height)));
+        }
     }
 
     private void OnHandlePointerPressed(object? sender, PointerPressedEventArgs e)
@@ -215,7 +216,7 @@ internal sealed class DesktopWidgetResizeAdorner : Canvas
 
         _isResizing = true;
         _activeHandle = handle.Position;
-        _resizeStartPoint = e.GetPosition(Parent as Visual);
+        _resizeStartScreenPoint = this.PointToScreen(e.GetPosition(this));
         _resizeStartBounds = Bounds;
         e.Pointer.Capture(handle);
 
@@ -227,8 +228,7 @@ internal sealed class DesktopWidgetResizeAdorner : Canvas
     {
         if (!_isResizing) return;
 
-        var currentPoint = e.GetPosition(Parent as Visual);
-        var delta = currentPoint - _resizeStartPoint;
+        var delta = GetScreenDelta(e);
 
         Resizing?.Invoke(this, new ResizeEventArgs(_activeHandle, delta, _resizeStartBounds));
         e.Handled = true;
@@ -238,14 +238,21 @@ internal sealed class DesktopWidgetResizeAdorner : Canvas
     {
         if (!_isResizing) return;
 
-        var currentPoint = e.GetPosition(Parent as Visual);
-        var delta = currentPoint - _resizeStartPoint;
+        var delta = GetScreenDelta(e);
 
         ResizeCompleted?.Invoke(this, new ResizeCompletedEventArgs(_activeHandle, delta, _resizeStartBounds));
 
         _isResizing = false;
         e.Pointer.Capture(null);
         e.Handled = true;
+    }
+
+    private Point GetScreenDelta(PointerEventArgs e)
+    {
+        var currentScreenPoint = this.PointToScreen(e.GetPosition(this));
+        return new Point(
+            currentScreenPoint.X - _resizeStartScreenPoint.X,
+            currentScreenPoint.Y - _resizeStartScreenPoint.Y);
     }
 }
 
