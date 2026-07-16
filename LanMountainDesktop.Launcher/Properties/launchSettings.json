@@ -41,14 +41,6 @@
         "DOTNET_ENVIRONMENT": "Development"
       }
     },
-    "Launcher (Preview Update)": {
-      "commandName": "Project",
-      "commandLineArgs": "preview-update",
-      "workingDirectory": "$(SolutionDir)",
-      "environmentVariables": {
-        "DOTNET_ENVIRONMENT": "Development"
-      }
-    },
     "Launcher (Preview OOBE)": {
       "commandName": "Project",
       "commandLineArgs": "preview-oobe",

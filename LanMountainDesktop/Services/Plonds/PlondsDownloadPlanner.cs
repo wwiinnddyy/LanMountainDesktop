@@ -4,14 +4,33 @@ internal sealed class PlondsDownloadPlanner(IPlondsPackageDownloader downloader)
 {
     public async Task<PlondsPrepareResult> PrepareAsync(
         PlondsManifestCandidate candidate,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool forceFullPackage = false)
     {
         ArgumentNullException.ThrowIfNull(candidate);
 
-        if (candidate.Manifest.RequiresCleanInstall)
+        // Clean install / force reinstall: prefer full PLONDS package from this source (S3 first, GitHub PLONDS second).
+        // If all PLONDS package sources fail, UpdateSettingsService may still fall back to a GitHub installer EXE.
+        if (forceFullPackage ||
+            candidate.Manifest.RequiresCleanInstall ||
+            candidate.Manifest.IsFullUpdate)
         {
-            return PlondsPrepareResult.FailedForUi(
-                "PLONDS manifest requires a clean install. Use the Host Update installer flow instead.");
+            try
+            {
+                var fullPackage = await downloader
+                    .PrepareFullAsync(candidate.Manifest, candidate.Source, cancellationToken)
+                    .ConfigureAwait(false);
+                return PlondsPrepareResult.Prepared(fullPackage);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception fullError)
+            {
+                return PlondsPrepareResult.FailedForUi(
+                    $"智慧更新全量包准备失败（将尝试其他源/GitHub 回退）：{fullError.Message}");
+            }
         }
 
         try
@@ -43,7 +62,7 @@ internal sealed class PlondsDownloadPlanner(IPlondsPackageDownloader downloader)
             catch (Exception fullError)
             {
                 return PlondsPrepareResult.FailedForUi(
-                    $"PLONDS delta package failed and full package fallback also failed. Delta: {deltaError.Message}; Full: {fullError.Message}");
+                    $"智慧更新增量包失败且全量回退也失败。增量：{deltaError.Message}；全量：{fullError.Message}");
             }
         }
     }

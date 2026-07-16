@@ -29,26 +29,51 @@ internal sealed class PlondsService(
 
     public Task<PlondsPrepareResult> FindAndPrepareLatestAsync(CancellationToken cancellationToken)
     {
-        return FindAndPrepareLatestAsync(new Version(0, 0, 0), cancellationToken);
+        return FindAndPrepareLatestAsync(new Version(0, 0, 0), forceFullPackage: false, cancellationToken);
     }
 
-    public async Task<PlondsPrepareResult> FindAndPrepareLatestAsync(Version currentVersion, CancellationToken cancellationToken)
+    public Task<PlondsPrepareResult> FindAndPrepareLatestAsync(Version currentVersion, CancellationToken cancellationToken)
+    {
+        return FindAndPrepareLatestAsync(currentVersion, forceFullPackage: false, cancellationToken);
+    }
+
+    public async Task<PlondsPrepareResult> FindAndPrepareLatestAsync(
+        Version currentVersion,
+        bool forceFullPackage,
+        CancellationToken cancellationToken)
     {
         var latest = await FindLatestAsync(currentVersion, cancellationToken).ConfigureAwait(false);
         if (!latest.Success)
         {
-            return PlondsPrepareResult.FailedForUi(latest.ErrorMessage ?? "No usable PLONDS manifest was found.");
+            return PlondsPrepareResult.FailedForUi(latest.ErrorMessage ?? "未找到可用的智慧更新清单（S3 优先，GitHub 回退）。请检查网络或清单发布状态。");
         }
 
-        if (!latest.IsUpdateAvailable)
+        if (!latest.IsUpdateAvailable && !forceFullPackage)
         {
-            return PlondsPrepareResult.FailedForUi("No newer PLONDS version was found.");
+            return PlondsPrepareResult.FailedForUi("当前已是最新版本。");
+        }
+
+        var candidates = latest.Candidates;
+        if (candidates.Count == 0)
+        {
+            // force reinstall may still want to re-download current version package
+            candidates = await DiscoverHighestVersionCandidatesAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        if (candidates.Count == 0)
+        {
+            return PlondsPrepareResult.FailedForUi("未找到可用的智慧更新源（S3 / GitHub）。");
         }
 
         var errors = new List<string>();
-        foreach (var selected in latest.Candidates)
+        // Prefer S3, then other high-priority sources, then GitHub PLONDS mirrors.
+        foreach (var selected in candidates.OrderByDescending(c => c.Source.Priority)
+                     .ThenBy(c => string.Equals(c.Source.Kind, "s3", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+                     .ThenBy(c => string.Equals(c.Source.Kind, "github", StringComparison.OrdinalIgnoreCase) ? 1 : 0))
         {
-            var result = await downloadPlanner.PrepareAsync(selected, cancellationToken).ConfigureAwait(false);
+            var result = await downloadPlanner
+                .PrepareAsync(selected, cancellationToken, forceFullPackage)
+                .ConfigureAwait(false);
             if (result.Success)
             {
                 return result;

@@ -7,4 +7,9 @@ internal interface IPlondsService
     Task<PlondsPrepareResult> FindAndPrepareLatestAsync(CancellationToken cancellationToken);
 
     Task<PlondsPrepareResult> FindAndPrepareLatestAsync(Version currentVersion, CancellationToken cancellationToken);
+
+    Task<PlondsPrepareResult> FindAndPrepareLatestAsync(
+        Version currentVersion,
+        bool forceFullPackage,
+        CancellationToken cancellationToken);
 }

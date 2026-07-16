@@ -29,9 +29,10 @@
                                   VerticalAlignment="Center" />
             </Grid>
 
+            <!-- 28 icon host + 14 column spacing => content indent ~42 -->
             <ContentPresenter x:Name="DetailsContentHost"
                               Grid.Row="1"
-                              Margin="54,0,0,0" />
+                              Margin="42,0,0,0" />
         </Grid>
     </Border>
 </UserControl>

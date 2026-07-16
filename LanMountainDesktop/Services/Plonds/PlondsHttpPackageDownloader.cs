@@ -39,13 +39,14 @@ internal sealed class PlondsHttpPackageDownloader(
         }
 
         Exception? lastError = null;
-        foreach (var url in urls)
+        foreach (var url in ExpandUrlCandidates(urls, mode))
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             var staging = await packageStore.CreateStagingAsync(manifest, source, mode, cancellationToken).ConfigureAwait(false);
             try
             {
+                AppLogger.Info("PLONDS.Download", $"Downloading {mode} package from {url.AbsoluteUri}");
                 await DownloadToFileAsync(url, staging.PackageZipPath, cancellationToken).ConfigureAwait(false);
                 await verifier.VerifyFileAsync(
                     staging.PackageZipPath,
@@ -62,19 +63,44 @@ internal sealed class PlondsHttpPackageDownloader(
             }
             catch (Exception ex)
             {
+                AppLogger.Warn("PLONDS.Download", $"Package URL failed: {url.AbsoluteUri} -> {ex.Message}");
                 lastError = ex;
             }
         }
 
-        throw new InvalidOperationException($"Failed to prepare PLONDS {mode} package.", lastError);
+        throw new InvalidOperationException($"Failed to prepare PLONDS {mode} package from S3/CDN.", lastError);
+    }
+
+    private static IEnumerable<Uri> ExpandUrlCandidates(IReadOnlyList<Uri> urls, PlondsPackageMode mode)
+    {
+        foreach (var url in urls)
+        {
+            yield return url;
+            // Case variants commonly used by different publishers.
+            if (mode is PlondsPackageMode.Full &&
+                url.AbsoluteUri.EndsWith("Files.zip", StringComparison.OrdinalIgnoreCase))
+            {
+                var alt = url.AbsoluteUri.EndsWith("Files.zip", StringComparison.Ordinal)
+                    ? url.AbsoluteUri[..^"Files.zip".Length] + "files.zip"
+                    : url.AbsoluteUri[..^"files.zip".Length] + "Files.zip";
+                if (Uri.TryCreate(alt, UriKind.Absolute, out var altUri) &&
+                    !string.Equals(altUri.AbsoluteUri, url.AbsoluteUri, StringComparison.OrdinalIgnoreCase))
+                {
+                    yield return altUri;
+                }
+            }
+        }
     }
 
     private async Task DownloadToFileAsync(Uri url, string destinationPath, CancellationToken cancellationToken)
     {
-        using var response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.TryAddWithoutValidation("Cache-Control", "no-cache");
+        using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode)
         {
-            throw new HttpRequestException($"PLONDS package download failed: {(int)response.StatusCode} {response.ReasonPhrase}");
+            throw new HttpRequestException(
+                $"PLONDS package download failed: {(int)response.StatusCode} {response.ReasonPhrase} ({url.AbsoluteUri})");
         }
 
         var directory = Path.GetDirectoryName(Path.GetFullPath(destinationPath));

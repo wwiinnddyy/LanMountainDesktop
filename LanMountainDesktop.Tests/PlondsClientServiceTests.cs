@@ -88,7 +88,7 @@ public sealed class PlondsClientServiceTests : IDisposable
         Assert.False(result.Success);
         Assert.True(result.RequiresUiHandling);
         Assert.Null(result.Package);
-        Assert.Contains("full package fallback also failed", result.ErrorMessage);
+        Assert.Contains("全量回退也失败", result.ErrorMessage);
     }
 
     [Fact]
@@ -103,11 +103,11 @@ public sealed class PlondsClientServiceTests : IDisposable
                 CreateManifest("1.2.3", requiresCleanInstall: true)),
             CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.True(result.RequiresUiHandling);
-        Assert.Contains("clean install", result.ErrorMessage);
+        // Clean install now uses full package from the same PLONDS/S3 source (not GitHub EXE).
+        Assert.True(result.Success);
         Assert.Equal(0, downloader.DeltaCalls);
-        Assert.Equal(0, downloader.FullCalls);
+        Assert.Equal(1, downloader.FullCalls);
+        Assert.Equal(PlondsPackageMode.Full, result.Package?.Mode);
     }
 
     [Fact]
@@ -365,7 +365,7 @@ public sealed class PlondsClientServiceTests : IDisposable
 
         Assert.False(result.Success);
         Assert.True(result.RequiresUiHandling);
-        Assert.Contains("full package fallback also failed", result.ErrorMessage);
+        Assert.Contains("全量回退也失败", result.ErrorMessage);
     }
 
     [Fact]

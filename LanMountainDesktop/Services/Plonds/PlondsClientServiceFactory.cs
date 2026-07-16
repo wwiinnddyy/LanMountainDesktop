@@ -9,7 +9,7 @@ internal static class PlondsClientServiceFactory
 
     public static IPlondsService CreateDefault(HttpClient? httpClient = null)
     {
-        var client = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        var client = httpClient ?? PlondsHttpClientFactory.Create();
         var dataRoot = Path.Combine(AppDataPathProvider.GetDataRoot(), "PLONDS");
         var sourceStore = new PlondsSourceStore(Path.Combine(dataRoot, "sources.json"));
         var registry = new PlondsSourceRegistry(CreateBuiltInSources());
@@ -26,19 +26,34 @@ internal static class PlondsClientServiceFactory
             sourceStore);
     }
 
+    /// <summary>
+    /// Built-in sources. S3/CDN is the primary 智慧更新 endpoint; GitHub is fallback only.
+    /// </summary>
     internal static IReadOnlyList<PlondsSourceDescriptor> CreateBuiltInSources()
     {
+        var baseUrl = ResolveManifestUrl(
+            UpdateSettingsValues.PlondsStaticBaseUrlEnvironmentVariable,
+            UpdateSettingsValues.DefaultPlondsStaticBaseUrl).TrimEnd('/');
+
+        var s3Manifest = ResolveManifestUrl(
+            S3ManifestUrlEnvironmentVariable,
+            $"{baseUrl}/plonds/PLONDS.json");
+
+        var githubManifest = ResolveManifestUrl(
+            GitHubManifestUrlEnvironmentVariable,
+            DefaultGitHubManifestUrl);
+
         return
         [
             new(
                 Id: "s3",
                 Kind: "s3",
-                ManifestUrl: ResolveManifestUrl(S3ManifestUrlEnvironmentVariable, DefaultS3ManifestUrl),
+                ManifestUrl: s3Manifest,
                 Priority: 100),
             new(
                 Id: "github",
                 Kind: "github",
-                ManifestUrl: ResolveManifestUrl(GitHubManifestUrlEnvironmentVariable, DefaultGitHubManifestUrl),
+                ManifestUrl: githubManifest,
                 Priority: 50)
         ];
     }

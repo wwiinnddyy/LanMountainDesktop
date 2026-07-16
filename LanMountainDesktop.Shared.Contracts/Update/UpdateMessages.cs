@@ -54,13 +54,3 @@ public sealed record UpdateCheckReport(
     long? TotalDownloadBytes,
     long? FullInstallerBytes,
     string? ErrorMessage);
-
-public sealed record InstallRequest(
-    UpdatePayloadKind PayloadKind,
-    string LauncherRoot,
-    string? LaunchSource = null);
-
-public sealed record LaunchResult(
-    bool Success,
-    string? ErrorMessage,
-    int? ProcessId);

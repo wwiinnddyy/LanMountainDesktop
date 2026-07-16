@@ -13,16 +13,24 @@
         <TextBlock Classes="settings-section-description" Text="{Binding PageDescription}" />
       </StackPanel>
 
-        <StackPanel Spacing="16" Margin="0,0,0,24">
-          <Grid ColumnDefinitions="Auto,*,Auto">
-            <ui:FAFontIcon Glyph="&#xF0288;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" FontSize="40" VerticalAlignment="Center" Margin="0,0,20,0" Foreground="{DynamicResource AccentFillColorDefaultBrush}" />
-            
-            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
-              <TextBlock Text="{Binding StatusMessage}" FontSize="24" FontWeight="Medium" TextWrapping="Wrap" />
-              <TextBlock Text="{Binding LastCheckedText}" Classes="settings-item-description" />
+        <StackPanel Spacing="12" Margin="0,0,0,20">
+          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="0">
+            <ui:FAFontIcon Classes="settings-hero-icon"
+                           Glyph="&#xF0288;"
+                           FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+              <TextBlock Classes="settings-hero-title" Text="{Binding StatusMessage}" />
+              <TextBlock Classes="settings-item-description" Text="{Binding LastCheckedText}" />
             </StackPanel>
 
-            <Button Grid.Column="2" Classes="settings-accent-button" Content="{Binding CheckButtonText}" Command="{Binding CheckCommand}" IsVisible="{Binding CanCheck}" VerticalAlignment="Center" Margin="16,0,0,0" />
+            <Button Grid.Column="2"
+                    Classes="settings-accent-button"
+                    Content="{Binding CheckButtonText}"
+                    Command="{Binding CheckCommand}"
+                    IsVisible="{Binding CanCheck}"
+                    VerticalAlignment="Center"
+                    Margin="12,0,0,0" />
           </Grid>
 
           <StackPanel IsVisible="{Binding IsProgressSectionVisible}" Spacing="12">
@@ -110,37 +118,16 @@
           <StackPanel Spacing="2" Margin="0,16,0,0">
             <TextBlock Classes="settings-section-description" Text="{Binding PreferencesDescription}" Margin="0,0,0,12" />
 
-            <ui:FASettingsExpander Classes="settings-expander-card" Header="{Binding ChannelLabel}" Description="{Binding ChannelDescription}">
+            <ui:FASettingsExpander Classes="settings-expander-card" Header="{Binding SmartUpdateLabel}" Description="{Binding SmartUpdateDescription}">
               <ui:FASettingsExpander.IconSource>
                 <ui:FAFontIconSource Glyph="&#xF0908;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
               </ui:FASettingsExpander.IconSource>
               <ui:FASettingsExpander.Footer>
-                <ComboBox Width="220" ItemsSource="{Binding ChannelOptions}" SelectedItem="{Binding SelectedChannel}">
-                  <ComboBox.ItemTemplate>
-                    <DataTemplate x:DataType="vm:SelectionOption">
-                      <TextBlock Text="{Binding Label}" />
-                    </DataTemplate>
-                  </ComboBox.ItemTemplate>
-                </ComboBox>
+                <ToggleSwitch IsChecked="{Binding SmartUpdateEnabled}" OnContent="{Binding SmartUpdateOnText}" OffContent="{Binding SmartUpdateOffText}" />
               </ui:FASettingsExpander.Footer>
             </ui:FASettingsExpander>
 
-            <ui:FASettingsExpander Classes="settings-expander-card" Header="{Binding SourceLabel}" Description="{Binding SourceDescription}">
-              <ui:FASettingsExpander.IconSource>
-                <ui:FAFontIconSource Glyph="&#xF0168;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-              </ui:FASettingsExpander.IconSource>
-              <ui:FASettingsExpander.Footer>
-                <ComboBox Width="220" ItemsSource="{Binding SourceOptions}" SelectedItem="{Binding SelectedSource}">
-                  <ComboBox.ItemTemplate>
-                    <DataTemplate x:DataType="vm:SelectionOption">
-                      <TextBlock Text="{Binding Label}" />
-                    </DataTemplate>
-                  </ComboBox.ItemTemplate>
-                </ComboBox>
-              </ui:FASettingsExpander.Footer>
-            </ui:FASettingsExpander>
-
-            <ui:FASettingsExpander Classes="settings-expander-card" Header="{Binding ModeLabel}" Description="{Binding ModeDescription}">
+            <ui:FASettingsExpander Classes="settings-expander-card" Header="{Binding ModeLabel}" Description="{Binding ModeDescription}" IsVisible="{Binding SmartUpdateEnabled}">
               <ui:FASettingsExpander.IconSource>
                 <ui:FAFontIconSource Glyph="&#xF08E8;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
               </ui:FASettingsExpander.IconSource>

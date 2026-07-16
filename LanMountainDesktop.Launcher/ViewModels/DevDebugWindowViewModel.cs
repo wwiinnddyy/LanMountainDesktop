@@ -11,7 +11,6 @@ public sealed class DevDebugWindowViewModel : INotifyPropertyChanged
 {
     private bool _isSplashEnabled = true;
     private bool _isErrorEnabled = true;
-    private bool _isUpdateEnabled = true;
     private bool _isOobeEnabled = true;
     private bool _isDataLocationEnabled = true;
     private string _statusMessage = "就绪";
@@ -50,23 +49,6 @@ public sealed class DevDebugWindowViewModel : INotifyPropertyChanged
                 _isErrorEnabled = value;
                 OnPropertyChanged();
                 UpdateStatus($"错误页面: {(value ? "功能模式" : "仅查看")}");
-            }
-        }
-    }
-
-    /// <summary>
-    /// 更新页面是否启用实际功能
-    /// </summary>
-    public bool IsUpdateEnabled
-    {
-        get => _isUpdateEnabled;
-        set
-        {
-            if (_isUpdateEnabled != value)
-            {
-                _isUpdateEnabled = value;
-                OnPropertyChanged();
-                UpdateStatus($"更新页面: {(value ? "功能模式" : "仅查看")}");
             }
         }
     }
@@ -140,11 +122,6 @@ public sealed class DevDebugWindowViewModel : INotifyPropertyChanged
     public ICommand OpenErrorCommand { get; }
 
     /// <summary>
-    /// 打开更新页面命令
-    /// </summary>
-    public ICommand OpenUpdateCommand { get; }
-
-    /// <summary>
     /// 打开OOBE页面命令
     /// </summary>
     public ICommand OpenOobeCommand { get; }
@@ -184,11 +161,6 @@ public sealed class DevDebugWindowViewModel : INotifyPropertyChanged
     public event EventHandler<ErrorOpenEventArgs>? OpenErrorRequested;
 
     /// <summary>
-    /// 请求打开更新页面
-    /// </summary>
-    public event EventHandler<UpdateOpenEventArgs>? OpenUpdateRequested;
-
-    /// <summary>
     /// 请求打开OOBE页面
     /// </summary>
     public event EventHandler<OobeOpenEventArgs>? OpenOobeRequested;
@@ -217,11 +189,6 @@ public sealed class DevDebugWindowViewModel : INotifyPropertyChanged
             OpenErrorRequested?.Invoke(this, new ErrorOpenEventArgs(IsErrorEnabled));
         });
 
-        OpenUpdateCommand = new RelayCommand(() =>
-        {
-            OpenUpdateRequested?.Invoke(this, new UpdateOpenEventArgs(IsUpdateEnabled));
-        });
-
         OpenOobeCommand = new RelayCommand(() =>
         {
             OpenOobeRequested?.Invoke(this, new OobeOpenEventArgs(IsOobeEnabled));
@@ -236,7 +203,6 @@ public sealed class DevDebugWindowViewModel : INotifyPropertyChanged
         {
             IsSplashEnabled = false;
             IsErrorEnabled = false;
-            IsUpdateEnabled = false;
             IsOobeEnabled = false;
             IsDataLocationEnabled = false;
             UpdateStatus("全部页面已切换到查看模式");
@@ -246,7 +212,6 @@ public sealed class DevDebugWindowViewModel : INotifyPropertyChanged
         {
             IsSplashEnabled = true;
             IsErrorEnabled = true;
-            IsUpdateEnabled = true;
             IsOobeEnabled = true;
             IsDataLocationEnabled = true;
             UpdateStatus("全部页面已切换到功能模式");
@@ -281,12 +246,6 @@ public class ErrorOpenEventArgs : EventArgs
 {
     public bool IsFunctional { get; }
     public ErrorOpenEventArgs(bool isFunctional) => IsFunctional = isFunctional;
-}
-
-public class UpdateOpenEventArgs : EventArgs
-{
-    public bool IsFunctional { get; }
-    public UpdateOpenEventArgs(bool isFunctional) => IsFunctional = isFunctional;
 }
 
 public class OobeOpenEventArgs : EventArgs

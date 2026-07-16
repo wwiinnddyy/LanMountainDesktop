@@ -74,7 +74,7 @@ Air APP 独立应用开发指南
 - **Avalonia UI 12** - 跨平台 UI 框架
 - **FluentAvalonia** - Fluent Design 控件库
 - **CommunityToolkit.Mvvm** - MVVM 框架
-- **VeloPack** - 应用更新系统
+- **PLONDS** - 应用增量更新与分发系统
 - **dotnetCampus.Ipc** - 进程间通信
 
 ## 📖 相关资源

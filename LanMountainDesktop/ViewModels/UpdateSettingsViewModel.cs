@@ -63,10 +63,10 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private string _publishedAtLabel = string.Empty;
     [ObservableProperty] private string _lastCheckedLabel = string.Empty;
     [ObservableProperty] private string _updateTypeLabel = string.Empty;
-    [ObservableProperty] private string _channelLabel = string.Empty;
-    [ObservableProperty] private string _channelDescription = string.Empty;
-    [ObservableProperty] private string _sourceLabel = string.Empty;
-    [ObservableProperty] private string _sourceDescription = string.Empty;
+    [ObservableProperty] private string _smartUpdateLabel = string.Empty;
+    [ObservableProperty] private string _smartUpdateDescription = string.Empty;
+    [ObservableProperty] private string _smartUpdateOnText = string.Empty;
+    [ObservableProperty] private string _smartUpdateOffText = string.Empty;
     [ObservableProperty] private string _modeLabel = string.Empty;
     [ObservableProperty] private string _modeDescription = string.Empty;
     [ObservableProperty] private string _downloadThreadsLabel = string.Empty;
@@ -99,17 +99,12 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private bool _isDeltaUpdate;
     [ObservableProperty] private bool _forceReinstall;
 
-    [ObservableProperty] private string _selectedUpdateChannelValue = UpdateSettingsValues.ChannelStable;
-    [ObservableProperty] private string _selectedUpdateSourceValue = UpdateSettingsValues.DownloadSourcePlonds;
+    [ObservableProperty] private bool _smartUpdateEnabled = true;
     [ObservableProperty] private string _selectedUpdateModeValue = UpdateSettingsValues.ModeSilentDownload;
     [ObservableProperty] private double _downloadThreadsSliderValue = UpdateSettingsValues.DefaultDownloadThreads;
 
-    [ObservableProperty] private SelectionOption? _selectedChannel;
-    [ObservableProperty] private SelectionOption? _selectedSource;
     [ObservableProperty] private SelectionOption? _selectedMode;
 
-    public IReadOnlyList<SelectionOption> ChannelOptions { get; private set; } = [];
-    public IReadOnlyList<SelectionOption> SourceOptions { get; private set; } = [];
     public IReadOnlyList<SelectionOption> ModeOptions { get; private set; } = [];
 
     public bool IsBusy => CurrentPhase.IsBusy();
@@ -159,35 +154,28 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
         DownloadCommand.NotifyCanExecuteChanged();
     }
 
-    partial void OnSelectedUpdateChannelValueChanged(string value)
+    partial void OnSmartUpdateEnabledChanged(bool value)
     {
-        SavePreferenceState();
-    }
+        // Off => manual only; On => keep last non-manual mode or silent download.
+        if (!value)
+        {
+            SelectedUpdateModeValue = UpdateSettingsValues.ModeManual;
+        }
+        else if (string.Equals(SelectedUpdateModeValue, UpdateSettingsValues.ModeManual, StringComparison.OrdinalIgnoreCase))
+        {
+            SelectedUpdateModeValue = UpdateSettingsValues.ModeSilentDownload;
+        }
 
-    partial void OnSelectedUpdateSourceValueChanged(string value)
-    {
         SavePreferenceState();
+        SyncComboBoxSelections();
+        OnPropertyChanged(nameof(CanCheck));
+        CheckCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnSelectedUpdateModeValueChanged(string value)
     {
+        SmartUpdateEnabled = !string.Equals(value, UpdateSettingsValues.ModeManual, StringComparison.OrdinalIgnoreCase);
         SavePreferenceState();
-    }
-
-    partial void OnSelectedChannelChanged(SelectionOption? value)
-    {
-        if (value is not null)
-        {
-            SelectedUpdateChannelValue = value.Value;
-        }
-    }
-
-    partial void OnSelectedSourceChanged(SelectionOption? value)
-    {
-        if (value is not null)
-        {
-            SelectedUpdateSourceValue = value.Value;
-        }
     }
 
     partial void OnSelectedModeChanged(SelectionOption? value)
@@ -402,9 +390,8 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
         _suppressPreferenceSave = true;
         try
         {
-            SelectedUpdateChannelValue = state.UpdateChannel;
-            SelectedUpdateSourceValue = state.UpdateDownloadSource;
             SelectedUpdateModeValue = state.UpdateMode;
+            SmartUpdateEnabled = !string.Equals(state.UpdateMode, UpdateSettingsValues.ModeManual, StringComparison.OrdinalIgnoreCase);
             DownloadThreadsSliderValue = UpdateSettingsValues.NormalizeDownloadThreads(state.UpdateDownloadThreads);
             ForceReinstall = state.ForceUpdateReinstall;
             ApplyPersistedUpdateState(state);
@@ -450,70 +437,62 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
 
     private void SyncComboBoxSelections()
     {
-        SelectedChannel = ChannelOptions.FirstOrDefault(o => o.Value == SelectedUpdateChannelValue)
-            ?? ChannelOptions.FirstOrDefault();
-        SelectedSource = SourceOptions.FirstOrDefault(o => o.Value == SelectedUpdateSourceValue)
-            ?? SourceOptions.FirstOrDefault();
         SelectedMode = ModeOptions.FirstOrDefault(o => o.Value == SelectedUpdateModeValue)
             ?? ModeOptions.FirstOrDefault();
     }
 
     private void RefreshLocalizedText()
     {
-        PageTitle = L("settings.update.title", "Update");
-        PageDescription = L("settings.update.description", "Check releases, choose the update channel and download source, and control how updates are installed.");
-        StatusSectionHeader = L("settings.update.status_section_header", "Update Status");
-        CheckCardTitle = L("settings.update.check_card_title", "Check for Updates");
-        StatusCardTitle = L("settings.update.status_card_title", "Update Status");
-        StatusCardDescription = L("settings.update.status_card_description", "Check for updates, review release details, and continue with download or installation when a new version is available.");
-        ReleaseFactsTitle = L("settings.update.release_facts_title", "Release Facts");
-        ReleaseFactsDescription = L("settings.update.release_facts_description", "Keep the current version, published release, and update type visible without collapsing the layout while states change.");
-        ProgressTitle = L("settings.update.progress_title", "Progress");
-        ProgressDescription = L("settings.update.progress_description", "Watch download, installation, verification, and recovery progress here.");
-        ActionsTitle = L("settings.update.actions_title", "Actions");
-        ActionsDescription = L("settings.update.actions_description", "The buttons below stay in place while the update phase changes, so the page does not jump around.");
-        PreferencesTitle = L("settings.update.preferences_title", "Update Preferences");
-        PreferencesDescription = L("settings.update.preferences_description", "Choose the release channel, installer download source, installation behavior, and download parallelism.");
+        PageTitle = L("settings.update.title", "更新");
+        PageDescription = L("settings.update.description", "通过智慧更新检查并安装正式版。下载源由系统自动使用 S3/CDN，无需手动选择渠道。");
+        StatusSectionHeader = L("settings.update.status_section_header", "更新状态");
+        CheckCardTitle = L("settings.update.check_card_title", "检查更新");
+        StatusCardTitle = L("settings.update.status_card_title", "更新状态");
+        StatusCardDescription = L("settings.update.status_card_description", "检查更新，查看版本信息，并在有新版本时继续下载或安装。");
+        ReleaseFactsTitle = L("settings.update.release_facts_title", "版本信息");
+        ReleaseFactsDescription = L("settings.update.release_facts_description", "显示当前版本、最新发布与更新类型。");
+        ProgressTitle = L("settings.update.progress_title", "进度");
+        ProgressDescription = L("settings.update.progress_description", "在此查看下载、安装、校验与恢复进度。");
+        ActionsTitle = L("settings.update.actions_title", "操作");
+        ActionsDescription = L("settings.update.actions_description", "操作按钮会随更新阶段变化，布局保持稳定。");
+        PreferencesTitle = L("settings.update.preferences_title", "更新偏好");
+        PreferencesDescription = L("settings.update.preferences_description", "开启智慧更新后，系统会自动从官方 CDN 获取增量或全量更新包。");
 
-        CurrentVersionLabel = L("settings.update.current_version_label", "Current Version");
-        LatestVersionLabel = L("settings.update.latest_version_label", "Latest Release");
-        PublishedAtLabel = L("settings.update.published_at_label", "Published At");
-        LastCheckedLabel = L("settings.update.last_checked_label", "Last Checked");
-        UpdateTypeLabel = L("settings.update.update_type_label", "Update Type");
-        ChannelLabel = L("settings.update.channel_label", "Update Channel");
-        ChannelDescription = L("settings.update.channel_description", "Choose Stable for regular releases or Preview for earlier builds.");
-        SourceLabel = L("settings.update.source_label", "Download Source");
-        SourceDescription = L("settings.update.source_description", "Select the manifest and installer source used by the update workflow.");
-        ModeLabel = L("settings.update.mode_label", "Update Mode");
-        ModeDescription = L("settings.update.mode_description", "Manual never downloads or installs automatically. Silent Download downloads in the background. Silent Install downloads in the background and applies on exit.");
-        DownloadThreadsLabel = L("settings.update.download_threads_label", "Download Threads");
-        DownloadThreadsDescription = L("settings.update.download_threads_description", "Select how many parallel threads are used for update downloads. Paused downloads can be resumed later.");
-        ForceReinstallLabel = L("settings.update.force_reinstall_label", "Force Reinstall");
-        ForceReinstallDescription = L("settings.update.force_reinstall_description", "Download the full payload for the selected version and mark this run as a reinstall instead of an incremental update.");
-        ResumeSupportLabel = L("settings.update.resume_support_label", "Resume Support");
-        ResumeSupportDescription = L("settings.update.resume_support_description", "Downloads keep partial files and package metadata, so Pause and Resume continue from the previous state when the server supports it.");
-        TransferControlsTitle = L("settings.update.transfer_controls_title", "Transfer Controls");
-        TransferControlsDescription = L("settings.update.transfer_controls_description", "Pause a running download, resume it from the saved state, or cancel and clear pending update artifacts.");
+        CurrentVersionLabel = L("settings.update.current_version_label", "当前版本");
+        LatestVersionLabel = L("settings.update.latest_version_label", "最新版本");
+        PublishedAtLabel = L("settings.update.published_at_label", "发布时间");
+        LastCheckedLabel = L("settings.update.last_checked_label", "上次检查");
+        UpdateTypeLabel = L("settings.update.update_type_label", "更新类型");
+        SmartUpdateLabel = L("settings.update.smart_update_label", "智慧更新");
+        SmartUpdateDescription = L("settings.update.smart_update_description", "开启后自动检查更新：优先官方 S3/CDN，失败时回退 GitHub（含全量重装），无需手动选择渠道。");
+        SmartUpdateOnText = L("settings.update.smart_update_on", "开");
+        SmartUpdateOffText = L("settings.update.smart_update_off", "关");
+        ModeLabel = L("settings.update.mode_label", "更新方式");
+        ModeDescription = L("settings.update.mode_description", "手动：不自动下载安装。静默下载：后台下载后确认安装。静默安装：后台下载并在退出时应用。");
+        DownloadThreadsLabel = L("settings.update.download_threads_label", "下载线程");
+        DownloadThreadsDescription = L("settings.update.download_threads_description", "更新下载使用的并行线程数。");
+        ForceReinstallLabel = L("settings.update.force_reinstall_label", "强制全量重装");
+        ForceReinstallDescription = L("settings.update.force_reinstall_description", "忽略增量包，始终从官方 CDN 下载完整 Files.zip 并重建部署目录。");
+        ResumeSupportLabel = L("settings.update.resume_support_label", "断点续传");
+        ResumeSupportDescription = L("settings.update.resume_support_description", "下载会保留临时文件与元数据，可在支持的情况下从中断处继续。");
+        TransferControlsTitle = L("settings.update.transfer_controls_title", "传输控制");
+        TransferControlsDescription = L("settings.update.transfer_controls_description", "暂停、继续或取消当前更新传输。");
 
-        UpdateAvailableBadgeText = L("settings.update.badge_available", "Update available");
-        PausedBadgeText = L("settings.update.badge_paused", "Paused");
-        PausedHintText = L("settings.update.paused_hint", "Paused. Resume to continue from the current state.");
+        UpdateAvailableBadgeText = L("settings.update.badge_available", "有可用更新");
+        PausedBadgeText = L("settings.update.badge_paused", "已暂停");
+        PausedHintText = L("settings.update.paused_hint", "已暂停。继续后可从当前进度恢复。");
 
-        CheckButtonText = L("settings.update.check_button_short", "Check");
-        DownloadButtonText = L("settings.update.download_button_short", "Download");
-        InstallButtonText = L("settings.update.install_button_short", "Install");
-        PauseButtonText = L("settings.update.pause_button_short", "Pause");
-        ResumeButtonText = L("settings.update.resume_button_short", "Resume");
-        RollbackButtonText = L("settings.update.rollback_button_short", "Rollback");
-        CancelButtonText = L("settings.update.cancel_button_short", "Cancel");
+        CheckButtonText = L("settings.update.check_button_short", "检查");
+        DownloadButtonText = L("settings.update.download_button_short", "下载");
+        InstallButtonText = L("settings.update.install_button_short", "安装");
+        PauseButtonText = L("settings.update.pause_button_short", "暂停");
+        ResumeButtonText = L("settings.update.resume_button_short", "继续");
+        RollbackButtonText = L("settings.update.rollback_button_short", "回滚");
+        CancelButtonText = L("settings.update.cancel_button_short", "取消");
 
-        LastCheckedText = L("settings.update.last_checked_none", "Not checked yet.");
+        LastCheckedText = L("settings.update.last_checked_none", "尚未检查。");
 
-        ChannelOptions = CreateChannelOptions();
-        SourceOptions = CreateSourceOptions();
         ModeOptions = CreateModeOptions();
-        OnPropertyChanged(nameof(ChannelOptions));
-        OnPropertyChanged(nameof(SourceOptions));
         OnPropertyChanged(nameof(ModeOptions));
 
         SyncComboBoxSelections();
@@ -522,32 +501,12 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(LatestVersionDisplayText));
     }
 
-    private IReadOnlyList<SelectionOption> CreateChannelOptions()
-    {
-        return
-        [
-            new(UpdateSettingsValues.ChannelStable, L("settings.update.channel_stable", "Stable")),
-            new(UpdateSettingsValues.ChannelPreview, L("settings.update.channel_preview", "Preview"))
-        ];
-    }
-
-    private IReadOnlyList<SelectionOption> CreateSourceOptions()
-    {
-        return
-        [
-            new(UpdateSettingsValues.DownloadSourcePlonds, L("settings.update.source_plonds", "Plonds CDN")),
-            new(UpdateSettingsValues.DownloadSourceGitHub, L("settings.update.source_github", "GitHub")),
-            new(UpdateSettingsValues.DownloadSourceGhProxy, L("settings.update.source_gh_proxy", "GitHub Proxy"))
-        ];
-    }
-
     private IReadOnlyList<SelectionOption> CreateModeOptions()
     {
         return
         [
-            new(UpdateSettingsValues.ModeManual, L("settings.update.mode_manual", "Manual: no automatic download or install")),
-            new(UpdateSettingsValues.ModeSilentDownload, L("settings.update.mode_silent_download", "Silent Download")),
-            new(UpdateSettingsValues.ModeSilentInstall, L("settings.update.mode_silent_install", "Silent Install"))
+            new(UpdateSettingsValues.ModeSilentDownload, L("settings.update.mode_silent_download", "静默下载")),
+            new(UpdateSettingsValues.ModeSilentInstall, L("settings.update.mode_silent_install", "静默安装"))
         ];
     }
 
@@ -558,14 +517,24 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
             return;
         }
 
+        var mode = SmartUpdateEnabled
+            ? UpdateSettingsValues.NormalizeMode(SelectedUpdateModeValue)
+            : UpdateSettingsValues.ModeManual;
+        if (SmartUpdateEnabled && string.Equals(mode, UpdateSettingsValues.ModeManual, StringComparison.OrdinalIgnoreCase))
+        {
+            mode = UpdateSettingsValues.ModeSilentDownload;
+        }
+
         var current = _updateSettingsService.Get();
         _updateSettingsService.Save(current with
         {
-            UpdateChannel = SelectedUpdateChannelValue,
-            UpdateDownloadSource = SelectedUpdateSourceValue,
-            UpdateMode = SelectedUpdateModeValue,
+            UpdateChannel = UpdateSettingsValues.ChannelStable,
+            UpdateDownloadSource = UpdateSettingsValues.DownloadSourcePlonds,
+            UpdateMode = mode,
             UpdateDownloadThreads = UpdateSettingsValues.NormalizeDownloadThreads((int)Math.Round(DownloadThreadsSliderValue)),
-            ForceUpdateReinstall = ForceReinstall
+            ForceUpdateReinstall = ForceReinstall,
+            IncludePrereleaseUpdates = false
+            // UseGhProxyMirror: keep existing value; only used when falling back to GitHub full installer.
         });
     }
 
