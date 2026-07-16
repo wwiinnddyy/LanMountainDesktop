@@ -22,9 +22,6 @@ internal static class PreviewEntryHandler
             case "preview-multi-instance":
                 RunMultiInstancePreview(desktop);
                 return true;
-            case "preview-update":
-                RunUpdatePreview(desktop);
-                return true;
             case "preview-oobe":
                 RunOobePreview(desktop);
                 return true;
@@ -60,14 +57,6 @@ internal static class PreviewEntryHandler
         _ = WaitForWindowCloseAsync(desktop, promptWindow);
     }
 
-    private static void RunUpdatePreview(IClassicDesktopStyleApplicationLifetime desktop)
-    {
-        var updateWindow = new UpdateWindow();
-        updateWindow.SetDebugMode(true);
-        updateWindow.Show();
-        _ = SimulateUpdatePreviewAsync(desktop, updateWindow);
-    }
-
     private static void RunOobePreview(IClassicDesktopStyleApplicationLifetime desktop)
     {
         var oobeWindow = new OobeWindow();
@@ -77,11 +66,10 @@ internal static class PreviewEntryHandler
 
     private static async Task SimulateSplashPreviewAsync(IClassicDesktopStyleApplicationLifetime desktop, SplashWindow window)
     {
-        var stages = new[] { "initializing", "update", "plugins", "launch", "ready" };
+        var stages = new[] { "initializing", "plugins", "launch", "ready" };
         var messages = new[]
         {
             Strings.Preview_SplashInitializing,
-            Strings.Preview_SplashCheckingUpdates,
             Strings.Preview_SplashCheckingPlugins,
             Strings.Preview_SplashLaunchingHost,
             Strings.Preview_SplashReady
@@ -95,20 +83,6 @@ internal static class PreviewEntryHandler
         }
 
         await Task.Delay(5000).ConfigureAwait(false);
-        await Dispatcher.UIThread.InvokeAsync(() => desktop.Shutdown(0));
-    }
-
-    private static async Task SimulateUpdatePreviewAsync(IClassicDesktopStyleApplicationLifetime desktop, UpdateWindow window)
-    {
-        var stages = new[] { "verify", "extract", "apply", "plugins", "cleanup" };
-        for (var i = 0; i < stages.Length; i++)
-        {
-            window.Report(stages[i], string.Format(Strings.Preview_UpdateProcessing, stages[i]), (i + 1) * 20);
-            await Task.Delay(600).ConfigureAwait(false);
-        }
-
-        window.ReportComplete(true, null);
-        await Task.Delay(3000).ConfigureAwait(false);
         await Dispatcher.UIThread.InvokeAsync(() => desktop.Shutdown(0));
     }
 

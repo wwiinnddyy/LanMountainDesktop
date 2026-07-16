@@ -10,6 +10,4 @@ namespace LanMountainDesktop.Services.Update;
     PropertyNameCaseInsensitive = true)]
 [JsonSerializable(typeof(InstallProgressReport))]
 [JsonSerializable(typeof(InstallCompleteReport))]
-[JsonSerializable(typeof(InstallRequest))]
-[JsonSerializable(typeof(LaunchResult))]
 internal sealed partial class UpdateJsonContext : JsonSerializerContext;

@@ -846,37 +846,32 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
     public UpdateSettingsState Get()
     {
         var snapshot = _settingsService.Load();
-        var normalizedChannel = UpdateSettingsValues.NormalizeChannel(
-            snapshot.UpdateChannel,
-            snapshot.IncludePrereleaseUpdates);
+        // 智慧更新：检查/下载默认走 PLONDS（S3 优先）；GitHub 仅作自动回退。
+        // UseGhProxyMirror 仅影响 GitHub 全量安装包回退路径，不作为用户“下载源”选项暴露。
         return new UpdateSettingsState(
-            string.Equals(normalizedChannel, UpdateSettingsValues.ChannelPreview, StringComparison.OrdinalIgnoreCase),
-            normalizedChannel,
-            UpdateSettingsValues.NormalizeMode(snapshot.UpdateMode),
-            UpdateSettingsValues.NormalizeDownloadSource(snapshot.UpdateDownloadSource),
-            UpdateSettingsValues.NormalizeDownloadThreads(snapshot.UpdateDownloadThreads),
-            snapshot.ForceUpdateReinstall,
-            snapshot.UseGhProxyMirror,
-            snapshot.PendingUpdateInstallerPath,
-            snapshot.PendingUpdateVersion,
-            snapshot.PendingUpdatePublishedAtUtcMs,
-            snapshot.LastUpdateCheckUtcMs,
-            snapshot.PendingUpdateSha256);
+            IncludePrereleaseUpdates: false,
+            UpdateChannel: UpdateSettingsValues.ChannelStable,
+            UpdateMode: UpdateSettingsValues.NormalizeMode(snapshot.UpdateMode),
+            UpdateDownloadSource: UpdateSettingsValues.DownloadSourcePlonds,
+            UpdateDownloadThreads: UpdateSettingsValues.NormalizeDownloadThreads(snapshot.UpdateDownloadThreads),
+            ForceUpdateReinstall: snapshot.ForceUpdateReinstall,
+            UseGhProxyMirror: snapshot.UseGhProxyMirror,
+            PendingUpdateInstallerPath: snapshot.PendingUpdateInstallerPath,
+            PendingUpdateVersion: snapshot.PendingUpdateVersion,
+            PendingUpdatePublishedAtUtcMs: snapshot.PendingUpdatePublishedAtUtcMs,
+            LastUpdateCheckUtcMs: snapshot.LastUpdateCheckUtcMs,
+            PendingUpdateSha256: snapshot.PendingUpdateSha256);
     }
 
     public void Save(UpdateSettingsState state)
     {
         var snapshot = _settingsService.Load();
-        var normalizedChannel = UpdateSettingsValues.NormalizeChannel(
-            state.UpdateChannel,
-            state.IncludePrereleaseUpdates);
-        snapshot.IncludePrereleaseUpdates = string.Equals(
-            normalizedChannel,
-            UpdateSettingsValues.ChannelPreview,
-            StringComparison.OrdinalIgnoreCase);
+        // 智慧更新：固定 stable + PLONDS 主路径；GitHub 仅自动回退，不作为用户可选源。
+        var normalizedChannel = UpdateSettingsValues.ChannelStable;
+        snapshot.IncludePrereleaseUpdates = false;
         snapshot.UpdateChannel = normalizedChannel;
         snapshot.UpdateMode = UpdateSettingsValues.NormalizeMode(state.UpdateMode);
-        snapshot.UpdateDownloadSource = UpdateSettingsValues.NormalizeDownloadSource(state.UpdateDownloadSource);
+        snapshot.UpdateDownloadSource = UpdateSettingsValues.DownloadSourcePlonds;
         snapshot.UpdateDownloadThreads = UpdateSettingsValues.NormalizeDownloadThreads(state.UpdateDownloadThreads);
         snapshot.ForceUpdateReinstall = state.ForceUpdateReinstall;
         snapshot.UseGhProxyMirror = state.UseGhProxyMirror;
@@ -1111,7 +1106,9 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         SaveLastChecked();
 
         var payloadKind = latest.IsUpdateAvailable
-            ? _pendingPlondsCleanInstallCandidate is not null
+            ? (_pendingPlondsCleanInstallCandidate is not null ||
+               latest.Candidates.Any(c => c.Manifest.IsFullUpdate || c.Manifest.RequiresCleanInstall) ||
+               Get().ForceUpdateReinstall)
                 ? UpdatePayloadKind.FullInstaller
                 : UpdatePayloadKind.DeltaPlonds
             : (UpdatePayloadKind?)null;
@@ -1138,27 +1135,49 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
 
         if (_pendingPlondsLatest is null || !_pendingPlondsLatest.IsUpdateAvailable)
         {
-            return new LanMountainDesktop.Services.Update.DownloadResult(false, null, "No PLONDS update is pending.", false);
+            return new LanMountainDesktop.Services.Update.DownloadResult(false, null, "没有待下载的智慧更新。", false);
         }
 
         var currentVersion = _pendingPlondsLatest.CurrentVersion;
-        if (_pendingPlondsCleanInstallCandidate is not null)
-        {
-            return await DownloadPlondsCleanInstallAsync(_pendingPlondsCleanInstallCandidate, cancellationToken).ConfigureAwait(false);
-        }
+        var forceFull = Get().ForceUpdateReinstall ||
+                        _pendingPlondsCleanInstallCandidate is not null ||
+                        _pendingPlondsLatest.Candidates.Any(c => c.Manifest.IsFullUpdate || c.Manifest.RequiresCleanInstall);
 
         TransitionPlonds(UpdatePhase.Downloading);
-        var result = await _plondsService.FindAndPrepareLatestAsync(currentVersion, cancellationToken).ConfigureAwait(false);
-        if (!result.Success || result.Package is null)
+
+        // 1) Prefer PLONDS packages (S3 first, then GitHub PLONDS mirrors inside the service).
+        var result = await _plondsService
+            .FindAndPrepareLatestAsync(currentVersion, forceFull, cancellationToken)
+            .ConfigureAwait(false);
+        if (result.Success && result.Package is not null)
         {
-            TransitionPlonds(UpdatePhase.Failed);
-            return new LanMountainDesktop.Services.Update.DownloadResult(false, null, result.ErrorMessage ?? "PLONDS package preparation failed.", false);
+            _pendingPlondsInstallerManifest = null;
+            _pendingPlondsPackage = result.Package;
+            TransitionPlonds(UpdatePhase.Downloaded);
+            SavePendingPlondsPackage(result.Package);
+            return new LanMountainDesktop.Services.Update.DownloadResult(true, result.Package.ManifestPath, null, true);
         }
 
-        _pendingPlondsPackage = result.Package;
-        TransitionPlonds(UpdatePhase.Downloaded);
-        SavePendingPlondsPackage(result.Package);
-        return new LanMountainDesktop.Services.Update.DownloadResult(true, result.Package.ManifestPath, null, true);
+        // 2) Full / clean / force reinstall: fall back to GitHub release installer assets.
+        if (forceFull)
+        {
+            var fallbackCandidate = _pendingPlondsCleanInstallCandidate
+                                    ?? _pendingPlondsLatest.Candidates.FirstOrDefault();
+            if (fallbackCandidate is not null)
+            {
+                AppLogger.Info(
+                    "UpdateWorkflow",
+                    $"PLONDS package prepare failed; falling back to GitHub full installer. Detail: {result.ErrorMessage}");
+                return await DownloadPlondsCleanInstallAsync(fallbackCandidate, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        TransitionPlonds(UpdatePhase.Failed);
+        return new LanMountainDesktop.Services.Update.DownloadResult(
+            false,
+            null,
+            result.ErrorMessage ?? "智慧更新包准备失败（S3 优先，GitHub 回退也不可用）。",
+            false);
     }
 
     private async Task<LanMountainDesktop.Services.Update.DownloadResult> DownloadPlondsCleanInstallAsync(
@@ -1174,7 +1193,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
             return new LanMountainDesktop.Services.Update.DownloadResult(
                 false,
                 null,
-                $"PLONDS {candidate.Manifest.CurrentVersion} requires clean install, but no matching GitHub installer release was found.",
+                $"智慧更新 {candidate.Manifest.CurrentVersion} 需要全量安装，但未找到匹配的 GitHub 安装包。",
                 false);
         }
 
@@ -1186,7 +1205,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
             return new LanMountainDesktop.Services.Update.DownloadResult(
                 false,
                 null,
-                $"PLONDS {candidate.Manifest.CurrentVersion} requires clean install, but GitHub release has no usable installer asset.",
+                $"智慧更新 {candidate.Manifest.CurrentVersion} 需要全量安装，但 GitHub Release 没有可用安装包资源。",
                 false);
         }
 
@@ -1215,23 +1234,28 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
                 null));
         });
 
-        var result = await _githubReleaseUpdateService.DownloadAssetAsync(
+        // Prefer direct GitHub; if user still has gh-proxy preference in snapshot, honor it for installer only.
+        var downloadSource = Get().UseGhProxyMirror
+            ? UpdateSettingsValues.DownloadSourceGhProxy
+            : UpdateSettingsValues.DownloadSourceGitHub;
+
+        var download = await _githubReleaseUpdateService.DownloadAssetAsync(
                 asset,
                 destinationPath,
-                UpdateSettingsValues.DownloadSourceGitHub,
+                downloadSource,
                 maxThreads,
                 progress,
                 cancellationToken)
             .ConfigureAwait(false);
 
-        if (!result.Success || string.IsNullOrWhiteSpace(result.FilePath))
+        if (!download.Success || string.IsNullOrWhiteSpace(download.FilePath))
         {
             TransitionPlonds(UpdatePhase.Failed);
             return new LanMountainDesktop.Services.Update.DownloadResult(
                 false,
-                result.FilePath,
-                result.ErrorMessage ?? "Failed to download GitHub installer for PLONDS clean install.",
-                result.HashVerified);
+                download.FilePath,
+                download.ErrorMessage ?? "从 GitHub 下载全量安装包失败。",
+                download.HashVerified);
         }
 
         var launcherRoot = UpdatePaths.ResolveLauncherRoot(AppContext.BaseDirectory);
@@ -1239,15 +1263,15 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
             SchemaVersion: 1,
             Kind: "full",
             TargetVersion: manifest.ToVersion,
-            PayloadPath: result.FilePath,
-            PayloadSha256: result.ExpectedHash,
+            PayloadPath: download.FilePath,
+            PayloadSha256: download.ExpectedHash,
             CreatedAtUtc: DateTimeOffset.UtcNow));
 
         _pendingPlondsInstallerManifest = manifest;
         _pendingPlondsPackage = null;
         TransitionPlonds(UpdatePhase.Downloaded);
-        SavePendingPlondsInstaller(manifest, result.FilePath, result.ExpectedHash);
-        return new LanMountainDesktop.Services.Update.DownloadResult(true, result.FilePath, null, result.HashVerified);
+        SavePendingPlondsInstaller(manifest, download.FilePath, download.ExpectedHash);
+        return new LanMountainDesktop.Services.Update.DownloadResult(true, download.FilePath, null, download.HashVerified);
     }
 
     private Task PausePlondsAsync()
@@ -1274,6 +1298,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
             return new InstallResult(false, $"Cannot install in phase {_plondsPhase}.", false, "invalid_phase");
         }
 
+        // GitHub full installer path (fallback after S3/PLONDS package failure).
         if (_pendingPlondsInstallerManifest is not null)
         {
             return await InstallPlondsCleanInstallAsync(cancellationToken).ConfigureAwait(false);
@@ -1281,7 +1306,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
 
         if (_pendingPlondsPackage is null)
         {
-            return new InstallResult(false, "No PLONDS package has been prepared.", false, "staging_incomplete");
+            return new InstallResult(false, "尚未准备智慧更新包。", false, "staging_incomplete");
         }
 
         TransitionPlonds(UpdatePhase.Installing);
@@ -1353,17 +1378,12 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         }
     }
 
-    private bool IsPlondsSelected()
-    {
-        return !IsGitHubSelected();
-    }
+    /// <summary>
+    /// 智慧更新固定走 PLONDS（S3 优先）。不再允许用户切换到 GitHub 作为更新源。
+    /// </summary>
+    private bool IsPlondsSelected() => true;
 
-    private bool IsGitHubSelected()
-    {
-        var source = UpdateSettingsValues.NormalizeDownloadSource(Get().UpdateDownloadSource);
-        return string.Equals(source, UpdateSettingsValues.DownloadSourceGitHub, StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(source, UpdateSettingsValues.DownloadSourceGhProxy, StringComparison.OrdinalIgnoreCase);
-    }
+    private bool IsGitHubSelected() => false;
 
     private void TransitionPlonds(UpdatePhase phase)
     {
@@ -1459,6 +1479,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
                 return result.Success;
             }
 
+            // GitHub full-installer fallback path.
             var deploymentLock = DeploymentLockService.ReadLock(launcherRoot);
             if (!string.Equals(deploymentLock?.Kind, "full", StringComparison.OrdinalIgnoreCase))
             {
@@ -1471,7 +1492,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
                 return false;
             }
 
-            AppLogger.Info("UpdateWorkflow", "PLONDS clean-install installer pending. Launching from Host Update on exit.");
+            AppLogger.Info("UpdateWorkflow", "GitHub full installer pending. Launching from Host on exit.");
             var install = _plondsUpdateInstallGateway.InstallAsync(
                     UpdatePayloadKind.FullInstaller,
                     launcherRoot,

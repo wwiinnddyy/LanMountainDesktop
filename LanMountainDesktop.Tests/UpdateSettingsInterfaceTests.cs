@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.Input;
+﻿using CommunityToolkit.Mvvm.Input;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
@@ -100,18 +100,29 @@ public sealed class UpdateSettingsInterfaceTests
         var update = new FakeUpdateSettingsService();
         var viewModel = new UpdateSettingsViewModel(new FakeSettingsFacade(update));
 
-        viewModel.SelectedUpdateChannelValue = UpdateSettingsValues.ChannelPreview;
-        viewModel.SelectedUpdateSourceValue = UpdateSettingsValues.DownloadSourceGitHub;
-        viewModel.SelectedUpdateModeValue = UpdateSettingsValues.ModeManual;
+        viewModel.SmartUpdateEnabled = true;
+        viewModel.SelectedUpdateModeValue = UpdateSettingsValues.ModeSilentInstall;
         viewModel.DownloadThreadsSliderValue = 12;
         viewModel.ForceReinstall = true;
 
-        Assert.True(update.SaveCalls >= 5);
-        Assert.Equal(UpdateSettingsValues.ChannelPreview, update.State.UpdateChannel);
-        Assert.Equal(UpdateSettingsValues.DownloadSourceGitHub, update.State.UpdateDownloadSource);
-        Assert.Equal(UpdateSettingsValues.ModeManual, update.State.UpdateMode);
+        Assert.True(update.SaveCalls >= 3);
+        Assert.Equal(UpdateSettingsValues.ChannelStable, update.State.UpdateChannel);
+        Assert.Equal(UpdateSettingsValues.DownloadSourcePlonds, update.State.UpdateDownloadSource);
+        Assert.Equal(UpdateSettingsValues.ModeSilentInstall, update.State.UpdateMode);
         Assert.Equal(12, update.State.UpdateDownloadThreads);
         Assert.True(update.State.ForceUpdateReinstall);
+    }
+
+    [Fact]
+    public void UpdateSettingsViewModel_DisablingSmartUpdate_ForcesManualMode()
+    {
+        var update = new FakeUpdateSettingsService();
+        var viewModel = new UpdateSettingsViewModel(new FakeSettingsFacade(update));
+
+        viewModel.SmartUpdateEnabled = false;
+
+        Assert.Equal(UpdateSettingsValues.ModeManual, update.State.UpdateMode);
+        Assert.Equal(UpdateSettingsValues.DownloadSourcePlonds, update.State.UpdateDownloadSource);
     }
 
     [Fact]
@@ -236,7 +247,7 @@ public sealed class UpdateSettingsInterfaceTests
     }
 
     [Fact]
-    public async Task UpdateSettingsService_WhenGitHubSelected_UsesOrchestrator()
+    public async Task UpdateSettingsService_WhenGitHubSelectedInSnapshot_StillUsesPlondsSmartUpdate()
     {
         var settings = new FakeSettingsService
         {
@@ -245,28 +256,33 @@ public sealed class UpdateSettingsInterfaceTests
                 UpdateDownloadSource = UpdateSettingsValues.DownloadSourceGitHub
             }
         };
-        var orchestrator = CreateTestOrchestrator(DefaultUpdateState() with
+        var plonds = new FakePlondsService
         {
-            UpdateDownloadSource = UpdateSettingsValues.DownloadSourceGitHub
-        });
+            LatestResult = PlondsLatestResult.Available(
+                new Version(1, 0, 0),
+                new Version(2, 0, 0),
+                [new PlondsManifestCandidate(
+                    new PlondsSourceDescriptor("s3", "s3", "https://s3.test/PLONDS.json", 100),
+                    CreatePlondsManifest("2.0.0"))])
+        };
         var orchestratorCreated = false;
         var service = new UpdateSettingsService(
             settings,
             orchestratorFactory: () =>
             {
                 orchestratorCreated = true;
-                return orchestrator;
+                throw new InvalidOperationException("UpdateOrchestrator should not be used for smart update.");
             },
-            plondsService: new FakePlondsService());
+            plondsService: plonds);
 
-        var _ = service.CurrentPhase;
-
-        Assert.False(orchestratorCreated);
+        var state = service.Get();
+        Assert.Equal(UpdateSettingsValues.DownloadSourcePlonds, state.UpdateDownloadSource);
 
         var report = await service.CheckAsync(CancellationToken.None);
 
-        Assert.True(orchestratorCreated);
+        Assert.False(orchestratorCreated);
         Assert.True(report.IsUpdateAvailable);
+        Assert.Equal(1, plonds.FindLatestCalls);
     }
 
     [Fact]
@@ -450,6 +466,7 @@ public sealed class UpdateSettingsInterfaceTests
         public PlondsPrepareResult PrepareResult { get; set; } = PlondsPrepareResult.FailedForUi("not prepared");
         public int FindLatestCalls { get; private set; }
         public int PrepareLatestCalls { get; private set; }
+        public bool? LastForceFullPackage { get; private set; }
 
         public Task<PlondsLatestResult> FindLatestAsync(Version currentVersion, CancellationToken cancellationToken)
         {
@@ -466,6 +483,16 @@ public sealed class UpdateSettingsInterfaceTests
         public Task<PlondsPrepareResult> FindAndPrepareLatestAsync(Version currentVersion, CancellationToken cancellationToken)
         {
             PrepareLatestCalls++;
+            return Task.FromResult(PrepareResult);
+        }
+
+        public Task<PlondsPrepareResult> FindAndPrepareLatestAsync(
+            Version currentVersion,
+            bool forceFullPackage,
+            CancellationToken cancellationToken)
+        {
+            PrepareLatestCalls++;
+            LastForceFullPackage = forceFullPackage;
             return Task.FromResult(PrepareResult);
         }
     }
@@ -629,3 +656,4 @@ public sealed class UpdateSettingsInterfaceTests
         public AppRenderBackendInfo GetRenderBackendInfo() => throw new NotSupportedException();
     }
 }
+

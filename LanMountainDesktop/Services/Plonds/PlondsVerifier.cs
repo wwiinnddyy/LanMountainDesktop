@@ -18,7 +18,10 @@ internal sealed class PlondsVerifier
         var checksum = FindChecksum(checksums, checksumKeys);
         if (checksum is null)
         {
-            throw new InvalidDataException("PLONDS manifest does not declare a checksum for the package.");
+            // Some published manifests only list per-file hashes, not package zip hashes.
+            // Allow install to proceed after a successful HTTP download when zip checksum is absent.
+            AppLogger.Warn("PLONDS.Verify", $"No package checksum declared for keys [{string.Join(", ", checksumKeys)}]; skipping zip hash verification.");
+            return;
         }
 
         var (algorithm, expectedHash) = ParseChecksum(checksum);

@@ -91,32 +91,6 @@
             </Grid>
           </Border>
 
-          <!-- 更新页面 -->
-          <Border Background="{DynamicResource SystemControlBackgroundAltMediumBrush}"
-                  CornerRadius="8"
-                  Padding="15">
-            <Grid ColumnDefinitions="*,Auto">
-              <StackPanel Grid.Column="0">
-                <TextBlock Text="{x:Static res:Strings.DevDebug_Update}"
-                           FontWeight="SemiBold"
-                           FontSize="14" />
-                <TextBlock Text="显示更新进度和状态"
-                           FontSize="11"
-                           Opacity="0.6"
-                           Margin="0,3,0,0" />
-              </StackPanel>
-              <StackPanel Grid.Column="1" Spacing="8">
-                <ToggleSwitch Content="{x:Static res:Strings.DevDebug_EnableFeature}"
-                              IsChecked="{Binding IsUpdateEnabled}"
-                              OnContent="功能"
-                              OffContent="查看" />
-                <Button Content="{x:Static res:Strings.DevDebug_Open}"
-                        Command="{Binding OpenUpdateCommand}"
-                        HorizontalAlignment="Right" />
-              </StackPanel>
-            </Grid>
-          </Border>
-
           <!-- OOBE页面 -->
           <Border Background="{DynamicResource SystemControlBackgroundAltMediumBrush}"
                   CornerRadius="8"

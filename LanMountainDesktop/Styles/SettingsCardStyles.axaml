@@ -38,26 +38,30 @@
         </Style>
     </Style>
 
+    <!-- Fluent settings page title: ~20-28; keep hierarchical but not oversized vs body. -->
     <Style Selector="TextBlock.settings-section-title">
-        <Setter Property="FontSize" Value="30" />
+        <Setter Property="FontSize" Value="24" />
         <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="LineHeight" Value="32" />
         <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
-        <Setter Property="Margin" Value="0,0,0,8" />
+        <Setter Property="Margin" Value="0,0,0,6" />
     </Style>
 
     <Style Selector="TextBlock.settings-section-description">
         <Setter Property="FontSize" Value="14" />
+        <Setter Property="LineHeight" Value="20" />
         <Setter Property="Opacity" Value="0.76" />
         <Setter Property="TextWrapping" Value="Wrap" />
         <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
-        <Setter Property="Margin" Value="0,0,0,22" />
+        <Setter Property="Margin" Value="0,0,0,20" />
     </Style>
 
     <Style Selector="TextBlock.settings-subsection-title">
-        <Setter Property="FontSize" Value="15" />
+        <Setter Property="FontSize" Value="14" />
         <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="LineHeight" Value="20" />
         <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
-        <Setter Property="Margin" Value="0,18,0,10" />
+        <Setter Property="Margin" Value="0,16,0,8" />
     </Style>
 
     <Style Selector="Border.settings-section-card, Border.settings-option-card, Border.settings-list-item">
@@ -102,51 +106,104 @@
         <Setter Property="BoxShadow" Value="0 4 10 #13000000" />
     </Style>
 
+    <!--
+      Fluent settings iconography:
+      - List / option row icon: 16px glyph in a compact ~28-32 host
+      - Section card icon: 20px glyph in a ~32 host
+      Avoid 36-42 hosts next to 12-14 body text (glyph appears oversized).
+    -->
     <Style Selector="Border.settings-option-card-icon-host, Border.settings-section-card-icon-host">
         <Setter Property="Background" Value="{DynamicResource AdaptiveButtonBackgroundBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveButtonBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusXs}" />
         <Setter Property="HorizontalAlignment" Value="Left" />
-        <Setter Property="VerticalAlignment" Value="Top" />
+        <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
 
     <Style Selector="Border.settings-option-card-icon-host">
-        <Setter Property="Width" Value="36" />
-        <Setter Property="Height" Value="36" />
+        <Setter Property="Width" Value="28" />
+        <Setter Property="Height" Value="28" />
     </Style>
 
     <Style Selector="Border.settings-section-card-icon-host">
-        <Setter Property="Width" Value="42" />
-        <Setter Property="Height" Value="42" />
+        <Setter Property="Width" Value="32" />
+        <Setter Property="Height" Value="32" />
+    </Style>
+
+    <Style Selector="Border.settings-option-card-icon-host fi|SymbolIcon, Border.settings-option-card-icon-host fi|FluentIcon">
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector="Border.settings-section-card-icon-host fi|SymbolIcon, Border.settings-section-card-icon-host fi|FluentIcon">
+        <Setter Property="FontSize" Value="18" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
 
     <Style Selector="TextBlock.settings-card-header">
-        <Setter Property="FontSize" Value="17" />
+        <Setter Property="FontSize" Value="15" />
         <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="LineHeight" Value="22" />
         <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
-        <Setter Property="Margin" Value="0,0,0,12" />
+        <Setter Property="Margin" Value="0,0,0,10" />
     </Style>
 
     <Style Selector="TextBlock.settings-card-description">
-        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="LineHeight" Value="18" />
         <Setter Property="Opacity" Value="0.72" />
         <Setter Property="TextWrapping" Value="Wrap" />
         <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
-        <Setter Property="Margin" Value="0,-8,0,0" />
+        <Setter Property="Margin" Value="0,-6,0,0" />
     </Style>
 
     <Style Selector="TextBlock.settings-item-label">
-        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontSize" Value="14" />
         <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="LineHeight" Value="20" />
         <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
     </Style>
 
     <Style Selector="TextBlock.settings-item-description">
         <Setter Property="FontSize" Value="12" />
+        <Setter Property="LineHeight" Value="18" />
         <Setter Property="Opacity" Value="0.68" />
         <Setter Property="TextWrapping" Value="Wrap" />
         <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
+    </Style>
+
+    <!-- Hero / status strip used on update and similar pages -->
+    <Style Selector="ui|FAFontIcon.settings-hero-icon">
+        <Setter Property="FontSize" Value="20" />
+        <Setter Property="Width" Value="20" />
+        <Setter Property="Height" Value="20" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Margin" Value="0,0,12,0" />
+        <Setter Property="Foreground" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+    </Style>
+
+    <Style Selector="TextBlock.settings-hero-title">
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="LineHeight" Value="22" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
+    </Style>
+
+    <!-- FASettingsExpander row icons: Fluent list icon = 16px, not decorative 24-40 -->
+    <Style Selector="ui|FASettingsExpander.settings-expander-card ui|FAFontIcon, ui|FASettingsExpanderItem ui|FAFontIcon">
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="Width" Value="16" />
+        <Setter Property="Height" Value="16" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector="ui|FASettingsExpander.settings-expander-card fi|SymbolIcon, ui|FASettingsExpanderItem fi|SymbolIcon, ui|FASettingsExpander.settings-expander-card fi|FluentIcon, ui|FASettingsExpanderItem fi|FluentIcon">
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
 
     <Style Selector="StackPanel.settings-item">

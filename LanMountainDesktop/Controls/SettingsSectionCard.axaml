@@ -12,7 +12,7 @@
                 <Border x:Name="IconHost"
                         Classes="settings-section-card-icon-host">
                     <fi:SymbolIcon x:Name="CardIcon"
-                                   Classes="icon-l" />
+                                   Classes="icon-m" />
                 </Border>
 
                 <StackPanel Grid.Column="1"

@@ -11,7 +11,6 @@ internal sealed class CommandContext
         "launch",
         "preview-splash",
         "preview-error",
-        "preview-update",
         "preview-oobe",
         "preview-debug"
     ];
