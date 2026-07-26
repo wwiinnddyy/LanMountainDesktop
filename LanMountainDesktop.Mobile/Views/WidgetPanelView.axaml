@@ -1,0 +1,44 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LanMountainDesktop.Mobile.ViewModels"
+             x:Class="LanMountainDesktop.Mobile.Views.WidgetPanelView"
+             x:DataType="vm:WidgetPanelViewModel">
+  <Grid RowDefinitions="Auto,*">
+    <Border Grid.Row="0" Padding="20,16">
+      <TextBlock Text="{Binding Title}"
+                 FontSize="22"
+                 FontWeight="SemiBold" />
+    </Border>
+
+    <ScrollViewer Grid.Row="1" Padding="12,0,12,12">
+      <ItemsControl ItemsSource="{Binding Widgets}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Spacing="12" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:WidgetCardViewModel">
+            <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                    CornerRadius="16"
+                    Padding="16"
+                    MinHeight="96">
+              <StackPanel Spacing="8">
+                <TextBlock Text="{Binding Name}"
+                           FontSize="15"
+                           FontWeight="SemiBold" />
+                <ContentControl Content="{Binding Content}"
+                                IsVisible="{Binding Content, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <TextBlock Text="{Binding Placeholder}"
+                           FontSize="13"
+                           Opacity="0.6"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding Content, Converter={x:Static ObjectConverters.IsNull}}" />
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+  </Grid>
+</UserControl>
