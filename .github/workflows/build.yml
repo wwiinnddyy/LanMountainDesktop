@@ -165,6 +165,68 @@ jobs:
             LanMountainDesktop/bin/Release/
           retention-days: 7
 
+  build-android:
+    runs-on: ubuntu-latest
+    name: Build_Android
+    # Android head 尚未合入时允许跳过
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Check Android head exists
+        id: check
+        run: |
+          if [ -f "LanMountainDesktop.Mobile.Android/LanMountainDesktop.Mobile.Android.csproj" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup .NET
+        if: steps.check.outputs.exists == 'true'
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: 'preview'
+
+      - name: Setup Java
+        if: steps.check.outputs.exists == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'microsoft'
+          java-version: '17'
+
+      - name: Install Android workload
+        if: steps.check.outputs.exists == 'true'
+        run: dotnet workload install android
+
+      - name: Cache NuGet packages
+        if: steps.check.outputs.exists == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.nuget/packages
+          key: ${{ runner.os }}-nuget-android-${{ hashFiles('**/Directory.Packages.props') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-android-
+            ${{ runner.os }}-nuget-
+
+      - name: Build Android head
+        if: steps.check.outputs.exists == 'true'
+        run: dotnet build LanMountainDesktop.Mobile.Android/LanMountainDesktop.Mobile.Android.csproj -c Release -v minimal
+
+      - name: Upload artifacts
+        if: steps.check.outputs.exists == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-android
+          path: |
+            LanMountainDesktop.Mobile.Android/bin/Release/**/*.apk
+          if-no-files-found: warn
+          retention-days: 7
+
   pack-plugin-packages:
     runs-on: ubuntu-latest
     name: Pack_Plugin_Packages

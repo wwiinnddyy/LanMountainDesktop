@@ -22,6 +22,11 @@
 - `LanMountainDesktop/Views/` and `ViewModels/`: UI 页面、窗口与视图模型
 - `LanMountainDesktop/Services/`: 设置、遥测、启动、持久化、业务服务
 - `LanMountainDesktop.PluginSdk/`: 插件 SDK 公共接口和默认打包行为
+- `LanMountainDesktop.Platform.Abstractions/`: 平台差异层接口（跨平台契约，禁止平台专属 API）
+- `LanMountainDesktop.Platform.Windows/`: Windows 平台实现（P/Invoke、桌面层、点击穿透等）
+- `LanMountainDesktop.Platform.Android/`: Android 平台实现
+- `LanMountainDesktop.Mobile/`: 共享移动 UI 壳（组件面板）
+- `LanMountainDesktop.Mobile.Android/`: Android head（入口）
 - `LanMountainDesktop.Shared.Contracts/`: 宿主/插件共享契约
 - `LanMountainDesktop.Tests/`: 宿主与 SDK 测试
 - `.trae/specs/`: feature 级规格、任务拆解和验收清单
@@ -91,6 +96,7 @@ dotnet test LanMountainDesktop.slnx -c Debug
 - 视觉规范：`docs/VISUAL_SPEC.md`
 - 圆角规范：`docs/CORNER_RADIUS_SPEC.md`
 - 生态边界：`docs/ECOSYSTEM_BOUNDARIES.md`
+- 跨平台架构：`docs/CROSS_PLATFORM.md`
 - SDK v5 迁移：`docs/PLUGIN_SDK_V5_MIGRATION.md`
 
 如果多个文档都提到同一件事，以 `docs/ai/DOC_SOURCES.md` 列出的权威来源为准。
