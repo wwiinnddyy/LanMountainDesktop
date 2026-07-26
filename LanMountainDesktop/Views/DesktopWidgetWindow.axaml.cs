@@ -7,6 +7,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using LanMountainDesktop.DesktopEditing;
 using LanMountainDesktop.Models;
+using LanMountainDesktop.Platform.Abstractions;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 

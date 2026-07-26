@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
@@ -9,10 +9,10 @@ using System.Runtime.Versioning;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace LanMountainDesktop.Services;
+namespace LanMountainDesktop.Platform.Windows;
 
 [SupportedOSPlatform("windows")]
-internal static class WindowsIconService
+public static class WindowsIconService
 {
     private const int HighResolutionIconSize = 256;
     private const int MaxShellPath = 1024;

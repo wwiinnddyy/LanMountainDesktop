@@ -16,6 +16,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using FluentAvalonia.UI.Controls;
 using LanMountainDesktop.Models;
+using LanMountainDesktop.Platform.Windows;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;

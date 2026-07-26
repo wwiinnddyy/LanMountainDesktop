@@ -1,6 +1,7 @@
-using System.Reflection;
+﻿using System.Reflection;
 using Avalonia;
-using LanMountainDesktop.Services;
+using LanMountainDesktop.Platform.Abstractions;
+using LanMountainDesktop.Platform.Windows;
 using Xunit;
 
 namespace LanMountainDesktop.Tests;
@@ -52,7 +53,7 @@ public sealed class WindowPassthroughServiceTests
     [Fact]
     public void NativeIntegration_UsesAvaloniaCallbacksWithoutManualWndProcSubclassing()
     {
-        var source = ReadRepositoryFile("LanMountainDesktop", "Services", "WindowPassthroughService.cs");
+        var source = ReadRepositoryFile("LanMountainDesktop.Platform.Windows", "WindowsWindowPassthroughServices.cs");
 
         Assert.Contains("Win32Properties.AddWindowStylesCallback", source);
         Assert.Contains("Win32Properties.AddWndProcHookCallback", source);
@@ -158,7 +159,7 @@ public sealed class WindowPassthroughServiceTests
         Assert.False(Invoke<bool>("OriginalWindowUsesParentClientCoordinates", WsPopup));
         Assert.False(Invoke<bool>("OriginalWindowUsesParentClientCoordinates", 0U));
 
-        var source = ReadRepositoryFile("LanMountainDesktop", "Services", "WindowPassthroughService.cs");
+        var source = ReadRepositoryFile("LanMountainDesktop.Platform.Windows", "WindowsWindowPassthroughServices.cs");
         Assert.Contains("GWLP_HWNDPARENT", source);
         Assert.Contains("restore the owner through GWLP_HWNDPARENT", source);
     }
@@ -213,7 +214,7 @@ public sealed class WindowPassthroughServiceTests
     [Fact]
     public void HitTestCoordinates_AreResolvedFromTheLiveWindowState()
     {
-        var source = ReadRepositoryFile("LanMountainDesktop", "Services", "WindowPassthroughService.cs");
+        var source = ReadRepositoryFile("LanMountainDesktop.Platform.Windows", "WindowsWindowPassthroughServices.cs");
 
         Assert.Contains("ScreenToClient(hWnd, ref screenPoint)", source);
         Assert.Contains("GetDpiForWindow(handle)", source);
@@ -229,9 +230,8 @@ public sealed class WindowPassthroughServiceTests
 
     private static T Invoke<T>(string methodName, params object[] arguments)
     {
-        var serviceType = typeof(IWindowBottomMostService).Assembly.GetType(
-            "LanMountainDesktop.Services.WindowsWindowBottomMostService",
-            throwOnError: true)!;
+        // Windows 实现已迁移至 Platform.Windows（跨平台重构），类型现为 public。
+        var serviceType = typeof(WindowsWindowBottomMostService);
         var method = serviceType.GetMethod(
             methodName,
             BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);

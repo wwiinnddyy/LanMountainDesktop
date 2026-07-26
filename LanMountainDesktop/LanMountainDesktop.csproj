@@ -30,6 +30,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\LanMountainDesktop.Platform.Abstractions\LanMountainDesktop.Platform.Abstractions.csproj" />
+    <ProjectReference Include="..\LanMountainDesktop.Platform.Windows\LanMountainDesktop.Platform.Windows.csproj" />
+    <ProjectReference Include="..\LanMountainDesktop.Platform.MacOS\LanMountainDesktop.Platform.MacOS.csproj" />
     <ProjectReference Include="..\LanMountainDesktop.Host.Abstractions\LanMountainDesktop.Host.Abstractions.csproj" />
     <ProjectReference Include="..\LanMountainDesktop.Shared.Contracts\LanMountainDesktop.Shared.Contracts.csproj" />
     <ProjectReference Include="..\LanMountainDesktop.Shared.IPC\LanMountainDesktop.Shared.IPC.csproj" />

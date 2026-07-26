@@ -1,4 +1,8 @@
 <Solution>
+  <Project Path="LanMountainDesktop.Platform.Abstractions/LanMountainDesktop.Platform.Abstractions.csproj" />
+  <Project Path="LanMountainDesktop.Platform.Windows/LanMountainDesktop.Platform.Windows.csproj" />
+  <Project Path="LanMountainDesktop.Platform.Android/LanMountainDesktop.Platform.Android.csproj" />
+  <Project Path="LanMountainDesktop.Platform.MacOS/LanMountainDesktop.Platform.MacOS.csproj" />
   <Project Path="LanMountainDesktop.Host.Abstractions/LanMountainDesktop.Host.Abstractions.csproj" />
   <Project Path="LanMountainDesktop.Shared.Contracts/LanMountainDesktop.Shared.Contracts.csproj" />
   <Project Path="LanMountainDesktop.Shared.IPC/LanMountainDesktop.Shared.IPC.csproj" />

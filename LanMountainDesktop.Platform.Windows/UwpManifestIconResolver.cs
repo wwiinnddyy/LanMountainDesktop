@@ -10,10 +10,10 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
-namespace LanMountainDesktop.Services;
+namespace LanMountainDesktop.Platform.Windows;
 
 [SupportedOSPlatform("windows")]
-internal static class UwpManifestIconResolver
+public static class UwpManifestIconResolver
 {
     private const int ErrorSuccess = 0;
     private const int ErrorInsufficientBuffer = 122;

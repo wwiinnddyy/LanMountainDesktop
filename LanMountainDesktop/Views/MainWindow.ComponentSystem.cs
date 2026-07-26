@@ -18,6 +18,7 @@ using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.DesktopEditing;
 using LanMountainDesktop.Host.Abstractions;
 using LanMountainDesktop.Models;
+using LanMountainDesktop.Platform.Abstractions;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Settings.Core;
 using LanMountainDesktop.Theme;

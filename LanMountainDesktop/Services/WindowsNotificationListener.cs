@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using LanMountainDesktop.Models;
+using LanMountainDesktop.Platform.Windows;
 
 namespace LanMountainDesktop.Services;
 
@@ -320,26 +321,7 @@ internal sealed class WindowsNotificationListener : IPlatformNotificationListene
 
     private static bool HasPackageIdentity()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return false;
-        }
-
-        var length = 0;
-        var hr = GetCurrentPackageFullName(ref length, null);
-        if (hr == AppmodelErrorNoPackage)
-        {
-            return false;
-        }
-
-        if (length <= 0)
-        {
-            return hr == 0;
-        }
-
-        var builder = new StringBuilder(length);
-        hr = GetCurrentPackageFullName(ref length, builder);
-        return hr == 0;
+        return WindowsPackageIdentity.HasPackageIdentity();
     }
 
     private static string TryReadPackageFamilyName(object? appInfo)
@@ -497,8 +479,4 @@ internal sealed class WindowsNotificationListener : IPlatformNotificationListene
         _cts.Dispose();
     }
 
-    private const int AppmodelErrorNoPackage = 15700;
-
-    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
-    private static extern int GetCurrentPackageFullName(ref int packageFullNameLength, StringBuilder? packageFullName);
 }

@@ -11,6 +11,8 @@ using Avalonia.Media.Imaging;
 using FluentIcons.Avalonia;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
+using LanMountainDesktop.Platform.MacOS;
+using LanMountainDesktop.Platform.Windows;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 

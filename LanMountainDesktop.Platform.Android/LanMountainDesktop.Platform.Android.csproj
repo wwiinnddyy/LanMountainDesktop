@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LanMountainDesktop.Platform.Abstractions\LanMountainDesktop.Platform.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+</Project>

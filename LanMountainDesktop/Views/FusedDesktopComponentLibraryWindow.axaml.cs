@@ -1,11 +1,11 @@
 using System;
-using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using LanMountainDesktop.Appearance;
+using LanMountainDesktop.Platform.Windows;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Settings.Core;
@@ -14,9 +14,6 @@ namespace LanMountainDesktop.Views;
 
 public partial class FusedDesktopComponentLibraryWindow : Window
 {
-    private const int DwmWindowAttributeBorderColor = 34;
-    private const uint DwmColorNone = 0xFFFFFFFE;
-
     private static readonly LocalizationService LocalizationService = new();
 
     public FusedDesktopComponentLibraryWindow()
@@ -124,30 +121,8 @@ public partial class FusedDesktopComponentLibraryWindow : Window
 
     private void TryDisableNativeWindowBorder()
     {
-        if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000))
-        {
-            return;
-        }
-
-        try
-        {
-            var handle = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
-            if (handle == IntPtr.Zero)
-            {
-                return;
-            }
-
-            var borderColor = DwmColorNone;
-            _ = DwmSetWindowAttribute(
-                handle,
-                DwmWindowAttributeBorderColor,
-                ref borderColor,
-                sizeof(uint));
-        }
-        catch
-        {
-            // DWM attributes are best-effort and unavailable on older/unsupported Windows builds.
-        }
+        var handle = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+        WindowsDwmInterop.TryDisableWindowBorder(handle);
     }
 
     protected override void OnClosed(EventArgs e)
@@ -163,11 +138,4 @@ public partial class FusedDesktopComponentLibraryWindow : Window
         var mainWindow = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow as MainWindow;
         mainWindow?.UnregisterFusedLibraryWindow(this);
     }
-
-    [DllImport("dwmapi.dll")]
-    private static extern int DwmSetWindowAttribute(
-        IntPtr windowHandle,
-        int attribute,
-        ref uint attributeValue,
-        int attributeSize);
 }

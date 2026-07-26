@@ -18,6 +18,7 @@ using Avalonia.Threading;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.DesktopHost;
 using LanMountainDesktop.Models;
+using LanMountainDesktop.Platform.Abstractions;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.ExternalIpc;

@@ -10,6 +10,7 @@ using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.DesktopEditing;
 using LanMountainDesktop.Host.Abstractions;
 using LanMountainDesktop.Models;
+using LanMountainDesktop.Platform.Abstractions;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Views;

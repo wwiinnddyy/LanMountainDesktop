@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -6,10 +6,10 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
-namespace LanMountainDesktop.Services;
+namespace LanMountainDesktop.Platform.MacOS;
 
 [SupportedOSPlatform("macos")]
-internal static class MacIconService
+public static class MacIconService
 {
     private const int IconSize = 256;
 
