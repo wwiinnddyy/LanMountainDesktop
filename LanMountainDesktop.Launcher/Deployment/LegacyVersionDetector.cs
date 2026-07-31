@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using LanMountainDesktop.Shared.Contracts.Deployment;
 using Microsoft.Win32;
 
 namespace LanMountainDesktop.Launcher.Deployment;
@@ -122,7 +123,7 @@ internal sealed class LegacyVersionDetector
                 {
                     // 检查是否存在老版本的特征文件（没有 app-* 目录）
                     var exePath = Path.Combine(path, LegacyExeName);
-                    var hasAppDirs = Directory.GetDirectories(path, "app-*").Length > 0;
+                    var hasAppDirs = Directory.GetDirectories(path, DeploymentLayout.DeploymentDirectoryPrefix + "*").Length > 0;
 
                     if (File.Exists(exePath) && !hasAppDirs)
                     {
@@ -162,7 +163,7 @@ internal sealed class LegacyVersionDetector
             if (Directory.Exists(parentDir))
             {
                 var exePath = Path.Combine(parentDir, LegacyExeName);
-                var hasAppDirs = Directory.GetDirectories(parentDir, "app-*").Length > 0;
+                var hasAppDirs = Directory.GetDirectories(parentDir, DeploymentLayout.DeploymentDirectoryPrefix + "*").Length > 0;
 
                 // 如果存在 exe 且没有 app-* 目录，可能是老版本
                 if (File.Exists(exePath) && !hasAppDirs)

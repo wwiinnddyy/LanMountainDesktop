@@ -23,10 +23,12 @@
     <PackageReference Include="Avalonia.Angle.Windows.Natives" ExcludeAssets="all" PrivateAssets="all" />
     <PackageReference Include="Avalonia.Desktop" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
-    <PackageReference Include="HarfBuzzSharp" PrivateAssets="all" />
-    <PackageReference Include="HarfBuzzSharp.NativeAssets.Win32" GeneratePathProperty="true" PrivateAssets="all" />
-    <PackageReference Include="SkiaSharp" PrivateAssets="all" />
-    <PackageReference Include="SkiaSharp.NativeAssets.Win32" GeneratePathProperty="true" PrivateAssets="all" />
+    <!-- HarfBuzzSharp/SkiaSharp: 移除 PrivateAssets="all" 使原生资产通过
+         PublishSingleFile+IncludeNativeLibrariesForSelfExtract 正常流入发布。 -->
+    <PackageReference Include="HarfBuzzSharp" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.Win32" />
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" />
     <PackageReference Include="CommunityToolkit.Mvvm" />
   </ItemGroup>
 

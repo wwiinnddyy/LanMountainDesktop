@@ -1,0 +1,65 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:installer="using:LanDesktopPLONDS.Installer"
+        x:Class="LanDesktopPLONDS.Installer.Views.UninstallConfirmWindow"
+        x:DataType="installer:UninstallConfirmViewModel"
+        Title="确认卸载阑山桌面"
+        Width="480"
+        Height="300"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Background="#1E1E1E"
+        ExtendClientAreaToDecorationsHint="False"
+        WindowDecorations="Full">
+  <Grid RowDefinitions="Auto,*,Auto"
+        Margin="24">
+    <StackPanel Spacing="8">
+      <TextBlock Text="确认卸载"
+                 FontSize="20"
+                 FontWeight="SemiBold"
+                 Foreground="White" />
+      <TextBlock Text="确定要卸载阑山桌面吗？此操作将删除所有已安装的文件。"
+                 TextWrapping="Wrap"
+                 Foreground="#99FFFFFF"
+                 FontSize="14" />
+    </StackPanel>
+
+    <Border Grid.Row="1"
+            Background="#2D2D2D"
+            CornerRadius="8"
+            Padding="16"
+            Margin="0,16,0,0">
+      <StackPanel Spacing="4">
+        <TextBlock Text="安装路径"
+                   FontSize="12"
+                   Foreground="#99FFFFFF" />
+        <TextBlock Text="{Binding InstallPath}"
+                   FontFamily="Consolas"
+                   FontSize="13"
+                   Foreground="#CCFFFFFF"
+                   TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+
+    <StackPanel Grid.Row="2"
+                Orientation="Horizontal"
+                HorizontalAlignment="Right"
+                Spacing="8"
+                Margin="0,16,0,0">
+      <Button Content="取消"
+              Width="100"
+              Height="36"
+              CornerRadius="6"
+              Background="#3D3D3D"
+              Foreground="White"
+              Click="OnCancelClick" />
+      <Button Content="确认卸载"
+              Width="100"
+              Height="36"
+              CornerRadius="6"
+              Background="#C42B1C"
+              Foreground="White"
+              Click="OnConfirmClick" />
+    </StackPanel>
+  </Grid>
+</Window>

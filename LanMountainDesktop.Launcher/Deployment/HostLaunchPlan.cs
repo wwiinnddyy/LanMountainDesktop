@@ -1,3 +1,4 @@
+using LanMountainDesktop.Shared.Contracts.Deployment;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 
 namespace LanMountainDesktop.Launcher.Deployment;
@@ -164,7 +165,7 @@ internal static class HostLaunchPlanBuilder
     private static bool IsAppDeploymentDirectory(string path)
     {
         var fileName = Path.GetFileName(Path.TrimEndingDirectorySeparator(path));
-        return fileName.StartsWith("app-", StringComparison.OrdinalIgnoreCase);
+        return DeploymentLayout.IsDeploymentDirectoryName(fileName);
     }
 
     private static bool IsParentOf(string parent, string child)

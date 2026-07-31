@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using LanMountainDesktop.Launcher.Models;
+using LanMountainDesktop.Shared.Contracts.Deployment;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 
 namespace LanMountainDesktop.Launcher.Deployment;
@@ -30,16 +31,17 @@ internal sealed class DeploymentLocator
 
         try
         {
-            var candidates = Directory.GetDirectories(_appRoot, "app-*", SearchOption.TopDirectoryOnly);
-            Console.WriteLine($"[DeploymentLocator] Found {candidates.Length} app-* directories");
+            var searchPattern = DeploymentLayout.DeploymentDirectoryPrefix + "*";
+            var candidates = Directory.GetDirectories(_appRoot, searchPattern, SearchOption.TopDirectoryOnly);
+            Console.WriteLine($"[DeploymentLocator] Found {candidates.Length} {searchPattern} directories");
 
             var validInstallations = candidates
                 .Where(path =>
                 {
-                    var hasDestroy = File.Exists(Path.Combine(path, ".destroy"));
-                    var hasPartial = File.Exists(Path.Combine(path, ".partial"));
+                    var hasDestroy = File.Exists(Path.Combine(path, DeploymentLayout.DestroyMarkerFileName));
+                    var hasPartial = File.Exists(Path.Combine(path, DeploymentLayout.PartialMarkerFileName));
                     var hasExe = File.Exists(Path.Combine(path, executable));
-                    var hasCurrent = File.Exists(Path.Combine(path, ".current"));
+                    var hasCurrent = File.Exists(Path.Combine(path, DeploymentLayout.CurrentMarkerFileName));
                     var version = ParseVersionFromDirectory(path);
 
                     Console.WriteLine($"[DeploymentLocator] Candidate: {Path.GetFileName(path)} | " +
@@ -55,7 +57,7 @@ internal sealed class DeploymentLocator
                 {
                     Path = path,
                     Version = ParseVersionFromDirectory(path),
-                    HasCurrentMarker = File.Exists(Path.Combine(path, ".current"))
+                    HasCurrentMarker = File.Exists(Path.Combine(path, DeploymentLayout.CurrentMarkerFileName))
                 })
                 .OrderBy(x => x.HasCurrentMarker ? 0 : 1)  // .current 鏍囪鐨勬帓鍓嶉潰
                 .ThenByDescending(x => x.Version)  // 鐒跺悗鎸夌増鏈彿闄嶅簭
@@ -292,18 +294,19 @@ internal sealed class DeploymentLocator
     {
         if (!Directory.Exists(root))
         {
-            searchedPaths.Add(Path.Combine(root, "app-*", executable));
+            searchedPaths.Add(Path.Combine(root, DeploymentLayout.DeploymentDirectoryPrefix + "*", executable));
             return null;
         }
 
-        var appDirs = Directory.GetDirectories(root, "app-*", SearchOption.TopDirectoryOnly)
-            .Where(path => !File.Exists(Path.Combine(path, ".destroy")))
-            .Where(path => !File.Exists(Path.Combine(path, ".partial")))
+        var searchPattern = DeploymentLayout.DeploymentDirectoryPrefix + "*";
+        var appDirs = Directory.GetDirectories(root, searchPattern, SearchOption.TopDirectoryOnly)
+            .Where(path => !File.Exists(Path.Combine(path, DeploymentLayout.DestroyMarkerFileName)))
+            .Where(path => !File.Exists(Path.Combine(path, DeploymentLayout.PartialMarkerFileName)))
             .Select(path => new
             {
                 Path = path,
                 HostPath = Path.Combine(path, executable),
-                HasCurrent = File.Exists(Path.Combine(path, ".current")),
+                HasCurrent = File.Exists(Path.Combine(path, DeploymentLayout.CurrentMarkerFileName)),
                 Version = ParseVersionFromDirectory(path)
             })
             .OrderByDescending(item => item.HasCurrent)
@@ -321,7 +324,7 @@ internal sealed class DeploymentLocator
 
         if (appDirs.Count == 0)
         {
-            searchedPaths.Add(Path.Combine(root, "app-*", executable));
+            searchedPaths.Add(Path.Combine(root, DeploymentLayout.DeploymentDirectoryPrefix + "*", executable));
         }
 
         return null;
@@ -466,18 +469,7 @@ internal sealed class DeploymentLocator
 
     public string BuildNextDeploymentDirectory(string targetVersion)
     {
-        var sanitized = string.IsNullOrWhiteSpace(targetVersion) ? "0.0.0" : targetVersion.Trim();
-        var index = 0;
-        while (true)
-        {
-            var candidate = Path.Combine(_appRoot, $"app-{sanitized}-{index.ToString(CultureInfo.InvariantCulture)}");
-            if (!Directory.Exists(candidate))
-            {
-                return candidate;
-            }
-
-            index++;
-        }
+        return DeploymentLayout.BuildDeploymentDirectory(_appRoot, targetVersion);
     }
 
     /// <summary>
@@ -494,16 +486,17 @@ internal sealed class DeploymentLocator
                 return;
             }
 
-            var candidates = Directory.GetDirectories(_appRoot, "app-*", SearchOption.TopDirectoryOnly);
+            var searchPattern = DeploymentLayout.DeploymentDirectoryPrefix + "*";
+            var candidates = Directory.GetDirectories(_appRoot, searchPattern, SearchOption.TopDirectoryOnly);
 
             var validDeployments = candidates
-                .Where(path => !File.Exists(Path.Combine(path, ".partial")))
+                .Where(path => !File.Exists(Path.Combine(path, DeploymentLayout.PartialMarkerFileName)))
                 .Select(path => new
                 {
                     Path = path,
                     Version = ParseVersionFromDirectory(path),
-                    IsDestroyed = File.Exists(Path.Combine(path, ".destroy")),
-                    IsCurrent = File.Exists(Path.Combine(path, ".current"))
+                    IsDestroyed = File.Exists(Path.Combine(path, DeploymentLayout.DestroyMarkerFileName)),
+                    IsCurrent = File.Exists(Path.Combine(path, DeploymentLayout.CurrentMarkerFileName))
                 })
                 .OrderByDescending(item => item.Version)
                 .ToList();
@@ -577,13 +570,13 @@ internal sealed class DeploymentLocator
             {
                 if (versionsToKeep.Contains(deployment.Path))
                 {
-                    if (deployment.IsDestroyed)
+                if (deployment.IsDestroyed)
+                {
+                    try
                     {
-                        try
-                        {
-                            File.Delete(Path.Combine(deployment.Path, ".destroy"));
-                            Console.WriteLine($"[DeploymentLocator] Unmarked for deletion (kept): {deployment.Path}");
-                        }
+                        File.Delete(Path.Combine(deployment.Path, DeploymentLayout.DestroyMarkerFileName));
+                        Console.WriteLine($"[DeploymentLocator] Unmarked for deletion (kept): {deployment.Path}");
+                    }
                         catch
                         {
                             // 蹇界暐鍙栨秷鏍囪澶辫触
@@ -596,7 +589,7 @@ internal sealed class DeploymentLocator
                 {
                     try
                     {
-                        File.WriteAllText(Path.Combine(deployment.Path, ".destroy"), string.Empty);
+                        File.WriteAllText(Path.Combine(deployment.Path, DeploymentLayout.DestroyMarkerFileName), string.Empty);
                         Console.WriteLine($"[DeploymentLocator] Marked for deletion: {deployment.Path}");
                     }
                     catch

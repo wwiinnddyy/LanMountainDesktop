@@ -3,15 +3,29 @@ using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
 using LanDesktopPLONDS.Installer.Models;
+using LanMountainDesktop.Shared.Contracts.Deployment;
 
 namespace LanDesktopPLONDS.Installer.Services;
 
-internal sealed class InstallerPlondsClient(HttpClient httpClient, string stagingRoot)
+internal sealed class InstallerPlondsClient
 {
     private const string S3ManifestUrlEnvironmentVariable = "LANMOUNTAIN_PLONDS_S3_MANIFEST_URL";
     private const string GitHubManifestUrlEnvironmentVariable = "LANMOUNTAIN_PLONDS_GITHUB_MANIFEST_URL";
     private const string DefaultS3ManifestUrl = "https://cn-nb1.rains3.com/lmdesktop/lanmountain/update/plonds/PLONDS.json";
     private const string DefaultGitHubManifestUrl = "https://github.com/wwiinnddyy/LanMountainDesktop/releases/latest/download/PLONDS.json";
+
+    /// <summary>下载最大重试次数（每 URL）。</summary>
+    internal const int MaxDownloadRetries = 3;
+
+    /// <summary>Manifest 请求超时（秒）。</summary>
+    internal const int ManifestFetchTimeoutSeconds = 10;
+
+    /// <summary>暂存空间倍数：需要至少 2 倍估算包大小。</summary>
+    private const long RequiredSpaceMultiplier = 2;
+
+    private readonly HttpClient _httpClient;
+    private readonly string _stagingRoot;
+    private readonly Func<int, TimeSpan>? _retryDelayFactory;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -19,6 +33,24 @@ internal sealed class InstallerPlondsClient(HttpClient httpClient, string stagin
         ReadCommentHandling = JsonCommentHandling.Skip,
         AllowTrailingCommas = true
     };
+
+    /// <summary>
+    /// 生产构造函数。
+    /// </summary>
+    public InstallerPlondsClient(HttpClient httpClient, string stagingRoot)
+        : this(httpClient, stagingRoot, null)
+    {
+    }
+
+    /// <summary>
+    /// 内部构造函数，允许注入重试延迟策略（用于测试）。
+    /// </summary>
+    internal InstallerPlondsClient(HttpClient httpClient, string stagingRoot, Func<int, TimeSpan>? retryDelayFactory)
+    {
+        _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+        _stagingRoot = stagingRoot ?? throw new ArgumentNullException(nameof(stagingRoot));
+        _retryDelayFactory = retryDelayFactory;
+    }
 
     public static IReadOnlyList<InstallerPlondsSource> CreateBuiltInSources()
     {
@@ -29,27 +61,32 @@ internal sealed class InstallerPlondsClient(HttpClient httpClient, string stagin
         ];
     }
 
+    /// <summary>
+    /// 查找最新可用的 PLONDS 全量包源。
+    /// 诊断聚合：记录所有源探测失败信息，当无可用源时抛出包含所有错误的中文异常。
+    /// </summary>
     public async Task<InstallerPlondsCandidate> FindLatestAsync(CancellationToken cancellationToken)
     {
         var sources = CreateBuiltInSources().ToList();
         var candidates = new List<InstallerPlondsCandidate>();
+        var probeReport = new InstallerSourceProbeReport();
 
         for (var index = 0; index < sources.Count; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var source = sources[index];
-            InstallerPlondsManifest? manifest;
+            InstallerPlondsManifest manifest;
             try
             {
                 manifest = await GetManifestAsync(source, cancellationToken).ConfigureAwait(false);
             }
-            catch
+            catch (OperationCanceledException)
             {
-                continue;
+                throw;
             }
-
-            if (manifest is null)
+            catch (Exception ex)
             {
+                probeReport.AddFailure(source.Id, source.ManifestUrl, ex);
                 continue;
             }
 
@@ -57,39 +94,70 @@ internal sealed class InstallerPlondsClient(HttpClient httpClient, string stagin
             var filesUrl = InstallerPlondsUrlResolver.ResolveFilesZipUrls(manifest, source).FirstOrDefault();
             if (filesUrl is null)
             {
+                probeReport.AddFailure(source.Id, source.ManifestUrl, "清单中未找到可用的 Files.zip 下载链接。");
                 continue;
             }
 
             candidates.Add(new InstallerPlondsCandidate(source, manifest, filesUrl));
         }
 
-        return candidates
-                   .Where(candidate => TryParseVersion(candidate.Manifest.CurrentVersion, out _))
-                   .OrderByDescending(candidate => ParseVersion(candidate.Manifest.CurrentVersion))
-                   .ThenByDescending(candidate => candidate.Source.Priority)
-                   .FirstOrDefault()
-               ?? throw new InvalidOperationException("No usable PLONDS full package source was found.");
+        var bestCandidate = candidates
+            .Where(candidate => SemanticVersion.TryParse(candidate.Manifest.CurrentVersion, out _))
+            .OrderByDescending(candidate => SemanticVersion.Parse(candidate.Manifest.CurrentVersion))
+            .ThenByDescending(candidate => candidate.Source.Priority)
+            .FirstOrDefault();
+
+        if (bestCandidate is not null)
+        {
+            return bestCandidate;
+        }
+
+        // 所有源均不可用，抛出包含所有错误的中文异常
+        if (probeReport.HasFailures)
+        {
+            throw new InvalidOperationException(probeReport.FormatChineseSummary());
+        }
+
+        throw new InvalidOperationException("未找到可用的 PLONDS 全量包源。");
     }
 
+    /// <summary>
+    /// 下载并准备全量包。支持：重试（指数退避）、HTTP Range 续传、停滞检测、暂存空间检查。
+    /// 保持与现有调用方源兼容的签名。
+    /// </summary>
     public async Task<PreparedFilesPackage> DownloadAndPrepareFullPackageAsync(
         InstallerPlondsCandidate candidate,
         IProgress<InstallerDeployProgress>? progress,
         CancellationToken cancellationToken)
     {
-        var version = ParseVersion(candidate.Manifest.CurrentVersion).ToString();
-        var packageRoot = Path.Combine(stagingRoot, SanitizePathSegment(version), SanitizePathSegment(candidate.Source.Id), "full");
+        var version = SemanticVersion.Parse(candidate.Manifest.CurrentVersion).ToString();
+        var packageRoot = Path.Combine(_stagingRoot, SanitizePathSegment(version), SanitizePathSegment(candidate.Source.Id), "full");
         var urls = new[] { candidate.FilesZipUrl }
             .Concat(InstallerPlondsUrlResolver.ResolveFilesZipUrls(candidate.Manifest, candidate.Source))
             .DistinctBy(uri => uri.AbsoluteUri, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+
+        // 暂存空间检查：需要至少 2 倍估算包大小
+        EnsureStagingSpaceAvailable(candidate.Manifest, packageRoot);
+
         Exception? lastError = null;
 
         foreach (var filesZipUrl in urls)
         {
             cancellationToken.ThrowIfCancellationRequested();
+
+            // 清理上一个 URL 的残留，但保留 .partial 文件以支持续传
             if (Directory.Exists(packageRoot))
             {
-                Directory.Delete(packageRoot, recursive: true);
+                var partialPath = Path.Combine(packageRoot, "Files.zip.partial");
+                var hasPartial = File.Exists(partialPath);
+                var hasFinal = File.Exists(Path.Combine(packageRoot, "Files.zip"));
+
+                // 切换 URL 时清理已完成的文件，保留 .partial
+                if (hasFinal || !hasPartial)
+                {
+                    Directory.Delete(packageRoot, recursive: true);
+                }
             }
 
             Directory.CreateDirectory(packageRoot);
@@ -98,36 +166,51 @@ internal sealed class InstallerPlondsClient(HttpClient httpClient, string stagin
             Directory.CreateDirectory(extractDirectory);
             var attempt = candidate with { FilesZipUrl = filesZipUrl };
 
-            try
+            // 带指数退避的重试循环
+            for (var retryAttempt = 0; retryAttempt < MaxDownloadRetries; retryAttempt++)
             {
-                await DownloadToFileAsync(attempt, zipPath, progress, cancellationToken).ConfigureAwait(false);
-                await VerifyPackageAsync(zipPath, attempt.Manifest, filesZipUrl, cancellationToken).ConfigureAwait(false);
-                ExtractZip(zipPath, extractDirectory);
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    await DownloadWithRetryAsync(attempt, zipPath, progress, cancellationToken).ConfigureAwait(false);
+                    await VerifyPackageAsync(zipPath, attempt.Manifest, filesZipUrl, cancellationToken).ConfigureAwait(false);
+                    ExtractZip(zipPath, extractDirectory);
 
-                progress?.Report(new InstallerDeployProgress(
-                    "Files package prepared",
-                    version,
-                    1,
-                    0.10,
-                    "Files.zip",
-                    new FileInfo(zipPath).Length,
-                    new FileInfo(zipPath).Length));
+                    progress?.Report(new InstallerDeployProgress(
+                        "Files package prepared",
+                        version,
+                        1,
+                        0.10,
+                        "Files.zip",
+                        new FileInfo(zipPath).Length,
+                        new FileInfo(zipPath).Length));
 
-                return new PreparedFilesPackage(version, candidate.Source.Id, zipPath, extractDirectory, candidate.Manifest);
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                lastError = ex;
+                    return new PreparedFilesPackage(version, candidate.Source.Id, zipPath, extractDirectory, candidate.Manifest);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    lastError = ex;
+
+                    // 指数退避（最后一次重试不再等待）
+                    if (retryAttempt < MaxDownloadRetries - 1)
+                    {
+                        var delay = _retryDelayFactory is not null
+                            ? _retryDelayFactory(retryAttempt)
+                            : TimeSpan.FromSeconds(Math.Pow(2, retryAttempt + 1)); // 2s, 4s
+                        await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+                    }
+                }
             }
         }
 
-        throw new InvalidOperationException("Failed to download and prepare the PLONDS Files package.", lastError);
+        throw new InvalidOperationException("下载并准备 PLONDS Files 包失败。", lastError);
     }
 
+    /// <summary>估算安装所需的字节数。</summary>
     public static long EstimateInstallBytes(InstallerPlondsManifest manifest)
     {
         var filesBytes = manifest.FilesMap?.Values.Sum(file => Math.Max(0, file.Size)) ?? 0;
@@ -135,92 +218,117 @@ internal sealed class InstallerPlondsClient(HttpClient httpClient, string stagin
         return Math.Max(filesBytes, packageBytes);
     }
 
-    private async Task<InstallerPlondsManifest?> GetManifestAsync(
+    /// <summary>
+    /// 使用 10 秒超时获取清单。
+    /// </summary>
+    private async Task<InstallerPlondsManifest> GetManifestAsync(
         InstallerPlondsSource source,
         CancellationToken cancellationToken)
     {
-        using var response = await httpClient.GetAsync(source.ManifestUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
-            .ConfigureAwait(false);
-        if (!response.IsSuccessStatusCode)
-        {
-            return null;
-        }
+        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(ManifestFetchTimeoutSeconds));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-        return await JsonSerializer.DeserializeAsync(stream, InstallerJsonContext.Default.InstallerPlondsManifest, cancellationToken)
-            .ConfigureAwait(false);
-    }
-
-    private async Task DownloadToFileAsync(
-        InstallerPlondsCandidate candidate,
-        string destinationPath,
-        IProgress<InstallerDeployProgress>? progress,
-        CancellationToken cancellationToken)
-    {
-        using var response = await httpClient.GetAsync(candidate.FilesZipUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+        using var response = await _httpClient.GetAsync(source.ManifestUrl, HttpCompletionOption.ResponseHeadersRead, linkedCts.Token)
             .ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
 
-        var totalBytes = response.Content.Headers.ContentLength;
-        var partialPath = $"{destinationPath}.partial";
-        long downloaded = 0;
-        try
-        {
-            await using (var source = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false))
-            await using (var target = File.Create(partialPath))
-            {
-                var buffer = new byte[128 * 1024];
-                while (true)
-                {
-                    var read = await source.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
-                    if (read == 0)
-                    {
-                        break;
-                    }
+        await using var stream = await response.Content.ReadAsStreamAsync(linkedCts.Token).ConfigureAwait(false);
+        var manifest = await JsonSerializer.DeserializeAsync(stream, InstallerJsonContext.Default.InstallerPlondsManifest, linkedCts.Token)
+            .ConfigureAwait(false);
 
-                    await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
-                    downloaded += read;
-                    var fraction = totalBytes is > 0 ? Math.Clamp((double)downloaded / totalBytes.Value, 0, 1) : 0;
-                    progress?.Report(new InstallerDeployProgress(
-                        "Downloading Files.zip",
-                        candidate.Manifest.CurrentVersion,
-                        fraction,
-                        0,
-                        "Files.zip",
-                        downloaded,
-                        totalBytes));
-                }
-            }
-
-            File.Move(partialPath, destinationPath, overwrite: true);
-        }
-        finally
-        {
-            if (File.Exists(partialPath))
-            {
-                File.Delete(partialPath);
-            }
-        }
+        return manifest ?? throw new InvalidOperationException($"清单反序列化结果为空（源: {source.Id}）。");
     }
 
-    private static async Task VerifyPackageAsync(
+    /// <summary>
+    /// 使用 ResilientDownloader 执行单次下载流程（含重试外层由调用方控制）。
+    /// </summary>
+    private async Task DownloadWithRetryAsync(
+        InstallerPlondsCandidate candidate,
         string zipPath,
-        InstallerPlondsManifest manifest,
-        Uri filesZipUrl,
+        IProgress<InstallerDeployProgress>? progress,
         CancellationToken cancellationToken)
     {
-        var checksum = FindChecksum(manifest.Checksums, GetChecksumKeys(filesZipUrl));
-        if (checksum is null)
+        // 获取文件大小用于进度报告
+        long totalBytes = 0;
+        using (var headRequest = new HttpRequestMessage(HttpMethod.Head, candidate.FilesZipUrl))
         {
-            throw new InvalidDataException("PLONDS manifest does not declare a checksum for Files.zip.");
+            try
+            {
+                using var headResponse = await _httpClient.SendAsync(headRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                    .ConfigureAwait(false);
+                totalBytes = headResponse.Content.Headers.ContentLength ?? 0;
+            }
+            catch
+            {
+                // HEAD 请求失败不影响下载，使用 0 作为总大小
+            }
         }
 
-        var (algorithm, expectedHash) = ParseChecksum(checksum);
-        var actualHash = await ComputeHashAsync(zipPath, algorithm, cancellationToken).ConfigureAwait(false);
-        if (!string.Equals(actualHash, expectedHash, StringComparison.OrdinalIgnoreCase))
+        // 包装进度回调：传递版本信息
+        var wrappedProgress = new Progress<long>(downloaded =>
         {
-            throw new InvalidDataException(
-                $"PLONDS Files.zip checksum mismatch. Expected {algorithm}:{expectedHash}, actual {algorithm}:{actualHash}.");
+            var fraction = totalBytes > 0 ? Math.Clamp((double)downloaded / totalBytes, 0, 1) : 0;
+            progress?.Report(new InstallerDeployProgress(
+                "Downloading Files.zip",
+                candidate.Manifest.CurrentVersion,
+                fraction,
+                0,
+                "Files.zip",
+                downloaded,
+                totalBytes));
+        });
+
+        await ResilientDownloader.DownloadSingleAttemptAsync(
+            _httpClient,
+            candidate.FilesZipUrl,
+            zipPath,
+            wrappedProgress,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// 检查暂存目录所在磁盘是否有足够空间（至少 2 倍估算包大小）。
+    /// 若估算大小为 0 则跳过检查。
+    /// </summary>
+    private void EnsureStagingSpaceAvailable(InstallerPlondsManifest manifest, string packageRoot)
+    {
+        var estimatedBytes = EstimateInstallBytes(manifest);
+        if (estimatedBytes <= 0)
+        {
+            return;
+        }
+
+        var requiredBytes = estimatedBytes * RequiredSpaceMultiplier;
+        try
+        {
+            // 确保暂存目录的父目录存在以获取驱动器信息
+            var parentDir = Path.GetDirectoryName(Path.GetFullPath(packageRoot));
+            if (string.IsNullOrEmpty(parentDir))
+            {
+                return;
+            }
+
+            var driveRoot = Path.GetPathRoot(parentDir);
+            if (string.IsNullOrEmpty(driveRoot))
+            {
+                return;
+            }
+
+            var driveInfo = new DriveInfo(driveRoot);
+            if (driveInfo.AvailableFreeSpace > 0 && driveInfo.AvailableFreeSpace < requiredBytes)
+            {
+                throw new InvalidOperationException(
+                    $"暂存目录可用空间不足。需要至少 {FormatBytes(requiredBytes)}，" +
+                    $"当前可用 {FormatBytes(driveInfo.AvailableFreeSpace)}。暂存路径: {_stagingRoot}");
+            }
+        }
+        catch (InvalidOperationException)
+        {
+            throw;
+        }
+        catch
+        {
+            // 无法检测磁盘空间时跳过检查（如网络路径）
         }
     }
 
@@ -317,6 +425,10 @@ internal sealed class InstallerPlondsClient(HttpClient httpClient, string stagin
         return null;
     }
 
+    /// <summary>
+    /// 校验和解析：仅接受 SHA-256；MD5 拒绝并抛出清晰的中文错误。
+    /// 兼容 "sha256:HEX" 和纯 64 位十六进制格式。
+    /// </summary>
     private static (string Algorithm, string Hash) ParseChecksum(string checksum)
     {
         var normalized = checksum.Trim();
@@ -325,7 +437,13 @@ internal sealed class InstallerPlondsClient(HttpClient httpClient, string stagin
         {
             var algorithm = normalized[..separatorIndex].Trim().ToLowerInvariant();
             var hash = NormalizeHash(normalized[(separatorIndex + 1)..]);
-            if (algorithm is "md5" or "sha256" && hash.Length > 0)
+
+            if (algorithm == "md5")
+            {
+                throw new InvalidDataException("MD5 校验和不被支持，请使用 SHA-256 校验和。");
+            }
+
+            if (algorithm == "sha256" && hash.Length > 0)
             {
                 return (algorithm, hash);
             }
@@ -334,22 +452,47 @@ internal sealed class InstallerPlondsClient(HttpClient httpClient, string stagin
         var inferred = NormalizeHash(normalized);
         return inferred.Length switch
         {
-            32 => ("md5", inferred),
+            // 32 位十六进制 = MD5，明确拒绝
+            32 => throw new InvalidDataException("检测到 MD5 校验和（32 位十六进制），但 MD5 不被支持。请使用 SHA-256 校验和。"),
             64 => ("sha256", inferred),
-            _ => throw new InvalidDataException($"Unsupported PLONDS checksum format: {checksum}")
+            _ => throw new InvalidDataException($"不支持的校验和格式: {checksum}")
         };
     }
 
+    private static async Task VerifyPackageAsync(
+        string zipPath,
+        InstallerPlondsManifest manifest,
+        Uri filesZipUrl,
+        CancellationToken cancellationToken)
+    {
+        var checksum = FindChecksum(manifest.Checksums, GetChecksumKeys(filesZipUrl));
+        if (checksum is null)
+        {
+            throw new InvalidDataException("PLONDS 清单中未声明 Files.zip 的校验和。");
+        }
+
+        var (algorithm, expectedHash) = ParseChecksum(checksum);
+        var actualHash = await ComputeHashAsync(zipPath, algorithm, cancellationToken).ConfigureAwait(false);
+        if (!string.Equals(actualHash, expectedHash, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException(
+                $"PLONDS Files.zip 校验和不匹配。期望 {algorithm}:{expectedHash}，实际 {algorithm}:{actualHash}。");
+        }
+    }
+
+    /// <summary>
+    /// 计算文件哈希：仅支持 SHA-256。
+    /// </summary>
     private static async Task<string> ComputeHashAsync(string filePath, string algorithm, CancellationToken cancellationToken)
     {
-        using HashAlgorithm hasher = algorithm switch
+        if (algorithm != "sha256")
         {
-            "md5" => MD5.Create(),
-            "sha256" => SHA256.Create(),
-            _ => throw new InvalidDataException($"Unsupported PLONDS checksum algorithm: {algorithm}")
-        };
+            throw new InvalidDataException($"不支持的校验和算法: {algorithm}，仅支持 SHA-256。");
+        }
+
+        using var sha = SHA256.Create();
         await using var stream = File.OpenRead(filePath);
-        var hash = await hasher.ComputeHashAsync(stream, cancellationToken).ConfigureAwait(false);
+        var hash = await sha.ComputeHashAsync(stream, cancellationToken).ConfigureAwait(false);
         return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
@@ -357,17 +500,6 @@ internal sealed class InstallerPlondsClient(HttpClient httpClient, string stagin
     {
         _ = checksums;
         return 0;
-    }
-
-    private static Version ParseVersion(string version)
-    {
-        var normalized = version.Trim().TrimStart('v', 'V');
-        return Version.Parse(normalized);
-    }
-
-    private static bool TryParseVersion(string version, out Version parsed)
-    {
-        return Version.TryParse(version.Trim().TrimStart('v', 'V'), out parsed!);
     }
 
     private static string NormalizeHash(string value)
@@ -387,5 +519,20 @@ internal sealed class InstallerPlondsClient(HttpClient httpClient, string stagin
         var chars = value.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray();
         var sanitized = new string(chars).Trim();
         return string.IsNullOrWhiteSpace(sanitized) ? "unknown" : sanitized;
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes >= 1024L * 1024 * 1024)
+        {
+            return $"{bytes / (1024.0 * 1024 * 1024):F1} GB";
+        }
+
+        if (bytes >= 1024L * 1024)
+        {
+            return $"{bytes / (1024.0 * 1024):F0} MB";
+        }
+
+        return $"{bytes / 1024.0:F0} KB";
     }
 }

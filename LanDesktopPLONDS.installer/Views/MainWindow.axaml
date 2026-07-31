@@ -283,7 +283,9 @@
                              Text="请选择一个专用文件夹。默认位置需要管理员权限，和现有安装方式保持一致。" />
                 </StackPanel>
 
-                <Border Classes="content-card">
+                <!-- 正常路径选择 UI（提权不需要时显示） -->
+                <Border Classes="content-card"
+                        IsVisible="{Binding !IsElevationRequired}">
                   <StackPanel Spacing="16">
                     <StackPanel Spacing="6">
                       <TextBlock Text="安装目录"
@@ -311,6 +313,42 @@
                               Content="创建桌面快捷方式" />
                     <CheckBox IsChecked="{Binding CreateStartupShortcut}"
                               Content="开机时自动启动阑山桌面" />
+                  </StackPanel>
+                </Border>
+
+                <!-- Task 2: 自动提权提示 -->
+                <Border Classes="content-card"
+                        IsVisible="{Binding IsElevationRequired}">
+                  <StackPanel Spacing="16">
+                    <StackPanel Spacing="6">
+                      <TextBlock Text="需要管理员权限"
+                                 FontSize="16"
+                                 FontWeight="SemiBold" />
+                      <TextBlock Text="{Binding ElevationMessage}"
+                                 Classes="muted" />
+                    </StackPanel>
+                    <Border Classes="info-panel">
+                      <Grid ColumnDefinitions="Auto,*"
+                            ColumnSpacing="10">
+                        <TextBlock Classes="installer-icon"
+                                   Text="&#xEA18;"
+                                   Foreground="{DynamicResource InstallerAccentBrush}"
+                                   FontSize="18" />
+                        <TextBlock Grid.Column="1"
+                                   Text="点击下方按钮将以管理员身份重新启动安装程序。安装程序将自动继续到下一步。"
+                                   Classes="muted" />
+                      </Grid>
+                    </Border>
+                    <Button Classes="primary-command"
+                            HorizontalAlignment="Left"
+                            Command="{Binding RelaunchElevatedCommand}">
+                      <StackPanel Orientation="Horizontal"
+                                  Spacing="6">
+                        <TextBlock Classes="installer-icon"
+                                   Text="&#xE7EF;" />
+                        <TextBlock Text="以管理员身份重新启动" />
+                      </StackPanel>
+                    </Button>
                   </StackPanel>
                 </Border>
               </StackPanel>
@@ -395,8 +433,15 @@
                       <ProgressBar Minimum="0"
                                    Maximum="1"
                                    Value="{Binding DownloadProgress}" />
-                      <TextBlock Classes="caption-text"
-                                 Text="{Binding DownloadBytesText}" />
+                      <Grid ColumnDefinitions="*,Auto"
+                            ColumnSpacing="12">
+                        <TextBlock Classes="caption-text"
+                                   Text="{Binding DownloadBytesText}" />
+                        <TextBlock Grid.Column="1"
+                                   Classes="caption-text"
+                                   Text="{Binding DownloadSpeedText}"
+                                   FontWeight="SemiBold" />
+                      </Grid>
                     </StackPanel>
 
                     <StackPanel Spacing="8">
@@ -488,7 +533,7 @@
         <Border Grid.Row="1"
                 Background="Transparent"
                 Padding="36,16,42,18">
-          <Grid ColumnDefinitions="*,Auto,Auto"
+          <Grid ColumnDefinitions="*,Auto,Auto,Auto"
                 ColumnSpacing="8">
             <Border Classes="error-bar"
                     IsVisible="{Binding HasError}">
@@ -515,14 +560,35 @@
                 <TextBlock Text="上一步" />
               </StackPanel>
             </Button>
+            <!-- Task 1: 取消版本检查按钮（检查中显示） -->
             <Button Grid.Column="2"
+                    Classes="secondary-command"
+                    Command="{Binding CancelCheckCommand}"
+                    IsVisible="{Binding IsCheckingUpdate}">
+              <StackPanel Orientation="Horizontal"
+                          Spacing="6">
+                <TextBlock Classes="installer-icon"
+                           Text="&#xE711;" />
+                <TextBlock Text="取消" />
+              </StackPanel>
+            </Button>
+            <Button Grid.Column="3"
                     Classes="primary-command"
                     Command="{Binding NextCommand}">
               <StackPanel Orientation="Horizontal"
                           Spacing="6">
-                <TextBlock Text="下一步" />
+                <!-- 正常状态：下一步 -->
+                <TextBlock Text="下一步"
+                           IsVisible="{Binding !IsCheckingUpdate}" />
+                <!-- 检查中状态 -->
+                <TextBlock Text="检查中..."
+                           IsVisible="{Binding IsCheckingUpdate}" />
                 <TextBlock Classes="installer-icon"
-                           Text="&#xE72A;" />
+                           Text="&#xE72A;"
+                           IsVisible="{Binding !IsCheckingUpdate}" />
+                <TextBlock Classes="installer-icon"
+                           Text="&#xE895;"
+                           IsVisible="{Binding IsCheckingUpdate}" />
               </StackPanel>
             </Button>
           </Grid>

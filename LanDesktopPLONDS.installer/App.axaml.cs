@@ -22,9 +22,18 @@ public partial class App : Application
             var privacyIdentity = new PrivacyDeviceIdentityProvider();
             var installService = OnlineInstallService.CreateDefault(privacyIdentity);
             var consentStore = new InstallerPrivacyConsentStore();
+            var vm = new MainWindowViewModel(installService, privacyIdentity, consentStore);
+
+            // Task 2: 解析 --install-path 参数（提权重启后由管理员进程传入）
+            var installPath = MainWindowViewModel.ParseInstallPath(desktop.Args);
+            if (!string.IsNullOrWhiteSpace(installPath))
+            {
+                vm.InstallPath = installPath;
+            }
+
             var mainWindow = new MainWindow
             {
-                DataContext = new MainWindowViewModel(installService, privacyIdentity, consentStore)
+                DataContext = vm
             };
             desktop.MainWindow = mainWindow;
             mainWindow.Show();

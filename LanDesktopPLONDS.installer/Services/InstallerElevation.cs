@@ -34,7 +34,19 @@ internal static class InstallerElevation
         if (RequiresElevation(installPath) && !IsRunningElevated())
         {
             throw new UnauthorizedAccessException(
-                "The selected installation path requires administrator permission. Restart the installer as administrator or choose a user-writable folder.");
+                "所选安装路径需要管理员权限。请以管理员身份重新运行安装程序，或选择用户可写入的文件夹。");
+        }
+    }
+
+    /// <summary>
+    /// 确保当前进程有权限执行卸载操作（删除安装目录、注册表键、快捷方式）。
+    /// </summary>
+    public static void EnsureCanUninstall(string installPath)
+    {
+        if (RequiresElevation(installPath) && !IsRunningElevated())
+        {
+            throw new UnauthorizedAccessException(
+                "卸载操作需要管理员权限。请以管理员身份重新运行安装程序。");
         }
     }
 

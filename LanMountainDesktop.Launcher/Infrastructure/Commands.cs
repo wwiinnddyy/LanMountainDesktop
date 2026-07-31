@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using LanMountainDesktop.Launcher.Models;
+using LanMountainDesktop.Shared.Contracts.Deployment;
 
 namespace LanMountainDesktop.Launcher.Infrastructure;
 
@@ -140,7 +141,8 @@ internal static class Commands
             ? launcherDir
             : AppContext.BaseDirectory);
         
-        var appDirs = Directory.GetDirectories(baseDir, "app-*", SearchOption.TopDirectoryOnly);
+        var searchPattern = DeploymentLayout.DeploymentDirectoryPrefix + "*";
+        var appDirs = Directory.GetDirectories(baseDir, searchPattern, SearchOption.TopDirectoryOnly);
         if (appDirs.Length > 0)
         {
             return baseDir;
