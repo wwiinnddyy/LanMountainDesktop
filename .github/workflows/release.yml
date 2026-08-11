@@ -650,17 +650,24 @@ jobs:
 
       - name: Install Linglong build tools
         run: |
-          # Add Linglong repository for Ubuntu 24.04
-          echo "deb [trusted=yes] https://ci.deepin.com/repo/obs/linglong:/CI:/release/xUbuntu_24.04/ ./" | sudo tee /etc/apt/sources.list.d/linglong.list
-          sudo apt-get update
-          
+          # Add Linglong repository for Ubuntu 24.04 (deepin OBS path is case-sensitive: Ubuntu_24.04)
+          echo "deb [trusted=yes] https://ci.deepin.com/repo/obs/linglong:/CI:/release/Ubuntu_24.04/ ./" | sudo tee /etc/apt/sources.list.d/linglong.list
+
+          # Update may fail if the Linglong mirror is unreachable; that must not fail the whole
+          # Linux release. Fall through to the graceful-skip path below.
+          sudo apt-get update || {
+            echo "::warning::apt-get update failed (Linglong repo unreachable), skipping Linglong build"
+            echo "LINGLONG_AVAILABLE=false" >> $GITHUB_ENV
+            exit 0
+          }
+
           # Install Linglong builder and CLI
           sudo apt-get install -y linglong-bin linglong-builder || {
             echo "::warning::Failed to install Linglong tools, skipping Linglong build"
             echo "LINGLONG_AVAILABLE=false" >> $GITHUB_ENV
             exit 0
           }
-          
+
           # Verify installation
           if command -v ll-builder &> /dev/null; then
             ll-builder --version
