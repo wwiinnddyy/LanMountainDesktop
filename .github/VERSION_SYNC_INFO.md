@@ -13,11 +13,11 @@
 仓库内的静态版本现在故意保留为开发占位值：
 
 - `Directory.Build.props`
-- `LanMountainDesktop/LanMountainDesktop.csproj`
-- `LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj`
-- `LanMountainDesktop.Shared.Contracts/LanMountainDesktop.Shared.Contracts.csproj`
-- `LanMountainDesktop/app.manifest`
-- `LanMountainDesktop.Launcher/app.manifest`
+- `desktop/LanMountainDesktop/LanMountainDesktop.csproj`
+- `desktop/LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj`
+- `core/LanMountainDesktop.Core/LanMountainDesktop.Core.csproj`
+- `desktop/LanMountainDesktop/app.manifest`
+- `desktop/LanMountainDesktop.Launcher/app.manifest`
 
 这些值只是提醒“当前不是正式注入构建”，不能代表发布版本。
 
@@ -36,7 +36,7 @@ Release 工作流会先从 tag 提取版本：
 
 - 主程序 `.csproj` 的 `Version`
 - Launcher `.csproj` 的 `Version`
-- Shared.Contracts `.csproj` 的 `Version`
+- Core `.csproj` 的 `Version`
 - `Directory.Build.props`
 - 主程序 `app.manifest`
 - Launcher `app.manifest`

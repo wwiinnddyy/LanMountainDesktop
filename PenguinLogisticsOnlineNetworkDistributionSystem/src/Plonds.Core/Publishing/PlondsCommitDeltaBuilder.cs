@@ -15,13 +15,10 @@ public sealed class PlondsCommitDeltaBuilder
 
     private static readonly Dictionary<string, string[]> SourceToArtifactMap = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["LanMountainDesktop"] = ["LanMountainDesktop.dll", "LanMountainDesktop.exe"],
-        ["LanMountainDesktop.Launcher"] = ["LanMountainDesktop.Launcher.exe"],
-        ["LanMountainDesktop.Shared.Contracts"] = ["LanMountainDesktop.Shared.Contracts.dll"],
-        ["LanMountainDesktop.PluginSdk"] = ["LanMountainDesktop.PluginSdk.dll"],
-        ["LanMountainDesktop.Appearance"] = ["LanMountainDesktop.Appearance.dll"],
-        ["LanMountainDesktop.Settings.Core"] = ["LanMountainDesktop.Settings.Core.dll"],
-        ["LanMountainDesktop.ComponentSystem"] = ["LanMountainDesktop.ComponentSystem.dll"]
+        ["desktop/LanMountainDesktop"] = ["LanMountainDesktop.dll", "LanMountainDesktop.exe"],
+        ["desktop/LanMountainDesktop.Launcher"] = ["LanMountainDesktop.Launcher.exe"],
+        ["core/LanMountainDesktop.Core"] = ["LanMountainDesktop.Core.dll"],
+        ["airapp/LanMountainDesktop.PluginSdk"] = ["LanMountainDesktop.PluginSdk.dll"]
     };
 
     private static readonly string[] FallbackAllArtifacts =
@@ -29,11 +26,8 @@ public sealed class PlondsCommitDeltaBuilder
         "LanMountainDesktop.dll",
         "LanMountainDesktop.exe",
         "LanMountainDesktop.Launcher.exe",
-        "LanMountainDesktop.Shared.Contracts.dll",
-        "LanMountainDesktop.PluginSdk.dll",
-        "LanMountainDesktop.Appearance.dll",
-        "LanMountainDesktop.Settings.Core.dll",
-        "LanMountainDesktop.ComponentSystem.dll"
+        "LanMountainDesktop.Core.dll",
+        "LanMountainDesktop.PluginSdk.dll"
     ];
 
     public PlondsDeltaBuildResult Build(PlondsCommitDeltaBuildOptions options)

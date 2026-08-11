@@ -58,7 +58,7 @@ jobs:
         with:
           name: build-windows-${{ matrix.configuration }}
           path: |
-            LanMountainDesktop/bin/${{ matrix.configuration }}/
+            desktop/LanMountainDesktop/bin/${{ matrix.configuration }}/
           retention-days: 7
 
   build-linux:
@@ -117,7 +117,7 @@ jobs:
         with:
           name: build-linux
           path: |
-            LanMountainDesktop/bin/Release/
+            desktop/LanMountainDesktop/bin/Release/
           retention-days: 7
 
   build-macos:
@@ -162,7 +162,7 @@ jobs:
         with:
           name: build-macos
           path: |
-            LanMountainDesktop/bin/Release/
+            desktop/LanMountainDesktop/bin/Release/
           retention-days: 7
 
   build-android:

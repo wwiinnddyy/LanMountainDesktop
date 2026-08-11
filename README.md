@@ -96,21 +96,35 @@ dotnet new install LanMountainDesktop.PluginTemplate
 dotnet new lmd-plugin -n MyPlugin
 ```
 
-- **Plugin SDK**: `LanMountainDesktop.PluginSdk` (API 5.0.0)
-- **共享契约**: `LanMountainDesktop.Shared.Contracts`
+- **Plugin SDK**: `LanMountainDesktop.PluginSdk` (API 6.0.0)
+- **共享契约**: `LanMountainDesktop.Core`
 - **迁移指南**: [PLUGIN_SDK_V5_MIGRATION.md](docs/PLUGIN_SDK_V5_MIGRATION.md)
 
 ## 项目结构
 
 ```
 LanMountainDesktop/
-├── LanMountainDesktop/              # 桌面宿主应用
-├── LanMountainDesktop.Launcher/     # 启动器 (OOBE、Splash、版本管理、更新)
-├── LanMountainDesktop.PluginSdk/    # 官方插件 SDK
-├── LanMountainDesktop.Shared.Contracts/  # 宿主与插件共享契约
-├── LanMountainDesktop.Appearance/   # 主题与外观基础设施
-├── LanMountainDesktop.Settings.Core/# 设置持久化基础设施
-└── LanMountainDesktop.Tests/        # 测试项目
+├── core/                            # 共享基础：契约、IPC、插件打包
+│   └── LanMountainDesktop.Core/
+├── platform/                        # 平台差异层（接口 + Windows/macOS 实现）
+│   └── LanMountainDesktop.Platform/
+├── airappsdk/                       # AirApp 第三方 SDK 与工具
+│   └── LanMountainDesktop.AirAppSdk/ (+ AirAppDevServer / AirAppTemplate)
+├── airapp/                          # 插件 SDK 与 AirApp 运行时
+│   ├── LanMountainDesktop.PluginSdk/    # 官方插件 SDK
+│   ├── LanMountainDesktop.AirAppRuntime/
+│   ├── LanMountainDesktop.AirAppHost/
+│   └── LanMountainDesktop.PluginTemplate/
+├── desktop/                         # 桌面宿主
+│   ├── LanMountainDesktop/          # 桌面宿主应用
+│   └── LanMountainDesktop.Launcher/ # 启动器 (OOBE、Splash、版本管理、更新)
+├── mobile/                          # 移动端壳（不参与桌面构建）
+│   ├── LanMountainDesktop.Mobile/
+│   └── LanMountainDesktop.Mobile.Android/
+├── install/                         # 在线安装器
+│   └── LanDesktopPLONDS.installer/
+└── tests/                           # 测试项目
+    └── LanMountainDesktop.Tests/
 ```
 
 ## 生态边界

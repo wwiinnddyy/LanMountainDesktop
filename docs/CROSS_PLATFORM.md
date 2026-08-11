@@ -16,32 +16,28 @@
 │  ComponentSystem / Controls / Theme（随桌面宿主）      │
 ├─────────────────────────────────────────────────────┤
 │  平台差异层（Platform）                               │
-│  LanMountainDesktop.Platform.Abstractions（接口）     │
-│  LanMountainDesktop.Platform.Windows（Windows 实现）  │
-│  （后续按需增加 Platform.Android / Platform.MacOS）    │
+│  LanMountainDesktop.Platform（接口 + Windows/MacOS 实现）│
 ├─────────────────────────────────────────────────────┤
 │  共享核心层（必须无平台依赖）                          │
-│  Shared.Contracts / Shared.IPC / Settings.Core        │
-│  Appearance / DesktopComponents.Runtime / PluginSdk   │
-│  Host.Abstractions / PluginIsolation.Contracts        │
+│  LanMountainDesktop.Core（契约 / IPC / 插件打包）     │
+│  LanMountainDesktop.PluginSdk（SDK / 隔离 / 设置/外观）│
 └─────────────────────────────────────────────────────┘
 ```
 
 ## 1.1 当前落地状态
 
-- ✅ `Platform.Abstractions`：接口 + NoOp 实现 + `PlatformLog` 日志桥
-- ✅ `Platform.Windows`：电源管理、原生对话框、桌面层嵌入、窗口置底/区域穿透、
-  DWM 互操作、图标服务（WindowsIconService/UwpManifestIconResolver）、包标识查询
-- ✅ `Platform.MacOS`：MacIconService
-- ✅ `Platform.Android`：骨架（后续按需填充）
+- ✅ `LanMountainDesktop.Platform`：接口 + NoOp 实现 + `PlatformLog` 日志桥；
+  Windows 实现（电源管理、原生对话框、桌面层嵌入、窗口置底/区域穿透、
+  DWM 互操作、图标服务 WindowsIconService/UwpManifestIconResolver、包标识查询）、
+  MacIconService（合并自 Platform.Abstractions / Windows / MacOS）
 - ✅ `Mobile` + `Mobile.Android`：单视图组件面板壳，APK 可构建
 - ✅ 主工程 `LanMountainDesktop` 已无任何 DllImport/LibraryImport
-- ✅ PluginIsolation.Ipc 新增 `InProcPluginIpcTransport`（进程内直通，含测试）
+- ✅ PluginIsolation 的 `InProcPluginIpcTransport`（进程内直通，含测试）已并入 PluginSdk
 
 主工程保留的平台相关内容（有意为之）：
 - `WindowsNotificationListener` / `WindowsSmtcMusicControlService` / `LocationService`
   的 WinRT **反射**调用路径（无编译期平台依赖，运行时 `OperatingSystem.IsWindows()` 保护），
-  P/Invoke 部分已抽到 `Platform.Windows.WindowsPackageIdentity`。
+  P/Invoke 部分已抽到 `LanMountainDesktop.Platform.Windows` 命名空间下的 `WindowsPackageIdentity`。
 - `LinuxPowerManagementService`（纯命令行调用，无平台 API）。
 - 静态工厂门面（`*ServiceFactory`）留在 `LanMountainDesktop.Services` 命名空间，
   保持既有调用点不变，内部委托平台实现。
@@ -49,8 +45,8 @@
 ## 2. Platform 层规则
 
 - 所有 P/Invoke、`DllImport`/`LibraryImport`、Windows 注册表、COM/Office 互操作等平台专属代码，
-  一律放入 `LanMountainDesktop.Platform.<平台>` 项目，禁止出现在主工程与共享层。
-- `Platform.Abstractions` 只包含接口、跨平台 DTO 与 Null/NoOp 兜底实现。
+  一律放入 `LanMountainDesktop.Platform` 项目（按平台子命名空间区分），禁止出现在主工程与共享层。
+- `LanMountainDesktop.Platform` 的接口与 DTO 部分只包含跨平台契约与 Null/NoOp 兜底实现。
 - Head 项目在启动时负责注册对应平台实现（桌面注册 Windows 实现，Android 注册移动实现或 NoOp）。
 
 ## 3. 插件体系的平台策略

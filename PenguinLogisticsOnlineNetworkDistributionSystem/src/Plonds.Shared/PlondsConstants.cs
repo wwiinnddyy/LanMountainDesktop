@@ -35,12 +35,9 @@ public static class PlondsConstants
 
     public static readonly string[] DefaultSourceDirs =
     [
-        "LanMountainDesktop",
-        "LanMountainDesktop.Launcher",
-        "LanMountainDesktop.Shared.Contracts",
-        "LanMountainDesktop.PluginSdk",
-        "LanMountainDesktop.Appearance",
-        "LanMountainDesktop.Settings.Core",
-        "LanMountainDesktop.ComponentSystem"
+        "desktop/LanMountainDesktop",
+        "desktop/LanMountainDesktop.Launcher",
+        "core/LanMountainDesktop.Core",
+        "airapp/LanMountainDesktop.PluginSdk"
     ];
 }

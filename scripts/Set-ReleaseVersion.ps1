@@ -40,9 +40,9 @@ function Update-XmlNodeValue {
 
 $projectFiles = @(
     'Directory.Build.props',
-    'LanMountainDesktop/LanMountainDesktop.csproj',
-    'LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj',
-    'LanMountainDesktop.Shared.Contracts/LanMountainDesktop.Shared.Contracts.csproj'
+    'desktop/LanMountainDesktop/LanMountainDesktop.csproj',
+    'desktop/LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj',
+    'core/LanMountainDesktop.Core/LanMountainDesktop.Core.csproj'
 )
 
 foreach ($projectFile in $projectFiles) {
@@ -50,7 +50,7 @@ foreach ($projectFile in $projectFiles) {
 }
 
 $manifestNamespace = @{ asm = 'urn:schemas-microsoft-com:asm.v1' }
-Update-XmlNodeValue -Path 'LanMountainDesktop/app.manifest' -XPath '/asm:assembly/asm:assemblyIdentity/@version' -Value $AssemblyVersion -NamespaceMap $manifestNamespace
-Update-XmlNodeValue -Path 'LanMountainDesktop.Launcher/app.manifest' -XPath '/asm:assembly/asm:assemblyIdentity/@version' -Value $AssemblyVersion -NamespaceMap $manifestNamespace
+Update-XmlNodeValue -Path 'desktop/LanMountainDesktop/app.manifest' -XPath '/asm:assembly/asm:assemblyIdentity/@version' -Value $AssemblyVersion -NamespaceMap $manifestNamespace
+Update-XmlNodeValue -Path 'desktop/LanMountainDesktop.Launcher/app.manifest' -XPath '/asm:assembly/asm:assemblyIdentity/@version' -Value $AssemblyVersion -NamespaceMap $manifestNamespace
 
 Write-Host "Stamped release version metadata. Version=$Version AssemblyVersion=$AssemblyVersion"

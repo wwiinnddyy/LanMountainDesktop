@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Version>6.0.0</Version>
+    <PackageId>LanMountainDesktop.Core</PackageId>
+    <IsPackable>true</IsPackable>
+    <Authors>LanMountainDesktop</Authors>
+    <Description>Shared contracts, IPC infrastructure and plugin packaging for LanMountainDesktop host and plugin ecosystems. (Merged from LanMountainDesktop.Shared.Contracts, LanMountainDesktop.Shared.IPC and LanMountainDesktop.PluginPackaging.)</Description>
+    <PackageTags>LanMountainDesktop;Plugin;SharedContracts;IPC;Packaging;Avalonia</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/wwiinnddyy/LanMountainDesktop</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>LGPL-3.0-or-later</PackageLicenseExpression>
+    <Copyright>Copyright (c) LanMountainDesktop Contributors</Copyright>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="dotnetCampus.Ipc" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+    <None Include="LICENSE" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>

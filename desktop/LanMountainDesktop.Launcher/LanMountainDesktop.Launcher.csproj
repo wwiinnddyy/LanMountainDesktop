@@ -1,0 +1,63 @@
+<Project Sdk="Microsoft.NET.Sdk" TreatAsLocalProperty="Version;PackageVersion;InformationalVersion;AssemblyVersion;FileVersion">
+  
+  <!-- 导入 AOT 配置 -->
+  <Import Project="LanMountainDesktop.Launcher.AOT.props" Condition="Exists('LanMountainDesktop.Launcher.AOT.props')" />
+  
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Version>0.0.0-dev</Version>
+    <PackageVersion>$(Version)</PackageVersion>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- 应用程序图标 -->
+    <ApplicationIcon>Assets\logo.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 只引用 Core（共享契约、IPC 协议、插件打包） -->
+    <ProjectReference Include="..\..\core\LanMountainDesktop.Core\LanMountainDesktop.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="FluentAvaloniaUI" />
+    <PackageReference Include="FluentIcons.Avalonia" />
+    <PackageReference Include="Avalonia.Fonts.Inter" />
+    <PackageReference Include="ClassIsland.Markdown.Avalonia" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="Tmds.DBus.Protocol" />
+  </ItemGroup>
+
+  <!-- 资源文件 -->
+  <ItemGroup>
+    <!-- 公钥文件 -->
+    <None Include="Assets\public-key.pem" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Avalonia 资源文件 -->
+    <AvaloniaResource Include="Assets\logo.ico" />
+    <AvaloniaResource Include="..\LanMountainDesktop\Assets\logo_nightly.png" Link="Assets\logo_nightly.png" />
+  </ItemGroup>
+
+  <Target Name="CopyPublicKeyToLauncherDir" AfterTargets="Build">
+    <PropertyGroup>
+      <PublicKeySource>$(MSBuildProjectDirectory)\Assets\public-key.pem</PublicKeySource>
+      <PublicKeyDestDir>$(OutDir).Launcher\update</PublicKeyDestDir>
+    </PropertyGroup>
+    <MakeDir Directories="$(PublicKeyDestDir)" />
+    <Copy SourceFiles="$(PublicKeySource)" DestinationFolder="$(PublicKeyDestDir)" SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="CopyPublicKeyToPublishDir" AfterTargets="Publish">
+    <PropertyGroup>
+      <PublishedKeySource>$(MSBuildProjectDirectory)\Assets\public-key.pem</PublishedKeySource>
+      <PublishedKeyDestDir>$(PublishDir).Launcher\update</PublishedKeyDestDir>
+    </PropertyGroup>
+    <MakeDir Directories="$(PublishedKeyDestDir)" />
+    <Copy SourceFiles="$(PublishedKeySource)" DestinationFolder="$(PublishedKeyDestDir)" SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

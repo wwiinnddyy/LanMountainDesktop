@@ -1,6 +1,14 @@
 ---
 name: "refactoring-insight"
-description: "Analyzes codebase for refactoring opportunities: large files, code duplication, god classes, naming inconsistencies, tight coupling, and missing abstractions. Invoke when user asks for refactoring insight/analysis or wants to improve code architecture."
+description: "Use when /refactoring-insight analyzes the codebase for refactoring opportunities including large files, code duplication, god classes, naming inconsistencies, tight coupling, and missing abstractions. Invoke when the user asks for refactoring insight, refactoring analysis, code quality analysis, architecture review, or wants to improve code architecture."
+trigger:
+  - "/refactoring-insight"
+  - "refactoring insight"
+  - "refactoring analysis"
+  - "code quality analysis"
+  - "architecture review"
+  - "code smells"
+  - "what needs refactoring"
 ---
 
 # Refactoring Insight
@@ -9,9 +17,13 @@ Deep codebase analysis skill that identifies structural problems and produces pr
 
 ## When to Invoke
 
-- User asks for "refactoring insight", "refactoring analysis", "code quality analysis", "architecture review"
-- User wants to understand what should be refactored in the codebase
-- User asks "where are the code smells?" or "what needs refactoring?"
+This Skill is triggered when the user:
+
+- Uses the slash command `/refactoring-insight`
+- Asks for "refactoring insight", "refactoring analysis", "code quality analysis", or "architecture review"
+- Asks "where are the code smells?" or "what needs refactoring?"
+- Wants to understand what should be refactored in the codebase
+- Requests a structural or architectural health check of the project
 
 ## Analysis Dimensions
 
@@ -80,6 +92,20 @@ Search for these specific duplication patterns:
 
 **Output**: List of misplaced files/classes with recommended new locations.
 
+## Output Validation
+
+Before delivering the report, verify ALL of the following:
+
+1. **Completeness**: All 6 analysis dimensions have been executed and have findings or an explicit "no issues found" statement.
+2. **Priority assignment**: Every finding has exactly one priority level (P0/P1/P2/P3) with justification matching the priority criteria.
+3. **File references**: Every finding includes at least one affected file path that exists in the codebase (verify via file lookup).
+4. **Line numbers**: Every file reference includes specific line numbers or ranges that point to the described problem.
+5. **Actionable recommendation**: Every finding includes a concrete recommended action (not just "fix this" — specify what to extract, rename, merge, or move).
+6. **Summary table**: The report begins with a summary table containing total metrics (file count analyzed, duplication instances, coupling violations, etc.).
+7. **No false positives**: Cross-check at least P0 and P1 findings by reading the referenced code to confirm the problem actually exists.
+
+If any validation check fails, correct the finding before including it in the final report.
+
 ## Output Format
 
 Produce a structured report with:
@@ -94,6 +120,44 @@ Produce a structured report with:
 - **P1**: Patterns duplicated 5-9 times; services without interfaces that are widely used; DI bypass affecting testability
 - **P2**: Patterns duplicated 3-4 times; naming inconsistencies affecting readability; misplaced files
 - **P3**: Minor naming variations; single-instance duplications; organizational improvements
+
+## Verification
+
+After completing the analysis, run ALL of the following checks before delivering the report:
+
+1. **Dimension coverage**: Confirm all 6 analysis dimensions produced findings or an explicit "no issues found" statement. Count: exactly 6 dimension sections must appear in the output.
+2. **File existence**: For every file path referenced in a finding, verify the file exists via `Glob` or `Read`. Remove or correct any finding whose primary file path does not resolve.
+3. **Priority consistency**: Confirm every finding has exactly one priority (P0/P1/P2/P3) and that the priority matches the criteria in the Priority Criteria section (e.g., P0 requires 1000+ lines or 10+ duplications).
+4. **Line number accuracy**: For P0 and P1 findings, re-read the referenced code at the cited line numbers to confirm the described problem actually exists at that location.
+5. **Actionable check**: Every recommendation must specify a concrete action (extract to base class, rename X to Y, merge file A into file B, add interface I). Reject vague recommendations like "improve this" or "consider refactoring".
+6. **Summary metrics match**: The summary table totals must equal the actual count of findings per dimension. Cross-check: sum of duplication instances in summary = count of duplication findings, etc.
+
+If any check fails, correct the finding before including it. If correction is not possible, remove the finding and note the gap.
+
+## Routing
+
+### Stop Conditions
+
+- All 6 dimensions have been analyzed and the report passes all Verification checks.
+- The user explicitly stops the analysis early.
+- The target workspace contains fewer than 10 source files (report "codebase too small for meaningful analysis" with a brief summary instead of the full report).
+
+### After Completion
+
+1. **If P0 findings exist**: Recommend the user address P0 items first. Suggest invoking `/refactoring-insight` again after P0 fixes to re-evaluate.
+2. **If the user wants to act on findings**: For each accepted finding, the concrete recommendation already specifies the action (extract, rename, merge, move). Execute the action in a separate task — do not mix refactoring execution with this analysis Skill.
+3. **If no significant issues found (P2/P3 only)**: Report that the codebase structure is healthy. List P2/P3 items as optional improvements. No follow-up needed.
+4. **If the user requests deeper analysis on a specific dimension**: Re-invoke this Skill with a scoped target (e.g., "analyze only the Services/ directory for tight coupling"). Do not create a new Skill for scoped analysis.
+5. **Handoff to other Skills**: If findings reveal needs for other workflows, route as follows:
+   - Security concerns → `/security-scan`
+   - Test coverage gaps → suggest adding tests (not owned by this Skill)
+   - Architecture documentation gaps → update `docs/ARCHITECTURE.md` (not owned by this Skill)
+
+### Failure Boundary
+
+- This Skill is read-only analysis. It does not modify source code, create files, or change project configuration.
+- If the codebase is not a .NET/C# project, this Skill's project-specific context does not apply. Adapt dimension targets or report "not applicable".
+- If search tools return no results for a dimension, report "no data available" for that dimension rather than guessing.
 
 ## Project-Specific Context
 

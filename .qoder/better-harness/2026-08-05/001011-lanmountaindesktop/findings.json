@@ -1,0 +1,132 @@
+{
+  "summary": {
+    "projectName": "阑山桌面LanMountainDesktop",
+    "locale": "zh-CN",
+    "modelId": "agent-work-loop-v4",
+    "reportContractVersion": 25,
+    "overview": "项目拥有完善的文档指导和 CI/CD 工作流，但编码代理缺少可复用的 Skill 配置且项目无专用测试文件，限制了变更验证和持续学习能力。",
+    "aiAgentPractice": {
+      "inspectedSurfaces": [
+        "Rules",
+        "Skills",
+        "Workflows",
+        "Custom Agents"
+      ],
+      "coverageRows": [
+        {
+          "surface": "Rules",
+          "scopes": [
+            "Project"
+          ],
+          "count": 1,
+          "paths": [
+            "AGENTS.md"
+          ]
+        },
+        {
+          "surface": "Skills",
+          "scopes": [
+            "Project"
+          ],
+          "count": 0,
+          "paths": []
+        },
+        {
+          "surface": "Workflows",
+          "scopes": [
+            "Project"
+          ],
+          "count": 7,
+          "paths": [
+            ".github/workflows/build.yml",
+            ".github/workflows/code-quality.yml",
+            ".github/workflows/installer-build.yml",
+            ".github/workflows/issue-management.yml",
+            ".github/workflows/plonds-comparator.yml",
+            ".github/workflows/plonds-uploader.yml",
+            ".github/workflows/release.yml"
+          ]
+        },
+        {
+          "surface": "Custom Agents",
+          "scopes": [
+            "Project"
+          ],
+          "count": 0
+        }
+      ]
+    },
+    "assignmentSummaries": [],
+    "dimensions": [
+      {
+        "id": "task-understanding",
+        "label": "任务理解",
+        "score": 70,
+        "summary": "AGENTS.md 提供了全面的架构指引和规范，104 个规格文档使任务边界清晰，但工作流指引未与 CI 直接关联。",
+        "findingRefs": []
+      },
+      {
+        "id": "controlled-execution",
+        "label": "可控执行",
+        "score": 45,
+        "summary": "启动和构建命令在 AGENTS.md 中有文档，但无 Skill、Command 或 Agent 配置，操作能力受限。",
+        "findingRefs": []
+      },
+      {
+        "id": "change-validation",
+        "label": "改动验证",
+        "score": 45,
+        "summary": "CI 工作流提供了验证管道，但项目缺少专用测试文件（990 源文件 vs 0 测试文件），限制了变更验证覆盖。",
+        "findingRefs": [
+          "zero-test-files"
+        ]
+      },
+      {
+        "id": "reliable-delivery",
+        "label": "可靠交付",
+        "score": 48,
+        "summary": "7 个 CI/CD 工作流覆盖了构建、发布和代码质量，但分析窗口内无实际交付证据。",
+        "findingRefs": []
+      },
+      {
+        "id": "learning-capture",
+        "label": "经验沉淀",
+        "score": 35,
+        "summary": "无 Skill 配置、无学习事件、无重复模式检测，持续改进机制尚未建立。",
+        "findingRefs": [
+          "candidate-skill-unconfigured"
+        ]
+      }
+    ]
+  },
+  "findings": [
+    {
+      "id": "zero-test-files",
+      "title": "项目无专用测试文件，变更验证依赖有限",
+      "severity": "Medium",
+      "reason": "项目有 990 个源文件但 0 个专用测试文件。尽管 CI 管道存在，变更验证覆盖受到根本性限制，无法在交付前验证受影响的行为。",
+      "expectedOutput": [
+        "为核心模块添加专用测试文件，确保 dotnet test 可以执行并验证关键行为。"
+      ],
+      "expectedArtifact": "Test files",
+      "aiFixPrompt": "/better-harness fix this issue\n\n为项目的核心模块添加最小但有效的测试覆盖，优先覆盖高频变更的核心路径。\n\n## 验证\n\n- 运行 dotnet test 确认测试通过\n- 确认测试覆盖了至少一个核心业务路径",
+      "dimensionRefs": [
+        "change-validation"
+      ]
+    },
+    {
+      "id": "candidate-skill-unconfigured",
+      "title": "候选 Skill 文件缺少触发和验证配置",
+      "severity": "Low",
+      "reason": ".trae/skills/refactoring-insight/SKILL.md 存在但触发条件为 no、验证为 no、路由为 no。即使激活也无法被自动路由或在正确时机触发。",
+      "expectedOutput": [
+        "补全候选 Skill 的触发条件和验证配置，使其可被正确路由和激活。"
+      ],
+      "expectedArtifact": "Skill configuration",
+      "aiFixPrompt": "/better-harness fix this issue\n\n检查 .trae/skills/refactoring-insight/SKILL.md 的配置，补充触发条件和输出验证。\n\n## 验证\n\n- 确认 Skill 的 trigger 字段已正确配置\n- 确认 Skill 的输出有明确的验证方法",
+      "dimensionRefs": [
+        "learning-capture"
+      ]
+    }
+  ]
+}

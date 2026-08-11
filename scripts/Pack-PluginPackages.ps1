@@ -24,9 +24,9 @@ New-Item -ItemType Directory -Force -Path $resolvedNuGetPackagesPath | Out-Null
 $env:NUGET_PACKAGES = $resolvedNuGetPackagesPath
 
 $projects = @(
-    "LanMountainDesktop.Shared.Contracts\LanMountainDesktop.Shared.Contracts.csproj",
-    "LanMountainDesktop.PluginSdk\LanMountainDesktop.PluginSdk.csproj",
-    "LanMountainDesktop.PluginTemplate\LanMountainDesktop.PluginTemplate.csproj"
+    "core\LanMountainDesktop.Core\LanMountainDesktop.Core.csproj",
+    "airapp\LanMountainDesktop.PluginSdk\LanMountainDesktop.PluginSdk.csproj",
+    "airapp\LanMountainDesktop.PluginTemplate\LanMountainDesktop.PluginTemplate.csproj"
 )
 
 $versionArgs = @()

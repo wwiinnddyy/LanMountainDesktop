@@ -7,19 +7,19 @@ on:
     paths:
       - '.github/workflows/installer-build.yml'
       - 'Directory.Packages.props'
-      - 'LanDesktopPLONDS.installer/**'
-      - 'LanMountainDesktop.Shared.Contracts/**'
+      - 'install/LanDesktopPLONDS.installer/**'
+      - 'core/LanMountainDesktop.Core/**'
   pull_request:
     paths:
       - '.github/workflows/installer-build.yml'
       - 'Directory.Packages.props'
-      - 'LanDesktopPLONDS.installer/**'
-      - 'LanMountainDesktop.Shared.Contracts/**'
+      - 'install/LanDesktopPLONDS.installer/**'
+      - 'core/LanMountainDesktop.Core/**'
   workflow_dispatch:
 
 env:
   DOTNET_VERSION: '10.0.x'
-  INSTALLER_PROJECT: LanDesktopPLONDS.installer/LanDesktopPLONDS.installer.csproj
+  INSTALLER_PROJECT: install/LanDesktopPLONDS.installer/LanDesktopPLONDS.installer.csproj
   INSTALLER_RUNTIME: win-x64
   INSTALLER_ARTIFACT_DIR: artifacts/installer-online/win-x64
   DOTNET_gcServer: 1

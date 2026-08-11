@@ -26,7 +26,7 @@ if ([string]::IsNullOrWhiteSpace($OutputDir)) {
     $OutputDir = "..\publish\aot\$RuntimeIdentifier"
 }
 
-$projectPath = "..\LanMountainDesktop.Launcher\LanMountainDesktop.Launcher.csproj"
+$projectPath = "..\desktop\LanMountainDesktop.Launcher\LanMountainDesktop.Launcher.csproj"
 $absoluteOutputDir = Resolve-Path $OutputDir -ErrorAction SilentlyContinue
 if (-not $absoluteOutputDir) {
     $absoluteOutputDir = Join-Path (Get-Location) $OutputDir

@@ -10,8 +10,8 @@ $ErrorActionPreference = "Stop"
 
 # 获取项目根目录
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
-$LauncherOutput = Join-Path $ProjectRoot "LanMountainDesktop.Launcher\bin\$Configuration\net10.0"
-$MainAppOutput = Join-Path $ProjectRoot "LanMountainDesktop\bin\$Configuration\net10.0"
+$LauncherOutput = Join-Path $ProjectRoot "desktop\LanMountainDesktop.Launcher\bin\$Configuration\net10.0"
+$MainAppOutput = Join-Path $ProjectRoot "desktop\LanMountainDesktop\bin\$Configuration\net10.0"
 $DevRoot = Join-Path $ProjectRoot "dev-test"
 
 Write-Host "Setting up development environment..." -ForegroundColor Cyan

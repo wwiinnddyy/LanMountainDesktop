@@ -143,7 +143,7 @@ jobs:
           $arch = "${{ matrix.arch }}"
           $launcherPublishDir = "publish/launcher-win-$arch"
 
-          dotnet publish LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj `
+          dotnet publish desktop/LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj `
             -c Release `
             -o ./$launcherPublishDir `
             --self-contained `
@@ -192,7 +192,7 @@ jobs:
           $arch = "${{ matrix.arch }}"
           $publishDir = "publish/airapp-runtime-win-$arch"
 
-          dotnet publish LanMountainDesktop.AirAppRuntime/LanMountainDesktop.AirAppRuntime.csproj `
+          dotnet publish airapp/LanMountainDesktop.AirAppRuntime/LanMountainDesktop.AirAppRuntime.csproj `
             -c Release `
             -o ./$publishDir `
             --self-contained:false `
@@ -215,7 +215,7 @@ jobs:
           $arch = "${{ matrix.arch }}"
           $publishDir = "publish/windows-$arch"
 
-          dotnet publish LanMountainDesktop.AirAppHost/LanMountainDesktop.AirAppHost.csproj `
+          dotnet publish airapp/LanMountainDesktop.AirAppHost/LanMountainDesktop.AirAppHost.csproj `
             -c Release `
             -o ./$publishDir `
             --self-contained:false `
@@ -467,7 +467,7 @@ jobs:
 
       - name: Publish Launcher (AOT)
         run: |
-          dotnet publish LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj \
+          dotnet publish desktop/LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj \
             -c Release \
             -o ./publish/launcher-linux-x64 \
             --self-contained \
@@ -504,7 +504,7 @@ jobs:
 
       - name: Publish AirAppRuntime
         run: |
-          dotnet publish LanMountainDesktop.AirAppRuntime/LanMountainDesktop.AirAppRuntime.csproj \
+          dotnet publish airapp/LanMountainDesktop.AirAppRuntime/LanMountainDesktop.AirAppRuntime.csproj \
             -c Release \
             -o ./publish/airapp-runtime-linux-x64 \
             --self-contained false \
@@ -950,7 +950,7 @@ jobs:
 
       - name: Publish Launcher (AOT)
         run: |
-          dotnet publish LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj \
+          dotnet publish desktop/LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj \
             -c Release \
             -o ./publish/launcher-macos-${{ matrix.arch }} \
             --self-contained \
@@ -987,7 +987,7 @@ jobs:
 
       - name: Publish AirAppRuntime
         run: |
-          dotnet publish LanMountainDesktop.AirAppRuntime/LanMountainDesktop.AirAppRuntime.csproj \
+          dotnet publish airapp/LanMountainDesktop.AirAppRuntime/LanMountainDesktop.AirAppRuntime.csproj \
             -c Release \
             -o ./publish/airapp-runtime-macos-${{ matrix.arch }} \
             --self-contained false \

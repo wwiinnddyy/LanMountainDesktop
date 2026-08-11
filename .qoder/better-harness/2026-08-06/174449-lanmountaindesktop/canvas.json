@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "summary": {},
+  "dimensions": [
+    {
+      "id": "task-understanding"
+    },
+    {
+      "id": "controlled-execution"
+    },
+    {
+      "id": "change-validation"
+    },
+    {
+      "id": "reliable-delivery"
+    },
+    {
+      "id": "learning-capture"
+    }
+  ],
+  "findings": [
+    {
+      "id": "zero-project-skill-coverage",
+      "subdimensionRefs": [
+        "loop-engineering"
+      ]
+    },
+    {
+      "id": "no-validation-commands-observed",
+      "subdimensionRefs": [
+        "relevant-check"
+      ]
+    },
+    {
+      "id": "unreviewed-execution-friction",
+      "subdimensionRefs": [
+        "lifecycle-repeat-detection"
+      ]
+    },
+    {
+      "id": "unevaluated-lifecycle-demand",
+      "subdimensionRefs": [
+        "lifecycle-repeat-detection"
+      ]
+    }
+  ]
+}

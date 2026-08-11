@@ -1,0 +1,184 @@
+{
+  "summary": {
+    "projectName": "阑山桌面LanMountainDesktop",
+    "locale": "zh-CN",
+    "modelId": "agent-work-loop-v4",
+    "reportContractVersion": 25,
+    "overview": "项目拥有全面的 AGENTS.md 指导文档和 7 个 CI 工作流，但项目级可执行 Agent 能力完全缺失（零 Skills、零 Commands、零 MCP），且 12 个会话中未观察到任何变更验证行为，学习捕获机制尚未从线索阶段推进到可复用改进。",
+    "aiAgentPractice": {
+      "inspectedSurfaces": [
+        "Rules",
+        "Workflows"
+      ],
+      "coverageRows": [
+        {
+          "surface": "Rules",
+          "scopes": [
+            "Project"
+          ],
+          "count": 1,
+          "paths": [
+            "AGENTS.md"
+          ]
+        },
+        {
+          "surface": "Workflows",
+          "scopes": [
+            "Project"
+          ],
+          "count": 7,
+          "paths": [
+            ".github/workflows/build.yml",
+            ".github/workflows/code-quality.yml",
+            ".github/workflows/installer-build.yml",
+            ".github/workflows/issue-management.yml",
+            ".github/workflows/plonds-comparator.yml",
+            ".github/workflows/plonds-uploader.yml",
+            ".github/workflows/release.yml"
+          ]
+        },
+        {
+          "surface": "Skills",
+          "scopes": [
+            "Project"
+          ],
+          "count": 0
+        },
+        {
+          "surface": "MCP",
+          "scopes": [
+            "Project"
+          ],
+          "count": 0
+        },
+        {
+          "surface": "Commands",
+          "scopes": [
+            "Project"
+          ],
+          "count": 0
+        },
+        {
+          "surface": "Custom Agents",
+          "scopes": [
+            "Project"
+          ],
+          "count": 0
+        },
+        {
+          "surface": "Plugins",
+          "scopes": [
+            "Project"
+          ],
+          "count": 0
+        }
+      ]
+    },
+    "assignmentSummaries": [],
+    "dimensions": [
+      {
+        "id": "task-understanding",
+        "label": "任务理解",
+        "score": 76,
+        "summary": "AGENTS.md 提供了全面的 AI 指导，涵盖架构、视觉规范、插件 SDK 等关键领域；24 份架构文档和 80 份规格文件为上下文路由提供了充足依据，但部分会话仍出现执行摩擦，说明指导到执行的转化路径存在断裂。",
+        "findingRefs": []
+      },
+      {
+        "id": "controlled-execution",
+        "label": "可控执行",
+        "score": 50,
+        "summary": "项目有明确的启动和构建命令（AGENTS.md 中记录），但项目级可执行能力为零——无 Skills、Commands、MCP、Agents 或 Plugins 配置。Agent 只能依赖通用工具能力，无法通过项目专属的可复用工作流执行任务。",
+        "findingRefs": []
+      },
+      {
+        "id": "change-validation",
+        "label": "改动验证",
+        "score": 35,
+        "summary": "12 个已分析会话中未观察到任何验证命令执行。证据包报告 990 个源文件中零测试文件，仅 3 个跟踪测试文件。变更验证维度所有三项检查均处于 Unobserved 状态。",
+        "findingRefs": [
+          "no-validation-commands-observed"
+        ]
+      },
+      {
+        "id": "reliable-delivery",
+        "label": "可靠交付",
+        "score": 55,
+        "summary": "7 个 CI 工作流覆盖了构建、代码质量、安装程序、发布等交付路径，机制已 Present。但在分析窗口内未观察到会话级别的交付验收或回滚恢复行为，证据强度停留在 Present 未达 Wired。",
+        "findingRefs": []
+      },
+      {
+        "id": "learning-capture",
+        "label": "经验沉淀",
+        "score": 40,
+        "summary": "检测到 3 次执行摩擦信号和 1 个重复工作候选，但均未完成语义复核。2 条 episode 记录未产生任何可复用候选。学习捕获处于线索收集阶段，尚未推进到 Loop Engineering 或纵向验证。",
+        "findingRefs": [
+          "zero-project-skill-coverage",
+          "unreviewed-execution-friction",
+          "unevaluated-lifecycle-demand"
+        ]
+      }
+    ]
+  },
+  "findings": [
+    {
+      "id": "zero-project-skill-coverage",
+      "title": "项目级 Skill 为零，已检测到的可复用流程候选无持久所有者",
+      "severity": "Low",
+      "reason": "资产清单确认项目级 Skills 为零，而分析器检测到 `.trae/skills/refactoring-insight/SKILL.md` 作为 Skill 候选存在（触发条件、流程、输出均已具备，仅缺验证和路由）。重复程序或知识需求没有通过覆盖检查梯级（observed → built-in → configured → extend → create）进行路由，导致可复用能力无法被 Agent 发现和调用。",
+      "expectedOutput": [
+        "通过 Loop Discovery 为每个检测到的 Skill 候选选择最小持久所有者（observed → built-in → configured → extend → create）",
+        "记录路由决策和覆盖梯级检查结果"
+      ],
+      "expectedArtifact": "Skill 覆盖路由决策记录",
+      "aiFixPrompt": "/better-harness fix this issue\n\n为检测到的 Skill 候选执行覆盖检查梯级路由。\n\n## 先检查的覆盖梯级\n\n1. 检查是否存在 observed 覆盖（Agent 已在会话中自发执行的流程）\n2. 检查 built-in 覆盖（Qoder 内置能力是否已满足）\n3. 检查 configured 覆盖（已配置但未激活的 Skill）\n4. 评估 extend 或 create 的必要性\n\n## 候选 Skill\n\n- `.trae/skills/refactoring-insight/SKILL.md`：触发条件 yes，流程 yes，输出 yes，验证 no，路由 no\n\n## 验证\n\n- 运行 `node scripts/better-harness.mjs coding-agent-practices asset-baseline qoder --workspace . --language zh-CN --json` 确认 Skill 覆盖变化\n- 确认 Loop Discovery 已为候选选择了最小持久所有者",
+      "dimensionRefs": [
+        "learning-capture"
+      ]
+    },
+    {
+      "id": "no-validation-commands-observed",
+      "title": "12 个会话中未执行任何验证命令，变更验证完全缺失",
+      "severity": "Low",
+      "reason": "12 个已分析会话中没有任何验证命令类别被观察到。证据包报告 990 个源文件中零测试文件（由证据包统计），仅 3 个跟踪测试文件存在于 LanMountainDesktop.Tests 项目中。AGENTS.md 记录了 `dotnet test LanMountainDesktop.slnx -c Debug` 命令，但该命令未在分析窗口内的任何会话中被执行。变更验证维度的三项检查（相关验证、失败诊断与修复、修复后重新验证）均处于 Unobserved 状态，维度分数上限为 59。",
+      "expectedOutput": [
+        "确认 `dotnet test` 命令可执行并覆盖核心变更路径",
+        "如果验证路由存在障碍（如测试项目不完整），记录具体阻塞原因"
+      ],
+      "expectedArtifact": "验证路由检查报告",
+      "aiFixPrompt": "/better-harness fix this issue\n\n在 AGENTS.md 的「改动后必做检查」中已记录验证命令，但会话中未观察到执行。检查验证路由是否可发现且可执行。\n\n## 先核对的命令\n\n- `dotnet build LanMountainDesktop.slnx -c Debug`\n- `dotnet test LanMountainDesktop.slnx -c Debug`\n\n## 验证\n\n- 确认 `dotnet test` 在本地可执行且返回有意义的结果\n- 确认 AGENTS.md 中的测试命令与实际测试项目路径一致\n- 检查是否需要添加 Hook 在编辑后自动触发验证",
+      "dimensionRefs": [
+        "change-validation"
+      ]
+    },
+    {
+      "id": "unreviewed-execution-friction",
+      "title": "3 次执行摩擦信号未完成语义复核，无法区分真实问题与噪音",
+      "severity": "Low",
+      "reason": "分析器聚合了 3 次 failed-event 摩擦信号（来源：2 次 disabled-source-root 警告、2 次 missing-optional-root 警告），但对应的有界会话尚未打开进行语义复核。当前无法判断这些摩擦是否导致了实际的任务失败、重试或工作丢失，还是仅为配置噪音。摩擦信号是调查线索，不是已确认的后果，但长期不复核会导致真实问题被淹没。",
+      "expectedOutput": [
+        "每个摩擦信号完成 taskFamily、outcome、friction 分类",
+        "区分配置噪音与真实执行障碍，对真实障碍记录修复路由"
+      ],
+      "expectedArtifact": "摩擦信号语义复核报告",
+      "aiFixPrompt": "/better-harness fix this issue\n\n对 3 次 failed-event 摩擦信号执行有界语义复核。\n\n## 先做什么\n\n1. 运行 session-analysis insights 获取完整会话洞察\n2. 为每个摩擦信号分类：taskFamily、outcome、friction、confidence、evidenceReason\n3. 区分配置缺失（disabled-source-root、missing-optional-root）与真实执行失败\n\n## 验证\n\n- 运行 `node scripts/session-analysis.mjs insights --platform qoder --workspace . --selection all-eligible --limit 1000 --format json`\n- 确认每个摩擦信号已有分类结论\n- 对于确认为配置问题的信号，修复配置或记录为已知噪音",
+      "dimensionRefs": [
+        "learning-capture"
+      ]
+    },
+    {
+      "id": "unevaluated-lifecycle-demand",
+      "title": "1 个重复工作候选未通过覆盖梯级路由，学习捕获停留在线索阶段",
+      "severity": "Low",
+      "reason": "工作流需求诊断检测到 1 个重复工作候选（repeated candidate），但当前手off 数量为零。该候选未被追踪通过 Skill 覆盖梯级（observed → built-in → configured → extend → create），也未通过 Loop Discovery 选择最小持久所有者。2 条 episode 记录未产生任何循环候选。学习捕获维度的 Lifecycle Opportunity Detection 处于线索阶段，Loop Engineering 和 Longitudinal Validation 均无法推进。",
+      "expectedOutput": [
+        "重复工作候选通过 Loop Discovery 选择了最小持久所有者",
+        "记录覆盖梯级检查结果和路由决策依据"
+      ],
+      "expectedArtifact": "Loop Discovery 路由决策记录",
+      "aiFixPrompt": "/better-harness fix this issue\n\n对检测到的重复工作候选执行 Loop Discovery 路由。\n\n## 先做什么\n\n1. 运行 session-analysis 获取工作流需求诊断详情\n2. 识别重复候选的具体意图和范围\n3. 通过覆盖梯级检查现有覆盖\n4. 如无现有覆盖，通过 Loop Discovery 选择最小持久所有者\n\n## 验证\n\n- 确认重复候选已有明确的覆盖路由决策\n- 如果选择 Skill 形状的所有者，确认触发条件、流程、输出和验证器已定义\n- 运行 `node scripts/better-harness.mjs coding-agent-practices asset-baseline qoder --workspace . --language zh-CN --json` 确认资产变化",
+      "dimensionRefs": [
+        "learning-capture"
+      ]
+    }
+  ]
+}

@@ -417,13 +417,15 @@ function Get-CommitRangeInfo {
     $ignoredPrefixes = @(".github/", ".trae/", "docs/", "PenguinLogisticsOnlineNetworkDistributionSystem/")
     $ignoredExtensions = @(".md", ".txt")
     $expansionPrefixes = @(
-        "LanMountainDesktop/",
-        "LanMountainDesktop.Launcher/",
-        "LanMountainDesktop.Appearance/",
-        "LanMountainDesktop.PluginSdk/",
-        "LanMountainDesktop.Settings.Core/",
-        "LanMountainDesktop.Shared.Contracts/",
-        "LanMountainDesktop.Tests/",
+        "desktop/LanMountainDesktop/",
+        "desktop/LanMountainDesktop.Launcher/",
+        "airapp/LanMountainDesktop.PluginSdk/",
+        "airapp/LanMountainDesktop.AirAppRuntime/",
+        "airapp/LanMountainDesktop.AirAppHost/",
+        "core/LanMountainDesktop.Core/",
+        "platform/LanMountainDesktop.Platform/",
+        "install/LanDesktopPLONDS.installer/",
+        "tests/LanMountainDesktop.Tests/",
         "scripts/"
     )
     $expansionExtensions = @(".csproj", ".props", ".targets", ".sln", ".slnx", ".json", ".axaml", ".resx")

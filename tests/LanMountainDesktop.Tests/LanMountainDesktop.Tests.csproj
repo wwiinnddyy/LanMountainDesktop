@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Headless.XUnit" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\desktop\LanMountainDesktop\LanMountainDesktop.csproj" />
+    <ProjectReference Include="..\..\airapp\LanMountainDesktop.PluginSdk\LanMountainDesktop.PluginSdk.csproj" />
+    <ProjectReference Include="..\..\airapp\LanMountainDesktop.AirAppRuntime\LanMountainDesktop.AirAppRuntime.csproj" />
+    <ProjectReference Include="..\..\desktop\LanMountainDesktop.Launcher\LanMountainDesktop.Launcher.csproj" />
+    <ProjectReference Include="..\..\install\LanDesktopPLONDS.installer\LanDesktopPLONDS.installer.csproj" />
+  </ItemGroup>
+</Project>

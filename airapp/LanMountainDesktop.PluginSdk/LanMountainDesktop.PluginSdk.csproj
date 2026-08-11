@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Version>6.0.0</Version>
+    <PackageId>LanMountainDesktop.PluginSdk</PackageId>
+    <IsPackable>true</IsPackable>
+    <Authors>LanMountainDesktop</Authors>
+    <Description>Official plugin SDK for LanMountainDesktop, including plugin manifest contracts, runtime interfaces, and registration extensions.</Description>
+    <PackageTags>LanMountainDesktop;Plugin;SDK;Avalonia</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/wwiinnddyy/LanMountainDesktop</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>LGPL-3.0-or-later</PackageLicenseExpression>
+    <Copyright>Copyright (c) LanMountainDesktop Contributors</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="_build_verify_*\**\*.cs" />
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="FluentAvaloniaUI" ExcludeAssets="runtime" />
+    <PackageReference Include="FluentIcons.Avalonia" ExcludeAssets="runtime" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="dotnetCampus.Ipc" />
+    <ProjectReference Include="..\..\core\LanMountainDesktop.Core\LanMountainDesktop.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+    <None Include="buildTransitive\LanMountainDesktop.PluginSdk.props" Pack="true" PackagePath="buildTransitive\" />
+    <None Include="buildTransitive\LanMountainDesktop.PluginSdk.targets" Pack="true" PackagePath="buildTransitive\" />
+  </ItemGroup>
+
+</Project>
