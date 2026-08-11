@@ -1,6 +1,6 @@
 using Avalonia;
 using Avalonia.Threading;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Shared.IPC.Abstractions.Services;
 
 namespace LanMountainDesktop.Services.ExternalIpc;

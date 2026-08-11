@@ -70,7 +70,7 @@ internal static class PreviewEntryHandler
         var messages = new[]
         {
             Strings.Preview_SplashInitializing,
-            Strings.Preview_SplashCheckingPlugins,
+            Strings.Preview_SplashCheckingAirApps,
             Strings.Preview_SplashLaunchingHost,
             Strings.Preview_SplashReady
         };

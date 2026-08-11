@@ -18,6 +18,8 @@ public interface IAirAppLauncherService
     void OpenWhiteboard(string componentId, string? sourcePlacementId);
 
     void OpenRssReader(string componentId, string? sourcePlacementId, string? targetEntryId = null);
+
+    void OpenThirdPartyAirAppWindow(string appId, string windowId, string packageDirectory, string? sourceComponentId, string? sourcePlacementId);
 }
 
 internal sealed class AirAppLauncherService : IAirAppLauncherService
@@ -63,19 +65,30 @@ internal sealed class AirAppLauncherService : IAirAppLauncherService
         _ = OpenAsync(RssReaderAppId, componentId, sourcePlacementId, targetEntryId);
     }
 
+    public void OpenThirdPartyAirAppWindow(string appId, string windowId, string packageDirectory, string? sourceComponentId, string? sourcePlacementId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(appId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(windowId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(packageDirectory);
+
+        _ = OpenAsync(appId, sourceComponentId, sourcePlacementId, windowId, packageDirectory);
+    }
+
     internal static AirAppOpenRequest BuildOpenRequest(
         string appId,
         string? sourceComponentId,
         string? sourcePlacementId,
         int requesterProcessId,
-        string? targetEntryId = null)
+        string? targetEntryId = null,
+        string? appPackagePath = null)
     {
         return new AirAppOpenRequest(
             appId.Trim(),
             string.IsNullOrWhiteSpace(sourceComponentId) ? null : sourceComponentId.Trim(),
             string.IsNullOrWhiteSpace(sourcePlacementId) ? null : sourcePlacementId.Trim(),
             requesterProcessId,
-            string.IsNullOrWhiteSpace(targetEntryId) ? null : targetEntryId.Trim());
+            string.IsNullOrWhiteSpace(targetEntryId) ? null : targetEntryId.Trim(),
+            string.IsNullOrWhiteSpace(appPackagePath) ? null : Path.GetFullPath(appPackagePath));
     }
 
     internal static string BuildSingleInstanceKey(string appId, string? sourceComponentId, string? sourcePlacementId)
@@ -95,9 +108,9 @@ internal sealed class AirAppLauncherService : IAirAppLauncherService
         return $"{normalizedAppId}:{normalizedComponentId}:{normalizedPlacementId}";
     }
 
-    private static async Task OpenAsync(string appId, string sourceComponentId, string? sourcePlacementId, string? targetEntryId = null)
+    private static async Task OpenAsync(string appId, string sourceComponentId, string? sourcePlacementId, string? targetEntryId = null, string? appPackagePath = null)
     {
-        var request = BuildOpenRequest(appId, sourceComponentId, sourcePlacementId, Environment.ProcessId, targetEntryId);
+        var request = BuildOpenRequest(appId, sourceComponentId, sourcePlacementId, Environment.ProcessId, targetEntryId, appPackagePath);
         try
         {
             var result = await SendOpenRequestAsync(request).ConfigureAwait(false);

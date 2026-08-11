@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using LanMountainDesktop.DesktopHost;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.Plugins;
+using LanMountainDesktop.AirApps;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 
@@ -24,7 +24,7 @@ public sealed class Program
     {
         AppLogger.Initialize();
         AppDataPathProvider.Initialize(args);
-        DevPluginOptions.Parse(args);
+        DevAirAppOptions.Parse(args);
         RegisterGlobalExceptionLogging();
 
         DesktopBootstrap.InitializeStartupServices(
@@ -130,7 +130,7 @@ public sealed class Program
         {
             var snapshot = HostSettingsFacadeProvider.GetOrCreate()
                 .Settings
-                .LoadSnapshot<AppSettingsSnapshot>(LanMountainDesktop.PluginSdk.SettingsScope.App);
+                .LoadSnapshot<AppSettingsSnapshot>(LanMountainDesktop.AirAppSdk.AirAppSettingsScope.App);
             return AppRenderingModeHelper.Normalize(snapshot.AppRenderMode);
         }
         catch (Exception ex)
@@ -146,7 +146,7 @@ public sealed class Program
         {
             var snapshot = HostSettingsFacadeProvider.GetOrCreate()
                 .Settings
-                .LoadSnapshot<AppSettingsSnapshot>(LanMountainDesktop.PluginSdk.SettingsScope.App);
+                .LoadSnapshot<AppSettingsSnapshot>(LanMountainDesktop.AirAppSdk.AirAppSettingsScope.App);
             if (OperatingSystem.IsWindows())
             {
                 LanMountainDesktop.Platform.Windows.ChromePatchState.UseSystemChrome = snapshot.UseSystemChrome;

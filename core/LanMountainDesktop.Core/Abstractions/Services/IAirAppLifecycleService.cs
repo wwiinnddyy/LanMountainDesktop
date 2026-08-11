@@ -23,7 +23,8 @@ public sealed record AirAppOpenRequest(
     string? SourceComponentId,
     string? SourcePlacementId,
     int RequesterProcessId,
-    string? TargetEntryId = null);
+    string? TargetEntryId = null,
+    string? AppPackagePath = null);
 
 public sealed record AirAppRegistrationRequest(
     string InstanceKey,

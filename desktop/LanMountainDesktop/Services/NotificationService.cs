@@ -10,7 +10,7 @@ using Avalonia.Platform;
 using Avalonia.Threading;
 using FluentAvalonia.UI.Controls;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.ViewModels;
 using LanMountainDesktop.Views;
@@ -207,7 +207,7 @@ internal sealed class NotificationService : INotificationService
         try
         {
             var settingsFacade = HostSettingsFacadeProvider.GetOrCreate();
-            var snapshot = settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(PluginSdk.SettingsScope.App);
+            var snapshot = settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSdk.AirAppSettingsScope.App);
             return snapshot.NotificationEnabled;
         }
         catch
@@ -420,7 +420,7 @@ internal sealed class NotificationWindowManager
         {
             // 濠电偛顕慨瀛橆殽閹间礁鐭楅煫鍥ㄦ磻濞岊亪鏌嶈閸撴盯骞忕€ｎ喖绀堢憸蹇涘几閸岀偞鐓涢柛顐ｇ箘瀛濇繝娈垮枤閸犳劗绮欐径鎰垫晣闁宠棄妫楀▓娲⒑閸涘﹦鎳勯柣妤侇殔閵嗘帡鎳滈棃娑氱獮閻熸粍妫冮崺鈧い鎺嶇劍閻ㄦ垿鏌ｉ幙鍕瘈鐎殿噮鍋呯€靛ジ寮堕幋鐑嗕画
             var settingsFacade = HostSettingsFacadeProvider.GetOrCreate();
-            var snapshot = settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(PluginSdk.SettingsScope.App);
+            var snapshot = settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSdk.AirAppSettingsScope.App);
             return snapshot.NotificationMaxPerPosition > 0 ? snapshot.NotificationMaxPerPosition : 5;
         }
         catch

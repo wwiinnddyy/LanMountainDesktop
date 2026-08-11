@@ -59,7 +59,7 @@ public sealed class ComponentSettingsServiceTests
                   "DesktopClockSecondHandMode": "Sweep"
                 }
               },
-              "PluginSettings": {
+              "AirAppSettings": {
                 "DesktopClock::clock-2x2": {
                   "SampleFlag": true
                 }
@@ -70,7 +70,7 @@ public sealed class ComponentSettingsServiceTests
         var service = sandbox.CreateService();
 
         var snapshot = service.LoadForComponent("DesktopClock", "clock-2x2");
-        var pluginSettings = service.LoadPluginSettings<SamplePluginSettings>("DesktopClock", "clock-2x2");
+        var pluginSettings = service.LoadAirAppSettings<SampleAirAppSettings>("DesktopClock", "clock-2x2");
 
         Assert.Equal("Sweep", snapshot.DesktopClockSecondHandMode);
         Assert.True(pluginSettings.SampleFlag);
@@ -82,13 +82,13 @@ public sealed class ComponentSettingsServiceTests
         ComponentSettingsService.ResetCacheForTests();
         var reloadedService = sandbox.CreateService();
         var reloadedSnapshot = reloadedService.LoadForComponent("DesktopClock", "clock-2x2");
-        var reloadedPluginSettings = reloadedService.LoadPluginSettings<SamplePluginSettings>("DesktopClock", "clock-2x2");
+        var reloadedAirAppSettings = reloadedService.LoadAirAppSettings<SampleAirAppSettings>("DesktopClock", "clock-2x2");
         Assert.Equal("Sweep", reloadedSnapshot.DesktopClockSecondHandMode);
-        Assert.True(reloadedPluginSettings.SampleFlag);
+        Assert.True(reloadedAirAppSettings.SampleFlag);
     }
 
     [Fact]
-    public void SaveForComponent_RoundTripsInstanceAndPluginSettingsAcrossNewService()
+    public void SaveForComponent_RoundTripsInstanceAndAirAppSettingsAcrossNewService()
     {
         using var sandbox = new ComponentSettingsSandbox();
         var service = sandbox.CreateService();
@@ -116,10 +116,10 @@ public sealed class ComponentSettingsServiceTests
                 ],
                 ActiveImportedClassScheduleId = "spring-2026"
             });
-        service.SavePluginSettings(
+        service.SaveAirAppSettings(
             "DesktopClassSchedule",
             "class-schedule-2x2",
-            new SamplePluginSettings
+            new SampleAirAppSettings
             {
                 SampleFlag = true,
                 Title = "schedule-settings"
@@ -130,7 +130,7 @@ public sealed class ComponentSettingsServiceTests
 
         var clockSnapshot = reloadedService.LoadForComponent("DesktopClock", "clock-2x2");
         var classScheduleSnapshot = reloadedService.LoadForComponent("DesktopClassSchedule", "class-schedule-2x2");
-        var pluginSettings = reloadedService.LoadPluginSettings<SamplePluginSettings>(
+        var pluginSettings = reloadedService.LoadAirAppSettings<SampleAirAppSettings>(
             "DesktopClassSchedule",
             "class-schedule-2x2");
 
@@ -185,7 +185,7 @@ public sealed class ComponentSettingsServiceTests
         }
     }
 
-    private sealed class SamplePluginSettings
+    private sealed class SampleAirAppSettings
     {
         public bool SampleFlag { get; set; }
 

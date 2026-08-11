@@ -10,7 +10,7 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 
@@ -137,7 +137,7 @@ public partial class NotificationBoxWidget : UserControl,
     {
         var appSettingsFacade = HostSettingsFacadeProvider.GetOrCreate();
         _appSettingsService = appSettingsFacade.Settings;
-        _appSettings = _appSettingsService.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        _appSettings = _appSettingsService.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
         _isPrivacyMode = _appSettings.NotificationBoxPrivacyMode;
 
         _componentSettingsSnapshot = _componentSettings?.Load()

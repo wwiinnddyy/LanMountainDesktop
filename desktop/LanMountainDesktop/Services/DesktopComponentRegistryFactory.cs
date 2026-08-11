@@ -9,8 +9,8 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.ComponentSystem.Extensions;
-using LanMountainDesktop.Host.Abstractions;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Views.Components;
 
@@ -18,7 +18,7 @@ namespace LanMountainDesktop.Services;
 
 public static class DesktopComponentRegistryFactory
 {
-    public static ComponentRegistry Create(PluginRuntimeService? pluginRuntimeService)
+    public static ComponentRegistry Create(AirAppRuntimeService? pluginRuntimeService)
     {
         var registry = ComponentRegistry
             .CreateDefault()
@@ -26,7 +26,7 @@ public static class DesktopComponentRegistryFactory
                 JsonComponentExtensionProvider.LoadProvidersFromDirectory(
                     Path.Combine(AppContext.BaseDirectory, "Extensions", "Components")));
 
-        var pluginDefinitions = GetPluginDefinitions(registry, pluginRuntimeService);
+        var pluginDefinitions = GetAirAppDefinitions(registry, pluginRuntimeService);
         return pluginDefinitions.Count == 0
             ? registry
             : registry.RegisterComponents(pluginDefinitions);
@@ -34,7 +34,7 @@ public static class DesktopComponentRegistryFactory
 
     public static DesktopComponentRuntimeRegistry CreateRuntimeRegistry(
         ComponentRegistry componentRegistry,
-        PluginRuntimeService? pluginRuntimeService,
+        AirAppRuntimeService? pluginRuntimeService,
         ISettingsFacadeService settingsFacade,
         IMaterialColorService? materialColorService = null)
     {
@@ -57,17 +57,17 @@ public static class DesktopComponentRegistryFactory
                 if (!registeredIds.Add(registration.ComponentId))
                 {
                     Debug.WriteLine(
-                        $"[PluginRuntime] Skipped plugin widget '{registration.ComponentId}' from '{contribution.Plugin.Manifest.Id}' because a runtime registration already exists.");
+                        $"[AirAppRuntime] Skipped plugin widget '{registration.ComponentId}' from '{contribution.AirApp.Manifest.Id}' because a runtime registration already exists.");
                     continue;
                 }
 
                 registrations.Add(new DesktopComponentRuntimeRegistration(
                     registration.ComponentId,
                     registration.DisplayNameLocalizationKey,
-                    factoryContext => CreatePluginControl(contribution, factoryContext, resolvedMaterialColorService),
+                    factoryContext => CreateAirAppControl(contribution, factoryContext, resolvedMaterialColorService),
                     chromeContext =>
                     {
-                        var appearanceContext = CreatePluginAppearanceContext(chromeContext);
+                        var appearanceContext = CreateAirAppAppearanceContext(chromeContext);
                         return registration.ResolveCornerRadius(appearanceContext, chromeContext.CellSize);
                     }));
             }
@@ -77,9 +77,9 @@ public static class DesktopComponentRegistryFactory
         return new DesktopComponentRuntimeRegistry(componentRegistry, registrations);
     }
 
-    private static List<DesktopComponentDefinition> GetPluginDefinitions(
+    private static List<DesktopComponentDefinition> GetAirAppDefinitions(
         ComponentRegistry baseRegistry,
-        PluginRuntimeService? pluginRuntimeService)
+        AirAppRuntimeService? pluginRuntimeService)
     {
         var definitions = new List<DesktopComponentDefinition>();
         if (pluginRuntimeService is null)
@@ -97,7 +97,7 @@ public static class DesktopComponentRegistryFactory
             if (!knownIds.Add(registration.ComponentId))
             {
                 Debug.WriteLine(
-                    $"[PluginRuntime] Skipped plugin widget '{registration.ComponentId}' from '{contribution.Plugin.Manifest.Id}' because the component id already exists.");
+                    $"[AirAppRuntime] Skipped plugin widget '{registration.ComponentId}' from '{contribution.AirApp.Manifest.Id}' because the component id already exists.");
                 continue;
             }
 
@@ -110,7 +110,7 @@ public static class DesktopComponentRegistryFactory
                 registration.MinHeightCells,
                 registration.AllowStatusBarPlacement,
                 registration.AllowDesktopPlacement,
-                registration.ResizeMode == PluginDesktopComponentResizeMode.Free
+                registration.ResizeMode == AirAppComponentResizeMode.Free
                     ? DesktopComponentResizeMode.Free
                     : DesktopComponentResizeMode.Proportional,
                 Description: registration.Description,
@@ -120,52 +120,65 @@ public static class DesktopComponentRegistryFactory
         return definitions;
     }
 
-    private static Control CreatePluginControl(
-        PluginDesktopComponentContribution contribution,
+    private static Control CreateAirAppControl(
+        AirAppDesktopComponentContribution contribution,
         DesktopComponentControlFactoryContext context,
         IMaterialColorService materialColorService)
     {
         try
         {
-            var settingsService = contribution.Plugin.Services.GetService(typeof(ISettingsService)) as ISettingsService
+            var settingsService = contribution.AirApp.Services.GetService(typeof(ISettingsService)) as ISettingsService
                 ?? context.SettingsService;
-            var pluginSettings = new PluginScopedSettingsService(
-                contribution.Plugin.Manifest.Id,
+            var pluginSettings = new AirAppScopedSettingsService(
+                contribution.AirApp.Manifest.Id,
                 settingsService);
-            var pluginAppearance = new PluginAppearanceContext(
-                PluginAppearanceSnapshotMapper.FromMaterialColorSnapshot(
+            var pluginAppearance = new AirAppAppearanceContext(
+                AirAppAppearanceSnapshotMapper.FromMaterialColorSnapshot(
                     materialColorService.GetMaterialColorSnapshot()));
-            var pluginContext = new PluginDesktopComponentContext(
-                contribution.Plugin.Manifest,
-                contribution.Plugin.Context.PluginDirectory,
-                contribution.Plugin.Context.DataDirectory,
-                contribution.Plugin.Services,
-                contribution.Plugin.Context.Properties,
+            var pluginContext = new AirAppComponentContext(
+                contribution.AirApp.Manifest,
+                contribution.AirApp.Context.AirAppDirectory,
+                contribution.AirApp.Context.DataDirectory,
+                contribution.AirApp.Services,
+                contribution.AirApp.Context.Properties,
                 contribution.Registration.ComponentId,
                 context.PlacementId,
                 context.CellSize,
                 pluginAppearance,
-                pluginSettings);
+                pluginSettings)
+            {
+                OpenWindowHandler = windowId =>
+                {
+                    var launcher = AirAppLauncherServiceProvider.GetOrCreate();
+                    launcher.OpenThirdPartyAirAppWindow(
+                        contribution.AirApp.Manifest.Id,
+                        windowId,
+                        contribution.AirApp.Context.AirAppDirectory,
+                        contribution.Registration.ComponentId,
+                        context.PlacementId);
+                    return Task.CompletedTask;
+                }
+            };
 
-            return contribution.Registration.ControlFactory(contribution.Plugin.Services, pluginContext);
+            return contribution.Registration.ControlFactory(contribution.AirApp.Services, pluginContext);
         }
         catch (Exception ex)
         {
             Debug.WriteLine(
-                $"[PluginRuntime] Failed to create widget '{contribution.Registration.ComponentId}' from '{contribution.Plugin.Manifest.Id}': {ex}");
-            return CreatePluginErrorControl(contribution, ex);
+                $"[AirAppRuntime] Failed to create widget '{contribution.Registration.ComponentId}' from '{contribution.AirApp.Manifest.Id}': {ex}");
+            return CreateAirAppErrorControl(contribution, ex);
         }
     }
 
-    private static IPluginAppearanceContext CreatePluginAppearanceContext(ComponentChromeContext chromeContext)
+    private static IAirAppAppearanceContext CreateAirAppAppearanceContext(AirAppComponentChromeContext chromeContext)
     {
-        return new PluginAppearanceContext(new PluginAppearanceSnapshot(
-            CornerRadiusTokens: PluginCornerRadiusTokens.FromShared(chromeContext.CornerRadiusTokens),
+        return new AirAppAppearanceContext(new AirAppAppearanceSnapshot(
+            CornerRadiusTokens: AirAppCornerRadiusTokens.FromShared(chromeContext.CornerRadiusTokens),
             ThemeVariant: "Unknown"));
     }
 
-    private static Control CreatePluginErrorControl(
-        PluginDesktopComponentContribution contribution,
+    private static Control CreateAirAppErrorControl(
+        AirAppDesktopComponentContribution contribution,
         Exception exception)
     {
         return new Border
@@ -189,7 +202,7 @@ public static class DesktopComponentRegistryFactory
                     },
                     new TextBlock
                     {
-                        Text = $"Plugin {contribution.Plugin.Manifest.Name} failed to create this widget.",
+                        Text = $"AirApp {contribution.AirApp.Manifest.Name} failed to create this widget.",
                         TextWrapping = TextWrapping.Wrap
                     },
                     new TextBlock

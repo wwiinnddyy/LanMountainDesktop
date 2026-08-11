@@ -1,8 +1,8 @@
-namespace LanMountainDesktop.PluginPackaging;
+namespace LanMountainDesktop.AirAppPackaging;
 
 public static class PluginPackagingConstants
 {
-    public const string ManifestFileName = "plugin.json";
+    public const string ManifestFileName = "airapp.json";
     public const string LegacyManifestFileName = "manifest.json";
     public const string PackageFileExtension = ".laapp";
     public const string LegacyPackageFileExtension = ".lmdp";

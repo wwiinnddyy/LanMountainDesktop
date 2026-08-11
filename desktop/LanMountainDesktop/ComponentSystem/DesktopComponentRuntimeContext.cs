@@ -1,5 +1,5 @@
-using LanMountainDesktop.Host.Abstractions;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 
@@ -11,7 +11,7 @@ public sealed record DesktopComponentRuntimeContext(
     ISettingsFacadeService SettingsFacade,
     ISettingsService SettingsService,
     IAppearanceThemeService AppearanceTheme,
-    ComponentChromeContext Chrome,
+    AirAppComponentChromeContext Chrome,
     IComponentSettingsAccessor ComponentSettingsAccessor,
     IComponentInstanceSettingsStore ComponentSettingsStore,
     DesktopComponentRenderMode RenderMode = DesktopComponentRenderMode.Live);

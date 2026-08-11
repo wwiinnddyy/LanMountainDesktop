@@ -6,7 +6,7 @@ namespace LanMountainDesktop.Services;
 public static class PendingRestartStateService
 {
     public const string RenderModeReason = "RenderMode";
-    public const string PluginCatalogReason = "PluginCatalog";
+    public const string AirAppCatalogReason = "AirAppCatalog";
     public const string SettingsWindowReason = "SettingsWindow";
     public const string SystemMaterialReason = "SystemMaterial";
 

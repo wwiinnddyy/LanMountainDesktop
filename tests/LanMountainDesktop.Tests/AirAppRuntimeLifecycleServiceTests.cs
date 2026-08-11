@@ -185,7 +185,8 @@ public sealed class AirAppRuntimeLifecycleServiceTests
             string instanceKey,
             string? sourceComponentId,
             string? sourcePlacementId,
-            string? targetEntryId = null)
+            string? targetEntryId = null,
+            string? appPackagePath = null)
         {
             StartCount++;
             return _process;

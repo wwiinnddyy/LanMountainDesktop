@@ -1,18 +1,18 @@
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.ViewModels;
 
 namespace LanMountainDesktop.Views.SettingsPages;
 
-[SettingsPageInfo(
+[AirAppSettingsPageInfo(
     "update",
     "Update",
-    SettingsPageCategory.About,
+    AirAppSettingsPageCategory.About,
     IconKey = "ArrowSync",
     SortOrder = 35,
     TitleLocalizationKey = "settings.update.title",
     DescriptionLocalizationKey = "settings.update.description")]
-public partial class UpdateSettingsPage : SettingsPageBase
+public partial class UpdateSettingsPage : AirAppSettingsPageBase
 {
     public UpdateSettingsPage()
         : this(new UpdateSettingsViewModel(HostSettingsFacadeProvider.GetOrCreate()))

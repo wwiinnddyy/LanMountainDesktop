@@ -1,18 +1,18 @@
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.ViewModels;
 
 namespace LanMountainDesktop.Views.SettingsPages;
 
-[SettingsPageInfo(
+[AirAppSettingsPageInfo(
     "general",
     "General",
-    SettingsPageCategory.General,
+    AirAppSettingsPageCategory.General,
     IconKey = "Settings",
     SortOrder = 0,
     TitleLocalizationKey = "settings.general.title",
     DescriptionLocalizationKey = "settings.general.description")]
-public partial class GeneralSettingsPage : SettingsPageBase
+public partial class GeneralSettingsPage : AirAppSettingsPageBase
 {
     public GeneralSettingsPage()
         : this(new GeneralSettingsPageViewModel(HostSettingsFacadeProvider.GetOrCreate()))

@@ -2,7 +2,7 @@ using System.Text.Json;
 using Avalonia.Controls;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.ComponentSystem.Extensions;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Views.Components;
 using Xunit;
@@ -18,22 +18,22 @@ public sealed class FusedDesktopLibraryMetadataTests : IDisposable
         Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public void PluginDesktopComponentDescriptionMetadata_ReachesRuntimeDescriptor()
+    public void AirAppDesktopComponentDescriptionMetadata_ReachesRuntimeDescriptor()
     {
         const string componentId = "plugin.metadata.widget";
-        var registration = new PluginDesktopComponentRegistration(
+        var registration = new AirAppComponentRegistration(
             _ => new Border(),
-            new PluginDesktopComponentOptions
+            new AirAppComponentOptions
             {
                 ComponentId = componentId,
                 DisplayName = "Metadata Widget",
                 IconKey = "Apps",
-                Category = "Plugins",
-                Description = "Plugin supplied description.",
+                Category = "AirApps",
+                Description = "AirApp supplied description.",
                 DescriptionLocalizationKey = "plugin.metadata.description"
             });
 
-        Assert.Equal("Plugin supplied description.", registration.Description);
+        Assert.Equal("AirApp supplied description.", registration.Description);
         Assert.Equal("plugin.metadata.description", registration.DescriptionLocalizationKey);
 
         var registry = ComponentRegistry.CreateDefault().RegisterComponents(
@@ -61,7 +61,7 @@ public sealed class FusedDesktopLibraryMetadataTests : IDisposable
             ]);
 
         Assert.True(runtimeRegistry.TryGetDescriptor(componentId, out var descriptor));
-        Assert.Equal("Plugin supplied description.", descriptor.Description);
+        Assert.Equal("AirApp supplied description.", descriptor.Description);
         Assert.Equal("plugin.metadata.description", descriptor.DescriptionLocalizationKey);
     }
 

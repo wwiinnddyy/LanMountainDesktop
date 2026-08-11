@@ -10,12 +10,12 @@ public static class LoadingStateUsageExample
     /// <summary>
     /// 示例：插件加载
     /// </summary>
-    public static async Task LoadPluginsExample(LoadingStateManager manager)
+    public static async Task LoadAirAppsExample(LoadingStateManager manager)
     {
         // 注册插件加载项
         var pluginItem = manager.RegisterItem(
             "plugins.core",
-            LoadingItemType.Plugin,
+            LoadingItemType.AirApp,
             "核心插件",
             "加载系统核心插件",
             new Dictionary<string, string> { { "version", "1.0.0" } });
@@ -176,8 +176,8 @@ public static class LoadingStateUsageExample
         manager.CompleteItem("settings.load");
 
         // 3. 加载插件
-        manager.SetStage(StartupStage.LoadingPlugins, "正在加载插件...");
-        await LoadPluginsExample(manager);
+        manager.SetStage(StartupStage.LoadingAirApps, "正在加载插件...");
+        await LoadAirAppsExample(manager);
 
         // 4. 加载组件
         await LoadComponentsExample(manager);

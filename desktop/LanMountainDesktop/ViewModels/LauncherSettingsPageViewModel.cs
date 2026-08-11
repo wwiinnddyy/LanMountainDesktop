@@ -9,7 +9,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FluentIcons.Common;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 
@@ -142,7 +142,7 @@ public sealed partial class LauncherSettingsPageViewModel : ViewModelBase, IDisp
         var snapshot = _settingsFacade.LauncherPolicy.Get()?.Clone() ?? new LauncherSettingsSnapshot();
         snapshot.ShowTileBackground = value;
         _settingsFacade.Settings.SaveSnapshot(
-            SettingsScope.Launcher,
+            AirAppSettingsScope.Launcher,
             snapshot,
             changedKeys: [nameof(LauncherSettingsSnapshot.ShowTileBackground)]);
     }
@@ -160,7 +160,7 @@ public sealed partial class LauncherSettingsPageViewModel : ViewModelBase, IDisp
 
     private void OnSettingsChanged(object? sender, SettingsChangedEvent e)
     {
-        if (e.Scope != SettingsScope.Launcher)
+        if (e.Scope != AirAppSettingsScope.Launcher)
         {
             return;
         }
@@ -333,7 +333,7 @@ public sealed partial class LauncherSettingsPageViewModel : ViewModelBase, IDisp
             return;
         }
 
-        _settingsFacade.Settings.SaveSnapshot(SettingsScope.Launcher, snapshot, changedKeys: changedKeys);
+        _settingsFacade.Settings.SaveSnapshot(AirAppSettingsScope.Launcher, snapshot, changedKeys: changedKeys);
         ReloadData();
     }
 

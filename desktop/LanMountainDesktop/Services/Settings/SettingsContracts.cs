@@ -4,11 +4,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Update;
-using LanMountainDesktop.Services.PluginMarket;
-using LanMountainDesktop.Settings.Core;
+using LanMountainDesktop.Services.AirAppMarket;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Shared.Contracts.Update;
 
 namespace LanMountainDesktop.Services.Settings
@@ -98,15 +98,15 @@ public sealed record UpdateSettingsState(
     long? PendingUpdatePublishedAtUtcMs,
     long? LastUpdateCheckUtcMs,
     string? PendingUpdateSha256);
-public sealed record PluginManagementSettingsState(IReadOnlyList<string> DisabledPluginIds);
-public enum PluginPackageSourceKind
+public sealed record AirAppManagementSettingsState(IReadOnlyList<string> DisabledPluginIds);
+public enum AirAppPackageSourceKind
 {
     ReleaseAsset = 0,
     RawFallback = 1,
     WorkspaceLocal = 2
 }
 
-public sealed record PluginCatalogSourceInfo(
+public sealed record AirAppCatalogSourceInfo(
     string Id,
     string Name,
     string? Description,
@@ -115,23 +115,23 @@ public sealed record PluginCatalogSourceInfo(
     bool IsOfficial,
     int Priority);
 
-public sealed record PluginCatalogSharedContractInfo(
+public sealed record AirAppCatalogSharedContractInfo(
     string Id,
     string Version,
     string AssemblyName);
 
-public sealed record PluginCapabilityInfo(
+public sealed record AirAppCapabilityInfo(
     string Id,
     string? Version,
     string? AssemblyName);
 
-public sealed record PluginPackageSourceInfo(
-    PluginPackageSourceKind Kind,
+public sealed record AirAppPackageSourceInfo(
+    AirAppPackageSourceKind Kind,
     string Url,
     string Sha256,
     long PackageSizeBytes);
 
-public sealed record PluginCatalogManifestInfo(
+public sealed record AirAppCatalogManifestInfo(
     string Id,
     string Name,
     string Description,
@@ -139,13 +139,13 @@ public sealed record PluginCatalogManifestInfo(
     string Version,
     string ApiVersion,
     string EntranceAssembly,
-    IReadOnlyList<PluginCatalogSharedContractInfo> SharedContracts);
+    IReadOnlyList<AirAppCatalogSharedContractInfo> SharedContracts);
 
-public sealed record PluginCatalogCompatibilityInfo(
+public sealed record AirAppCatalogCompatibilityInfo(
     string MinHostVersion,
     string ApiVersion);
 
-public sealed record PluginCatalogRepositoryInfo(
+public sealed record AirAppCatalogRepositoryInfo(
     string IconUrl,
     string ProjectUrl,
     string ReadmeUrl,
@@ -154,7 +154,7 @@ public sealed record PluginCatalogRepositoryInfo(
     IReadOnlyList<string> Tags,
     string ReleaseNotes);
 
-public sealed record PluginCatalogPublicationInfo(
+public sealed record AirAppCatalogPublicationInfo(
     string ReleaseTag,
     string ReleaseAssetName,
     DateTimeOffset PublishedAt,
@@ -163,13 +163,13 @@ public sealed record PluginCatalogPublicationInfo(
     string Sha256,
     string? Md5);
 
-public sealed record PluginCatalogItemInfo(
-    PluginCatalogManifestInfo Manifest,
-    PluginCatalogCompatibilityInfo Compatibility,
-    PluginCatalogRepositoryInfo Repository,
-    PluginCatalogPublicationInfo Publication,
-    IReadOnlyList<PluginPackageSourceInfo> PackageSources,
-    IReadOnlyList<PluginCapabilityInfo> Capabilities)
+public sealed record AirAppCatalogItemInfo(
+    AirAppCatalogManifestInfo Manifest,
+    AirAppCatalogCompatibilityInfo Compatibility,
+    AirAppCatalogRepositoryInfo Repository,
+    AirAppCatalogPublicationInfo Publication,
+    IReadOnlyList<AirAppPackageSourceInfo> PackageSources,
+    IReadOnlyList<AirAppCapabilityInfo> Capabilities)
 {
     public string Id => Manifest.Id;
 
@@ -203,7 +203,7 @@ public sealed record PluginCatalogItemInfo(
 
     public IReadOnlyList<string> Tags => Repository.Tags;
 
-    public IReadOnlyList<PluginCatalogSharedContractInfo> SharedContracts => Manifest.SharedContracts;
+    public IReadOnlyList<AirAppCatalogSharedContractInfo> SharedContracts => Manifest.SharedContracts;
 
     public DateTimeOffset PublishedAt => Publication.PublishedAt;
 
@@ -216,51 +216,51 @@ public sealed record PluginCatalogItemInfo(
     public string ReleaseNotes => Repository.ReleaseNotes;
 }
 
-public sealed record PluginCatalogIndexResult(
+public sealed record AirAppCatalogIndexResult(
     bool Success,
-    IReadOnlyList<PluginCatalogItemInfo> Plugins,
-    IReadOnlyList<PluginCatalogSourceInfo> Sources,
+    IReadOnlyList<AirAppCatalogItemInfo> AirApps,
+    IReadOnlyList<AirAppCatalogSourceInfo> Sources,
     string? Source,
     string? SourceLocation,
     string? WarningMessage,
     string? ErrorMessage);
 
-public sealed record PluginInstallDiagnostic(
+public sealed record AirAppInstallDiagnostic(
     string Code,
     string Message,
     string? Details = null);
 
-public sealed record PluginCatalogInstallResult(
+public sealed record AirAppCatalogInstallResult(
     bool Success,
-    string? PluginId,
-    string? PluginName,
-    PluginManifest? InstalledManifest,
-    IReadOnlyList<PluginInstallDiagnostic> Diagnostics,
+    string? AirAppId,
+    string? AirAppName,
+    AirAppManifest? InstalledManifest,
+    IReadOnlyList<AirAppInstallDiagnostic> Diagnostics,
     string? ErrorMessage);
 
-public interface IPluginCatalogSourceProvider
+public interface IAirAppCatalogSourceProvider
 {
-    Task<PluginCatalogIndexResult> LoadCatalogAsync(CancellationToken cancellationToken = default);
+    Task<AirAppCatalogIndexResult> LoadCatalogAsync(CancellationToken cancellationToken = default);
 }
 
-public interface IPluginCatalogService : IPluginCatalogSourceProvider
+public interface IAirAppCatalogService : IAirAppCatalogSourceProvider
 {
-    Task<PluginCatalogInstallResult> InstallAsync(string pluginId, CancellationToken cancellationToken = default);
+    Task<AirAppCatalogInstallResult> InstallAsync(string pluginId, CancellationToken cancellationToken = default);
 }
 
 public interface IPackageSourceResolver
 {
-    IReadOnlyList<PluginPackageSourceInfo> ResolveSources(PluginCatalogItemInfo item);
+    IReadOnlyList<AirAppPackageSourceInfo> ResolveSources(AirAppCatalogItemInfo item);
 }
 
-public interface IPluginCompatibilityEvaluator
+public interface IAirAppCompatibilityEvaluator
 {
-    PluginInstallDiagnostic? Evaluate(PluginCatalogItemInfo item, Version? hostVersion);
+    AirAppInstallDiagnostic? Evaluate(AirAppCatalogItemInfo item, Version? hostVersion);
 }
 
-public interface IPluginInstallOrchestrator
+public interface IAirAppInstallOrchestrator
 {
-    Task<PluginCatalogInstallResult> InstallAsync(PluginCatalogItemInfo item, CancellationToken cancellationToken = default);
+    Task<AirAppCatalogInstallResult> InstallAsync(AirAppCatalogItemInfo item, CancellationToken cancellationToken = default);
 }
 
 public interface IGridSettingsService
@@ -402,19 +402,19 @@ public interface ILauncherPolicyService
     void Save(LauncherSettingsSnapshot snapshot);
 }
 
-public interface IPluginManagementSettingsService
+public interface IAirAppManagementSettingsService
 {
-    PluginManagementSettingsState Get();
-    void Save(PluginManagementSettingsState state);
-    IReadOnlyList<InstalledPluginInfo> GetInstalledPlugins();
-    bool SetPluginEnabled(string pluginId, bool isEnabled);
-    bool DeleteInstalledPlugin(string pluginId);
+    AirAppManagementSettingsState Get();
+    void Save(AirAppManagementSettingsState state);
+    IReadOnlyList<AirAppInstalledInfo> GetInstalledAirApps();
+    bool SetAirAppEnabled(string pluginId, bool isEnabled);
+    bool DeleteInstalledAirApp(string pluginId);
 }
 
-public interface IPluginCatalogSettingsService : IPluginCatalogSourceProvider
+public interface IAirAppCatalogSettingsService : IAirAppCatalogSourceProvider
 {
-    new Task<PluginCatalogIndexResult> LoadCatalogAsync(CancellationToken cancellationToken = default);
-    Task<PluginCatalogInstallResult> InstallAsync(string pluginId, CancellationToken cancellationToken = default);
+    new Task<AirAppCatalogIndexResult> LoadCatalogAsync(CancellationToken cancellationToken = default);
+    Task<AirAppCatalogInstallResult> InstallAsync(string pluginId, CancellationToken cancellationToken = default);
 }
 
 public interface IApplicationInfoService
@@ -440,16 +440,16 @@ public interface ISettingsFacadeService
     IUpdateSettingsService Update { get; }
     ILauncherCatalogService LauncherCatalog { get; }
     ILauncherPolicyService LauncherPolicy { get; }
-    IPluginManagementSettingsService PluginManagement { get; }
-    IPluginCatalogSettingsService PluginCatalog { get; }
+    IAirAppManagementSettingsService AirAppManagement { get; }
+    IAirAppCatalogSettingsService AirAppCatalog { get; }
     IApplicationInfoService ApplicationInfo { get; }
 }
 
 }
 
-namespace LanMountainDesktop.Services.PluginMarket
+namespace LanMountainDesktop.Services.AirAppMarket
 {
-    internal enum PluginPackageSourceKind
+    internal enum AirAppPackageSourceKind
     {
         ReleaseAsset = 0,
         RawFallback = 1,

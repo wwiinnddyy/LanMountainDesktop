@@ -1,21 +1,21 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.ViewModels;
 
 namespace LanMountainDesktop.Views.SettingsPages;
 
-[SettingsPageInfo(
+[AirAppSettingsPageInfo(
     "material-color",
     "Material & Color",
-    SettingsPageCategory.Appearance,
+    AirAppSettingsPageCategory.Appearance,
     IconKey = "Color",
     SortOrder = 8,
     TitleLocalizationKey = "settings.material_color.title",
     DescriptionLocalizationKey = "settings.material_color.description")]
-public partial class MaterialColorSettingsPage : SettingsPageBase
+public partial class MaterialColorSettingsPage : AirAppSettingsPageBase
 {
     public MaterialColorSettingsPage()
         : this(new MaterialColorSettingsPageViewModel(

@@ -14,9 +14,9 @@ public interface IComponentInstanceSettingsStore
 
     void DeleteForComponent(string componentId, string? placementId);
 
-    T LoadPluginSettings<T>(string componentId, string? placementId) where T : new();
+    T LoadAirAppSettings<T>(string componentId, string? placementId) where T : new();
 
-    void SavePluginSettings<T>(string componentId, string? placementId, T settings);
+    void SaveAirAppSettings<T>(string componentId, string? placementId, T settings);
 
-    void DeletePluginSettings(string componentId, string? placementId);
+    void DeleteAirAppSettings(string componentId, string? placementId);
 }

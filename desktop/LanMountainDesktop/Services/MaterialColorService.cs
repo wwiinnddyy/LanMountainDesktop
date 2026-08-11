@@ -7,11 +7,11 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
-using LanMountainDesktop.Appearance;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services.Settings;
-using LanMountainDesktop.Settings.Core;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Shared.Contracts;
 using LanMountainDesktop.Theme;
 using Microsoft.Win32;
@@ -194,7 +194,7 @@ internal sealed class MaterialColorService : IMaterialColorService, IDisposable
     {
         _ = sender;
 
-        if (e.Scope != SettingsScope.App)
+        if (e.Scope != AirAppSettingsScope.App)
         {
             return;
         }

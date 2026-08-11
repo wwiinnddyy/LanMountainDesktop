@@ -25,8 +25,8 @@ $env:NUGET_PACKAGES = $resolvedNuGetPackagesPath
 
 $projects = @(
     "core\LanMountainDesktop.Core\LanMountainDesktop.Core.csproj",
-    "airapp\LanMountainDesktop.PluginSdk\LanMountainDesktop.PluginSdk.csproj",
-    "airapp\LanMountainDesktop.PluginTemplate\LanMountainDesktop.PluginTemplate.csproj"
+    "airapp\LanMountainDesktop.AirAppSdk\LanMountainDesktop.AirAppSdk.csproj",
+    "airapp\LanMountainDesktop.AirAppTemplate\LanMountainDesktop.AirAppTemplate.csproj"
 )
 
 $versionArgs = @()
@@ -54,4 +54,4 @@ foreach ($project in $projects) {
     }
 }
 
-Write-Host "Plugin packages generated to '$resolvedOutputPath'."
+Write-Host "AirApp packages generated to '$resolvedOutputPath'."

@@ -4,11 +4,11 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using LanMountainDesktop.Appearance;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Platform.Windows;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
-using LanMountainDesktop.Settings.Core;
+using LanMountainDesktop.AirAppSdk;
 
 namespace LanMountainDesktop.Views;
 

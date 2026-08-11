@@ -1,6 +1,6 @@
 using Avalonia;
-using LanMountainDesktop.PluginSdk;
-using LanMountainDesktop.Settings.Core;
+using LanMountainDesktop.AirAppSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Shared.Contracts;
 using Xunit;
 
@@ -24,7 +24,7 @@ public sealed class CornerRadiusStyleTests
     [Fact]
     public void FluentStyle_ReturnsFluentDesignSystemValues()
     {
-        var tokens = LanMountainDesktop.Appearance.AppearanceCornerRadiusTokenFactory.Create(
+        var tokens = LanMountainDesktop.AirAppSdk.AppearanceCornerRadiusTokenFactory.Create(
             GlobalAppearanceSettings.CornerRadiusStyleFluent);
 
         // Microsoft Fluent Design System: ControlCornerRadius = 4px, OverlayCornerRadius = 8px
@@ -39,10 +39,10 @@ public sealed class CornerRadiusStyleTests
     }
 
     [Fact]
-    public void PluginAppearanceContext_ResolveCornerRadius_ReturnsFixedTokenValues()
+    public void AirAppAppearanceContext_ResolveCornerRadius_ReturnsFixedTokenValues()
     {
-        var context = new PluginAppearanceContext(new PluginAppearanceSnapshot(
-            CornerRadiusTokens: new PluginCornerRadiusTokens(
+        var context = new AirAppAppearanceContext(new AirAppAppearanceSnapshot(
+            CornerRadiusTokens: new AirAppCornerRadiusTokens(
                 Micro: 6d,
                 Xs: 12d,
                 Sm: 14d,
@@ -54,23 +54,23 @@ public sealed class CornerRadiusStyleTests
             ThemeVariant: "Light"));
 
         // Preset resolution should return fixed values from tokens
-        Assert.Equal(20d, context.ResolveCornerRadius(PluginCornerRadiusPreset.Md), 3);
-        Assert.Equal(15d, context.ResolveCornerRadius(PluginCornerRadiusPreset.Md, maximum: 15d), 3);
+        Assert.Equal(20d, context.ResolveCornerRadius(AirAppCornerRadiusPreset.Md), 3);
+        Assert.Equal(15d, context.ResolveCornerRadius(AirAppCornerRadiusPreset.Md, maximum: 15d), 3);
         // ResolveScaledCornerRadius returns baseRadius as-is when no min/max specified
         Assert.Equal(18d, context.ResolveScaledCornerRadius(18d), 3);
-        Assert.Equal(24d, context.ResolveCornerRadius(PluginCornerRadiusPreset.Component), 3);
+        Assert.Equal(24d, context.ResolveCornerRadius(AirAppCornerRadiusPreset.Component), 3);
     }
 
     [Fact]
-    public void PluginDesktopComponentContext_ProvidesDirectTokenAccess()
+    public void AirAppComponentContext_ProvidesDirectTokenAccess()
     {
-        var appearanceContext = new PluginAppearanceContext(new PluginAppearanceSnapshot(
-            CornerRadiusTokens: new PluginCornerRadiusTokens(6, 12, 14, 20, 28, 32, 36, 24),
+        var appearanceContext = new AirAppAppearanceContext(new AirAppAppearanceSnapshot(
+            CornerRadiusTokens: new AirAppCornerRadiusTokens(6, 12, 14, 20, 28, 32, 36, 24),
             ThemeVariant: "Dark"));
 
-        var context = new PluginDesktopComponentContext(
-            new LanMountainDesktop.PluginSdk.PluginManifest("plugin.id", "Plugin Name", "plugin.dll"),
-            "C:\\Plugins\\plugin.id",
+        var context = new AirAppComponentContext(
+            new LanMountainDesktop.AirAppSdk.AirAppManifest("plugin.id", "AirApp Name", "plugin.dll"),
+            "C:\\AirApps\\plugin.id",
             "C:\\Data\\plugin.id",
             new NullServiceProvider(),
             new Dictionary<string, object?>(),

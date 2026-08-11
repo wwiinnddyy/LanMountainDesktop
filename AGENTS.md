@@ -4,10 +4,10 @@
 
 ## 1. 项目目标与仓库边界
 
-- 本仓库是阑山桌面桌面宿主、宿主侧插件运行时、Plugin SDK、共享契约与基础外观/设置能力的权威来源。
-- 不要把插件市场元数据、开发者门户或官方示例插件实现当作本仓库内容维护。
+- 本仓库是阑山桌面桌面宿主、宿主侧 AirApp 运行时、AirApp SDK、共享契约与基础外观/设置能力的权威来源。
+- 不要把轻应用市场元数据、开发者门户或官方示例轻应用实现当作本仓库内容维护。
 - 市场和生态材料属于兄弟仓库 `LanAirApp`。
-- 官方示例插件属于独立仓库 `LanMountainDesktop.SamplePlugin`。
+- 官方示例轻应用属于独立仓库 `LanMountainDesktop.SamplePlugin`。
 
 边界详情看：
 
@@ -16,14 +16,14 @@
 
 ## 2. 关键目录地图
 
-- `desktop/LanMountainDesktop/`: 主宿主应用，包含 UI、服务、组件系统、主题与插件运行时接入
+- `desktop/LanMountainDesktop/`: 主宿主应用，包含 UI、服务、组件系统、主题与 AirApp 运行时接入
 - `desktop/LanMountainDesktop/ComponentSystem/`: 内置组件定义、注册、扩展加载
-- `desktop/LanMountainDesktop/plugins/`: 宿主侧插件运行时、安装与 market 集成
+- `desktop/LanMountainDesktop/plugins/`: 宿主侧 AirApp 运行时、安装与 market 集成
 - `desktop/LanMountainDesktop/Views/` and `ViewModels/`: UI 页面、窗口与视图模型
 - `desktop/LanMountainDesktop/Services/`: 设置、遥测、启动、持久化、业务服务
-- `airapp/LanMountainDesktop.PluginSdk/`: 插件 SDK 公共接口和默认打包行为（含 PluginIsolation、Host.Abstractions、Settings.Core、Appearance）
+- `airapp/LanMountainDesktop.AirAppSdk/`: AirApp SDK 公共接口和默认打包行为（含隔离层与宿主桥接契约）
 - `platform/LanMountainDesktop.Platform/`: 平台差异层（接口 + Windows/macOS 实现）
-- `core/LanMountainDesktop.Core/`: 宿主/插件共享契约、IPC 基础设施与插件打包
+- `core/LanMountainDesktop.Core/`: 宿主/AirApp 共享契约、IPC 基础设施与打包
 - `mobile/LanMountainDesktop.Mobile/`: 共享移动 UI 壳（组件面板）
 - `mobile/LanMountainDesktop.Mobile.Android/`: Android head（入口）
 - `tests/LanMountainDesktop.Tests/`: 宿主与 SDK 测试
@@ -40,7 +40,7 @@ dotnet run --project desktop/LanMountainDesktop/LanMountainDesktop.csproj
 dotnet test LanMountainDesktop.slnx -c Debug
 ```
 
-插件本地包生成：
+AirApp 本地包生成：
 
 ```powershell
 ./scripts/Pack-PluginPackages.ps1
@@ -72,17 +72,17 @@ dotnet test LanMountainDesktop.slnx -c Debug
 - 设置页相关改动通常同时落在 `Views/`、`ViewModels/`、`Services/` 和 `.trae/specs/`
 - UI 启动与窗口生命周期主线在 `Program.cs` 和 `App.axaml.cs`
 
-### 插件
+### AirApp
 
-- SDK 公共 API 以 `airapp/LanMountainDesktop.PluginSdk/` 为准
+- SDK 公共 API 以 `airapp/LanMountainDesktop.AirAppSdk/` 为准
 - 共享契约以 `core/LanMountainDesktop.Core/` 为准
 - market 数据来源默认是兄弟仓库 `..\\LanAirApp`
 - 迁移或 breaking change 优先同步 `docs/PLUGIN_SDK_V5_MIGRATION.md`
 
 ### 设置与主题
 
-- 设置持久化和 scope 变化优先检查 `airapp/LanMountainDesktop.PluginSdk/`（合并自 `LanMountainDesktop.Settings.Core`）
-- 外观、圆角、主题资源优先检查 `airapp/LanMountainDesktop.PluginSdk/`（合并自 `LanMountainDesktop.Appearance`）与专题规范
+- 设置持久化和 scope 变化优先检查 `airapp/LanMountainDesktop.AirAppSdk/`（合并自 `LanMountainDesktop.Settings.Core`）
+- 外观、圆角、主题资源优先检查 `airapp/LanMountainDesktop.AirAppSdk/`（合并自 `LanMountainDesktop.Appearance`）与专题规范
 - **圆角统一**：桌面组件（Widget）必须统一使用动态资源 `DesignCornerRadiusComponent`。严禁在组件根容器使用硬编码数值或非组件级令牌（如 `Xs`, `Md` 等），以确保全局圆角缩放设置能正确应用到所有组件。
 
 ## 6. 权威来源

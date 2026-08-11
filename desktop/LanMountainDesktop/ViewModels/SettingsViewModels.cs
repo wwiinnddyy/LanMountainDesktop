@@ -14,11 +14,11 @@ using CommunityToolkit.Mvvm.Input;
 using FluentIcons.Common;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
-using LanMountainDesktop.Appearance;
-using LanMountainDesktop.Settings.Core;
+using LanMountainDesktop.AirAppSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 
 namespace LanMountainDesktop.ViewModels;
@@ -269,7 +269,7 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
             string.Equals(option.Id, regionState.TimeZoneId, StringComparison.OrdinalIgnoreCase))
             ?? TimeZones[0];
 
-        var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
         var normalizedRenderMode = AppRenderingModeHelper.Normalize(appSnapshot.AppRenderMode);
         SelectedRenderMode = RenderModes.FirstOrDefault(option =>
             string.Equals(option.Value, normalizedRenderMode, StringComparison.OrdinalIgnoreCase))
@@ -311,7 +311,7 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
     
     private void OnSettingsChanged(object? sender, SettingsChangedEvent e)
     {
-        if (e.Scope != SettingsScope.App)
+        if (e.Scope != AirAppSettingsScope.App)
         {
             return;
         }
@@ -325,18 +325,18 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
         if (changedKeys.Contains(nameof(AppSettingsSnapshot.EnableSlideTransition)) ||
             changedKeys.Contains(nameof(AppSettingsSnapshot.EnableFadeTransition)))
         {
-            var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
             ApplyTransitionPreferences(snapshot.EnableFadeTransition, snapshot.EnableSlideTransition);
         }
 
         if (changedKeys.Contains(nameof(AppSettingsSnapshot.ShowInTaskbar)))
         {
-            ShowInTaskbar = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App).ShowInTaskbar;
+            ShowInTaskbar = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App).ShowInTaskbar;
         }
 
         if (changedKeys.Contains(nameof(AppSettingsSnapshot.MultiInstanceLaunchBehavior)))
         {
-            var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
             SelectedMultiInstanceLaunchBehavior = MultiInstanceLaunchBehaviors.FirstOrDefault(option =>
                 string.Equals(option.Value, snapshot.MultiInstanceLaunchBehavior.ToString(), StringComparison.OrdinalIgnoreCase))
                 ?? MultiInstanceLaunchBehaviors.First(option =>
@@ -345,7 +345,7 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
 
         if (changedKeys.Contains(nameof(AppSettingsSnapshot.BackToWindowsButtonDisplayMode)))
         {
-            var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
             SelectedBackToWindowsButtonDisplayMode = BackToWindowsButtonDisplayModes.FirstOrDefault(option =>
                 string.Equals(option.Value, NormalizeBackToWindowsButtonDisplayMode(snapshot.BackToWindowsButtonDisplayMode), StringComparison.OrdinalIgnoreCase))
                 ?? BackToWindowsButtonDisplayModes[0];
@@ -355,7 +355,7 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
             changedKeys.Contains(nameof(AppSettingsSnapshot.BackToWindowsFluentIconName)) ||
             changedKeys.Contains(nameof(AppSettingsSnapshot.BackToWindowsIconText)))
         {
-            var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
             SelectedBackToWindowsIconSource = BackToWindowsIconSources.FirstOrDefault(option =>
                 string.Equals(option.Value, NormalizeBackToWindowsIconSource(snapshot.BackToWindowsIconSource), StringComparison.OrdinalIgnoreCase))
                 ?? BackToWindowsIconSources[0];
@@ -567,11 +567,11 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
             return;
         }
 
-        var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
         var normalizedRenderMode = AppRenderingModeHelper.Normalize(value.Value);
         appSnapshot.AppRenderMode = normalizedRenderMode;
         _settingsFacade.Settings.SaveSnapshot(
-            SettingsScope.App,
+            AirAppSettingsScope.App,
             appSnapshot,
             changedKeys: [nameof(AppSettingsSnapshot.AppRenderMode)]);
 
@@ -689,25 +689,25 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
 
     private void SaveField<T>(string key, T value)
     {
-        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
         var property = typeof(AppSettingsSnapshot).GetProperty(key);
         if (property is not null && property.CanWrite)
         {
             property.SetValue(snapshot, value);
         }
 
-        _settingsFacade.Settings.SaveSnapshot(SettingsScope.App, snapshot, changedKeys: [key]);
+        _settingsFacade.Settings.SaveSnapshot(AirAppSettingsScope.App, snapshot, changedKeys: [key]);
     }
 
     private void SaveTransitionPreferences(bool enableFadeTransition, bool enableSlideTransition)
     {
         var normalized = StartupVisualPreferencesResolver.FromFlags(enableFadeTransition, enableSlideTransition);
-        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
         snapshot.EnableFadeTransition = normalized.EnableFadeTransition;
         snapshot.EnableSlideTransition = normalized.EnableSlideTransition;
         ApplyTransitionPreferences(normalized.EnableFadeTransition, normalized.EnableSlideTransition);
         _settingsFacade.Settings.SaveSnapshot(
-            SettingsScope.App,
+            AirAppSettingsScope.App,
             snapshot,
             changedKeys:
             [
@@ -1359,11 +1359,11 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
         => _localizationService.GetString(_languageCode, key, fallback);
 }
 
-public sealed partial class InstalledPluginItemViewModel : ViewModelBase
+public sealed partial class InstalledAirAppItemViewModel : ViewModelBase
 {
-    public InstalledPluginItemViewModel(InstalledPluginInfo info)
+    public InstalledAirAppItemViewModel(AirAppInstalledInfo info)
     {
-        PluginId = info.Manifest.Id;
+        AirAppId = info.Manifest.Id;
         Name = info.Manifest.Name;
         Version = info.Manifest.Version ?? "-";
         Description = info.Manifest.Description;
@@ -1373,7 +1373,7 @@ public sealed partial class InstalledPluginItemViewModel : ViewModelBase
         IsEnabled = info.IsEnabled;
     }
 
-    public string PluginId { get; }
+    public string AirAppId { get; }
 
     public string Name { get; }
 
@@ -1391,13 +1391,13 @@ public sealed partial class InstalledPluginItemViewModel : ViewModelBase
     private bool _isEnabled;
 }
 
-public sealed partial class PluginsSettingsPageViewModel : ViewModelBase
+public sealed partial class AirAppsSettingsPageViewModel : ViewModelBase
 {
     private readonly ISettingsFacadeService _settingsFacade;
     private readonly LocalizationService _localizationService = new();
     private readonly string _languageCode;
 
-    public PluginsSettingsPageViewModel(ISettingsFacadeService settingsFacade)
+    public AirAppsSettingsPageViewModel(ISettingsFacadeService settingsFacade)
     {
         _settingsFacade = settingsFacade;
         _languageCode = _localizationService.NormalizeLanguageCode(_settingsFacade.Region.Get().LanguageCode);
@@ -1409,7 +1409,7 @@ public sealed partial class PluginsSettingsPageViewModel : ViewModelBase
 
     public event Action? RestartRequested;
 
-    public ObservableCollection<InstalledPluginItemViewModel> InstalledPlugins { get; } = [];
+    public ObservableCollection<InstalledAirAppItemViewModel> InstalledAirApps { get; } = [];
 
     [ObservableProperty]
     private string _statusMessage = string.Empty;
@@ -1440,7 +1440,7 @@ public sealed partial class PluginsSettingsPageViewModel : ViewModelBase
 
     public async Task InitializeAsync()
     {
-        if (InstalledPlugins.Count > 0)
+        if (InstalledAirApps.Count > 0)
         {
             return;
         }
@@ -1460,10 +1460,10 @@ public sealed partial class PluginsSettingsPageViewModel : ViewModelBase
         {
             IsBusy = true;
 
-            InstalledPlugins.Clear();
-            foreach (var plugin in _settingsFacade.PluginManagement.GetInstalledPlugins())
+            InstalledAirApps.Clear();
+            foreach (var plugin in _settingsFacade.AirAppManagement.GetInstalledAirApps())
             {
-                InstalledPlugins.Add(new InstalledPluginItemViewModel(plugin));
+                InstalledAirApps.Add(new InstalledAirAppItemViewModel(plugin));
             }
 
             StatusMessage = string.Format(
@@ -1471,7 +1471,7 @@ public sealed partial class PluginsSettingsPageViewModel : ViewModelBase
                 L(
                     "settings.plugins.refresh_success_installed_format",
                     "Loaded {0} installed plugins."),
-                InstalledPlugins.Count);
+                InstalledAirApps.Count);
         }
         finally
         {
@@ -1480,20 +1480,20 @@ public sealed partial class PluginsSettingsPageViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void TogglePlugin(InstalledPluginItemViewModel? item)
+    private void ToggleAirApp(InstalledAirAppItemViewModel? item)
     {
         if (item is null)
         {
             return;
         }
 
-        if (_settingsFacade.PluginManagement.SetPluginEnabled(item.PluginId, item.IsEnabled))
+        if (_settingsFacade.AirAppManagement.SetAirAppEnabled(item.AirAppId, item.IsEnabled))
         {
             StatusMessage = string.Format(
                 CultureInfo.CurrentCulture,
                 L(
                     "settings.plugins.toggle_result_format",
-                    "Plugin '{0}' was {1} for the next launch. Restart the app to apply page and widget changes."),
+                    "AirApp '{0}' was {1} for the next launch. Restart the app to apply page and widget changes."),
                 item.Name,
                 item.IsEnabled
                     ? L("settings.plugins.toggle_state_enabled", "enabled")
@@ -1505,27 +1505,27 @@ public sealed partial class PluginsSettingsPageViewModel : ViewModelBase
             item.IsEnabled = !item.IsEnabled;
             StatusMessage = string.Format(
                 CultureInfo.CurrentCulture,
-                L("settings.plugins.toggle_unchanged_format", "Plugin '{0}' did not change."),
+                L("settings.plugins.toggle_unchanged_format", "AirApp '{0}' did not change."),
                 item.Name);
         }
     }
 
     [RelayCommand]
-    private void DeletePlugin(InstalledPluginItemViewModel? item)
+    private void DeleteAirApp(InstalledAirAppItemViewModel? item)
     {
         if (item is null)
         {
             return;
         }
 
-        if (_settingsFacade.PluginManagement.DeleteInstalledPlugin(item.PluginId))
+        if (_settingsFacade.AirAppManagement.DeleteInstalledAirApp(item.AirAppId))
         {
-            InstalledPlugins.Remove(item);
+            InstalledAirApps.Remove(item);
             StatusMessage = string.Format(
                 CultureInfo.CurrentCulture,
                 L(
                     "settings.plugins.delete_success_format",
-                    "Plugin '{0}' was staged for deletion. Restart the app to finish removing it."),
+                    "AirApp '{0}' was staged for deletion. Restart the app to finish removing it."),
                 item.Name);
             RestartRequested?.Invoke();
         }
@@ -1540,13 +1540,13 @@ public sealed partial class PluginsSettingsPageViewModel : ViewModelBase
 
     private void RefreshLocalizedText()
     {
-        PageTitle = L("settings.plugins.title", "Plugins");
+        PageTitle = L("settings.plugins.title", "AirApps");
         PageDescription = L("settings.plugins.description", "Manage installed plugins and review their runtime state.");
-        RefreshButtonText = L("settings.plugins.refresh_button", "Refresh Plugins");
-        InstalledHeader = L("settings.plugins.installed_header", "Installed Plugins");
+        RefreshButtonText = L("settings.plugins.refresh_button", "Refresh AirApps");
+        InstalledHeader = L("settings.plugins.installed_header", "Installed AirApps");
         DeleteButtonText = L("settings.plugins.delete_button_short", "Delete");
         EmptyInstalledText = L("settings.plugins.empty", "No plugins found.");
-        RestartRequiredMessage = L("settings.plugins.restart_required", "Plugin changes take effect after restart.");
+        RestartRequiredMessage = L("settings.plugins.restart_required", "AirApp changes take effect after restart.");
     }
 
     private string L(string key, string fallback)
@@ -1678,9 +1678,9 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
     {
         try
         {
-            var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
             appSnapshot.StudyEnabled = StudyEnabled;
-            _settingsFacade.Settings.SaveSnapshot(SettingsScope.App, appSnapshot,
+            _settingsFacade.Settings.SaveSnapshot(AirAppSettingsScope.App, appSnapshot,
                 changedKeys: [nameof(AppSettingsSnapshot.StudyEnabled)]);
         }
         catch (Exception)
@@ -1773,10 +1773,10 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
     {
         try
         {
-            var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
             appSnapshot.StudyFrameMs = SamplingRateMs;
             appSnapshot.StudyScoreThresholdDbfs = NoiseSensitivityDbfs;
-            _settingsFacade.Settings.SaveSnapshot(SettingsScope.App, appSnapshot,
+            _settingsFacade.Settings.SaveSnapshot(AirAppSettingsScope.App, appSnapshot,
                 changedKeys: [nameof(AppSettingsSnapshot.StudyFrameMs), nameof(AppSettingsSnapshot.StudyScoreThresholdDbfs)]);
             UpdateThresholdText();
             UpdateStudyAnalyticsConfig();
@@ -1971,14 +1971,14 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
     {
         try
         {
-            var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
             appSnapshot.StudyFocusDurationMinutes = FocusDurationMinutes;
             appSnapshot.StudyBreakDurationMinutes = BreakDurationMinutes;
             appSnapshot.StudyLongBreakDurationMinutes = LongBreakDurationMinutes;
             appSnapshot.StudySessionsBeforeLongBreak = SessionsBeforeLongBreak;
             appSnapshot.StudyAutoStartBreak = AutoStartBreak;
             appSnapshot.StudyAutoStartFocus = AutoStartFocus;
-            _settingsFacade.Settings.SaveSnapshot(SettingsScope.App, appSnapshot,
+            _settingsFacade.Settings.SaveSnapshot(AirAppSettingsScope.App, appSnapshot,
                 changedKeys: [
                     nameof(AppSettingsSnapshot.StudyFocusDurationMinutes),
                     nameof(AppSettingsSnapshot.StudyBreakDurationMinutes),
@@ -2049,10 +2049,10 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
     {
         try
         {
-            var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
             appSnapshot.StudyNoiseAlertEnabled = NoiseAlertEnabled;
             appSnapshot.StudyMaxInterruptsPerMinute = MaxInterruptsPerMinute;
-            _settingsFacade.Settings.SaveSnapshot(SettingsScope.App, appSnapshot,
+            _settingsFacade.Settings.SaveSnapshot(AirAppSettingsScope.App, appSnapshot,
                 changedKeys: [nameof(AppSettingsSnapshot.StudyNoiseAlertEnabled), nameof(AppSettingsSnapshot.StudyMaxInterruptsPerMinute)]);
             UpdateStudyAnalyticsConfig();
         }
@@ -2165,11 +2165,11 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
     {
         try
         {
-            var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
             appSnapshot.StudyShowRealtimeDb = ShowRealtimeDb;
             appSnapshot.StudyBaselineDb = BaselineDb;
             appSnapshot.StudyAvgWindowSec = AvgWindowSec;
-            _settingsFacade.Settings.SaveSnapshot(SettingsScope.App, appSnapshot,
+            _settingsFacade.Settings.SaveSnapshot(AirAppSettingsScope.App, appSnapshot,
                 changedKeys: [nameof(AppSettingsSnapshot.StudyShowRealtimeDb), nameof(AppSettingsSnapshot.StudyBaselineDb), nameof(AppSettingsSnapshot.StudyAvgWindowSec)]);
             UpdateStudyAnalyticsConfig();
         }
@@ -2183,7 +2183,7 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
     {
         try
         {
-            var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
 
             // Master switch - 确保正确加载保存的值
             StudyEnabled = appSnapshot.StudyEnabled;
@@ -2315,16 +2315,16 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
         => _localizationService.GetString(_languageCode, key, fallback);
 }
 
-public sealed class PluginGeneratedSettingsPageViewModel
+public sealed class AirAppGeneratedSettingsPageViewModel
 {
-    public PluginGeneratedSettingsPageViewModel(
+    public AirAppGeneratedSettingsPageViewModel(
         ISettingsService settingsService,
         string pluginId,
-        PluginSettingsSectionRegistration section,
-        PluginLocalizer localizer)
+        AirAppSettingsSectionRegistration section,
+        AirAppLocalizer localizer)
     {
         SettingsService = settingsService;
-        PluginId = pluginId;
+        AirAppId = pluginId;
         Section = section;
         Localizer = localizer;
         Title = localizer.GetString(section.TitleLocalizationKey, section.TitleLocalizationKey);
@@ -2335,11 +2335,11 @@ public sealed class PluginGeneratedSettingsPageViewModel
 
     public ISettingsService SettingsService { get; }
 
-    public string PluginId { get; }
+    public string AirAppId { get; }
 
-    public PluginSettingsSectionRegistration Section { get; }
+    public AirAppSettingsSectionRegistration Section { get; }
 
-    public PluginLocalizer Localizer { get; }
+    public AirAppLocalizer Localizer { get; }
 
     public string Title { get; }
 
@@ -2371,7 +2371,7 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
     private bool _isDevModeEnabled;
 
     [ObservableProperty]
-    private string _devPluginPath = string.Empty;
+    private string _devAirAppPath = string.Empty;
 
     [ObservableProperty]
     private bool _enableThreeFingerSwipe;
@@ -2428,13 +2428,13 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
     private string _desktopLayerConflictCancelText = string.Empty;
 
     [ObservableProperty]
-    private string _pluginPathHeader = string.Empty;
+    private string _airAppPathHeader = string.Empty;
 
     [ObservableProperty]
-    private string _pluginPathDescription = string.Empty;
+    private string _airAppPathDescription = string.Empty;
 
     [ObservableProperty]
-    private string _pluginPathPlaceholder = string.Empty;
+    private string _airAppPathPlaceholder = string.Empty;
 
     [ObservableProperty]
     private string _startupArgsHeader = string.Empty;
@@ -2480,9 +2480,9 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
         DesktopLayerConflictEnableFusedMessage = L("settings.dev.desktop_layer_conflict_enable_fused", "Fused desktop and main desktop layer mode cannot run at the same time. Enabling fused desktop will turn off main desktop layer mode.");
         DesktopLayerConflictConfirmText = L("settings.dev.desktop_layer_conflict_confirm", "Switch");
         DesktopLayerConflictCancelText = L("settings.dev.desktop_layer_conflict_cancel", "Cancel");
-        PluginPathHeader = L("settings.dev.plugin_path_header", "Development plugin path");
-        PluginPathDescription = L("settings.dev.plugin_path_description", "Load a local plugin output directory without packaging.");
-        PluginPathPlaceholder = L("settings.dev.plugin_path_placeholder", "e.g. C:\\path\\to\\plugin\\bin\\Debug\\net10.0");
+        AirAppPathHeader = L("settings.dev.plugin_path_header", "Development plugin path");
+        AirAppPathDescription = L("settings.dev.plugin_path_description", "Load a local plugin output directory without packaging.");
+        AirAppPathPlaceholder = L("settings.dev.plugin_path_placeholder", "e.g. C:\\path\\to\\plugin\\bin\\Debug\\net10.0");
         StartupArgsHeader = L("settings.dev.startup_args_header", "Developer startup arguments");
         StartupArgsDescription = L("settings.dev.startup_args_description", "Command-line arguments and environment variables for development.");
         CliLabel = L("settings.dev.cli_label", "Command-line arguments:");
@@ -2503,7 +2503,7 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
         SaveField(nameof(AppSettingsSnapshot.IsDevModeEnabled), value);
     }
 
-    partial void OnDevPluginPathChanged(string value)
+    partial void OnDevAirAppPathChanged(string value)
     {
         if (_isInitializing) return;
         SaveField(nameof(AppSettingsSnapshot.DevPluginPath), value);
@@ -2529,9 +2529,9 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
 
     private void LoadSettings()
     {
-        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
         IsDevModeEnabled = snapshot.IsDevModeEnabled;
-        DevPluginPath = snapshot.DevPluginPath ?? string.Empty;
+        DevAirAppPath = snapshot.DevPluginPath ?? string.Empty;
         EnableThreeFingerSwipe = snapshot.EnableThreeFingerSwipe;
         EnableFusedDesktop = snapshot.EnableFusedDesktop;
         EnableMainWindowDesktopLayer = snapshot.EnableMainWindowDesktopLayer;
@@ -2539,7 +2539,7 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
 
     private void OnSettingsChanged(object? sender, SettingsChangedEvent e)
     {
-        if (e.Scope != SettingsScope.App)
+        if (e.Scope != AirAppSettingsScope.App)
         {
             return;
         }
@@ -2553,7 +2553,7 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
         _isInitializing = true;
         try
         {
-            var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
             EnableThreeFingerSwipe = snapshot.EnableThreeFingerSwipe;
             EnableFusedDesktop = snapshot.EnableFusedDesktop;
             EnableMainWindowDesktopLayer = snapshot.EnableMainWindowDesktopLayer;
@@ -2566,19 +2566,19 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
 
     private void SaveField<T>(string key, T value)
     {
-        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
         var property = typeof(AppSettingsSnapshot).GetProperty(key);
         if (property is not null && property.CanWrite)
         {
             property.SetValue(snapshot, value);
         }
 
-        _settingsFacade.Settings.SaveSnapshot(SettingsScope.App, snapshot, changedKeys: [key]);
+        _settingsFacade.Settings.SaveSnapshot(AirAppSettingsScope.App, snapshot, changedKeys: [key]);
     }
 
     public void ApplyFusedDesktopPreference(bool enabled, bool disableMainWindowDesktopLayer)
     {
-        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
         snapshot.EnableFusedDesktop = enabled;
         if (enabled && disableMainWindowDesktopLayer)
         {
@@ -2590,7 +2590,7 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
 
     public void ApplyMainWindowDesktopLayerPreference(bool enabled, bool disableFusedDesktop)
     {
-        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
         snapshot.EnableMainWindowDesktopLayer = enabled;
         if (enabled && disableFusedDesktop)
         {
@@ -2603,7 +2603,7 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
     private void SaveDesktopLayerPreferences(AppSettingsSnapshot snapshot)
     {
         _settingsFacade.Settings.SaveSnapshot(
-            SettingsScope.App,
+            AirAppSettingsScope.App,
             snapshot,
             changedKeys:
             [

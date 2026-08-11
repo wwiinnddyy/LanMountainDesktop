@@ -1,4 +1,4 @@
-namespace LanMountainDesktop.PluginPackaging;
+namespace LanMountainDesktop.AirAppPackaging;
 
 public sealed class PluginPackageInstallOptions
 {

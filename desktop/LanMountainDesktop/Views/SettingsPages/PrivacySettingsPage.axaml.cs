@@ -1,18 +1,18 @@
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.ViewModels;
 
 namespace LanMountainDesktop.Views.SettingsPages;
 
-[SettingsPageInfo(
+[AirAppSettingsPageInfo(
     "privacy",
     "Privacy",
-    SettingsPageCategory.About,
+    AirAppSettingsPageCategory.About,
     IconKey = "Shield",
     SortOrder = 34,
     TitleLocalizationKey = "settings.privacy.title",
     DescriptionLocalizationKey = "settings.privacy.description")]
-public partial class PrivacySettingsPage : SettingsPageBase
+public partial class PrivacySettingsPage : AirAppSettingsPageBase
 {
     public PrivacySettingsPage()
         : this(new PrivacySettingsPageViewModel(HostSettingsFacadeProvider.GetOrCreate()))

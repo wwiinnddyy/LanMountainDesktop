@@ -10,7 +10,7 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 
@@ -342,9 +342,9 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
 
     private void RefreshSchedule()
     {
-        var appSettings = _settingsService.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var appSettings = _settingsService.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
         var componentSettings = _settingsService.LoadSnapshot<ComponentSettingsSnapshot>(
-            SettingsScope.ComponentInstance,
+            AirAppSettingsScope.ComponentInstance,
             _componentId,
             _placementId);
         _languageCode = _localizationService.NormalizeLanguageCode(appSettings.LanguageCode);

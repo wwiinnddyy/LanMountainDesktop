@@ -1,4 +1,4 @@
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Shared.IPC;
 using LanMountainDesktop.Shared.IPC.Abstractions.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,7 +15,7 @@ public sealed class ExternalIpcPublicApiTests
         using var host = new PublicIpcHostService(pipeName);
         host.PluginDescriptorProvider = () =>
         [
-            new PublicPluginDescriptor("sample.plugin", "Sample Plugin", "1.0.0", true, true)
+            new PublicPluginDescriptor("sample.plugin", "Sample AirApp", "1.0.0", true, true)
         ];
 
         var appInfo = new PublicAppInfoSnapshot(
@@ -59,16 +59,16 @@ public sealed class ExternalIpcPublicApiTests
     }
 
     [Fact]
-    public void AddPluginPublicIpc_RegistersServiceDescriptor()
+    public void AddAirAppPublicIpc_RegistersServiceDescriptor()
     {
         var services = new ServiceCollection();
-        services.AddPluginPublicIpc<ITestPluginPublicService, TestPluginPublicService>(
+        services.AddAirAppPublicIpc<ITestAirAppPublicService, TestAirAppPublicService>(
             objectId: "plugin-service",
             notifyIds: ["lanmountain.plugin.sample.updated"]);
 
         using var provider = services.BuildServiceProvider();
-        var registration = Assert.Single(provider.GetServices<PluginPublicIpcServiceRegistration>());
-        Assert.Equal(typeof(ITestPluginPublicService), registration.ContractType);
+        var registration = Assert.Single(provider.GetServices<AirAppPublicIpcServiceRegistration>());
+        Assert.Equal(typeof(ITestAirAppPublicService), registration.ContractType);
         Assert.Equal("plugin-service", registration.ObjectId);
         Assert.Contains("lanmountain.plugin.sample.updated", registration.NotifyIds);
     }
@@ -106,12 +106,12 @@ public sealed class ExternalIpcPublicApiTests
 }
 
 [dotnetCampus.Ipc.CompilerServices.Attributes.IpcPublic]
-public interface ITestPluginPublicService
+public interface ITestAirAppPublicService
 {
     string Ping();
 }
 
-public sealed class TestPluginPublicService : ITestPluginPublicService
+public sealed class TestAirAppPublicService : ITestAirAppPublicService
 {
     public string Ping()
     {

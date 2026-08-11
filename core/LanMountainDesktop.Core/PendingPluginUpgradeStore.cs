@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace LanMountainDesktop.PluginPackaging;
+namespace LanMountainDesktop.AirAppPackaging;
 
 public enum PendingPluginOperation
 {

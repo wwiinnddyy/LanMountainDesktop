@@ -5,8 +5,8 @@ using System.Reflection;
 using Avalonia.Controls;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.Plugins;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirApps;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Views.ComponentEditors;
 
 namespace LanMountainDesktop.Services;
@@ -15,7 +15,7 @@ public static class DesktopComponentEditorRegistryFactory
 {
     public static DesktopComponentEditorRegistry Create(
         ComponentRegistry componentRegistry,
-        PluginRuntimeService? pluginRuntimeService)
+        AirAppRuntimeService? pluginRuntimeService)
     {
         ArgumentNullException.ThrowIfNull(componentRegistry);
 
@@ -38,7 +38,7 @@ public static class DesktopComponentEditorRegistryFactory
 
                 registrations.Add(new DesktopComponentEditorRegistration(
                     registration.ComponentId,
-                    context => CreatePluginEditor(contribution, context),
+                    context => CreateAirAppEditor(contribution, context),
                     registration.PreferredWidth,
                     registration.PreferredHeight,
                     registration.MinScale,
@@ -372,26 +372,26 @@ public static class DesktopComponentEditorRegistryFactory
                 }));
     }
 
-    private static Control CreatePluginEditor(
-        PluginDesktopComponentEditorContribution contribution,
+    private static Control CreateAirAppEditor(
+        AirAppDesktopComponentEditorContribution contribution,
         DesktopComponentEditorContext context)
     {
-        var settingsService = contribution.Plugin.Services.GetService(typeof(ISettingsService)) as ISettingsService
+        var settingsService = contribution.AirApp.Services.GetService(typeof(ISettingsService)) as ISettingsService
             ?? context.SettingsService;
-        var pluginSettings = new PluginScopedSettingsService(
-            contribution.Plugin.Manifest.Id,
+        var pluginSettings = new AirAppScopedSettingsService(
+            contribution.AirApp.Manifest.Id,
             settingsService);
-        var pluginContext = new PluginDesktopComponentEditorContext(
-            contribution.Plugin.Manifest,
-            contribution.Plugin.Context.PluginDirectory,
-            contribution.Plugin.Context.DataDirectory,
-            contribution.Plugin.Services,
-            contribution.Plugin.Context.Properties,
+        var pluginContext = new AirAppComponentEditorContext(
+            contribution.AirApp.Manifest,
+            contribution.AirApp.Context.AirAppDirectory,
+            contribution.AirApp.Context.DataDirectory,
+            contribution.AirApp.Services,
+            contribution.AirApp.Context.Properties,
             context.ComponentId,
             context.PlacementId,
             pluginSettings,
             context.HostContext);
 
-        return contribution.Registration.EditorFactory(contribution.Plugin.Services, pluginContext);
+        return contribution.Registration.EditorFactory(contribution.AirApp.Services, pluginContext);
     }
 }

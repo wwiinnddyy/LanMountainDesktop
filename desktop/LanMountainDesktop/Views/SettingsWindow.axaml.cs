@@ -10,11 +10,11 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using FluentAvalonia.UI.Controls;
 using FluentAvalonia.UI.Windowing;
-using LanMountainDesktop.Appearance;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
-using LanMountainDesktop.Settings.Core;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Shared.Contracts;
 using LanMountainDesktop.ViewModels;
 using Symbol = FluentIcons.Common.Symbol;
@@ -235,7 +235,7 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         ToolTip.SetTip(_paneToggleItem, ViewModel.TogglePaneTooltip);
         RootNavigationView.MenuItems.Add(_paneToggleItem);
 
-        SettingsPageCategory? previousCategory = null;
+        AirAppSettingsPageCategory? previousCategory = null;
 
         foreach (var page in ViewModel.Pages)
         {
@@ -246,8 +246,8 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
                 IconSource = CreateSettingsIconSource(MapIcon(page.IconKey))
             };
 
-            if (page.Category == SettingsPageCategory.About ||
-                page.Category == SettingsPageCategory.Dev)
+            if (page.Category == AirAppSettingsPageCategory.About ||
+                page.Category == AirAppSettingsPageCategory.Dev)
             {
                 RootNavigationView.FooterMenuItems.Add(item);
                 continue;
@@ -319,7 +319,7 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         }
 
         var page = GetOrCreatePage(descriptor);
-        if (page is SettingsPageBase settingsPage)
+        if (page is AirAppSettingsPageBase settingsPage)
         {
             settingsPage.InitializeHostContext(this);
             settingsPage.NavigationUri = new Uri($"lmd://settings/{descriptor.PageId}", UriKind.Absolute);
@@ -373,7 +373,7 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         }
 
         page = descriptor.CreatePage(this);
-        if (page is SettingsPageBase settingsPage)
+        if (page is AirAppSettingsPageBase settingsPage)
         {
             settingsPage.InitializeHostContext(this);
         }

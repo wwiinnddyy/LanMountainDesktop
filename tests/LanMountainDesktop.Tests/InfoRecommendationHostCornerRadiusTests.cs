@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using LanMountainDesktop.Appearance;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.ComponentSystem;
-using LanMountainDesktop.Host.Abstractions;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Views.Components;
 using Xunit;
 
@@ -60,12 +60,12 @@ public sealed class InfoRecommendationHostCornerRadiusTests
         Assert.Equal(32d, open, 3);
     }
 
-    private static ComponentChromeContext CreateChromeContext(
+    private static AirAppComponentChromeContext CreateChromeContext(
         string componentId,
         double cellSize,
         string style)
     {
-        return new ComponentChromeContext(
+        return new AirAppComponentChromeContext(
             componentId,
             null,
             cellSize,

@@ -562,12 +562,12 @@ internal sealed class SqliteComponentDomainStorage :
             }
         }
 
-        if (document.PluginSettings is null)
+        if (document.AirAppSettings is null)
         {
             return;
         }
 
-        foreach (var pair in document.PluginSettings)
+        foreach (var pair in document.AirAppSettings)
         {
             if (!TrySplitInstanceKey(pair.Key, out var componentId, out var placementId))
             {
@@ -678,7 +678,7 @@ internal sealed class SqliteComponentDomainStorage :
                 document = JsonSerializer.Deserialize<LegacyComponentDocument>(json, SerializerOptions) ?? new LegacyComponentDocument();
                 document.DefaultSettings ??= new ComponentSettingsSnapshot();
                 document.InstanceSettings ??= new Dictionary<string, ComponentSettingsSnapshot>(StringComparer.OrdinalIgnoreCase);
-                document.PluginSettings ??= new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
+                document.AirAppSettings ??= new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
                 return true;
             }
 
@@ -837,7 +837,7 @@ internal sealed class SqliteComponentDomainStorage :
         public Dictionary<string, ComponentSettingsSnapshot>? InstanceSettings { get; set; } =
             new(StringComparer.OrdinalIgnoreCase);
 
-        public Dictionary<string, JsonElement>? PluginSettings { get; set; } =
+        public Dictionary<string, JsonElement>? AirAppSettings { get; set; } =
             new(StringComparer.OrdinalIgnoreCase);
     }
 }

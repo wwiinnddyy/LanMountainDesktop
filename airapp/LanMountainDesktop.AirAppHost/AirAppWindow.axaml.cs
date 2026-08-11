@@ -17,6 +17,8 @@ public sealed partial class AirAppWindow : FAAppWindow
     private readonly AirAppWindowDescriptor _descriptor;
     private WhiteboardWidget? _whiteboardWidget;
     private string _instanceKey = string.Empty;
+    private AirAppWindowLoader.LoadedAirAppWindow? _loadedAirAppWindow;
+    private LanMountainDesktop.AirAppSdk.IAirAppWindow? _thirdPartyWindow;
 
     public AirAppWindow()
         : this(AirAppLaunchOptions.Parse([]))
@@ -61,6 +63,12 @@ public sealed partial class AirAppWindow : FAAppWindow
 
     private void ConfigureWindow()
     {
+        if (!string.IsNullOrWhiteSpace(_options.AppPackagePath))
+        {
+            ConfigureThirdPartyWindow();
+            return;
+        }
+
         ApplyWindowDescriptor(_descriptor);
 
         if (string.Equals(_options.AppId, AirAppLaunchOptions.WorldClockAppId, StringComparison.OrdinalIgnoreCase))
@@ -86,6 +94,90 @@ public sealed partial class AirAppWindow : FAAppWindow
             Text = $"Unsupported Air APP: {_options.AppId}",
             Margin = new Avalonia.Thickness(18)
         };
+    }
+
+    private void ConfigureThirdPartyWindow()
+    {
+        var loaded = new AirAppWindowLoader().Load(_options);
+        _loadedAirAppWindow = loaded;
+        _thirdPartyWindow = loaded.Window;
+        var window = loaded.Window;
+
+        ApplySdkWindowDescriptor(window.Descriptor);
+
+        var content = window.Content;
+        if (content is null)
+        {
+            throw new InvalidOperationException(
+                $"AirApp window '{_options.AppId}' exposes no Content. Set Content on the IAirAppWindow implementation.");
+        }
+
+        ContentHost.Content = content;
+        _ = window.OnWindowOpeningAsync();
+        AppLogger.Info(
+            "AirAppWindow",
+            $"Third-party AirApp window configured. AppId='{_options.AppId}'; TargetEntryId='{_options.TargetEntryId ?? string.Empty}'.");
+    }
+
+    private void ApplySdkWindowDescriptor(LanMountainDesktop.AirAppSdk.AirAppWindowDescriptor descriptor)
+    {
+        Title = string.IsNullOrWhiteSpace(descriptor.Title) ? _options.AppId : descriptor.Title;
+        Width = descriptor.Width;
+        Height = descriptor.Height;
+        MinWidth = descriptor.MinWidth;
+        MinHeight = descriptor.MinHeight;
+        ShowInTaskbar = descriptor.ShowInTaskbar;
+        CanResize = descriptor.CanResize;
+        ShowAsDialog = descriptor.ShowAsDialog;
+        WindowState = WindowState.Normal;
+        WindowRoot.Background = this.TryFindResource("AirAppWindowBackgroundBrush", out var brush) && brush is IBrush backgroundBrush
+            ? backgroundBrush
+            : Brushes.White;
+
+        switch (descriptor.ChromeMode)
+        {
+            case LanMountainDesktop.AirAppSdk.AirAppWindowChromeMode.Standard:
+                WindowDecorations = WindowDecorations.Full;
+                TitleBar.ExtendsContentIntoTitleBar = false;
+                TitleBar.Height = 40;
+                break;
+
+            case LanMountainDesktop.AirAppSdk.AirAppWindowChromeMode.Borderless:
+                WindowDecorations = WindowDecorations.None;
+                TitleBar.ExtendsContentIntoTitleBar = true;
+                TitleBar.Height = 40;
+                break;
+
+            case LanMountainDesktop.AirAppSdk.AirAppWindowChromeMode.FullScreen:
+                WindowDecorations = WindowDecorations.None;
+                TitleBar.ExtendsContentIntoTitleBar = true;
+                ShowAsDialog = false;
+                WindowState = WindowState.FullScreen;
+                TitleBar.Height = 40;
+                break;
+
+            case LanMountainDesktop.AirAppSdk.AirAppWindowChromeMode.Tool:
+                WindowDecorations = WindowDecorations.Full;
+                TitleBar.ExtendsContentIntoTitleBar = false;
+                ShowInTaskbar = false;
+                CanResize = false;
+                TitleBar.Height = 36;
+                break;
+
+            case LanMountainDesktop.AirAppSdk.AirAppWindowChromeMode.BackgroundOnly:
+                // Reserved for future background-only Air APPs.
+                break;
+        }
+
+        TitleBar.BackgroundColor = Colors.Transparent;
+        TitleBar.ForegroundColor = Color.FromRgb(32, 32, 32);
+        TitleBar.InactiveBackgroundColor = Colors.Transparent;
+        TitleBar.InactiveForegroundColor = Color.FromRgb(96, 96, 96);
+        TitleBar.ButtonBackgroundColor = Colors.Transparent;
+        TitleBar.ButtonHoverBackgroundColor = Color.FromArgb(23, 0, 0, 0);
+        TitleBar.ButtonPressedBackgroundColor = Color.FromArgb(52, 0, 0, 0);
+        TitleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
+        TitleBar.ButtonInactiveForegroundColor = Colors.Gray;
     }
 
     private void ApplyWindowDescriptor(AirAppWindowDescriptor descriptor)
@@ -180,6 +272,7 @@ public sealed partial class AirAppWindow : FAAppWindow
     {
         base.OnOpened(e);
         _ = RegisterWithLauncherAsync();
+        _thirdPartyWindow?.OnWindowOpened();
         AppLogger.Info(
             "AirAppWindow",
             $"Opened. WindowRole=AirApp; AppId='{_options.AppId}'; ForegroundActivationRequested=True.");
@@ -192,14 +285,45 @@ public sealed partial class AirAppWindow : FAAppWindow
     protected override void OnClosing(WindowClosingEventArgs e)
     {
         SaveWhiteboard();
+        _thirdPartyWindow?.OnWindowClosing(e);
         base.OnClosing(e);
     }
 
     protected override void OnClosed(EventArgs e)
     {
         SaveAndDisposeWhiteboard();
+        DisposeLoadedAirAppWindow();
         _ = UnregisterWithLauncherAsync();
         base.OnClosed(e);
+    }
+
+    private void DisposeLoadedAirAppWindow()
+    {
+        var loaded = _loadedAirAppWindow;
+        if (loaded is null)
+        {
+            return;
+        }
+
+        _loadedAirAppWindow = null;
+        _thirdPartyWindow = null;
+        try
+        {
+            loaded.Window.OnWindowClosed();
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("AirAppWindow", "Failed to notify AirApp window closed.", ex);
+        }
+
+        try
+        {
+            loaded.LoadedAirApp.Dispose();
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("AirAppWindow", "Failed to dispose loaded AirApp window.", ex);
+        }
     }
 
     private void SaveAndDisposeWhiteboard()

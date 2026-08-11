@@ -1,20 +1,20 @@
 using Avalonia.Controls;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.ViewModels;
 
 namespace LanMountainDesktop.Views.SettingsPages;
 
-[SettingsPageInfo(
+[AirAppSettingsPageInfo(
     "study",
     "Study",
-    SettingsPageCategory.Appearance,
+    AirAppSettingsPageCategory.Appearance,
     IconKey = "Hourglass",
     SortOrder = 19,
     TitleLocalizationKey = "settings.study.title",
     DescriptionLocalizationKey = "settings.study.description")]
-public partial class StudySettingsPage : SettingsPageBase
+public partial class StudySettingsPage : AirAppSettingsPageBase
 {
     public StudySettingsPage()
         : this(Design.IsDesignMode ? CreateDesignTimeViewModel() : CreateDefaultViewModel())

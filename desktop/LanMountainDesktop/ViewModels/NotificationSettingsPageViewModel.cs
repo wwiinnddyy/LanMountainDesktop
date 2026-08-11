@@ -4,7 +4,7 @@ using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 
@@ -38,7 +38,7 @@ public sealed partial class NotificationSettingsPageViewModel : ViewModelBase
 
     private void LoadSettings()
     {
-        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
 
         _isInitializing = true;
 
@@ -67,7 +67,7 @@ public sealed partial class NotificationSettingsPageViewModel : ViewModelBase
     {
         if (_isInitializing) return;
 
-        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
 
         snapshot.NotificationEnabled = IsNotificationEnabled;
         snapshot.NotificationDefaultPosition = SelectedPosition?.Value ?? "TopRight";
@@ -80,7 +80,7 @@ public sealed partial class NotificationSettingsPageViewModel : ViewModelBase
         snapshot.NotificationBoxLinuxCaptureMode = SelectedLinuxCaptureMode?.Value ?? "ProxyDaemon";
 
         _settingsFacade.Settings.SaveSnapshot(
-            SettingsScope.App,
+            AirAppSettingsScope.App,
             snapshot,
             changedKeys:
             [

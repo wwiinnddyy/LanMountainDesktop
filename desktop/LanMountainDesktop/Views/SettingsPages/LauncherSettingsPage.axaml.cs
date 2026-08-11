@@ -1,19 +1,19 @@
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.ViewModels;
 
 namespace LanMountainDesktop.Views.SettingsPages;
 
-[SettingsPageInfo(
+[AirAppSettingsPageInfo(
     "launcher",
     "App Launcher",
-    SettingsPageCategory.Components,
+    AirAppSettingsPageCategory.Components,
     IconKey = "AppsListDetail",
     SortOrder = 10,
-    Scope = SettingsScope.Launcher,
+    Scope = AirAppSettingsScope.Launcher,
     TitleLocalizationKey = "settings.launcher.title",
     DescriptionLocalizationKey = "settings.launcher.description")]
-public partial class LauncherSettingsPage : SettingsPageBase
+public partial class LauncherSettingsPage : AirAppSettingsPageBase
 {
     public LauncherSettingsPage()
         : this(new LauncherSettingsPageViewModel(HostSettingsFacadeProvider.GetOrCreate()))

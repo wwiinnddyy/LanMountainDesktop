@@ -97,7 +97,7 @@ public partial class WorldClockWidget : UserControl,
         Interval = TimeSpan.FromSeconds(1)
     };
 
-    private LanMountainDesktop.PluginSdk.ISettingsService _appSettingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
+    private LanMountainDesktop.AirAppSdk.ISettingsService _appSettingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
     private IComponentInstanceSettingsStore _componentSettingsStore = HostComponentSettingsStoreProvider.GetOrCreate();
     private readonly LocalizationService _localizationService = new();
     private readonly ClockEntryVisual[] _entryVisuals = new ClockEntryVisual[WorldClockTimeZoneCatalog.ClockCount];

@@ -204,7 +204,7 @@ internal sealed class SettingsSearchService
             [
                 descriptor.Category.ToString(),
                 descriptor.IconKey,
-                descriptor.PluginId ?? string.Empty,
+                descriptor.AirAppId ?? string.Empty,
                 descriptor.GroupId ?? string.Empty
             ]);
     }

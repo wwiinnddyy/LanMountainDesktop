@@ -26,7 +26,7 @@ internal sealed class CommandContext
     /// </summary>
     public IReadOnlyList<string> RawArgs { get; }
 
-    public bool IsLegacyPluginInstall =>
+    public bool IsLegacyAirAppInstall =>
         Options.ContainsKey("source") &&
         Options.ContainsKey("plugins-dir") &&
         Options.ContainsKey("result");
@@ -108,7 +108,7 @@ internal sealed class CommandContext
             return "debug-preview";
         }
 
-        if (IsLegacyPluginInstall || string.Equals(Command, "plugin", StringComparison.OrdinalIgnoreCase))
+        if (IsLegacyAirAppInstall || string.Equals(Command, "plugin", StringComparison.OrdinalIgnoreCase))
         {
             return "plugin-install";
         }

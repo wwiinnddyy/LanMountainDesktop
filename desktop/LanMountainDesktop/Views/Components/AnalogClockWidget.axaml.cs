@@ -10,7 +10,7 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 
@@ -402,9 +402,9 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
 
     private void LoadClockSettings()
     {
-        var appSnapshot = _settingsService.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var appSnapshot = _settingsService.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
         var componentSnapshot = _settingsService.LoadSnapshot<ComponentSettingsSnapshot>(
-            SettingsScope.ComponentInstance,
+            AirAppSettingsScope.ComponentInstance,
             _componentId,
             _placementId);
         _languageCode = _localizationService.NormalizeLanguageCode(appSnapshot.LanguageCode);

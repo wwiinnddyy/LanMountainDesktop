@@ -138,7 +138,7 @@ public partial class DevDebugWindow : Window
     /// </summary>
     private async Task SimulateSplashProgress(SplashWindow splashWindow)
     {
-        var stages = new[] { Strings.Preview_SplashInitializing, Strings.Preview_SplashCheckingPlugins, Strings.Preview_SplashLaunchingHost };
+        var stages = new[] { Strings.Preview_SplashInitializing, Strings.Preview_SplashCheckingAirApps, Strings.Preview_SplashLaunchingHost };
         var reporter = (ISplashStageReporter)splashWindow;
         
         for (int i = 0; i < stages.Length; i++)

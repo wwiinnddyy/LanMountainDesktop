@@ -8,9 +8,9 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
 using LanMountainDesktop.ComponentSystem;
-using LanMountainDesktop.Host.Abstractions;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 
@@ -31,7 +31,7 @@ public abstract class WeatherWidgetBase : UserControl,
     IWeatherInfoAwareComponentWidget,
     IComponentRuntimeContextAware,
     IComponentPlacementContextAware,
-    IComponentChromeContextAware
+    IAirAppComponentChromeContextAware
 {
     private readonly DispatcherTimer _refreshTimer = new();
     private CancellationTokenSource? _refreshCancellation;
@@ -110,7 +110,7 @@ public abstract class WeatherWidgetBase : UserControl,
         ConfigureRefreshTimer();
     }
 
-    public virtual void SetComponentChromeContext(ComponentChromeContext context)
+    public virtual void SetAirAppComponentChromeContext(AirAppComponentChromeContext context)
     {
         ApplyCellSize(context.CellSize);
     }
@@ -352,7 +352,7 @@ public abstract class WeatherWidgetBase : UserControl,
 
     private void OnSettingsChanged(object? sender, SettingsChangedEvent e)
     {
-        if (e.Scope != SettingsScope.App)
+        if (e.Scope != AirAppSettingsScope.App)
         {
             return;
         }
@@ -377,7 +377,7 @@ public abstract class WeatherWidgetBase : UserControl,
         }
 
         var snapshot = _settingsService.LoadSnapshot<ComponentSettingsSnapshot>(
-            SettingsScope.ComponentInstance,
+            AirAppSettingsScope.ComponentInstance,
             _componentId,
             _placementId);
 

@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using LanMountainDesktop.Launcher.Models;
-using LanMountainDesktop.Launcher.Plugins;
+using LanMountainDesktop.Launcher.AirApps;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 using LanMountainDesktop.Shared.IPC.Abstractions.Services;
 
@@ -22,7 +22,7 @@ namespace LanMountainDesktop.Launcher;
 [JsonSerializable(typeof(PublicTaskbarStatus))]
 [JsonSerializable(typeof(PublicShellActivationResult))]
 [JsonSerializable(typeof(LauncherResult))]
-[JsonSerializable(typeof(PluginManifest))]
+[JsonSerializable(typeof(AirAppManifest))]
 [JsonSerializable(typeof(List<PendingUpgrade>))]
 [JsonSerializable(typeof(OobeStateFile))]
 [JsonSerializable(typeof(DataLocationConfig))]

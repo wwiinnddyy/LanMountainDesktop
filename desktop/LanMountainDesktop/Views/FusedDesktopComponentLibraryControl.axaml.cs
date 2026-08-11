@@ -89,7 +89,7 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
 
     private void LoadRegistry()
     {
-        var pluginRuntimeService = (Application.Current as App)?.PluginRuntimeService;
+        var pluginRuntimeService = (Application.Current as App)?.AirAppRuntimeService;
         _componentRegistry = DesktopComponentRegistryFactory.Create(pluginRuntimeService);
         _componentRuntimeRegistry = DesktopComponentRegistryFactory.CreateRuntimeRegistry(
             _componentRegistry,

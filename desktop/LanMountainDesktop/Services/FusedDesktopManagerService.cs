@@ -8,10 +8,10 @@ using Avalonia.Platform;
 using Avalonia.Threading;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.DesktopEditing;
-using LanMountainDesktop.Host.Abstractions;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Platform.Abstractions;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Views;
 using LanMountainDesktop.Views.Components;
@@ -74,7 +74,7 @@ internal sealed class FusedDesktopManagerService : IFusedDesktopManagerService
     {
         if (!OperatingSystem.IsWindows()) return;
 
-        var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
         if (!appSnapshot.EnableFusedDesktop)
         {
             AppLogger.Info("FusedDesktop", "Fused desktop is disabled. Skipping initialization.");
@@ -101,7 +101,7 @@ internal sealed class FusedDesktopManagerService : IFusedDesktopManagerService
     {
         if (_componentRuntimeRegistry is not null) return;
 
-        var pluginRuntimeService = (Application.Current as App)?.PluginRuntimeService;
+        var pluginRuntimeService = (Application.Current as App)?.AirAppRuntimeService;
         _componentRegistry = DesktopComponentRegistryFactory.Create(pluginRuntimeService);
         _componentRuntimeRegistry = DesktopComponentRegistryFactory.CreateRuntimeRegistry(
             _componentRegistry,
@@ -436,7 +436,7 @@ internal sealed class FusedDesktopManagerService : IFusedDesktopManagerService
         double cellSize,
         AppearanceThemeSnapshot snapshot)
     {
-        return descriptor.ResolveCornerRadius(new ComponentChromeContext(
+        return descriptor.ResolveCornerRadius(new AirAppComponentChromeContext(
             placement.ComponentId,
             placement.PlacementId,
             cellSize,

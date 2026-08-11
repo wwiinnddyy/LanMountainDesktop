@@ -17,7 +17,7 @@ using Avalonia.VisualTree;
 using FluentAvalonia.UI.Controls;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Platform.Windows;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
 
@@ -496,7 +496,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
         var isThreeFingerSwipeEnabled = appSnapshot.EnableThreeFingerSwipe;
 
         var currentPoint = e.GetCurrentPoint(DesktopPagesViewport);

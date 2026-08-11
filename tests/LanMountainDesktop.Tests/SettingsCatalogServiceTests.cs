@@ -1,5 +1,5 @@
 using System.Linq;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services.Settings;
 using Xunit;
 
@@ -12,7 +12,7 @@ public sealed class SettingsCatalogServiceTests
     {
         var catalog = new SettingsCatalogService();
 
-        var sections = catalog.GetSections(SettingsScope.App).ToList();
+        var sections = catalog.GetSections(AirAppSettingsScope.App).ToList();
 
         Assert.Equal(
             [
@@ -25,14 +25,14 @@ public sealed class SettingsCatalogServiceTests
             sections.Select(section => section.Id));
 
         var materialColor = sections.Single(section => section.Id == "material-color");
-        Assert.Equal(SettingsCategories.Appearance, materialColor.Category);
-        Assert.Equal(SettingsScope.App, materialColor.Scope);
+        Assert.Equal(AirAppSettingsCategories.Appearance, materialColor.Category);
+        Assert.Equal(AirAppSettingsScope.App, materialColor.Scope);
         Assert.Equal("settings.material_color.title", materialColor.TitleLocalizationKey);
         Assert.Equal("Color", materialColor.IconKey);
 
         var wallpaper = sections.Single(section => section.Id == "wallpaper");
-        Assert.Equal(SettingsCategories.Appearance, wallpaper.Category);
-        Assert.Equal(SettingsScope.App, wallpaper.Scope);
+        Assert.Equal(AirAppSettingsCategories.Appearance, wallpaper.Category);
+        Assert.Equal(AirAppSettingsScope.App, wallpaper.Scope);
         Assert.Equal("settings.wallpaper.title", wallpaper.TitleLocalizationKey);
         Assert.Equal("Image", wallpaper.IconKey);
     }

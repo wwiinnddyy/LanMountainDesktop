@@ -1,18 +1,18 @@
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.ViewModels;
 
 namespace LanMountainDesktop.Views.SettingsPages;
 
-[SettingsPageInfo(
+[AirAppSettingsPageInfo(
     "notifications",
     "Notifications",
-    SettingsPageCategory.Components,
+    AirAppSettingsPageCategory.Components,
     IconKey = "Bell",
     SortOrder = 5,
     TitleLocalizationKey = "settings.notifications.title",
     DescriptionLocalizationKey = "settings.notifications.description")]
-public partial class NotificationSettingsPage : SettingsPageBase
+public partial class NotificationSettingsPage : AirAppSettingsPageBase
 {
     public NotificationSettingsPage()
         : this(new NotificationSettingsPageViewModel(HostSettingsFacadeProvider.GetOrCreate()))

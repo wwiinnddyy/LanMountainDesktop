@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services.Settings;
 using Sentry;
 
@@ -69,7 +69,7 @@ public sealed class SentryCrashTelemetryService : IDisposable
                 return;
             }
 
-            var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
             shouldEnable = snapshot.UploadAnonymousCrashData;
 
             if (!force && _isEnabled == shouldEnable)
@@ -343,7 +343,7 @@ public sealed class SentryCrashTelemetryService : IDisposable
     {
         _ = sender;
 
-        if (e.Scope != SettingsScope.App ||
+        if (e.Scope != AirAppSettingsScope.App ||
             e.ChangedKeys is null ||
             !e.ChangedKeys.Contains(nameof(AppSettingsSnapshot.UploadAnonymousCrashData), StringComparer.OrdinalIgnoreCase))
         {

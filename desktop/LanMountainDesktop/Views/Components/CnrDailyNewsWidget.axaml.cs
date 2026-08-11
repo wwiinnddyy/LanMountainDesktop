@@ -44,7 +44,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
     };
 
     private readonly bool _isDesignModePreview = Design.IsDesignMode;
-    private LanMountainDesktop.PluginSdk.ISettingsService _appSettingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
+    private LanMountainDesktop.AirAppSdk.ISettingsService _appSettingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
     private IComponentInstanceSettingsStore _componentSettingsService = HostComponentSettingsStoreProvider.GetOrCreate();
     private readonly LocalizationService _localizationService = new();
     private readonly Bitmap?[] _newsBitmaps = new Bitmap?[2];

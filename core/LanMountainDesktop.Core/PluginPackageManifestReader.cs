@@ -1,7 +1,7 @@
 using System.IO.Compression;
 using System.Text.Json;
 
-namespace LanMountainDesktop.PluginPackaging;
+namespace LanMountainDesktop.AirAppPackaging;
 
 public static class PluginPackageManifestReader
 {

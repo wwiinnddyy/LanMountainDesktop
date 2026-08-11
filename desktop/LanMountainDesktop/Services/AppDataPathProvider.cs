@@ -40,9 +40,9 @@ public static class AppDataPathProvider
         return GetDataRoot();
     }
 
-    public static string GetPluginMarketDirectory()
+    public static string GetAirAppMarketDirectory()
     {
-        return Path.Combine(GetDataRoot(), "PluginMarket");
+        return Path.Combine(GetDataRoot(), "AirAppMarket");
     }
 
     public static string GetWallpapersDirectory()

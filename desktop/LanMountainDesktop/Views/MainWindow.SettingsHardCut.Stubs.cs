@@ -13,7 +13,7 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using FluentAvalonia.UI.Controls;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Update;
 using LanMountainDesktop.Theme;
@@ -39,13 +39,13 @@ public partial class MainWindow : Window
             return;
         }
 
-        // 缁勪欢瀹炰緥鑼冨洿鐨勮缃彉鏇翠笉搴旇Е鍙戞暣涓闈㈤噸鏂板姞杞斤紙姣斿缈婚〉淇濆瓨鍥剧墖绱㈠紩锛?        if (e.Scope == SettingsScope.ComponentInstance)
+        // 缁勪欢瀹炰緥鑼冨洿鐨勮缃彉鏇翠笉搴旇Е鍙戞暣涓闈㈤噸鏂板姞杞斤紙姣斿缈婚〉淇濆瓨鍥剧墖绱㈠紩锛?        if (e.Scope == AirAppSettingsScope.ComponentInstance)
         {
             return;
         }
 
         // 鍚姩鍙拌缃彉鍖栨椂锛岄噸鏂版覆鏌撳惎鍔ㄥ彴鍥炬爣
-        if (e.Scope == SettingsScope.Launcher && e.ChangedKeys is { Count: > 0 })
+        if (e.Scope == AirAppSettingsScope.Launcher && e.ChangedKeys is { Count: > 0 })
         {
             var changedKeys = e.ChangedKeys.ToArray();
             if (changedKeys.Any(key =>
@@ -53,7 +53,7 @@ public partial class MainWindow : Window
             {
                 Dispatcher.UIThread.Post(() =>
                 {
-                    var launcherSnapshot = _settingsService.LoadSnapshot<LauncherSettingsSnapshot>(SettingsScope.Launcher);
+                    var launcherSnapshot = _settingsService.LoadSnapshot<LauncherSettingsSnapshot>(AirAppSettingsScope.Launcher);
                     InitializeLauncherVisibilitySettings(launcherSnapshot);
                     RenderLauncherRootTiles();
                 }, DispatcherPriority.Background);
@@ -61,7 +61,7 @@ public partial class MainWindow : Window
             }
         }
 
-        if (e.Scope == SettingsScope.App && e.ChangedKeys is { Count: > 0 })
+        if (e.Scope == AirAppSettingsScope.App && e.ChangedKeys is { Count: > 0 })
         {
             var changedKeys = e.ChangedKeys.ToArray();
             if (changedKeys.Any(key =>
@@ -72,7 +72,7 @@ public partial class MainWindow : Window
             {
                 Dispatcher.UIThread.Post(() =>
                 {
-                    var snapshot = _settingsService.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+                    var snapshot = _settingsService.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
                     _backToWindowsButtonDisplayMode = NormalizeBackToWindowsButtonDisplayMode(snapshot.BackToWindowsButtonDisplayMode);
                     _backToWindowsIconSource = NormalizeBackToWindowsIconSource(snapshot.BackToWindowsIconSource);
                     _backToWindowsFluentIconName = NormalizeBackToWindowsFluentIcon(snapshot.BackToWindowsFluentIconName).ToString();
@@ -533,9 +533,9 @@ public partial class MainWindow : Window
         {
             // Saving our own state should not trigger a full external reload cycle.
             _suppressOwnSettingsReloadCount++;
-            _settingsService.SaveSnapshot(SettingsScope.App, BuildAppSettingsSnapshot());
+            _settingsService.SaveSnapshot(AirAppSettingsScope.App, BuildAppSettingsSnapshot());
             _componentLayoutStore.SaveLayout(BuildDesktopLayoutSettingsSnapshot());
-            _settingsService.SaveSnapshot(SettingsScope.Launcher, BuildLauncherSettingsSnapshot());
+            _settingsService.SaveSnapshot(AirAppSettingsScope.Launcher, BuildLauncherSettingsSnapshot());
         }
         catch (Exception ex)
         {
@@ -568,9 +568,9 @@ public partial class MainWindow : Window
 
     internal void ReloadFromPersistedSettings()
     {
-        var snapshot = _settingsService.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var snapshot = _settingsService.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
         var layoutSnapshot = _componentLayoutStore.LoadLayout();
-        var launcherSnapshot = _settingsService.LoadSnapshot<LauncherSettingsSnapshot>(SettingsScope.Launcher);
+        var launcherSnapshot = _settingsService.LoadSnapshot<LauncherSettingsSnapshot>(AirAppSettingsScope.Launcher);
         _suppressSettingsPersistence = true;
         try
         {
@@ -637,7 +637,7 @@ public partial class MainWindow : Window
         var latestUpdateState = _updateSettingsService.Get();
         var latestThemeState = _themeSettingsService.Get();
         var latestPrivacyState = _settingsFacade.Privacy.Get();
-        var existingSnapshot = _settingsService.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var existingSnapshot = _settingsService.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
         return new AppSettingsSnapshot
         {
             GridShortSideCells = _targetShortSideCells,

@@ -2,13 +2,13 @@ using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
-using LanMountainDesktop.Host.Abstractions;
+using LanMountainDesktop.AirAppSdk;
 
 namespace LanMountainDesktop.DesktopHost;
 
 public sealed class DesktopShellHost : IDesktopShellHost
 {
-    private readonly Action _initializePluginRuntime;
+    private readonly Action _initializeAirAppRuntime;
     private readonly Action _initializeTrayIcon;
     private readonly Action<IClassicDesktopStyleApplicationLifetime> _createAndAssignMainWindow;
     private readonly Action _performExitCleanup;
@@ -16,14 +16,14 @@ public sealed class DesktopShellHost : IDesktopShellHost
     private readonly Action _startWeatherRefresh;
 
     public DesktopShellHost(
-        Action initializePluginRuntime,
+        Action initializeAirAppRuntime,
         Action initializeTrayIcon,
         Action<IClassicDesktopStyleApplicationLifetime> createAndAssignMainWindow,
         Action performExitCleanup,
         Action startActivationListener,
         Action startWeatherRefresh)
     {
-        _initializePluginRuntime = initializePluginRuntime;
+        _initializeAirAppRuntime = initializeAirAppRuntime;
         _initializeTrayIcon = initializeTrayIcon;
         _createAndAssignMainWindow = createAndAssignMainWindow;
         _performExitCleanup = performExitCleanup;
@@ -40,7 +40,7 @@ public sealed class DesktopShellHost : IDesktopShellHost
     {
         ArgumentNullException.ThrowIfNull(application);
 
-        _initializePluginRuntime();
+        _initializeAirAppRuntime();
         _initializeTrayIcon();
 
         if (application.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)

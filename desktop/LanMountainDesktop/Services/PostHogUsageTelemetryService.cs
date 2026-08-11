@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services.Settings;
 using PostHog;
 
@@ -72,7 +72,7 @@ public sealed class PostHogUsageTelemetryService : IDisposable
     {
         try
         {
-            var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
             var enabled = snapshot.UploadAnonymousUsageData;
 
             if (_isUsageEnabled == enabled && !forceSessionStart)
@@ -422,7 +422,7 @@ public sealed class PostHogUsageTelemetryService : IDisposable
     {
         _ = sender;
 
-        if (e.Scope != SettingsScope.App ||
+        if (e.Scope != AirAppSettingsScope.App ||
             e.ChangedKeys is null ||
             !e.ChangedKeys.Contains(nameof(AppSettingsSnapshot.UploadAnonymousUsageData), StringComparer.OrdinalIgnoreCase))
         {

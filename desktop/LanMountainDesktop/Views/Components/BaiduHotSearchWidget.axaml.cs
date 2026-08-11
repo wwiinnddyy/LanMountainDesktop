@@ -35,7 +35,7 @@ public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget
         Interval = TimeSpan.FromMinutes(15)
     };
 
-    private LanMountainDesktop.PluginSdk.ISettingsService _appSettingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
+    private LanMountainDesktop.AirAppSdk.ISettingsService _appSettingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
     private IComponentInstanceSettingsStore _componentSettingsService = HostComponentSettingsStoreProvider.GetOrCreate();
     private readonly LocalizationService _localizationService = new();
     private readonly List<BaiduHotSearchItemSnapshot> _activeItems = [];

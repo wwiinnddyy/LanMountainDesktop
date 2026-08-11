@@ -2,21 +2,21 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using FluentAvalonia.UI.Controls;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.ViewModels;
 
 namespace LanMountainDesktop.Views.SettingsPages;
 
-[SettingsPageInfo(
+[AirAppSettingsPageInfo(
     "dev",
     "Developer",
-    SettingsPageCategory.Dev,
+    AirAppSettingsPageCategory.Dev,
     IconKey = "DeveloperBoard",
     SortOrder = 0,
     TitleLocalizationKey = "settings.dev.title",
     DescriptionLocalizationKey = "settings.dev.description")]
-public partial class DevSettingsPage : SettingsPageBase
+public partial class DevSettingsPage : AirAppSettingsPageBase
 {
     private bool _isReady;
     private bool _syncingToggles;

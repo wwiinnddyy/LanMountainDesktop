@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Avalonia.Controls;
-using LanMountainDesktop.Appearance;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.ComponentSystem;
-using LanMountainDesktop.Host.Abstractions;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
-using LanMountainDesktop.Settings.Core;
+using LanMountainDesktop.AirAppSdk;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -63,7 +63,7 @@ public sealed class DesktopComponentRuntimeRegistration
         string componentId,
         string? displayNameLocalizationKey,
         Func<DesktopComponentControlFactoryContext, Control> controlFactory,
-        Func<ComponentChromeContext, double>? cornerRadiusResolver = null)
+        Func<AirAppComponentChromeContext, double>? cornerRadiusResolver = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(componentId);
         ArgumentNullException.ThrowIfNull(controlFactory);
@@ -82,22 +82,22 @@ public sealed class DesktopComponentRuntimeRegistration
 
     public Func<DesktopComponentControlFactoryContext, Control> ControlFactory { get; }
 
-    public Func<ComponentChromeContext, double>? CornerRadiusResolver { get; }
+    public Func<AirAppComponentChromeContext, double>? CornerRadiusResolver { get; }
 }
 
 public sealed class DesktopComponentRuntimeDescriptor
 {
-    private static readonly Func<ComponentChromeContext, double> DefaultCornerRadiusResolver =
+    private static readonly Func<AirAppComponentChromeContext, double> DefaultCornerRadiusResolver =
         chromeContext => ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadiusValue(chromeContext);
 
     private readonly Func<DesktopComponentControlFactoryContext, Control> _controlFactory;
-    private readonly Func<ComponentChromeContext, double> _cornerRadiusResolver;
+    private readonly Func<AirAppComponentChromeContext, double> _cornerRadiusResolver;
 
     internal DesktopComponentRuntimeDescriptor(
         DesktopComponentDefinition definition,
         string? displayNameLocalizationKey,
         Func<DesktopComponentControlFactoryContext, Control> controlFactory,
-        Func<ComponentChromeContext, double>? cornerRadiusResolver)
+        Func<AirAppComponentChromeContext, double>? cornerRadiusResolver)
     {
         Definition = definition;
         DisplayNameLocalizationKey = displayNameLocalizationKey;
@@ -131,7 +131,7 @@ public sealed class DesktopComponentRuntimeDescriptor
         var componentAccessor = settingsService.GetComponentAccessor(Definition.Id, placementId);
         var componentSettingsStore = new ComponentSettingsService(settingsService);
         componentSettingsStore.SetScopedComponentContext(Definition.Id, placementId);
-        var chromeContext = new ComponentChromeContext(
+        var chromeContext = new AirAppComponentChromeContext(
             Definition.Id,
             placementId,
             cellSize,
@@ -184,9 +184,9 @@ public sealed class DesktopComponentRuntimeDescriptor
             placementAwareComponent.SetComponentPlacementContext(Definition.Id, placementId);
         }
 
-        if (control is IComponentChromeContextAware chromeContextAwareComponent)
+        if (control is IAirAppComponentChromeContextAware chromeContextAwareComponent)
         {
-            chromeContextAwareComponent.SetComponentChromeContext(chromeContext);
+            chromeContextAwareComponent.SetAirAppComponentChromeContext(chromeContext);
         }
 
         if (control is IDesktopComponentWidget sizedComponent)
@@ -217,7 +217,7 @@ public sealed class DesktopComponentRuntimeDescriptor
         return control;
     }
 
-    public double ResolveCornerRadius(ComponentChromeContext chromeContext)
+    public double ResolveCornerRadius(AirAppComponentChromeContext chromeContext)
     {
         ArgumentNullException.ThrowIfNull(chromeContext);
 
@@ -227,7 +227,7 @@ public sealed class DesktopComponentRuntimeDescriptor
 
     public double ResolveCornerRadius(double cellSize)
     {
-        return ResolveCornerRadius(new ComponentChromeContext(
+        return ResolveCornerRadius(new AirAppComponentChromeContext(
             Definition.Id,
             null,
             Math.Max(1, cellSize),

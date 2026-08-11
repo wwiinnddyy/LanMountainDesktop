@@ -7,7 +7,7 @@ namespace LanMountainDesktop.Launcher.Infrastructure;
 
 internal static class Commands
 {
-    public static async Task<int> RunLegacyPluginInstallAsync(CommandContext context, PluginInstallerService installer)
+    public static async Task<int> RunLegacyAirAppInstallAsync(CommandContext context, AirAppInstallerService installer)
     {
         var resultPath = context.GetOption("result");
         LauncherResult result;
@@ -37,8 +37,8 @@ internal static class Commands
     {
         var appRoot = ResolveAppRoot(context);
         _ = new DeploymentLocator(appRoot);
-        var pluginInstaller = new PluginInstallerService();
-        var pluginUpgrades = new PluginUpgradeQueueService(pluginInstaller);
+        var pluginInstaller = new AirAppInstallerService();
+        var pluginUpgrades = new AirAppUpgradeQueueService(pluginInstaller);
 
         LauncherResult result;
         try
@@ -63,13 +63,13 @@ internal static class Commands
 
     private static LauncherResult ExecuteCore(
         CommandContext context,
-        PluginInstallerService pluginInstaller,
-        PluginUpgradeQueueService pluginUpgrades)
+        AirAppInstallerService pluginInstaller,
+        AirAppUpgradeQueueService pluginUpgrades)
     {
         switch (context.Command.ToLowerInvariant())
         {
             case "plugin":
-                return ExecutePluginCommand(context, pluginInstaller, pluginUpgrades);
+                return ExecuteAirAppCommand(context, pluginInstaller, pluginUpgrades);
             default:
                 return new LauncherResult
                 {
@@ -81,10 +81,10 @@ internal static class Commands
         }
     }
 
-    private static LauncherResult ExecutePluginCommand(
+    private static LauncherResult ExecuteAirAppCommand(
         CommandContext context,
-        PluginInstallerService pluginInstaller,
-        PluginUpgradeQueueService pluginUpgrades)
+        AirAppInstallerService pluginInstaller,
+        AirAppUpgradeQueueService pluginUpgrades)
     {
         switch (context.SubCommand.ToLowerInvariant())
         {

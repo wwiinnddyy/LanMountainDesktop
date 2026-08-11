@@ -1,10 +1,11 @@
 <Solution>
   <Project Path="core/LanMountainDesktop.Core/LanMountainDesktop.Core.csproj" />
   <Project Path="platform/LanMountainDesktop.Platform/LanMountainDesktop.Platform.csproj" />
-  <Project Path="airapp/LanMountainDesktop.PluginSdk/LanMountainDesktop.PluginSdk.csproj" />
+  <Project Path="airapp/LanMountainDesktop.AirAppSdk/LanMountainDesktop.AirAppSdk.csproj" />
   <Project Path="airapp/LanMountainDesktop.AirAppRuntime/LanMountainDesktop.AirAppRuntime.csproj" />
   <Project Path="airapp/LanMountainDesktop.AirAppHost/LanMountainDesktop.AirAppHost.csproj" />
-  <Project Path="airapp/LanMountainDesktop.PluginTemplate/LanMountainDesktop.PluginTemplate.csproj" />
+  <Project Path="airapp/LanMountainDesktop.AirAppDevServer/LanMountainDesktop.AirAppDevServer.csproj" />
+  <Project Path="airapp/LanMountainDesktop.AirAppTemplate/LanMountainDesktop.AirAppTemplate.csproj" />
   <Project Path="desktop/LanMountainDesktop/LanMountainDesktop.csproj" />
   <Project Path="desktop/LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj" />
   <Project Path="install/LanDesktopPLONDS.installer/LanDesktopPLONDS.installer.csproj" />

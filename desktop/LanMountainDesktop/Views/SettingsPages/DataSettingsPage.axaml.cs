@@ -5,20 +5,20 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.ViewModels;
 
 namespace LanMountainDesktop.Views.SettingsPages;
 
-[SettingsPageInfo(
+[AirAppSettingsPageInfo(
     "data",
     "数据",
-    SettingsPageCategory.General,
+    AirAppSettingsPageCategory.General,
     IconKey = "HardDrive",
     SortOrder = 5,
     TitleLocalizationKey = "settings.data.title",
     DescriptionLocalizationKey = "settings.data.description")]
-public partial class DataSettingsPage : SettingsPageBase
+public partial class DataSettingsPage : AirAppSettingsPageBase
 {
     private readonly SolidColorBrush _fallbackBrush = new(Colors.Gray);
 

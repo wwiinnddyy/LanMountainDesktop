@@ -1,0 +1,51 @@
+<Project>
+  <Target Name="ValidateLanMountainAirAppManifest"
+          BeforeTargets="Build"
+          Condition="'$(LanMountainAirAppEnablePackaging)' == 'true'">
+    <Error Condition="!Exists('$(MSBuildProjectDirectory)\$(LanMountainAirAppManifestFileName)')"
+           Text="AirApp packaging is enabled, but '$(LanMountainAirAppManifestFileName)' was not found in '$(MSBuildProjectDirectory)'." />
+  </Target>
+
+  <Target Name="CreateLanMountainAirAppPackage"
+          AfterTargets="Build"
+          Condition="'$(LanMountainAirAppEnablePackaging)' == 'true'">
+    <PropertyGroup>
+      <_LanMountainAirAppBuildOutputDirectory>$(LanMountainAirAppBuildOutputDirectory)</_LanMountainAirAppBuildOutputDirectory>
+      <_LanMountainAirAppBuildOutputDirectory Condition="'$(_LanMountainAirAppBuildOutputDirectory)' == ''">$(TargetDir)</_LanMountainAirAppBuildOutputDirectory>
+      <_LanMountainAirAppBuildOutputDirectory Condition="'$(_LanMountainAirAppBuildOutputDirectory)' == ''">$(MSBuildProjectDirectory)\$(OutputPath)</_LanMountainAirAppBuildOutputDirectory>
+      <_LanMountainAirAppAssemblyName>$(LanMountainAirAppAssemblyName)</_LanMountainAirAppAssemblyName>
+      <_LanMountainAirAppAssemblyName Condition="'$(_LanMountainAirAppAssemblyName)' == '' and '$(AssemblyName)' != ''">$(AssemblyName)</_LanMountainAirAppAssemblyName>
+      <_LanMountainAirAppAssemblyName Condition="'$(_LanMountainAirAppAssemblyName)' == ''">$(MSBuildProjectName)</_LanMountainAirAppAssemblyName>
+      <_LanMountainAirAppPackageVersion>$(LanMountainAirAppPackageVersion)</_LanMountainAirAppPackageVersion>
+      <_LanMountainAirAppPackageVersion Condition="'$(_LanMountainAirAppPackageVersion)' == '' and '$(Version)' != ''">$(Version)</_LanMountainAirAppPackageVersion>
+      <_LanMountainAirAppPackageVersion Condition="'$(_LanMountainAirAppPackageVersion)' == ''">1.0.0</_LanMountainAirAppPackageVersion>
+      <_LanMountainAirAppPackageOutputDirectory>$(LanMountainAirAppPackageOutputDirectory)</_LanMountainAirAppPackageOutputDirectory>
+      <_LanMountainAirAppPackageOutputDirectory Condition="'$(_LanMountainAirAppPackageOutputDirectory)' == ''">$(MSBuildProjectDirectory)\</_LanMountainAirAppPackageOutputDirectory>
+      <_LanMountainAirAppPackageFileName>$(LanMountainAirAppPackageFileName)</_LanMountainAirAppPackageFileName>
+      <_LanMountainAirAppPackageFileName Condition="'$(_LanMountainAirAppPackageFileName)' == ''">$(_LanMountainAirAppAssemblyName).$(_LanMountainAirAppPackageVersion)$(LanMountainAirAppPackageExtension)</_LanMountainAirAppPackageFileName>
+      <_LanMountainAirAppPackagePath>$(LanMountainAirAppPackagePath)</_LanMountainAirAppPackagePath>
+      <_LanMountainAirAppPackagePath Condition="'$(_LanMountainAirAppPackagePath)' == ''">$(_LanMountainAirAppPackageOutputDirectory)$(_LanMountainAirAppPackageFileName)</_LanMountainAirAppPackagePath>
+      <_LanMountainAirAppManifestOutputPath>$(_LanMountainAirAppBuildOutputDirectory)$(LanMountainAirAppManifestFileName)</_LanMountainAirAppManifestOutputPath>
+      <_LanMountainAirAppDepsPath>$(ProjectDepsFilePath)</_LanMountainAirAppDepsPath>
+    </PropertyGroup>
+
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\$(LanMountainAirAppManifestFileName)"
+          DestinationFiles="$(_LanMountainAirAppManifestOutputPath)"
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(MSBuildProjectDirectory)\$(LanMountainAirAppManifestFileName)')" />
+
+    <Error Condition="!Exists('$(_LanMountainAirAppManifestOutputPath)')"
+           Text="AirApp manifest '$(_LanMountainAirAppManifestOutputPath)' was not found in build output. Ensure '$(LanMountainAirAppManifestFileName)' is copied to output." />
+    <Error Condition="!Exists('$(TargetPath)')"
+           Text="AirApp assembly '$(TargetPath)' was not found. Build output is incomplete." />
+    <Error Condition="'$(_LanMountainAirAppDepsPath)' != '' and !Exists('$(_LanMountainAirAppDepsPath)')"
+           Text="AirApp deps file '$(_LanMountainAirAppDepsPath)' was not found. AirApp packages must include a .deps.json file." />
+
+    <MakeDir Directories="$(_LanMountainAirAppPackageOutputDirectory)" />
+    <Delete Files="$(_LanMountainAirAppPackagePath)" TreatErrorsAsWarnings="true" />
+    <ZipDirectory SourceDirectory="$(_LanMountainAirAppBuildOutputDirectory)"
+                  DestinationFile="$(_LanMountainAirAppPackagePath)" />
+    <Message Importance="High"
+             Text="AirApp package generated: $(_LanMountainAirAppPackagePath)" />
+  </Target>
+</Project>

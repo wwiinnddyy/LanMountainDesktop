@@ -7,7 +7,7 @@ using Avalonia.Threading;
 using System.Globalization;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.RssReader;
 using LanMountainDesktop.Services.Settings;

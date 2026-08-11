@@ -64,14 +64,14 @@
 
             <Separator Classes="settings-separator" />
 
-            <ui:FASettingsExpander Header="{Binding PluginPathHeader}"
-                                 Description="{Binding PluginPathDescription}">
+            <ui:FASettingsExpander Header="{Binding AirAppPathHeader}"
+                                 Description="{Binding AirAppPathDescription}">
                 <ui:FASettingsExpander.IconSource>
                     <ui:FAFontIconSource Glyph="&#xF023C;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpanderItem>
-                    <TextBox Text="{Binding DevPluginPath}"
-                             Watermark="{Binding PluginPathPlaceholder}"
+                    <TextBox Text="{Binding DevAirAppPath}"
+                             Watermark="{Binding AirAppPathPlaceholder}"
                              Width="360"
                              MinWidth="200" />
                 </ui:FASettingsExpanderItem>

@@ -419,7 +419,7 @@ function Get-CommitRangeInfo {
     $expansionPrefixes = @(
         "desktop/LanMountainDesktop/",
         "desktop/LanMountainDesktop.Launcher/",
-        "airapp/LanMountainDesktop.PluginSdk/",
+        "airapp/LanMountainDesktop.AirAppSdk/",
         "airapp/LanMountainDesktop.AirAppRuntime/",
         "airapp/LanMountainDesktop.AirAppHost/",
         "core/LanMountainDesktop.Core/",

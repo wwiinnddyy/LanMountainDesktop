@@ -6,7 +6,7 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
 using LanMountainDesktop.ViewModels;
@@ -214,7 +214,7 @@ internal sealed class SettingsWindowService : ISettingsWindowService
     {
         _ = sender;
 
-        if (e.Scope != SettingsScope.App)
+        if (e.Scope != AirAppSettingsScope.App)
         {
             return;
         }
@@ -276,7 +276,7 @@ internal sealed class SettingsWindowService : ISettingsWindowService
                 return;
             }
 
-            var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
             var devPageVisible = _pageRegistry.GetPages().Any(p => p.PageId == "dev");
 
             if (snapshot.IsDevModeEnabled && !devPageVisible)

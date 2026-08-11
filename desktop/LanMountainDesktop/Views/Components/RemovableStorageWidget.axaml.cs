@@ -11,7 +11,7 @@ using Avalonia.Threading;
 using FluentIcons.Avalonia;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Theme;
@@ -256,7 +256,7 @@ public partial class RemovableStorageWidget : UserControl, IDesktopComponentWidg
     {
         try
         {
-            var appSettings = _settingsService.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            var appSettings = _settingsService.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
             var componentSettings = _componentSettingsStore.LoadForComponent(_componentId, _placementId);
             _languageCode = _localizationService.NormalizeLanguageCode(appSettings.LanguageCode);
             _componentColorScheme = componentSettings.ColorSchemeSource;

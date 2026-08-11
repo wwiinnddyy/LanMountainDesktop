@@ -15,7 +15,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 
@@ -687,7 +687,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
     {
         try
         {
-            var snapshot = _settingsService.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            var snapshot = _settingsService.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
             _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
         }
         catch
@@ -701,7 +701,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         try
         {
             var snapshot = _settingsService.LoadSnapshot<ComponentSettingsSnapshot>(
-                SettingsScope.ComponentInstance,
+                AirAppSettingsScope.ComponentInstance,
                 _componentId,
                 _placementId);
             return DailyArtworkMirrorSources.Normalize(snapshot.DailyArtworkMirrorSource);

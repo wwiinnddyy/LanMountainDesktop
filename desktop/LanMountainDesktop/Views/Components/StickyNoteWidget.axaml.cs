@@ -9,9 +9,9 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using FluentIcons.Common;
 using LanMountainDesktop.ComponentSystem;
-using LanMountainDesktop.Host.Abstractions;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services.Settings;
 
 namespace LanMountainDesktop.Views.Components;
@@ -70,12 +70,12 @@ public partial class StickyNoteWidget : UserControl,
 
         RootBorder.CornerRadius = new CornerRadius(
             ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadiusValue(
-                new ComponentChromeContext(
+                new AirAppComponentChromeContext(
                     _componentId,
                     _placementId,
                     Math.Max(1, cellSize),
-                    Appearance.AppearanceCornerRadiusTokenFactory.Create(
-                        Settings.Core.GlobalAppearanceSettings.DefaultCornerRadiusStyle))));
+                    AirAppSdk.AppearanceCornerRadiusTokenFactory.Create(
+                        AirAppSdk.GlobalAppearanceSettings.DefaultCornerRadiusStyle))));
 
         RootBorder.Padding = new Thickness(
             Math.Clamp(2 * scale, 1, 4),

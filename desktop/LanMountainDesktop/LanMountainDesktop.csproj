@@ -32,7 +32,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\platform\LanMountainDesktop.Platform\LanMountainDesktop.Platform.csproj" />
     <ProjectReference Include="..\..\core\LanMountainDesktop.Core\LanMountainDesktop.Core.csproj" />
-    <ProjectReference Include="..\..\airapp\LanMountainDesktop.PluginSdk\LanMountainDesktop.PluginSdk.csproj" />
+    <ProjectReference Include="..\..\airapp\LanMountainDesktop.AirAppSdk\LanMountainDesktop.AirAppSdk.csproj" />
     <!-- Launcher 引用已移除 - Launcher 现在是独立应用 -->
   </ItemGroup>
 

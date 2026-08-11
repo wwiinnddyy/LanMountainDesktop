@@ -23,7 +23,7 @@ using FluentIcons.Avalonia;
 using FluentAvalonia.Styling;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Shared.Contracts.Launcher;
@@ -203,7 +203,7 @@ public partial class MainWindow : Window
     {
         var pluginRuntimeService = Design.IsDesignMode
             ? null
-            : (Application.Current as App)?.PluginRuntimeService;
+            : (Application.Current as App)?.AirAppRuntimeService;
         _componentRegistry = DesktopComponentRegistryFactory.Create(pluginRuntimeService);
         _settingsService = _settingsFacade.Settings;
         _gridSettingsService = _settingsFacade.Grid;
@@ -456,9 +456,9 @@ public partial class MainWindow : Window
         SyncSettingsWindowState();
 
         _suppressSettingsPersistence = true;
-        var snapshot = _settingsService.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var snapshot = _settingsService.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
         var desktopLayoutSnapshot = _componentLayoutStore.LoadLayout();
-        var launcherSnapshot = _settingsService.LoadSnapshot<LauncherSettingsSnapshot>(SettingsScope.Launcher);
+        var launcherSnapshot = _settingsService.LoadSnapshot<LauncherSettingsSnapshot>(AirAppSettingsScope.Launcher);
 
         if (!string.IsNullOrWhiteSpace(snapshot.TimeZoneId))
         {
@@ -1080,7 +1080,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var snapshot = _settingsService.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var snapshot = _settingsService.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
         if (snapshot.ShowInTaskbar)
         {
             WindowState = WindowState.Minimized;
@@ -1167,7 +1167,7 @@ public partial class MainWindow : Window
 
     private StartupVisualPreferences GetStartupVisualPreferences()
     {
-        var snapshot = _settingsService.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var snapshot = _settingsService.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
         return StartupVisualPreferencesResolver.FromFlags(
             snapshot.EnableFadeTransition,
             snapshot.EnableSlideTransition);

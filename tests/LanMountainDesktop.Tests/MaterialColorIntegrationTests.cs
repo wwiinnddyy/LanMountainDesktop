@@ -10,11 +10,11 @@ namespace LanMountainDesktop.Tests;
 public sealed class MaterialColorIntegrationTests
 {
     [Fact]
-    public void PluginMapper_ExposesUnifiedMaterialColorSnapshot()
+    public void AirAppMapper_ExposesUnifiedMaterialColorSnapshot()
     {
         var snapshot = CreateSnapshot();
 
-        var pluginSnapshot = PluginAppearanceSnapshotMapper.FromMaterialColorSnapshot(snapshot);
+        var pluginSnapshot = AirAppAppearanceSnapshotMapper.FromMaterialColorSnapshot(snapshot);
 
         Assert.Equal("Dark", pluginSnapshot.ThemeVariant);
         Assert.Equal(Color.Parse("#FF214365").ToString(), pluginSnapshot.AccentColor);

@@ -8,7 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\core\LanMountainDesktop.Core\LanMountainDesktop.Core.csproj" />
-    <ProjectReference Include="..\..\airapp\LanMountainDesktop.PluginSdk\LanMountainDesktop.PluginSdk.csproj" />
+    <ProjectReference Include="..\..\airapp\LanMountainDesktop.AirAppSdk\LanMountainDesktop.AirAppSdk.csproj" />
   </ItemGroup>
 
   <ItemGroup>

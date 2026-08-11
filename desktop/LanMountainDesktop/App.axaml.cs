@@ -19,7 +19,7 @@ using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.DesktopHost;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Platform.Abstractions;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.ExternalIpc;
 using LanMountainDesktop.Services.Loading;
@@ -75,7 +75,7 @@ public partial class App : Application
 
     private DesktopTrayService? _desktopTrayService;
     private DispatcherTimer? _shellRecoveryTimer;
-    private PluginRuntimeService? _pluginRuntimeService;
+    private AirAppRuntimeService? _pluginRuntimeService;
     private MainWindow? _mainWindow;
     private FusedDesktopComponentLibraryWindow? _fusedComponentLibraryWindow;
     private bool _mainWindowClosed;
@@ -103,7 +103,7 @@ public partial class App : Application
         CurrentPrivacyPolicyViewRequested?.Invoke();
     }
 
-    public PluginRuntimeService? PluginRuntimeService => _pluginRuntimeService;
+    public AirAppRuntimeService? AirAppRuntimeService => _pluginRuntimeService;
     public ISettingsFacadeService SettingsFacade => _settingsFacade;
     public IHostApplicationLifecycle HostApplicationLifecycle => _hostApplicationLifecycle;
     internal ISettingsWindowService? SettingsWindowService => _settingsWindowService;
@@ -158,7 +158,7 @@ public partial class App : Application
         if (e.Property == ActualThemeVariantProperty)
         {
             // 系统主题变化时，检查是否需要更新
-            var themeMode = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App).ThemeMode;
+            var themeMode = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App).ThemeMode;
             if (string.Equals(themeMode, ThemeAppearanceValues.ThemeModeFollowSystem, StringComparison.OrdinalIgnoreCase))
             {
                 var newThemeVariant = (ThemeVariant?)e.NewValue;
@@ -389,7 +389,7 @@ public partial class App : Application
     {
         _desktopShellInitializationStarted = true;
         _desktopShellHost ??= new DesktopShellHost(
-            InitializePluginRuntime,
+            InitializeAirAppRuntime,
             InitializeTrayIcon,
             desktop =>
             {
@@ -558,23 +558,23 @@ public partial class App : Application
 
     private void DisableAvaloniaDataAnnotationValidation()
     {
-        // Avalonia 12 中 BindingPlugins 已移除，数据验证插件不再需要手动禁用
+        // Avalonia 12 中 BindingAirApps 已移除，数据验证插件不再需要手动禁用
         // 编译型绑定默认开启，数据注解验证行为已改变
     }
 
-    private void InitializePluginRuntime()
+    private void InitializeAirAppRuntime()
     {
-        ReportStartupProgress(StartupStage.LoadingPlugins, 30, "姝ｅ湪鍔犺浇鎻掍欢...");
+        ReportStartupProgress(StartupStage.LoadingAirApps, 30, "姝ｅ湪鍔犺浇鎻掍欢...");
         try
         {
             _pluginRuntimeService?.Dispose();
-            _pluginRuntimeService = new PluginRuntimeService(_settingsFacade, _publicIpcHostService);
-            HostSettingsFacadeProvider.BindPluginRuntime(_pluginRuntimeService);
-            _pluginRuntimeService.LoadInstalledPlugins();
+            _pluginRuntimeService = new AirAppRuntimeService(_settingsFacade, _publicIpcHostService);
+            HostSettingsFacadeProvider.BindAirAppRuntime(_pluginRuntimeService);
+            _pluginRuntimeService.LoadInstalledAirApps();
         }
         catch (Exception ex)
         {
-            AppLogger.Warn("PluginRuntime", "Failed to initialize plugin runtime.", ex);
+            AppLogger.Warn("AirAppRuntime", "Failed to initialize plugin runtime.", ex);
         }
     }
 
@@ -730,7 +730,7 @@ public partial class App : Application
             return false;
         }
 
-        var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
         return appSnapshot.EnableFusedDesktop;
     }
 
@@ -784,7 +784,7 @@ public partial class App : Application
     private void ApplyThemeFromSettings()
     {
         var snapshot = _appearanceThemeService.GetCurrent();
-        var themeMode = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App).ThemeMode;
+        var themeMode = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App).ThemeMode;
 
         // 处理跟随系统主题模式
         if (string.Equals(themeMode, ThemeAppearanceValues.ThemeModeFollowSystem, StringComparison.OrdinalIgnoreCase))
@@ -813,7 +813,7 @@ public partial class App : Application
 
     private void ApplyCurrentCultureFromSettings()
     {
-        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
         var languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
 
         CultureInfo culture;
@@ -1027,7 +1027,7 @@ public partial class App : Application
     {
         _ = sender;
 
-        if (e.Scope != SettingsScope.App)
+        if (e.Scope != AirAppSettingsScope.App)
         {
             return;
         }
@@ -1188,7 +1188,7 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            AppLogger.Warn("PluginRuntime", "Failed to dispose plugin runtime during shutdown.", ex);
+            AppLogger.Warn("AirAppRuntime", "Failed to dispose plugin runtime during shutdown.", ex);
         }
         finally
         {
@@ -1576,13 +1576,13 @@ public partial class App : Application
 
     private bool ShouldShowMainWindowInTaskbar()
     {
-        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
         return snapshot.ShowInTaskbar && !snapshot.EnableMainWindowDesktopLayer;
     }
 
     private bool IsMainWindowDesktopLayerEnabled()
     {
-        return _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App).EnableMainWindowDesktopLayer;
+        return _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App).EnableMainWindowDesktopLayer;
     }
 
     private void ActivateOrRefreshMainWindowLayer(MainWindow mainWindow, string source)
@@ -1624,7 +1624,7 @@ public partial class App : Application
 
     private void ApplyFusedDesktopRuntimeState()
     {
-        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
         try
         {
             if (snapshot.EnableFusedDesktop)
@@ -1738,7 +1738,7 @@ public partial class App : Application
 
     private string L(string key, string fallback)
     {
-        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
         var languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
         return _localizationService.GetString(languageCode, key, fallback);
     }

@@ -36,7 +36,7 @@ public sealed class DataStorageService
     [
         "Whiteboards",
         "Extensions",
-        "PluginMarket",
+        "AirAppMarket",
         "Wallpapers"
     ];
 
@@ -44,8 +44,8 @@ public sealed class DataStorageService
     {
         new("logs", "日志文件", "应用运行日志", "", true, "#9E9E9E"),
         new("whiteboards", "白板笔记", "桌面白板笔记数据", "Whiteboards", true, "#FF9800"),
-        new("plugins", "插件数据", "已安装插件文件", "Extensions/Plugins", true, "#2196F3"),
-        new("market", "插件市场缓存", "插件市场元数据缓存", "PluginMarket", true, "#9C27B0"),
+        new("plugins", "插件数据", "已安装插件文件", "Extensions/AirApps", true, "#2196F3"),
+        new("market", "插件市场缓存", "插件市场元数据缓存", "AirAppMarket", true, "#9C27B0"),
         new("wallpapers", "壁纸文件", "下载的壁纸资源", "Wallpapers", true, "#E91E63"),
         new("settings", "设置文件", "应用配置数据", "", false, "#4CAF50")
     };

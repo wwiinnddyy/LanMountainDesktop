@@ -37,10 +37,10 @@
 - 多页桌面，工作学习场景分离
 - 主题切换、玻璃效果、圆角风格
 
-### 🔌 插件生态
-- 通过 `.laapp` 插件扩展功能
-- 官方 Plugin SDK 支持自定义组件
-- 设置页、组件、集成功能一站式接入
+### 🔌 轻应用生态
+- 通过 `.laapp` 轻应用扩展功能
+- 官方 AirApp SDK 支持桌面组件与窗口轻应用
+- 设置页、组件、窗口、集成功能一站式接入
 
 ## 为谁而设计
 
@@ -48,7 +48,7 @@
 |---------|---------|
 | 🎓 学生用户 | 课程表、自习监测、计时、天气和日常信息聚合 |
 | 💼 办公用户 | 日历、资讯、最近文档、常用工具入口 |
-| 🎨 效率爱好者 | 自由布局、主题切换、插件扩展 |
+| 🎨 效率爱好者 | 自由布局、主题切换、轻应用扩展 |
 | 🇨🇳 中文用户 | 本地化界面、农历和节假日等本地语境支持 |
 
 ## 快速开始
@@ -84,37 +84,36 @@ dotnet run --project LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csp
 dotnet test LanMountainDesktop.slnx -c Debug
 ```
 
-## 插件开发
+## 轻应用开发
 
-阑山桌面支持通过 Plugin SDK 开发自定义插件：
+阑山桌面通过统一的 AirApp SDK 支持轻应用扩展（桌面组件 + 窗口轻应用）：
 
 ```bash
-# 安装插件模板
-dotnet new install LanMountainDesktop.PluginTemplate
+# 安装轻应用模板
+dotnet new install LanMountainDesktop.AirAppTemplate
 
-# 创建新插件
-dotnet new lmd-plugin -n MyPlugin
+# 创建新轻应用
+dotnet new lmd-airapp -n MyAirApp
 ```
 
-- **Plugin SDK**: `LanMountainDesktop.PluginSdk` (API 6.0.0)
+- **AirApp SDK**: `LanMountainDesktop.AirAppSdk` (API 1.0.0)
 - **共享契约**: `LanMountainDesktop.Core`
-- **迁移指南**: [PLUGIN_SDK_V5_MIGRATION.md](docs/PLUGIN_SDK_V5_MIGRATION.md)
+- **迁移指南**: [AIRAPP_SDK_V1_MIGRATION.md](docs/AIRAPP_SDK_V1_MIGRATION.md)
 
 ## 项目结构
 
 ```
 LanMountainDesktop/
-├── core/                            # 共享基础：契约、IPC、插件打包
+├── core/                            # 共享基础：契约、IPC、打包
 │   └── LanMountainDesktop.Core/
 ├── platform/                        # 平台差异层（接口 + Windows/macOS 实现）
 │   └── LanMountainDesktop.Platform/
-├── airappsdk/                       # AirApp 第三方 SDK 与工具
-│   └── LanMountainDesktop.AirAppSdk/ (+ AirAppDevServer / AirAppTemplate)
-├── airapp/                          # 插件 SDK 与 AirApp 运行时
-│   ├── LanMountainDesktop.PluginSdk/    # 官方插件 SDK
-│   ├── LanMountainDesktop.AirAppRuntime/
-│   ├── LanMountainDesktop.AirAppHost/
-│   └── LanMountainDesktop.PluginTemplate/
+├── airapp/                          # AirApp 统一扩展系统
+│   ├── LanMountainDesktop.AirAppSdk/     # 统一 SDK（组件 + 窗口轻应用）
+│   ├── LanMountainDesktop.AirAppRuntime/ # 轻应用运行时进程
+│   ├── LanMountainDesktop.AirAppHost/    # 轻应用窗口宿主进程
+│   ├── LanMountainDesktop.AirAppTemplate/   # dotnet new lmd-airapp 模板
+│   └── LanMountainDesktop.AirAppDevServer/  # 轻应用开发工具
 ├── desktop/                         # 桌面宿主
 │   ├── LanMountainDesktop/          # 桌面宿主应用
 │   └── LanMountainDesktop.Launcher/ # 启动器 (OOBE、Splash、版本管理、更新)
@@ -131,15 +130,17 @@ LanMountainDesktop/
 
 | 项目 | 职责 |
 |-----|------|
-| **本仓库** | 桌面宿主、插件运行时、Plugin SDK、共享契约 |
-| [LanAirApp](https://github.com/yourorg/LanAirApp) | 插件市场元数据、开发者生态材料 |
-| [LanMountainDesktop.SamplePlugin](https://github.com/yourorg/LanMountainDesktop.SamplePlugin) | 官方示例插件 |
+| **本仓库** | 桌面宿主、AirApp 运行时、AirApp SDK、共享契约 |
+| [LanAirApp](https://github.com/yourorg/LanAirApp) | 轻应用市场元数据、开发者生态材料 |
+| [LanMountainDesktop.SamplePlugin](https://github.com/yourorg/LanMountainDesktop.SamplePlugin) | 官方示例轻应用 |
 
 ## 文档索引
 
 - [产品定位](docs/PRODUCT.md) - 产品愿景与目标用户
 - [架构说明](docs/ARCHITECTURE.md) - 仓库结构与运行时主线
 - [开发指南](docs/DEVELOPMENT.md) - 构建、测试、调试
+- [AirApp 开发指南](docs/01-AirApp开发/README.md) - 轻应用组件与窗口开发
+- [AirApp 迁移指南](docs/AIRAPP_SDK_V1_MIGRATION.md) - 插件迁移到 AirApp
 - [视觉规范](docs/VISUAL_SPEC.md) - 主题、颜色、玻璃层级
 - [圆角规范](docs/CORNER_RADIUS_SPEC.md) - 圆角层级与动态规则
 - [贡献指南](docs/CONTRIBUTING.md) - PR、spec、文档协作规则

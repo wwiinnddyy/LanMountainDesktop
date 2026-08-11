@@ -7,7 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 
 namespace LanMountainDesktop.Services;
 
@@ -65,7 +65,7 @@ public sealed class NotificationListenerService : IDisposable
 
         try
         {
-            var settings = _settingsService.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            var settings = _settingsService.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
             if (!settings.NotificationBoxEnabled)
             {
                 SetStatus(new NotificationBoxStatus(NotificationBoxServiceState.Unsupported, "消息盒子已在设置中关闭。", "Disabled"));
@@ -133,7 +133,7 @@ public sealed class NotificationListenerService : IDisposable
 
     public void AddNotification(NotificationItem notification)
     {
-        var settings = _settingsService.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var settings = _settingsService.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
         if (!settings.NotificationBoxEnabled)
         {
             return;

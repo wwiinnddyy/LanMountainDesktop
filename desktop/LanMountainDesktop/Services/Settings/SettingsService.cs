@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 
 namespace LanMountainDesktop.Services.Settings;
 
@@ -32,20 +32,20 @@ internal sealed class SettingsService : ISettingsService
 
     public event EventHandler<SettingsChangedEvent>? Changed;
 
-    public T LoadSnapshot<T>(SettingsScope scope, string? subjectId = null, string? placementId = null) where T : new()
+    public T LoadSnapshot<T>(AirAppSettingsScope scope, string? subjectId = null, string? placementId = null) where T : new()
     {
         return scope switch
         {
-            SettingsScope.App => ConvertSnapshot<AppSettingsSnapshot, T>(_appSettingsService.Load()),
-            SettingsScope.Launcher => ConvertSnapshot<LauncherSettingsSnapshot, T>(_launcherSettingsService.Load()),
-            SettingsScope.ComponentInstance => LoadComponentSnapshot<T>(subjectId, placementId),
-            SettingsScope.Plugin => LoadSection<T>(scope, EnsureKey(subjectId), sectionId: "__snapshot__", placementId),
+            AirAppSettingsScope.App => ConvertSnapshot<AppSettingsSnapshot, T>(_appSettingsService.Load()),
+            AirAppSettingsScope.Launcher => ConvertSnapshot<LauncherSettingsSnapshot, T>(_launcherSettingsService.Load()),
+            AirAppSettingsScope.ComponentInstance => LoadComponentSnapshot<T>(subjectId, placementId),
+            AirAppSettingsScope.AirApp => LoadSection<T>(scope, EnsureKey(subjectId), sectionId: "__snapshot__", placementId),
             _ => new T()
         };
     }
 
     public void SaveSnapshot<T>(
-        SettingsScope scope,
+        AirAppSettingsScope scope,
         T snapshot,
         string? subjectId = null,
         string? placementId = null,
@@ -54,16 +54,16 @@ internal sealed class SettingsService : ISettingsService
     {
         switch (scope)
         {
-            case SettingsScope.App:
+            case AirAppSettingsScope.App:
                 _appSettingsService.Save(ConvertSnapshot<T, AppSettingsSnapshot>(snapshot));
                 break;
-            case SettingsScope.Launcher:
+            case AirAppSettingsScope.Launcher:
                 _launcherSettingsService.Save(ConvertSnapshot<T, LauncherSettingsSnapshot>(snapshot));
                 break;
-            case SettingsScope.ComponentInstance:
+            case AirAppSettingsScope.ComponentInstance:
                 SaveComponentSnapshot(subjectId, placementId, snapshot);
                 break;
-            case SettingsScope.Plugin:
+            case AirAppSettingsScope.AirApp:
                 SaveSection(scope, EnsureKey(subjectId), "__snapshot__", snapshot, placementId, changedKeys);
                 break;
         }
@@ -72,24 +72,24 @@ internal sealed class SettingsService : ISettingsService
     }
 
     public T LoadSection<T>(
-        SettingsScope scope,
+        AirAppSettingsScope scope,
         string subjectId,
         string sectionId,
         string? placementId = null) where T : new()
     {
-        if (scope == SettingsScope.ComponentInstance)
+        if (scope == AirAppSettingsScope.ComponentInstance)
         {
             return _componentMessageStore.LoadSection<T>(EnsureKey(subjectId), placementId, EnsureKey(sectionId));
         }
 
-        if (scope != SettingsScope.Plugin)
+        if (scope != AirAppSettingsScope.AirApp)
         {
             return new T();
         }
 
         lock (_pluginSettingsGate)
         {
-            var document = LoadPluginDocumentLocked();
+            var document = LoadAirAppDocumentLocked();
             if (!document.Sections.TryGetValue(EnsureKey(subjectId), out var pluginSections) ||
                 !pluginSections.TryGetValue(EnsureKey(sectionId), out var payload))
             {
@@ -101,28 +101,28 @@ internal sealed class SettingsService : ISettingsService
     }
 
     public void SaveSection<T>(
-        SettingsScope scope,
+        AirAppSettingsScope scope,
         string subjectId,
         string sectionId,
         T section,
         string? placementId = null,
         IReadOnlyCollection<string>? changedKeys = null)
     {
-        if (scope == SettingsScope.ComponentInstance)
+        if (scope == AirAppSettingsScope.ComponentInstance)
         {
             _componentMessageStore.SaveSection(EnsureKey(subjectId), placementId, EnsureKey(sectionId), section);
             OnChanged(new SettingsChangedEvent(scope, subjectId, placementId, sectionId, changedKeys));
             return;
         }
 
-        if (scope != SettingsScope.Plugin)
+        if (scope != AirAppSettingsScope.AirApp)
         {
             return;
         }
 
         lock (_pluginSettingsGate)
         {
-            var document = LoadPluginDocumentLocked();
+            var document = LoadAirAppDocumentLocked();
             var pluginId = EnsureKey(subjectId);
             if (!document.Sections.TryGetValue(pluginId, out var pluginSections))
             {
@@ -131,29 +131,29 @@ internal sealed class SettingsService : ISettingsService
             }
 
             pluginSections[EnsureKey(sectionId)] = JsonSerializer.SerializeToElement(section, SerializerOptions).Clone();
-            PersistPluginDocumentLocked(document);
+            PersistAirAppDocumentLocked(document);
         }
 
         OnChanged(new SettingsChangedEvent(scope, subjectId, placementId, sectionId, changedKeys));
     }
 
-    public void DeleteSection(SettingsScope scope, string subjectId, string sectionId, string? placementId = null)
+    public void DeleteSection(AirAppSettingsScope scope, string subjectId, string sectionId, string? placementId = null)
     {
-        if (scope == SettingsScope.ComponentInstance)
+        if (scope == AirAppSettingsScope.ComponentInstance)
         {
             _componentMessageStore.DeleteSection(EnsureKey(subjectId), placementId, EnsureKey(sectionId));
             OnChanged(new SettingsChangedEvent(scope, subjectId, placementId, sectionId));
             return;
         }
 
-        if (scope != SettingsScope.Plugin)
+        if (scope != AirAppSettingsScope.AirApp)
         {
             return;
         }
 
         lock (_pluginSettingsGate)
         {
-            var document = LoadPluginDocumentLocked();
+            var document = LoadAirAppDocumentLocked();
             var pluginId = EnsureKey(subjectId);
             if (document.Sections.TryGetValue(pluginId, out var sections) &&
                 sections.Remove(EnsureKey(sectionId)))
@@ -163,7 +163,7 @@ internal sealed class SettingsService : ISettingsService
                     document.Sections.Remove(pluginId);
                 }
 
-                PersistPluginDocumentLocked(document);
+                PersistAirAppDocumentLocked(document);
             }
         }
 
@@ -171,7 +171,7 @@ internal sealed class SettingsService : ISettingsService
     }
 
     public T? GetValue<T>(
-        SettingsScope scope,
+        AirAppSettingsScope scope,
         string key,
         string? subjectId = null,
         string? placementId = null,
@@ -179,17 +179,17 @@ internal sealed class SettingsService : ISettingsService
     {
         var snapshot = scope switch
         {
-            SettingsScope.App => JsonSerializer.SerializeToElement(_appSettingsService.Load(), SerializerOptions),
-            SettingsScope.Launcher => JsonSerializer.SerializeToElement(_launcherSettingsService.Load(), SerializerOptions),
-            SettingsScope.ComponentInstance => JsonSerializer.SerializeToElement(
+            AirAppSettingsScope.App => JsonSerializer.SerializeToElement(_appSettingsService.Load(), SerializerOptions),
+            AirAppSettingsScope.Launcher => JsonSerializer.SerializeToElement(_launcherSettingsService.Load(), SerializerOptions),
+            AirAppSettingsScope.ComponentInstance => JsonSerializer.SerializeToElement(
                 LoadSection<Dictionary<string, JsonElement>>(
-                    SettingsScope.ComponentInstance,
+                    AirAppSettingsScope.ComponentInstance,
                     EnsureKey(subjectId),
                     sectionId ?? "__root__",
                     placementId),
                 SerializerOptions),
-            SettingsScope.Plugin => JsonSerializer.SerializeToElement(
-                LoadSection<Dictionary<string, JsonElement>>(SettingsScope.Plugin, EnsureKey(subjectId), sectionId ?? "__root__", placementId),
+            AirAppSettingsScope.AirApp => JsonSerializer.SerializeToElement(
+                LoadSection<Dictionary<string, JsonElement>>(AirAppSettingsScope.AirApp, EnsureKey(subjectId), sectionId ?? "__root__", placementId),
                 SerializerOptions),
             _ => default
         };
@@ -220,7 +220,7 @@ internal sealed class SettingsService : ISettingsService
     }
 
     public void SetValue<T>(
-        SettingsScope scope,
+        AirAppSettingsScope scope,
         string key,
         T value,
         string? subjectId = null,
@@ -228,19 +228,19 @@ internal sealed class SettingsService : ISettingsService
         string? sectionId = null,
         IReadOnlyCollection<string>? changedKeys = null)
     {
-        if (scope == SettingsScope.Plugin)
+        if (scope == AirAppSettingsScope.AirApp)
         {
             var dict = LoadSection<Dictionary<string, JsonElement>>(
-                SettingsScope.Plugin,
+                AirAppSettingsScope.AirApp,
                 EnsureKey(subjectId),
                 sectionId ?? "__root__",
                 placementId);
             dict[key] = JsonSerializer.SerializeToElement(value, SerializerOptions).Clone();
-            SaveSection(SettingsScope.Plugin, EnsureKey(subjectId), sectionId ?? "__root__", dict, placementId, changedKeys ?? [key]);
+            SaveSection(AirAppSettingsScope.AirApp, EnsureKey(subjectId), sectionId ?? "__root__", dict, placementId, changedKeys ?? [key]);
             return;
         }
 
-        if (scope == SettingsScope.ComponentInstance)
+        if (scope == AirAppSettingsScope.ComponentInstance)
         {
             var effectiveSection = sectionId ?? "__root__";
             var dict = _componentMessageStore.LoadSection<Dictionary<string, JsonElement>>(EnsureKey(subjectId), placementId, effectiveSection);
@@ -250,7 +250,7 @@ internal sealed class SettingsService : ISettingsService
             return;
         }
 
-        if (scope == SettingsScope.App)
+        if (scope == AirAppSettingsScope.App)
         {
             var snapshot = _appSettingsService.Load();
             var updated = UpdateObjectKey(snapshot, key, value);
@@ -259,7 +259,7 @@ internal sealed class SettingsService : ISettingsService
             return;
         }
 
-        if (scope == SettingsScope.Launcher)
+        if (scope == AirAppSettingsScope.Launcher)
         {
             var snapshot = _launcherSettingsService.Load();
             var updated = UpdateObjectKey(snapshot, key, value);
@@ -329,26 +329,26 @@ internal sealed class SettingsService : ISettingsService
         }
     }
 
-    private PluginSettingsDocument LoadPluginDocumentLocked()
+    private AirAppSettingsDocument LoadAirAppDocumentLocked()
     {
         try
         {
             if (!File.Exists(_pluginSettingsPath))
             {
-                return new PluginSettingsDocument();
+                return new AirAppSettingsDocument();
             }
 
             var json = File.ReadAllText(_pluginSettingsPath);
-            return JsonSerializer.Deserialize<PluginSettingsDocument>(json, SerializerOptions) ?? new PluginSettingsDocument();
+            return JsonSerializer.Deserialize<AirAppSettingsDocument>(json, SerializerOptions) ?? new AirAppSettingsDocument();
         }
         catch (Exception ex)
         {
             AppLogger.Warn("SettingsService", $"Failed to load plugin settings '{_pluginSettingsPath}'.", ex);
-            return new PluginSettingsDocument();
+            return new AirAppSettingsDocument();
         }
     }
 
-    private void PersistPluginDocumentLocked(PluginSettingsDocument document)
+    private void PersistAirAppDocumentLocked(AirAppSettingsDocument document)
     {
         try
         {
@@ -401,28 +401,28 @@ internal sealed class SettingsService : ISettingsService
         public string? PlacementId { get; }
 
         public T LoadSnapshot<T>() where T : new()
-            => _settingsService.LoadSnapshot<T>(SettingsScope.ComponentInstance, ComponentId, PlacementId);
+            => _settingsService.LoadSnapshot<T>(AirAppSettingsScope.ComponentInstance, ComponentId, PlacementId);
 
         public void SaveSnapshot<T>(T snapshot, IReadOnlyCollection<string>? changedKeys = null)
-            => _settingsService.SaveSnapshot(SettingsScope.ComponentInstance, snapshot, ComponentId, PlacementId, changedKeys: changedKeys);
+            => _settingsService.SaveSnapshot(AirAppSettingsScope.ComponentInstance, snapshot, ComponentId, PlacementId, changedKeys: changedKeys);
 
         public T LoadSection<T>(string sectionId) where T : new()
-            => _settingsService.LoadSection<T>(SettingsScope.ComponentInstance, ComponentId, sectionId, PlacementId);
+            => _settingsService.LoadSection<T>(AirAppSettingsScope.ComponentInstance, ComponentId, sectionId, PlacementId);
 
         public void SaveSection<T>(string sectionId, T section, IReadOnlyCollection<string>? changedKeys = null)
-            => _settingsService.SaveSection(SettingsScope.ComponentInstance, ComponentId, sectionId, section, PlacementId, changedKeys);
+            => _settingsService.SaveSection(AirAppSettingsScope.ComponentInstance, ComponentId, sectionId, section, PlacementId, changedKeys);
 
         public void DeleteSection(string sectionId)
-            => _settingsService.DeleteSection(SettingsScope.ComponentInstance, ComponentId, sectionId, PlacementId);
+            => _settingsService.DeleteSection(AirAppSettingsScope.ComponentInstance, ComponentId, sectionId, PlacementId);
 
         public T? GetValue<T>(string key)
-            => _settingsService.GetValue<T>(SettingsScope.ComponentInstance, key, ComponentId, PlacementId);
+            => _settingsService.GetValue<T>(AirAppSettingsScope.ComponentInstance, key, ComponentId, PlacementId);
 
         public void SetValue<T>(string key, T value, IReadOnlyCollection<string>? changedKeys = null)
-            => _settingsService.SetValue(SettingsScope.ComponentInstance, key, value, ComponentId, PlacementId, changedKeys: changedKeys);
+            => _settingsService.SetValue(AirAppSettingsScope.ComponentInstance, key, value, ComponentId, PlacementId, changedKeys: changedKeys);
     }
 
-    private sealed class PluginSettingsDocument
+    private sealed class AirAppSettingsDocument
     {
         public Dictionary<string, Dictionary<string, JsonElement>> Sections { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     }

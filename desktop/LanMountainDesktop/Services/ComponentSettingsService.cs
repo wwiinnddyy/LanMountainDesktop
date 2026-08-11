@@ -1,7 +1,7 @@
 using System;
 using System.Reflection;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services.Settings;
 
 namespace LanMountainDesktop.Services;
@@ -47,7 +47,7 @@ public sealed class ComponentSettingsService : IComponentInstanceSettingsStore
         if (_settingsService is not null)
         {
             return _settingsService.LoadSnapshot<ComponentSettingsSnapshot>(
-                SettingsScope.ComponentInstance,
+                AirAppSettingsScope.ComponentInstance,
                 subjectId: string.Empty,
                 placementId: null);
         }
@@ -66,7 +66,7 @@ public sealed class ComponentSettingsService : IComponentInstanceSettingsStore
         if (_settingsService is not null)
         {
             _settingsService.SaveSnapshot(
-                SettingsScope.ComponentInstance,
+                AirAppSettingsScope.ComponentInstance,
                 snapshot ?? new ComponentSettingsSnapshot(),
                 subjectId: string.Empty,
                 placementId: null);
@@ -81,7 +81,7 @@ public sealed class ComponentSettingsService : IComponentInstanceSettingsStore
         if (_settingsService is not null)
         {
             return _settingsService.LoadSnapshot<ComponentSettingsSnapshot>(
-                SettingsScope.ComponentInstance,
+                AirAppSettingsScope.ComponentInstance,
                 subjectId: componentId,
                 placementId: placementId);
         }
@@ -94,7 +94,7 @@ public sealed class ComponentSettingsService : IComponentInstanceSettingsStore
         if (_settingsService is not null)
         {
             _settingsService.SaveSnapshot(
-                SettingsScope.ComponentInstance,
+                AirAppSettingsScope.ComponentInstance,
                 snapshot ?? new ComponentSettingsSnapshot(),
                 subjectId: componentId,
                 placementId: placementId);
@@ -111,23 +111,23 @@ public sealed class ComponentSettingsService : IComponentInstanceSettingsStore
         if (_settingsService is not null)
         {
             _settingsService.SaveSnapshot(
-                SettingsScope.ComponentInstance,
+                AirAppSettingsScope.ComponentInstance,
                 new ComponentSettingsSnapshot(),
                 subjectId: componentId,
                 placementId: placementId);
-            _settingsService.DeleteSection(SettingsScope.ComponentInstance, componentId, LegacySectionId, placementId);
+            _settingsService.DeleteSection(AirAppSettingsScope.ComponentInstance, componentId, LegacySectionId, placementId);
             return;
         }
 
         _stateStore?.DeleteState(componentId, placementId);
     }
 
-    public T LoadPluginSettings<T>(string componentId, string? placementId) where T : new()
+    public T LoadAirAppSettings<T>(string componentId, string? placementId) where T : new()
     {
         if (_settingsService is not null)
         {
             return _settingsService.LoadSection<T>(
-                SettingsScope.ComponentInstance,
+                AirAppSettingsScope.ComponentInstance,
                 subjectId: componentId,
                 sectionId: LegacySectionId,
                 placementId: placementId);
@@ -141,12 +141,12 @@ public sealed class ComponentSettingsService : IComponentInstanceSettingsStore
         return new T();
     }
 
-    public void SavePluginSettings<T>(string componentId, string? placementId, T settings)
+    public void SaveAirAppSettings<T>(string componentId, string? placementId, T settings)
     {
         if (_settingsService is not null)
         {
             _settingsService.SaveSection(
-                SettingsScope.ComponentInstance,
+                AirAppSettingsScope.ComponentInstance,
                 subjectId: componentId,
                 sectionId: LegacySectionId,
                 section: settings,
@@ -160,12 +160,12 @@ public sealed class ComponentSettingsService : IComponentInstanceSettingsStore
         }
     }
 
-    public void DeletePluginSettings(string componentId, string? placementId)
+    public void DeleteAirAppSettings(string componentId, string? placementId)
     {
         if (_settingsService is not null)
         {
             _settingsService.DeleteSection(
-                SettingsScope.ComponentInstance,
+                AirAppSettingsScope.ComponentInstance,
                 subjectId: componentId,
                 sectionId: LegacySectionId,
                 placementId: placementId);

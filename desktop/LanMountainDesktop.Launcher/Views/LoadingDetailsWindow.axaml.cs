@@ -237,7 +237,7 @@ public partial class LoadingDetailsWindow : Window
     {
         StartupStage.Initializing => "正在初始化系统...",
         StartupStage.LoadingSettings => "正在加载设置...",
-        StartupStage.LoadingPlugins => "正在加载插件...",
+        StartupStage.LoadingAirApps => "正在加载插件...",
         StartupStage.InitializingUI => "正在初始化界面...",
         StartupStage.ShellInitialized => "桌面程序已初始化",
         StartupStage.DesktopVisible => "桌面已经可见",
@@ -256,7 +256,7 @@ public partial class LoadingDetailsWindow : Window
 
         return item.Type switch
         {
-            LoadingItemType.Plugin => Strings.Loading_ItemPlugin,
+            LoadingItemType.AirApp => Strings.Loading_ItemAirApp,
             LoadingItemType.Component => Strings.Loading_ItemComponent,
             LoadingItemType.Resource => Strings.Loading_ItemResource,
             LoadingItemType.Data => Strings.Loading_ItemData,
@@ -269,7 +269,7 @@ public partial class LoadingDetailsWindow : Window
     /// 获取项图�?    /// </summary>
     private static string GetItemIcon(LoadingItemType type) => type switch
     {
-        LoadingItemType.Plugin => "\uE768",
+        LoadingItemType.AirApp => "\uE768",
         LoadingItemType.Component => "\uE7C4",
         LoadingItemType.Resource => "\uE7C5",
         LoadingItemType.Data => "\uE7C6",
@@ -360,7 +360,7 @@ public class LoadingItemViewModel : INotifyPropertyChanged
 
     private static string GetTypeLabel(LoadingItemType type) => type switch
     {
-        LoadingItemType.Plugin => Strings.Loading_TypePlugin,
+        LoadingItemType.AirApp => Strings.Loading_TypeAirApp,
         LoadingItemType.Component => Strings.Loading_TypeComponent,
         LoadingItemType.Resource => Strings.Loading_TypeResource,
         LoadingItemType.Data => Strings.Loading_TypeData,
@@ -372,7 +372,7 @@ public class LoadingItemViewModel : INotifyPropertyChanged
 
     private static IBrush GetTypeBackground(LoadingItemType type) => type switch
     {
-        LoadingItemType.Plugin => new SolidColorBrush(Color.Parse("#E3F2FD")),
+        LoadingItemType.AirApp => new SolidColorBrush(Color.Parse("#E3F2FD")),
         LoadingItemType.Component => new SolidColorBrush(Color.Parse("#F3E5F5")),
         LoadingItemType.Resource => new SolidColorBrush(Color.Parse("#E8F5E9")),
         LoadingItemType.Data => new SolidColorBrush(Color.Parse("#FFF3E0")),
@@ -382,7 +382,7 @@ public class LoadingItemViewModel : INotifyPropertyChanged
 
     private static IBrush GetTypeForeground(LoadingItemType type) => type switch
     {
-        LoadingItemType.Plugin => new SolidColorBrush(Color.Parse("#1976D2")),
+        LoadingItemType.AirApp => new SolidColorBrush(Color.Parse("#1976D2")),
         LoadingItemType.Component => new SolidColorBrush(Color.Parse("#7B1FA2")),
         LoadingItemType.Resource => new SolidColorBrush(Color.Parse("#388E3C")),
         LoadingItemType.Data => new SolidColorBrush(Color.Parse("#F57C00")),

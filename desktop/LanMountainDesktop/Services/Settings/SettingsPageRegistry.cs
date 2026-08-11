@@ -4,9 +4,9 @@ using System.Linq;
 using System.Reflection;
 using Avalonia.Controls;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.PluginSdk;
-using LanMountainDesktop.Plugins;
-using LanMountainDesktop.Services.PluginMarket;
+using LanMountainDesktop.AirAppSdk;
+using LanMountainDesktop.AirApps;
+using LanMountainDesktop.Services.AirAppMarket;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.ViewModels;
 using LanMountainDesktop.Views.SettingsPages;
@@ -24,7 +24,7 @@ public sealed class SettingsPageDescriptor
         string? description,
         string iconKey,
         string? selectedIconKey,
-        SettingsPageCategory category,
+        AirAppSettingsPageCategory category,
         int sortOrder,
         string? pluginId,
         bool isBuiltIn,
@@ -46,7 +46,7 @@ public sealed class SettingsPageDescriptor
         SelectedIconKey = string.IsNullOrWhiteSpace(selectedIconKey) ? IconKey : selectedIconKey.Trim();
         Category = category;
         SortOrder = sortOrder;
-        PluginId = string.IsNullOrWhiteSpace(pluginId) ? null : pluginId.Trim();
+        AirAppId = string.IsNullOrWhiteSpace(pluginId) ? null : pluginId.Trim();
         IsBuiltIn = isBuiltIn;
         HideDefault = hideDefault;
         HidePageTitle = hidePageTitle;
@@ -65,11 +65,11 @@ public sealed class SettingsPageDescriptor
 
     public string SelectedIconKey { get; }
 
-    public SettingsPageCategory Category { get; }
+    public AirAppSettingsPageCategory Category { get; }
 
     public int SortOrder { get; }
 
-    public string? PluginId { get; }
+    public string? AirAppId { get; }
 
     public bool IsBuiltIn { get; }
 
@@ -98,7 +98,7 @@ internal sealed class SettingsPageRegistry : ISettingsPageRegistry, IDisposable
     private readonly ISettingsFacadeService _settingsFacade;
     private readonly IHostApplicationLifecycle _hostApplicationLifecycle;
     private readonly LocalizationService _localizationService;
-    private readonly Func<PluginRuntimeService?> _pluginRuntimeAccessor;
+    private readonly Func<AirAppRuntimeService?> _pluginRuntimeAccessor;
     private readonly object _gate = new();
     private readonly List<SettingsPageDescriptor> _pages = [];
     private ServiceProvider? _hostServices;
@@ -107,7 +107,7 @@ internal sealed class SettingsPageRegistry : ISettingsPageRegistry, IDisposable
         ISettingsFacadeService settingsFacade,
         IHostApplicationLifecycle hostApplicationLifecycle,
         LocalizationService localizationService,
-        Func<PluginRuntimeService?> pluginRuntimeAccessor)
+        Func<AirAppRuntimeService?> pluginRuntimeAccessor)
     {
         _settingsFacade = settingsFacade ?? throw new ArgumentNullException(nameof(settingsFacade));
         _hostApplicationLifecycle = hostApplicationLifecycle ?? throw new ArgumentNullException(nameof(hostApplicationLifecycle));
@@ -135,10 +135,10 @@ internal sealed class SettingsPageRegistry : ISettingsPageRegistry, IDisposable
                 return;
             }
 
-            foreach (var loadedPlugin in pluginRuntime.LoadedPlugins)
+            foreach (var loadedAirApp in pluginRuntime.LoadedAirApps)
             {
-                RegisterPluginPages(loadedPlugin);
-                RegisterLegacyPluginSections(loadedPlugin);
+                RegisterAirAppPages(loadedAirApp);
+                RegisterLegacyAirAppSections(loadedAirApp);
             }
 
             SortPages();
@@ -205,21 +205,21 @@ internal sealed class SettingsPageRegistry : ISettingsPageRegistry, IDisposable
         bool isBuiltIn)
     {
         var isDevModeEnabled = _settingsFacade.Settings
-            .LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App)
+            .LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App)
             .IsDevModeEnabled;
 
         foreach (var pageType in assembly.GetTypes()
-                     .Where(type => !type.IsAbstract && typeof(SettingsPageBase).IsAssignableFrom(type)))
+                     .Where(type => !type.IsAbstract && typeof(AirAppSettingsPageBase).IsAssignableFrom(type)))
         {
-            var pageInfo = pageType.GetCustomAttribute<SettingsPageInfoAttribute>();
+            var pageInfo = pageType.GetCustomAttribute<AirAppSettingsPageInfoAttribute>();
             if (pageInfo is null)
             {
                 continue;
             }
 
-            var category = isBuiltIn ? pageInfo.Category : SettingsPageCategory.Plugins;
+            var category = isBuiltIn ? pageInfo.Category : AirAppSettingsPageCategory.AirApps;
 
-            if (category == SettingsPageCategory.Dev && !isDevModeEnabled)
+            if (category == AirAppSettingsPageCategory.Dev && !isDevModeEnabled)
             {
                 continue;
             }
@@ -245,22 +245,22 @@ internal sealed class SettingsPageRegistry : ISettingsPageRegistry, IDisposable
         }
     }
 
-    private void RegisterPluginPages(LoadedPlugin loadedPlugin)
+    private void RegisterAirAppPages(LoadedAirApp loadedAirApp)
     {
         RegisterAssemblyPages(
-            loadedPlugin.Assembly,
-            loadedPlugin.Services,
-            loadedPlugin.Manifest.Id,
+            loadedAirApp.Assembly,
+            loadedAirApp.Services,
+            loadedAirApp.Manifest.Id,
             isBuiltIn: false);
     }
 
-    private void RegisterLegacyPluginSections(LoadedPlugin loadedPlugin)
+    private void RegisterLegacyAirAppSections(LoadedAirApp loadedAirApp)
     {
-        var localizer = PluginLocalizer.Create(loadedPlugin.RuntimeContext);
+        var localizer = AirAppLocalizer.Create(loadedAirApp.RuntimeContext);
 
-        foreach (var section in loadedPlugin.SettingsSections)
+        foreach (var section in loadedAirApp.SettingsSections)
         {
-            var pageId = $"plugin:{loadedPlugin.Manifest.Id}:{section.Id}";
+            var pageId = $"plugin:{loadedAirApp.Manifest.Id}:{section.Id}";
             var title = localizer.GetString(section.TitleLocalizationKey, section.TitleLocalizationKey);
             var description = string.IsNullOrWhiteSpace(section.DescriptionLocalizationKey)
                 ? null
@@ -271,17 +271,17 @@ internal sealed class SettingsPageRegistry : ISettingsPageRegistry, IDisposable
             if (section.CustomViewType is not null)
             {
                 var customViewType = section.CustomViewType;
-                var pluginServices = loadedPlugin.Services;
+                var pluginServices = loadedAirApp.Services;
                 factory = hostContext => CreatePage(pluginServices, customViewType, hostContext);
             }
             else
             {
                 factory = hostContext =>
                 {
-                    var page = new GeneratedPluginSettingsPage(
-                        new PluginGeneratedSettingsPageViewModel(
+                    var page = new GeneratedAirAppSettingsPage(
+                        new AirAppGeneratedSettingsPageViewModel(
                             _settingsFacade.Settings,
-                            loadedPlugin.Manifest.Id,
+                            loadedAirApp.Manifest.Id,
                             section,
                             localizer));
                     page.InitializeHostContext(hostContext);
@@ -295,9 +295,9 @@ internal sealed class SettingsPageRegistry : ISettingsPageRegistry, IDisposable
                 description,
                 section.IconKey,
                 section.IconKey,
-                SettingsPageCategory.Plugins,
+                AirAppSettingsPageCategory.AirApps,
                 200 + section.SortOrder,
-                loadedPlugin.Manifest.Id,
+                loadedAirApp.Manifest.Id,
                 isBuiltIn: false,
                 hideDefault: false,
                 hidePageTitle: false,
@@ -323,7 +323,7 @@ internal sealed class SettingsPageRegistry : ISettingsPageRegistry, IDisposable
                 return sortOrderCompare;
             }
 
-            var pluginCompare = string.Compare(left.PluginId, right.PluginId, StringComparison.OrdinalIgnoreCase);
+            var pluginCompare = string.Compare(left.AirAppId, right.AirAppId, StringComparison.OrdinalIgnoreCase);
             if (pluginCompare != 0)
             {
                 return pluginCompare;
@@ -354,7 +354,7 @@ internal sealed class SettingsPageRegistry : ISettingsPageRegistry, IDisposable
         ISettingsPageHostContext hostContext)
     {
         var page = (Control)ActivatorUtilities.CreateInstance(services, pageType);
-        if (page is SettingsPageBase settingsPage)
+        if (page is AirAppSettingsPageBase settingsPage)
         {
             settingsPage.InitializeHostContext(hostContext);
         }

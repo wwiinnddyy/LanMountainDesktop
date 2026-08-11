@@ -8,12 +8,12 @@ using System.Threading.Tasks;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Plonds;
 using LanMountainDesktop.Services.Update;
-using LanMountainDesktop.Settings.Core;
-using LanMountainDesktop.Services.PluginMarket;
+using LanMountainDesktop.AirAppSdk;
+using LanMountainDesktop.Services.AirAppMarket;
 using LanMountainDesktop.Shared.Contracts.Update;
 
 namespace LanMountainDesktop.Services.Settings;
@@ -44,7 +44,7 @@ internal sealed class GridSettingsService : IGridSettingsService
         snapshot.GridSpacingPreset = state.SpacingPreset;
         snapshot.DesktopEdgeInsetPercent = state.EdgeInsetPercent;
         _settingsService.SaveSnapshot(
-            SettingsScope.App,
+            AirAppSettingsScope.App,
             snapshot,
             changedKeys:
             [
@@ -134,7 +134,7 @@ internal sealed class WallpaperSettingsService : IWallpaperSettingsService
             : state.Placement.Trim();
         snapshot.SystemWallpaperRefreshIntervalSeconds = NormalizeRefreshInterval(state.SystemWallpaperRefreshIntervalSeconds);
         _settingsService.SaveSnapshot(
-            SettingsScope.App,
+            AirAppSettingsScope.App,
             snapshot,
             changedKeys:
             [
@@ -371,7 +371,7 @@ internal sealed class ThemeAppearanceService : IThemeAppearanceService
         }
 
         _settingsService.SaveSnapshot(
-            SettingsScope.App,
+            AirAppSettingsScope.App,
             snapshot,
             changedKeys: changedKeys);
     }
@@ -481,7 +481,7 @@ internal sealed class StatusBarSettingsService : IStatusBarSettingsService
         snapshot.StatusBarShadowColor = state.ShadowColor;
         snapshot.StatusBarShadowOpacity = state.ShadowOpacity;
         _settingsService.SaveSnapshot(
-            SettingsScope.App,
+            AirAppSettingsScope.App,
             snapshot,
             changedKeys:
             [
@@ -540,7 +540,7 @@ internal sealed class TextCapsuleSettingsService : ITextCapsuleSettingsService
         snapshot.TextCapsulePosition = state.Position;
         snapshot.TextCapsuleTransparentBackground = state.TransparentBackground;
         _settingsService.SaveSnapshot(
-            SettingsScope.App,
+            AirAppSettingsScope.App,
             snapshot,
             changedKeys:
             [
@@ -629,7 +629,7 @@ internal sealed class WeatherSettingsService : IWeatherSettingsService, IDisposa
         snapshot.WeatherNoTlsRequests = state.NoTlsRequests;
         snapshot.WeatherLocationQuery = state.LocationQuery;
         _settingsService.SaveSnapshot(
-            SettingsScope.App,
+            AirAppSettingsScope.App,
             snapshot,
             changedKeys:
             [
@@ -706,7 +706,7 @@ internal sealed class RegionSettingsService : IRegionSettingsService
             ? null
             : state.TimeZoneId.Trim();
         _settingsService.SaveSnapshot(
-            SettingsScope.App,
+            AirAppSettingsScope.App,
             snapshot,
             changedKeys:
             [
@@ -779,7 +779,7 @@ internal sealed class PrivacySettingsService : IPrivacySettingsService
             "PrivacySettings",
             $"Saving: UploadAnonymousCrashData={state.UploadAnonymousCrashData}, UploadAnonymousUsageData={state.UploadAnonymousUsageData}");
         _settingsService.SaveSnapshot(
-            SettingsScope.App,
+            AirAppSettingsScope.App,
             snapshot,
             changedKeys: changedKeys);
     }
@@ -891,7 +891,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
             ? null
             : state.PendingUpdateSha256.Trim().ToLowerInvariant();
         _settingsService.SaveSnapshot(
-            SettingsScope.App,
+            AirAppSettingsScope.App,
             snapshot,
             changedKeys:
             [
@@ -1638,66 +1638,66 @@ internal sealed class LauncherPolicyService : ILauncherPolicyService
     }
 }
 
-internal sealed class PluginManagementSettingsService : IPluginManagementSettingsService
+internal sealed class AirAppManagementSettingsService : IAirAppManagementSettingsService
 {
     private readonly ISettingsService _settingsService;
-    private PluginRuntimeService? _pluginRuntimeService;
+    private AirAppRuntimeService? _pluginRuntimeService;
 
-    public PluginManagementSettingsService(ISettingsService settingsService, PluginRuntimeService? pluginRuntimeService)
+    public AirAppManagementSettingsService(ISettingsService settingsService, AirAppRuntimeService? pluginRuntimeService)
     {
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _pluginRuntimeService = pluginRuntimeService;
     }
 
-    public void SetPluginRuntime(PluginRuntimeService? pluginRuntimeService)
+    public void SetAirAppRuntime(AirAppRuntimeService? pluginRuntimeService)
     {
         _pluginRuntimeService = pluginRuntimeService;
     }
 
-    public PluginManagementSettingsState Get()
+    public AirAppManagementSettingsState Get()
     {
         var snapshot = _settingsService.Load();
-        return new PluginManagementSettingsState(snapshot.DisabledPluginIds?.ToArray() ?? []);
+        return new AirAppManagementSettingsState(snapshot.DisabledPluginIds?.ToArray() ?? []);
     }
 
-    public void Save(PluginManagementSettingsState state)
+    public void Save(AirAppManagementSettingsState state)
     {
         var snapshot = _settingsService.Load();
         snapshot.DisabledPluginIds = state.DisabledPluginIds?.ToList() ?? [];
         _settingsService.SaveSnapshot(
-            SettingsScope.App,
+            AirAppSettingsScope.App,
             snapshot,
             changedKeys: [nameof(AppSettingsSnapshot.DisabledPluginIds)]);
     }
 
-    public IReadOnlyList<InstalledPluginInfo> GetInstalledPlugins()
+    public IReadOnlyList<AirAppInstalledInfo> GetInstalledAirApps()
     {
-        return _pluginRuntimeService?.GetInstalledPluginsSnapshot() ?? [];
+        return _pluginRuntimeService?.GetInstalledAirAppsSnapshot() ?? [];
     }
 
-    public bool SetPluginEnabled(string pluginId, bool isEnabled)
+    public bool SetAirAppEnabled(string pluginId, bool isEnabled)
     {
-        return _pluginRuntimeService?.SetPluginEnabled(pluginId, isEnabled) ?? false;
+        return _pluginRuntimeService?.SetAirAppEnabled(pluginId, isEnabled) ?? false;
     }
 
-    public bool DeleteInstalledPlugin(string pluginId)
+    public bool DeleteInstalledAirApp(string pluginId)
     {
-        return _pluginRuntimeService?.DeleteInstalledPlugin(pluginId) ?? false;
+        return _pluginRuntimeService?.DeleteInstalledAirApp(pluginId) ?? false;
     }
 }
 
-internal sealed class PluginCatalogSettingsService : IPluginCatalogSettingsService, IDisposable
+internal sealed class AirAppCatalogSettingsService : IAirAppCatalogSettingsService, IDisposable
 {
-    private PluginRuntimeService? _pluginRuntimeService;
+    private AirAppRuntimeService? _pluginRuntimeService;
     private AirAppMarketIndexService _indexService;
     private AirAppMarketInstallService? _installService;
-    private readonly Dictionary<string, AirAppMarketPluginEntry> _cachedPlugins = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, AirAppMarketAirAppEntry> _cachedAirApps = new(StringComparer.OrdinalIgnoreCase);
 
-    public PluginCatalogSettingsService(PluginRuntimeService? pluginRuntimeService)
+    public AirAppCatalogSettingsService(AirAppRuntimeService? pluginRuntimeService)
     {
         _pluginRuntimeService = pluginRuntimeService;
 
-        var dataRoot = AppDataPathProvider.GetPluginMarketDirectory();
+        var dataRoot = AppDataPathProvider.GetAirAppMarketDirectory();
         var cacheService = new AirAppMarketCacheService(dataRoot);
         _indexService = new AirAppMarketIndexService(cacheService);
         if (_pluginRuntimeService is not null)
@@ -1706,7 +1706,7 @@ internal sealed class PluginCatalogSettingsService : IPluginCatalogSettingsServi
         }
     }
 
-    public void SetPluginRuntime(PluginRuntimeService? pluginRuntimeService)
+    public void SetAirAppRuntime(AirAppRuntimeService? pluginRuntimeService)
     {
         _pluginRuntimeService = pluginRuntimeService;
         _installService?.Dispose();
@@ -1717,30 +1717,30 @@ internal sealed class PluginCatalogSettingsService : IPluginCatalogSettingsServi
             return;
         }
 
-        var dataRoot = AppDataPathProvider.GetPluginMarketDirectory();
+        var dataRoot = AppDataPathProvider.GetAirAppMarketDirectory();
         _installService = new AirAppMarketInstallService(_pluginRuntimeService, dataRoot);
     }
 
-    public Task<PluginCatalogIndexResult> LoadCatalogAsync(CancellationToken cancellationToken = default)
+    public Task<AirAppCatalogIndexResult> LoadCatalogAsync(CancellationToken cancellationToken = default)
     {
         return LoadCatalogCoreAsync(cancellationToken);
     }
 
-    public Task<PluginCatalogInstallResult> InstallAsync(
+    public Task<AirAppCatalogInstallResult> InstallAsync(
         string pluginId,
         CancellationToken cancellationToken = default)
     {
         return InstallCatalogCoreAsync(pluginId, cancellationToken);
     }
 
-    private async Task<PluginCatalogIndexResult> LoadCatalogCoreAsync(CancellationToken cancellationToken = default)
+    private async Task<AirAppCatalogIndexResult> LoadCatalogCoreAsync(CancellationToken cancellationToken = default)
     {
         var result = await _indexService.LoadAsync(cancellationToken).ConfigureAwait(false);
         var sources = BuildCatalogSources(result.Source?.ToString(), result.SourceLocation, result.WarningMessage);
         if (!result.Success || result.Document is null)
         {
-            _cachedPlugins.Clear();
-            return new PluginCatalogIndexResult(
+            _cachedAirApps.Clear();
+            return new AirAppCatalogIndexResult(
                 false,
                 [],
                 sources,
@@ -1750,16 +1750,16 @@ internal sealed class PluginCatalogSettingsService : IPluginCatalogSettingsServi
                 result.ErrorMessage);
         }
 
-        _cachedPlugins.Clear();
-        var plugins = result.Document.Plugins
+        _cachedAirApps.Clear();
+        var plugins = result.Document.AirApps
             .Select(entry =>
             {
-                _cachedPlugins[entry.Id] = entry;
+                _cachedAirApps[entry.Id] = entry;
                 return MapCatalogItem(entry);
             })
             .ToArray();
 
-        return new PluginCatalogIndexResult(
+        return new AirAppCatalogIndexResult(
             true,
             plugins,
             sources,
@@ -1769,71 +1769,71 @@ internal sealed class PluginCatalogSettingsService : IPluginCatalogSettingsServi
             null);
     }
 
-    private async Task<PluginCatalogInstallResult> InstallCatalogCoreAsync(
+    private async Task<AirAppCatalogInstallResult> InstallCatalogCoreAsync(
         string pluginId,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(pluginId))
         {
-            return new PluginCatalogInstallResult(
+            return new AirAppCatalogInstallResult(
                 false,
                 null,
                 null,
                 null,
-                [new PluginInstallDiagnostic("invalid_request", "Plugin id is required.")],
-                "Plugin id is required.");
+                [new AirAppInstallDiagnostic("invalid_request", "AirApp id is required.")],
+                "AirApp id is required.");
         }
 
         if (_installService is null || _pluginRuntimeService is null)
         {
-            return new PluginCatalogInstallResult(
+            return new AirAppCatalogInstallResult(
                 false,
                 pluginId,
                 null,
                 null,
-                [new PluginInstallDiagnostic("runtime_unavailable", "Plugin runtime is unavailable.")],
-                "Plugin runtime is unavailable.");
+                [new AirAppInstallDiagnostic("runtime_unavailable", "AirApp runtime is unavailable.")],
+                "AirApp runtime is unavailable.");
         }
 
-        if (!_cachedPlugins.TryGetValue(pluginId, out var entry))
+        if (!_cachedAirApps.TryGetValue(pluginId, out var entry))
         {
             var load = await LoadCatalogCoreAsync(cancellationToken).ConfigureAwait(false);
             if (!load.Success)
             {
-                return new PluginCatalogInstallResult(
+                return new AirAppCatalogInstallResult(
                     false,
                     pluginId,
                     null,
                     null,
-                    [new PluginInstallDiagnostic("catalog_load_failed", load.ErrorMessage ?? "Failed to load the plugin catalog.")],
+                    [new AirAppInstallDiagnostic("catalog_load_failed", load.ErrorMessage ?? "Failed to load the plugin catalog.")],
                     load.ErrorMessage);
             }
 
-            if (!_cachedPlugins.TryGetValue(pluginId, out entry))
+            if (!_cachedAirApps.TryGetValue(pluginId, out entry))
             {
-                return new PluginCatalogInstallResult(
+                return new AirAppCatalogInstallResult(
                     false,
                     pluginId,
                     null,
                     null,
-                    [new PluginInstallDiagnostic("not_found", "Plugin was not found in the official catalog.")],
-                    "Plugin was not found in the official catalog.");
+                    [new AirAppInstallDiagnostic("not_found", "AirApp was not found in the official catalog.")],
+                    "AirApp was not found in the official catalog.");
             }
         }
 
         var result = await _installService.InstallAsync(entry, cancellationToken).ConfigureAwait(false);
         if (!result.Success)
         {
-            return new PluginCatalogInstallResult(
+            return new AirAppCatalogInstallResult(
                 false,
                 entry.Id,
                 entry.Name,
                 null,
-                [new PluginInstallDiagnostic("install_failed", result.ErrorMessage ?? "Plugin install failed.")],
+                [new AirAppInstallDiagnostic("install_failed", result.ErrorMessage ?? "AirApp install failed.")],
                 result.ErrorMessage);
         }
 
-        return new PluginCatalogInstallResult(
+        return new AirAppCatalogInstallResult(
             true,
             result.Manifest?.Id ?? entry.Id,
             result.Manifest?.Name ?? entry.Name,
@@ -1842,9 +1842,9 @@ internal sealed class PluginCatalogSettingsService : IPluginCatalogSettingsServi
             null);
     }
 
-    private static PluginCatalogItemInfo MapCatalogItem(AirAppMarketPluginEntry entry)
+    private static AirAppCatalogItemInfo MapCatalogItem(AirAppMarketAirAppEntry entry)
     {
-        var manifest = new PluginCatalogManifestInfo(
+        var manifest = new AirAppCatalogManifestInfo(
             entry.Id,
             entry.Name,
             entry.Description,
@@ -1853,17 +1853,17 @@ internal sealed class PluginCatalogSettingsService : IPluginCatalogSettingsServi
             entry.ApiVersion,
             entry.EntranceAssembly,
             entry.SharedContracts
-                .Select(contract => new PluginCatalogSharedContractInfo(
+                .Select(contract => new AirAppCatalogSharedContractInfo(
                     contract.Id,
                     contract.Version,
                     contract.AssemblyName))
                 .ToArray());
 
-        var compatibility = new PluginCatalogCompatibilityInfo(
+        var compatibility = new AirAppCatalogCompatibilityInfo(
             entry.MinHostVersion,
             entry.ApiVersion);
 
-        var repository = new PluginCatalogRepositoryInfo(
+        var repository = new AirAppCatalogRepositoryInfo(
             entry.IconUrl,
             entry.ProjectUrl,
             entry.ReadmeUrl,
@@ -1872,7 +1872,7 @@ internal sealed class PluginCatalogSettingsService : IPluginCatalogSettingsServi
             entry.Tags.ToArray(),
             entry.ReleaseNotes);
 
-        var publication = new PluginCatalogPublicationInfo(
+        var publication = new AirAppCatalogPublicationInfo(
             entry.ReleaseTag,
             entry.ReleaseAssetName,
             entry.PublishedAt,
@@ -1883,7 +1883,7 @@ internal sealed class PluginCatalogSettingsService : IPluginCatalogSettingsServi
 
         var sources = BuildPackageSources(entry);
 
-        return new PluginCatalogItemInfo(
+        return new AirAppCatalogItemInfo(
             manifest,
             compatibility,
             repository,
@@ -1892,26 +1892,26 @@ internal sealed class PluginCatalogSettingsService : IPluginCatalogSettingsServi
             BuildCapabilities(entry));
     }
 
-    private static IReadOnlyList<PluginCapabilityInfo> BuildCapabilities(AirAppMarketPluginEntry entry)
+    private static IReadOnlyList<AirAppCapabilityInfo> BuildCapabilities(AirAppMarketAirAppEntry entry)
     {
-        var capabilities = new List<PluginCapabilityInfo>();
+        var capabilities = new List<AirAppCapabilityInfo>();
         capabilities.AddRange(entry.SharedContracts.Select(contract =>
-            new PluginCapabilityInfo(contract.Id, contract.Version, contract.AssemblyName)));
+            new AirAppCapabilityInfo(contract.Id, contract.Version, contract.AssemblyName)));
         capabilities.AddRange(entry.DesktopComponents.Select(id =>
-            new PluginCapabilityInfo(id, null, null)));
+            new AirAppCapabilityInfo(id, null, null)));
         capabilities.AddRange(entry.SettingsSections.Select(id =>
-            new PluginCapabilityInfo(id, null, null)));
+            new AirAppCapabilityInfo(id, null, null)));
         capabilities.AddRange(entry.Exports.Select(id =>
-            new PluginCapabilityInfo(id, null, null)));
+            new AirAppCapabilityInfo(id, null, null)));
         capabilities.AddRange(entry.MessageTypes.Select(id =>
-            new PluginCapabilityInfo(id, null, null)));
+            new AirAppCapabilityInfo(id, null, null)));
 
         return capabilities
             .DistinctBy(capability => $"{capability.Id}@{capability.Version}@{capability.AssemblyName}")
             .ToArray();
     }
 
-    private static IReadOnlyList<PluginPackageSourceInfo> BuildPackageSources(AirAppMarketPluginEntry entry)
+    private static IReadOnlyList<AirAppPackageSourceInfo> BuildPackageSources(AirAppMarketAirAppEntry entry)
     {
         var sources = entry.GetPackageSourcesInInstallOrder();
         if (sources.Count == 0)
@@ -1920,13 +1920,13 @@ internal sealed class PluginCatalogSettingsService : IPluginCatalogSettingsServi
         }
 
         return sources
-            .Select(source => new PluginPackageSourceInfo(
+            .Select(source => new AirAppPackageSourceInfo(
                 source.SourceKind switch
                 {
-                    LanMountainDesktop.Services.PluginMarket.PluginPackageSourceKind.ReleaseAsset => PluginPackageSourceKind.ReleaseAsset,
-                    LanMountainDesktop.Services.PluginMarket.PluginPackageSourceKind.RawFallback => PluginPackageSourceKind.RawFallback,
-                    LanMountainDesktop.Services.PluginMarket.PluginPackageSourceKind.WorkspaceLocal => PluginPackageSourceKind.WorkspaceLocal,
-                    _ => PluginPackageSourceKind.RawFallback
+                    LanMountainDesktop.Services.AirAppMarket.AirAppPackageSourceKind.ReleaseAsset => AirAppPackageSourceKind.ReleaseAsset,
+                    LanMountainDesktop.Services.AirAppMarket.AirAppPackageSourceKind.RawFallback => AirAppPackageSourceKind.RawFallback,
+                    LanMountainDesktop.Services.AirAppMarket.AirAppPackageSourceKind.WorkspaceLocal => AirAppPackageSourceKind.WorkspaceLocal,
+                    _ => AirAppPackageSourceKind.RawFallback
                 },
                 source.Url,
                 entry.Sha256,
@@ -1934,7 +1934,7 @@ internal sealed class PluginCatalogSettingsService : IPluginCatalogSettingsServi
             .ToArray();
     }
 
-    private static IReadOnlyList<PluginCatalogSourceInfo> BuildCatalogSources(
+    private static IReadOnlyList<AirAppCatalogSourceInfo> BuildCatalogSources(
         string? sourceId,
         string? sourceLocation,
         string? warningMessage)
@@ -1950,7 +1950,7 @@ internal sealed class PluginCatalogSettingsService : IPluginCatalogSettingsServi
 
         return
         [
-            new PluginCatalogSourceInfo(
+            new AirAppCatalogSourceInfo(
                 normalizedSourceId,
                 normalizedSourceId,
                 string.IsNullOrWhiteSpace(warningMessage) ? null : warningMessage.Trim(),
@@ -2049,11 +2049,11 @@ internal sealed class ApplicationInfoService : IApplicationInfoService
 internal sealed class SettingsFacadeService : ISettingsFacadeService, IDisposable
 {
     private readonly UpdateSettingsService _updateSettingsService;
-    private readonly PluginCatalogSettingsService _pluginCatalogSettingsService;
-    private readonly PluginManagementSettingsService _pluginManagementSettingsService;
+    private readonly AirAppCatalogSettingsService _pluginCatalogSettingsService;
+    private readonly AirAppManagementSettingsService _pluginManagementSettingsService;
     private readonly WeatherSettingsService _weatherSettingsService;
 
-    public SettingsFacadeService(PluginRuntimeService? pluginRuntimeService = null)
+    public SettingsFacadeService(AirAppRuntimeService? pluginRuntimeService = null)
     {
         Settings = new SettingsService();
         Catalog = new SettingsCatalogService();
@@ -2071,10 +2071,10 @@ internal sealed class SettingsFacadeService : ISettingsFacadeService, IDisposabl
         Update = _updateSettingsService;
         LauncherCatalog = new LauncherCatalogService();
         LauncherPolicy = new LauncherPolicyService();
-        _pluginManagementSettingsService = new PluginManagementSettingsService(Settings, pluginRuntimeService);
-        PluginManagement = _pluginManagementSettingsService;
-        _pluginCatalogSettingsService = new PluginCatalogSettingsService(pluginRuntimeService);
-        PluginCatalog = _pluginCatalogSettingsService;
+        _pluginManagementSettingsService = new AirAppManagementSettingsService(Settings, pluginRuntimeService);
+        AirAppManagement = _pluginManagementSettingsService;
+        _pluginCatalogSettingsService = new AirAppCatalogSettingsService(pluginRuntimeService);
+        AirAppCatalog = _pluginCatalogSettingsService;
         ApplicationInfo = new ApplicationInfoService();
     }
 
@@ -2106,16 +2106,16 @@ internal sealed class SettingsFacadeService : ISettingsFacadeService, IDisposabl
 
     public ILauncherPolicyService LauncherPolicy { get; }
 
-    public IPluginManagementSettingsService PluginManagement { get; }
+    public IAirAppManagementSettingsService AirAppManagement { get; }
 
-    public IPluginCatalogSettingsService PluginCatalog { get; }
+    public IAirAppCatalogSettingsService AirAppCatalog { get; }
 
     public IApplicationInfoService ApplicationInfo { get; }
 
-    public void BindPluginRuntime(PluginRuntimeService? pluginRuntimeService)
+    public void BindAirAppRuntime(AirAppRuntimeService? pluginRuntimeService)
     {
-        _pluginManagementSettingsService.SetPluginRuntime(pluginRuntimeService);
-        _pluginCatalogSettingsService.SetPluginRuntime(pluginRuntimeService);
+        _pluginManagementSettingsService.SetAirAppRuntime(pluginRuntimeService);
+        _pluginCatalogSettingsService.SetAirAppRuntime(pluginRuntimeService);
     }
 
     public void Dispose()

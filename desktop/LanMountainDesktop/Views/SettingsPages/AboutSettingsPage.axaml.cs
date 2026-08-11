@@ -6,7 +6,7 @@ using Avalonia.Input;
 using Avalonia.VisualTree;
 using FluentAvalonia.UI.Controls;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.ViewModels;
@@ -14,16 +14,16 @@ using LanMountainDesktop.Views;
 
 namespace LanMountainDesktop.Views.SettingsPages;
 
-[SettingsPageInfo(
+[AirAppSettingsPageInfo(
     "about",
     "About",
-    SettingsPageCategory.About,
+    AirAppSettingsPageCategory.About,
     IconKey = "Info",
     SortOrder = 40,
     TitleLocalizationKey = "settings.about.title",
     DescriptionLocalizationKey = "settings.about.description",
     HidePageTitle = true)]
-public partial class AboutSettingsPage : SettingsPageBase
+public partial class AboutSettingsPage : AirAppSettingsPageBase
 {
     private const double HeroAspectRatio = 9d / 16d;
     private const int DevModeActivationClicks = 5;
@@ -92,7 +92,7 @@ public partial class AboutSettingsPage : SettingsPageBase
         _lastHeroCardClickTime = now;
 
         var settingsFacade = HostSettingsFacadeProvider.GetOrCreate();
-        var snapshot = settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var snapshot = settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
 
         if (snapshot.IsDevModeEnabled)
         {
@@ -135,10 +135,10 @@ public partial class AboutSettingsPage : SettingsPageBase
             return;
         }
 
-        var snapshot = settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var snapshot = settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
         snapshot.IsDevModeEnabled = true;
         settingsFacade.Settings.SaveSnapshot(
-            SettingsScope.App,
+            AirAppSettingsScope.App,
             snapshot,
             changedKeys: [nameof(AppSettingsSnapshot.IsDevModeEnabled)]);
 

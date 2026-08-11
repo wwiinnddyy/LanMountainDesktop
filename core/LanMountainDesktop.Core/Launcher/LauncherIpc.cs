@@ -4,7 +4,7 @@ public enum StartupStage
 {
     Initializing,
     LoadingSettings,
-    LoadingPlugins,
+    LoadingAirApps,
     TrayReady,
     InitializingUI,
     ShellInitialized,

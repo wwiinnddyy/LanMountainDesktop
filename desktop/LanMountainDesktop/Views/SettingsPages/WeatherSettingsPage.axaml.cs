@@ -1,20 +1,20 @@
 using Avalonia.Controls;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.ViewModels;
 
 namespace LanMountainDesktop.Views.SettingsPages;
 
-[SettingsPageInfo(
+[AirAppSettingsPageInfo(
     "weather",
     "Weather",
-    SettingsPageCategory.Appearance,
+    AirAppSettingsPageCategory.Appearance,
     IconKey = "WeatherMoon",
     SortOrder = 18,
     TitleLocalizationKey = "settings.weather.title",
     DescriptionLocalizationKey = "settings.weather.description")]
-public partial class WeatherSettingsPage : SettingsPageBase
+public partial class WeatherSettingsPage : AirAppSettingsPageBase
 {
     public WeatherSettingsPage()
         : this(Design.IsDesignMode ? CreateDesignTimeViewModel() : CreateDefaultViewModel())

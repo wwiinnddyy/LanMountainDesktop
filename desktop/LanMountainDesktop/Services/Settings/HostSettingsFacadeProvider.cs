@@ -16,13 +16,13 @@ internal static class HostSettingsFacadeProvider
         }
     }
 
-    public static void BindPluginRuntime(PluginRuntimeService pluginRuntimeService)
+    public static void BindAirAppRuntime(AirAppRuntimeService pluginRuntimeService)
     {
         ArgumentNullException.ThrowIfNull(pluginRuntimeService);
         lock (Gate)
         {
             _instance ??= new SettingsFacadeService(pluginRuntimeService);
-            _instance.BindPluginRuntime(pluginRuntimeService);
+            _instance.BindAirAppRuntime(pluginRuntimeService);
         }
     }
 }

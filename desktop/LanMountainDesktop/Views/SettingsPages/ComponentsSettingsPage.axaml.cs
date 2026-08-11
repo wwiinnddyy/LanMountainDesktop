@@ -1,21 +1,21 @@
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Platform;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.ViewModels;
 
 namespace LanMountainDesktop.Views.SettingsPages;
 
-[SettingsPageInfo(
+[AirAppSettingsPageInfo(
     "components",
     "Components",
-    SettingsPageCategory.Components,
+    AirAppSettingsPageCategory.Components,
     IconKey = "AppFolder",
     SortOrder = 20,
     TitleLocalizationKey = "settings.components.title",
     DescriptionLocalizationKey = "settings.components.description")]
-public partial class ComponentsSettingsPage : SettingsPageBase
+public partial class ComponentsSettingsPage : AirAppSettingsPageBase
 {
     public ComponentsSettingsPage()
         : this(new ComponentsSettingsPageViewModel(HostSettingsFacadeProvider.GetOrCreate()))

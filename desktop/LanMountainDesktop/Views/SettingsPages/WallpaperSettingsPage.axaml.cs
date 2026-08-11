@@ -1,21 +1,21 @@
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.ViewModels;
 using System.Linq;
 
 namespace LanMountainDesktop.Views.SettingsPages;
 
-[SettingsPageInfo(
+[AirAppSettingsPageInfo(
     "wallpaper",
     "Wallpaper",
-    SettingsPageCategory.Appearance,
+    AirAppSettingsPageCategory.Appearance,
     IconKey = "Image",
     SortOrder = 15,
     TitleLocalizationKey = "settings.wallpaper.title",
     DescriptionLocalizationKey = "settings.wallpaper.description")]
-public partial class WallpaperSettingsPage : SettingsPageBase
+public partial class WallpaperSettingsPage : AirAppSettingsPageBase
 {
     public WallpaperSettingsPage()
         : this(new WallpaperSettingsPageViewModel(HostSettingsFacadeProvider.GetOrCreate()))

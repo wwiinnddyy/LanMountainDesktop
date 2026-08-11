@@ -1,8 +1,8 @@
-using LanMountainDesktop.Host.Abstractions;
+using LanMountainDesktop.AirAppSdk;
 
 namespace LanMountainDesktop.ComponentSystem;
 
-public interface IComponentChromeContextAware
+public interface IAirAppComponentChromeContextAware
 {
-    void SetComponentChromeContext(ComponentChromeContext context);
+    void SetAirAppComponentChromeContext(AirAppComponentChromeContext context);
 }

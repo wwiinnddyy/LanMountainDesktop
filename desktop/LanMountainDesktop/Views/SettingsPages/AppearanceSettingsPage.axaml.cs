@@ -1,19 +1,19 @@
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.ViewModels;
 
 namespace LanMountainDesktop.Views.SettingsPages;
 
-[SettingsPageInfo(
+[AirAppSettingsPageInfo(
     "appearance",
     "Appearance",
-    SettingsPageCategory.Appearance,
+    AirAppSettingsPageCategory.Appearance,
     IconKey = "DesignIdeas",
     SortOrder = 10,
     TitleLocalizationKey = "settings.appearance.title",
     DescriptionLocalizationKey = "settings.appearance.description")]
-public partial class AppearanceSettingsPage : SettingsPageBase
+public partial class AppearanceSettingsPage : AirAppSettingsPageBase
 {
     public AppearanceSettingsPage()
         : this(new AppearanceSettingsPageViewModel(

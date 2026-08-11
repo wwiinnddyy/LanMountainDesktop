@@ -1,6 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.Input;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Plonds;
 using LanMountainDesktop.Services.Settings;
@@ -503,7 +503,7 @@ public sealed class UpdateSettingsInterfaceTests
 
         public AppSettingsSnapshot Snapshot { get; init; } = new();
 
-        public T LoadSnapshot<T>(SettingsScope scope, string? subjectId = null, string? placementId = null) where T : new()
+        public T LoadSnapshot<T>(AirAppSettingsScope scope, string? subjectId = null, string? placementId = null) where T : new()
         {
             if (typeof(T) == typeof(AppSettingsSnapshot))
             {
@@ -514,7 +514,7 @@ public sealed class UpdateSettingsInterfaceTests
         }
 
         public void SaveSnapshot<T>(
-            SettingsScope scope,
+            AirAppSettingsScope scope,
             T snapshot,
             string? subjectId = null,
             string? placementId = null,
@@ -529,11 +529,11 @@ public sealed class UpdateSettingsInterfaceTests
             Changed?.Invoke(this, new SettingsChangedEvent(scope, subjectId, placementId, sectionId, changedKeys));
         }
 
-        public T LoadSection<T>(SettingsScope scope, string subjectId, string sectionId, string? placementId = null) where T : new()
+        public T LoadSection<T>(AirAppSettingsScope scope, string subjectId, string sectionId, string? placementId = null) where T : new()
             => new();
 
         public void SaveSection<T>(
-            SettingsScope scope,
+            AirAppSettingsScope scope,
             string subjectId,
             string sectionId,
             T section,
@@ -542,15 +542,15 @@ public sealed class UpdateSettingsInterfaceTests
         {
         }
 
-        public void DeleteSection(SettingsScope scope, string subjectId, string sectionId, string? placementId = null)
+        public void DeleteSection(AirAppSettingsScope scope, string subjectId, string sectionId, string? placementId = null)
         {
         }
 
-        public T? GetValue<T>(SettingsScope scope, string key, string? subjectId = null, string? placementId = null, string? sectionId = null)
+        public T? GetValue<T>(AirAppSettingsScope scope, string key, string? subjectId = null, string? placementId = null, string? sectionId = null)
             => default;
 
         public void SetValue<T>(
-            SettingsScope scope,
+            AirAppSettingsScope scope,
             string key,
             T value,
             string? subjectId = null,
@@ -637,8 +637,8 @@ public sealed class UpdateSettingsInterfaceTests
         public IUpdateSettingsService Update { get; } = update;
         public ILauncherCatalogService LauncherCatalog => throw new NotSupportedException();
         public ILauncherPolicyService LauncherPolicy => throw new NotSupportedException();
-        public IPluginManagementSettingsService PluginManagement => throw new NotSupportedException();
-        public IPluginCatalogSettingsService PluginCatalog => throw new NotSupportedException();
+        public IAirAppManagementSettingsService AirAppManagement => throw new NotSupportedException();
+        public IAirAppCatalogSettingsService AirAppCatalog => throw new NotSupportedException();
         public IApplicationInfoService ApplicationInfo { get; } = new FakeApplicationInfoService();
     }
 

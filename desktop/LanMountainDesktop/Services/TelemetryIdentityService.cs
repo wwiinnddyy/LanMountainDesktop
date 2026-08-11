@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services.Settings;
 
 namespace LanMountainDesktop.Services;
@@ -89,7 +89,7 @@ public sealed class TelemetryIdentityService
                 return false;
             }
 
-            var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
             if (snapshot.HasReportedTelemetryBaseline)
             {
                 _hasReportedBaseline = true;
@@ -98,7 +98,7 @@ public sealed class TelemetryIdentityService
 
             snapshot.HasReportedTelemetryBaseline = true;
             _settingsFacade.Settings.SaveSnapshot(
-                SettingsScope.App,
+                AirAppSettingsScope.App,
                 snapshot,
                 changedKeys: [nameof(AppSettingsSnapshot.HasReportedTelemetryBaseline)]);
 
@@ -112,7 +112,7 @@ public sealed class TelemetryIdentityService
     {
         lock (_syncRoot)
         {
-            var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
             var changedKeys = new List<string>();
 
             if (string.IsNullOrWhiteSpace(snapshot.TelemetryInstallId))
@@ -134,7 +134,7 @@ public sealed class TelemetryIdentityService
             if (changedKeys.Count > 0)
             {
                 _settingsFacade.Settings.SaveSnapshot(
-                    SettingsScope.App,
+                    AirAppSettingsScope.App,
                     snapshot,
                     changedKeys: changedKeys);
             }

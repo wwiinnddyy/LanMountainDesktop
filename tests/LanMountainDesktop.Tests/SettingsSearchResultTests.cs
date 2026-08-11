@@ -1,6 +1,6 @@
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using Xunit;
 
 namespace LanMountainDesktop.Tests;

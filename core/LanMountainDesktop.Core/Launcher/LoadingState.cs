@@ -4,7 +4,7 @@ public enum LoadingItemType
 {
     System,
     Settings,
-    Plugin,
+    AirApp,
     Component,
     Resource,
     Data,

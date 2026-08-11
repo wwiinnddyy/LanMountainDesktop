@@ -206,7 +206,7 @@ internal static class LaunchUiPresenter
     {
         StartupStage.Initializing => "initializing",
         StartupStage.LoadingSettings => "settings",
-        StartupStage.LoadingPlugins => "plugins",
+        StartupStage.LoadingAirApps => "plugins",
         StartupStage.TrayReady => "shell",
         StartupStage.InitializingUI => "ui",
         StartupStage.ShellInitialized => "shell",

@@ -1,0 +1,14 @@
+<Project>
+  <PropertyGroup>
+    <LanMountainAirAppManifestFileName Condition="'$(LanMountainAirAppManifestFileName)' == ''">airapp.json</LanMountainAirAppManifestFileName>
+    <LanMountainAirAppPackageExtension Condition="'$(LanMountainAirAppPackageExtension)' == ''">.laapp</LanMountainAirAppPackageExtension>
+    <LanMountainAirAppPackageOutputDirectory Condition="'$(LanMountainAirAppPackageOutputDirectory)' == ''">$(MSBuildProjectDirectory)\</LanMountainAirAppPackageOutputDirectory>
+
+    <LanMountainAirAppEnablePackaging Condition="'$(LanMountainAirAppEnablePackaging)' == '' and Exists('$(MSBuildProjectDirectory)\$(LanMountainAirAppManifestFileName)')">true</LanMountainAirAppEnablePackaging>
+    <LanMountainAirAppEnablePackaging Condition="'$(LanMountainAirAppEnablePackaging)' == ''">false</LanMountainAirAppEnablePackaging>
+  </PropertyGroup>
+
+  <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)\$(LanMountainAirAppManifestFileName)')">
+    <None Update="$(LanMountainAirAppManifestFileName)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

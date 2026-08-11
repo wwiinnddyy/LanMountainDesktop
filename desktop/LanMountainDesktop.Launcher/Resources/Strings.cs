@@ -65,14 +65,14 @@ public static class Strings
     public static string Loading_ButtonDetails => ResourceManager.GetString(nameof(Loading_ButtonDetails), Culture)!;
     public static string Loading_ButtonCancel => ResourceManager.GetString(nameof(Loading_ButtonCancel), Culture)!;
     public static string Loading_StageReady => ResourceManager.GetString(nameof(Loading_StageReady), Culture)!;
-    public static string Loading_ItemPlugin => ResourceManager.GetString(nameof(Loading_ItemPlugin), Culture)!;
+    public static string Loading_ItemAirApp => ResourceManager.GetString(nameof(Loading_ItemAirApp), Culture)!;
     public static string Loading_ItemComponent => ResourceManager.GetString(nameof(Loading_ItemComponent), Culture)!;
     public static string Loading_ItemResource => ResourceManager.GetString(nameof(Loading_ItemResource), Culture)!;
     public static string Loading_ItemData => ResourceManager.GetString(nameof(Loading_ItemData), Culture)!;
     public static string Loading_ItemDownload => ResourceManager.GetString(nameof(Loading_ItemDownload), Culture)!;
     public static string Loading_ItemProcess => ResourceManager.GetString(nameof(Loading_ItemProcess), Culture)!;
     public static string Loading_ItemComplete => ResourceManager.GetString(nameof(Loading_ItemComplete), Culture)!;
-    public static string Loading_TypePlugin => ResourceManager.GetString(nameof(Loading_TypePlugin), Culture)!;
+    public static string Loading_TypeAirApp => ResourceManager.GetString(nameof(Loading_TypeAirApp), Culture)!;
     public static string Loading_TypeComponent => ResourceManager.GetString(nameof(Loading_TypeComponent), Culture)!;
     public static string Loading_TypeResource => ResourceManager.GetString(nameof(Loading_TypeResource), Culture)!;
     public static string Loading_TypeData => ResourceManager.GetString(nameof(Loading_TypeData), Culture)!;
@@ -90,7 +90,7 @@ public static class Strings
     public static string Update_DebugTitle => ResourceManager.GetString(nameof(Update_DebugTitle), Culture)!;
     public static string Update_DebugMessage => ResourceManager.GetString(nameof(Update_DebugMessage), Culture)!;
     public static string Update_Verifying => ResourceManager.GetString(nameof(Update_Verifying), Culture)!;
-    public static string Update_ApplyingPlugins => ResourceManager.GetString(nameof(Update_ApplyingPlugins), Culture)!;
+    public static string Update_ApplyingAirApps => ResourceManager.GetString(nameof(Update_ApplyingAirApps), Culture)!;
     public static string Update_CleaningUp => ResourceManager.GetString(nameof(Update_CleaningUp), Culture)!;
     public static string DebugDebug_Title => ResourceManager.GetString(nameof(DebugDebug_Title), Culture)!;
     public static string DebugDebug_SettingsTitle => ResourceManager.GetString(nameof(DebugDebug_SettingsTitle), Culture)!;
@@ -207,7 +207,7 @@ public static class Strings
     public static string Coordinator_RunningHostMessage => ResourceManager.GetString(nameof(Coordinator_RunningHostMessage), Culture)!;
     public static string Preview_SplashInitializing => ResourceManager.GetString(nameof(Preview_SplashInitializing), Culture)!;
     public static string Preview_SplashCheckingUpdates => ResourceManager.GetString(nameof(Preview_SplashCheckingUpdates), Culture)!;
-    public static string Preview_SplashCheckingPlugins => ResourceManager.GetString(nameof(Preview_SplashCheckingPlugins), Culture)!;
+    public static string Preview_SplashCheckingAirApps => ResourceManager.GetString(nameof(Preview_SplashCheckingAirApps), Culture)!;
     public static string Preview_SplashLaunchingHost => ResourceManager.GetString(nameof(Preview_SplashLaunchingHost), Culture)!;
     public static string Preview_SplashReady => ResourceManager.GetString(nameof(Preview_SplashReady), Culture)!;
     public static string Preview_ErrorMessage => ResourceManager.GetString(nameof(Preview_ErrorMessage), Culture)!;

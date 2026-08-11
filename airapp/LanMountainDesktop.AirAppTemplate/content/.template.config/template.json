@@ -1,0 +1,90 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "LanMountainDesktop",
+  "classifications": [
+    "LanMountainDesktop",
+    "AirApp",
+    "Desktop"
+  ],
+  "name": "LanMountainDesktop AirApp",
+  "identity": "LanMountainDesktop.AirAppTemplate.CSharp",
+  "shortName": "lmd-airapp",
+  "sourceName": "LanMountainDesktop.AirAppTemplate",
+  "preferNameDirectory": true,
+  "tags": {
+    "type": "project",
+    "language": "C#"
+  },
+  "symbols": {
+    "airAppId": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "LanMountainDesktop.AirAppTemplate",
+      "description": "AirApp manifest id.",
+      "replaces": "__AIRAPP_ID__"
+    },
+    "airAppAuthor": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "Your Name",
+      "description": "AirApp author.",
+      "replaces": "__AIRAPP_AUTHOR__"
+    },
+    "airAppName": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "My AirApp",
+      "description": "Display name shown in the AirApp manifest.",
+      "replaces": "__AIRAPP_NAME__"
+    },
+    "airAppDescription": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "AirApp generated from the official LanMountainDesktop template.",
+      "description": "AirApp description shown in the AirApp manifest.",
+      "replaces": "__AIRAPP_DESCRIPTION__"
+    },
+    "airAppSdkVersion": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "1.0.0",
+      "description": "LanMountainDesktop.AirAppSdk package version.",
+      "replaces": "__AIRAPP_SDK_VERSION__"
+    },
+    "componentId": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "my-component",
+      "description": "Desktop component identifier.",
+      "replaces": "__COMPONENT_ID__"
+    },
+    "componentName": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "My Component",
+      "description": "Desktop component display name.",
+      "replaces": "__COMPONENT_NAME__"
+    },
+    "componentDescription": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "A desktop component.",
+      "description": "Desktop component description.",
+      "replaces": "__COMPONENT_DESCRIPTION__"
+    },
+    "windowId": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "my-window",
+      "description": "Window AirApp identifier.",
+      "replaces": "__WINDOW_ID__"
+    },
+    "windowName": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "My Window",
+      "description": "Window AirApp display name.",
+      "replaces": "__WINDOW_NAME__"
+    }
+  }
+}

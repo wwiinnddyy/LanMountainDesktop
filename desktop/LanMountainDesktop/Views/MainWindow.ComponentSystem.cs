@@ -16,11 +16,11 @@ using FluentIcons.Avalonia;
 using FluentIcons.Common;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.DesktopEditing;
-using LanMountainDesktop.Host.Abstractions;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Platform.Abstractions;
 using LanMountainDesktop.Services;
-using LanMountainDesktop.Settings.Core;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Theme;
 using LanMountainDesktop.Views.Components;
 using PathShape = Avalonia.Controls.Shapes.Path;
@@ -2481,7 +2481,7 @@ public partial class MainWindow : Window
 
         if (_componentRuntimeRegistry.TryGetDescriptor(componentId, out var runtimeDescriptor))
         {
-            return runtimeDescriptor.ResolveCornerRadius(new ComponentChromeContext(
+            return runtimeDescriptor.ResolveCornerRadius(new AirAppComponentChromeContext(
                 componentId,
                 null,
                 _currentDesktopCellSize,

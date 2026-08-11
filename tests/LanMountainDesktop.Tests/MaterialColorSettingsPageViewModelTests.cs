@@ -1,12 +1,12 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
-using LanMountainDesktop.Appearance;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
-using LanMountainDesktop.Settings.Core;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Shared.Contracts;
 using LanMountainDesktop.ViewModels;
 using Xunit;
@@ -202,8 +202,8 @@ public sealed class MaterialColorSettingsPageViewModelTests
         public IUpdateSettingsService Update => throw new NotSupportedException();
         public ILauncherCatalogService LauncherCatalog => throw new NotSupportedException();
         public ILauncherPolicyService LauncherPolicy => throw new NotSupportedException();
-        public IPluginManagementSettingsService PluginManagement => throw new NotSupportedException();
-        public IPluginCatalogSettingsService PluginCatalog => throw new NotSupportedException();
+        public IAirAppManagementSettingsService AirAppManagement => throw new NotSupportedException();
+        public IAirAppCatalogSettingsService AirAppCatalog => throw new NotSupportedException();
         public IApplicationInfoService ApplicationInfo => throw new NotSupportedException();
     }
 

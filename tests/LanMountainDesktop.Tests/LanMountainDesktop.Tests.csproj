@@ -19,7 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\desktop\LanMountainDesktop\LanMountainDesktop.csproj" />
-    <ProjectReference Include="..\..\airapp\LanMountainDesktop.PluginSdk\LanMountainDesktop.PluginSdk.csproj" />
+    <ProjectReference Include="..\..\airapp\LanMountainDesktop.AirAppSdk\LanMountainDesktop.AirAppSdk.csproj" />
     <ProjectReference Include="..\..\airapp\LanMountainDesktop.AirAppRuntime\LanMountainDesktop.AirAppRuntime.csproj" />
     <ProjectReference Include="..\..\desktop\LanMountainDesktop.Launcher\LanMountainDesktop.Launcher.csproj" />
     <ProjectReference Include="..\..\install\LanDesktopPLONDS.installer\LanDesktopPLONDS.installer.csproj" />

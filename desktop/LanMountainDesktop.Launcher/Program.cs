@@ -25,10 +25,10 @@ public static class Program
 
         try
         {
-            if (commandContext.IsLegacyPluginInstall)
+            if (commandContext.IsLegacyAirAppInstall)
             {
-                var installer = new PluginInstallerService();
-                return await Commands.RunLegacyPluginInstallAsync(commandContext, installer).ConfigureAwait(false);
+                var installer = new AirAppInstallerService();
+                return await Commands.RunLegacyAirAppInstallAsync(commandContext, installer).ConfigureAwait(false);
             }
 
             if (!commandContext.IsGuiCommand)

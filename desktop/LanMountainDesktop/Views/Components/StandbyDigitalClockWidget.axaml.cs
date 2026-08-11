@@ -11,7 +11,7 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Theme;
@@ -440,9 +440,9 @@ public partial class StandbyDigitalClockWidget : UserControl,
 
     private void LoadClockSettings()
     {
-        var appSnapshot = _settingsService.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var appSnapshot = _settingsService.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
         var componentSnapshot = _settingsService.LoadSnapshot<ComponentSettingsSnapshot>(
-            SettingsScope.ComponentInstance,
+            AirAppSettingsScope.ComponentInstance,
             _componentId,
             _placementId);
 
