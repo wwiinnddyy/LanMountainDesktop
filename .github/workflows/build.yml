@@ -22,7 +22,7 @@ jobs:
       matrix:
         configuration: [ Debug, Release ]
       fail-fast: false
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -50,7 +50,7 @@ jobs:
       - name: Build
         run: dotnet build ${{ env.Solution_Name }} --no-restore -c ${{ matrix.configuration }} -v minimal
         env:
-          # Skip AirAppHost build to avoid recursive build issues
+          # AirAppHost 已在解决方案中独立构建；跳过主程序的嵌套 AirAppHost 构建目标
           SkipAirAppHostBuild: true
 
       - name: Upload artifacts
@@ -64,7 +64,7 @@ jobs:
   build-linux:
     runs-on: ubuntu-latest
     name: Build_Linux
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -109,7 +109,7 @@ jobs:
       - name: Build
         run: dotnet build ${{ env.Solution_Name }} --no-restore -c Release -v minimal
         env:
-          # Skip AirAppHost build to avoid recursive build issues
+          # AirAppHost 已在解决方案中独立构建；跳过主程序的嵌套 AirAppHost 构建目标
           SkipAirAppHostBuild: true
 
       - name: Upload artifacts
@@ -123,7 +123,7 @@ jobs:
   build-macos:
     runs-on: macos-latest
     name: Build_macOS
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -154,7 +154,7 @@ jobs:
       - name: Build
         run: dotnet build ${{ env.Solution_Name }} --no-restore -c Release -v minimal
         env:
-          # Skip AirAppHost build to avoid recursive build issues
+          # AirAppHost 已在解决方案中独立构建；跳过主程序的嵌套 AirAppHost 构建目标
           SkipAirAppHostBuild: true
 
       - name: Upload artifacts
@@ -168,7 +168,7 @@ jobs:
   build-android:
     runs-on: ubuntu-latest
     name: Build_Android
-    # Android head 尚未合入时允许跳过
+    # Android head 需要 Android workload，仅验证 mobile/LanMountainDesktop.Mobile.Android
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -179,7 +179,7 @@ jobs:
       - name: Check Android head exists
         id: check
         run: |
-          if [ -f "LanMountainDesktop.Mobile.Android/LanMountainDesktop.Mobile.Android.csproj" ]; then
+          if [ -f "mobile/LanMountainDesktop.Mobile.Android/LanMountainDesktop.Mobile.Android.csproj" ]; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
@@ -215,7 +215,7 @@ jobs:
 
       - name: Build Android head
         if: steps.check.outputs.exists == 'true'
-        run: dotnet build LanMountainDesktop.Mobile.Android/LanMountainDesktop.Mobile.Android.csproj -c Release -v minimal
+        run: dotnet build mobile/LanMountainDesktop.Mobile.Android/LanMountainDesktop.Mobile.Android.csproj -c Release -v minimal
 
       - name: Upload artifacts
         if: steps.check.outputs.exists == 'true'
@@ -223,7 +223,7 @@ jobs:
         with:
           name: build-android
           path: |
-            LanMountainDesktop.Mobile.Android/bin/Release/**/*.apk
+            mobile/LanMountainDesktop.Mobile.Android/bin/Release/**/*.apk
           if-no-files-found: warn
           retention-days: 7
 
@@ -252,14 +252,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
-      - name: Pack SDK and template packages
+      - name: Pack AirApp SDK and template packages
         shell: pwsh
-        run: .\scripts\Pack-PluginPackages.ps1 -Configuration Release -OutputPath .\artifacts\nuget
+        run: .\scripts\Pack-AirAppPackages.ps1 -Configuration Release -OutputPath .\artifacts\nuget
 
       - name: Upload AirApp package artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: plugin-packages
+          name: airapp-packages
           path: artifacts/nuget/*.nupkg
           if-no-files-found: error
           retention-days: 14

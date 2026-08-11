@@ -43,7 +43,7 @@ dotnet test LanMountainDesktop.slnx -c Debug
 AirApp 本地包生成：
 
 ```powershell
-./scripts/Pack-PluginPackages.ps1
+./scripts/Pack-AirAppPackages.ps1
 ```
 
 ## 4. 改动前后必做检查
