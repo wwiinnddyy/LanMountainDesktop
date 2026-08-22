@@ -429,7 +429,14 @@ internal sealed class HostStartupMonitor
         try
         {
             var shellProxy = ipcClient.CreateProxy<IPublicShellControlService>();
-            return await shellProxy.GetShellStatusAsync().ConfigureAwait(false);
+            var statusTask = shellProxy.GetShellStatusAsync();
+            var completed = await Task.WhenAny(statusTask, Task.Delay(TimeSpan.FromSeconds(3))).ConfigureAwait(false);
+            if (completed != statusTask)
+            {
+                Logger.Warn("Public shell status query timed out after 3s (host UI thread may be blocked).");
+                return null;
+            }
+            return await statusTask.ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -452,7 +459,14 @@ internal sealed class HostStartupMonitor
             }
 
             var shellProxy = ipcClient.CreateProxy<IPublicShellControlService>();
-            return await shellProxy.ActivateMainWindowWithStatusAsync().ConfigureAwait(false);
+            var activationTask = shellProxy.ActivateMainWindowWithStatusAsync();
+            var completed = await Task.WhenAny(activationTask, Task.Delay(TimeSpan.FromSeconds(3))).ConfigureAwait(false);
+            if (completed != activationTask)
+            {
+                Logger.Info("Existing host activation probe timed out after 3s.");
+                return null;
+            }
+            return await activationTask.ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -470,7 +484,14 @@ internal sealed class HostStartupMonitor
         try
         {
             var shellProxy = ipcClient.CreateProxy<IPublicShellControlService>();
-            var activation = await shellProxy.ActivateMainWindowWithStatusAsync().ConfigureAwait(false);
+            var activationTask = shellProxy.ActivateMainWindowWithStatusAsync();
+            var activationCompleted = await Task.WhenAny(activationTask, Task.Delay(TimeSpan.FromSeconds(3))).ConfigureAwait(false);
+            if (activationCompleted != activationTask)
+            {
+                Logger.Warn("Public activation recovery timed out after 3s.");
+                return null;
+            }
+            var activation = await activationTask.ConfigureAwait(false);
             StartupDiagnostics.TraceShellStatus("recovery_activation", activation.Status);
             if (startupSuccessTracker.TryResolve(activation.Status, out var shellSuccess))
             {

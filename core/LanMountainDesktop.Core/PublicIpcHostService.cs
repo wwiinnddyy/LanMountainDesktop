@@ -160,7 +160,19 @@ public sealed class PublicIpcHostService : IDisposable, IExternalIpcNotification
             try
             {
                 var client = new JsonIpcDirectRoutedClientProxy(peer);
-                await client.NotifyAsync(notifyId, payload).ConfigureAwait(false);
+                var notifyTask = client.NotifyAsync(notifyId, payload);
+                var timeoutTask = Task.Delay(TimeSpan.FromMilliseconds(1500), cancellationToken);
+                var completed = await Task.WhenAny(notifyTask, timeoutTask).ConfigureAwait(false);
+                if (completed == timeoutTask)
+                {
+                    // Per-peer timeout: don't block startup on a stale launcher peer
+                    continue;
+                }
+                await notifyTask.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch
             {

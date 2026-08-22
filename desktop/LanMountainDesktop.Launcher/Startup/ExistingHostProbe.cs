@@ -36,7 +36,14 @@ internal static class ExistingHostProbe
             }
 
             var shellProxy = ipcClient.CreateProxy<IPublicShellControlService>();
-            return await shellProxy.GetShellStatusAsync().ConfigureAwait(false);
+            var statusTask = shellProxy.GetShellStatusAsync();
+            var completed = await Task.WhenAny(statusTask, Task.Delay(TimeSpan.FromSeconds(3))).ConfigureAwait(false);
+            if (completed != statusTask)
+            {
+                Logger.Info("Existing host status probe timed out after 3s.");
+                return null;
+            }
+            return await statusTask.ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -101,14 +108,39 @@ internal static class ExistingHostProbe
         string successMessage,
         string failureCode)
     {
-        var activation = await shellProxy.ActivateMainWindowWithStatusAsync().ConfigureAwait(false);
+        async Task<PublicShellActivationResult?> TryActivateWithTimeoutAsync()
+        {
+            var task = shellProxy.ActivateMainWindowWithStatusAsync();
+            var completed = await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(3))).ConfigureAwait(false);
+            if (completed != task)
+            {
+                Logger.Warn("ActivateMainWindowWithStatus timed out after 3s.");
+                return null;
+            }
+            return await task.ConfigureAwait(false);
+        }
+
+        var activation = await TryActivateWithTimeoutAsync().ConfigureAwait(false);
+        if (activation is null)
+        {
+            return new ExistingHostBehaviorResult(
+                false,
+                failureCode,
+                "Existing host activation timed out before the shell responded.",
+                null);
+        }
+
         var success = activation.Accepted || HostActivationPolicy.IsRecoverableActivationFailure(activation);
         if (showLauncherNotice && success)
         {
             var promptResult = await LaunchUiPresenter.ShowMultiInstancePromptAsync(activation.Status).ConfigureAwait(false);
             if (promptResult == MultiInstancePromptResult.OpenDesktop)
             {
-                activation = await shellProxy.ActivateMainWindowWithStatusAsync().ConfigureAwait(false);
+                var secondActivation = await TryActivateWithTimeoutAsync().ConfigureAwait(false);
+                if (secondActivation is not null)
+                {
+                    activation = secondActivation;
+                }
             }
         }
 
@@ -122,7 +154,13 @@ internal static class ExistingHostProbe
     private static async Task<ExistingHostBehaviorResult> RestartExistingHostAsync(
         IPublicShellControlService shellProxy)
     {
-        var accepted = await shellProxy.RestartAsync().ConfigureAwait(false);
+        var restartTask = shellProxy.RestartAsync();
+        var completed = await Task.WhenAny(restartTask, Task.Delay(TimeSpan.FromSeconds(3))).ConfigureAwait(false);
+        var accepted = completed == restartTask && await restartTask.ConfigureAwait(false);
+        if (completed != restartTask)
+        {
+            Logger.Warn("Restart request timed out after 3s.");
+        }
         return new ExistingHostBehaviorResult(
             accepted,
             accepted ? "existing_host_restart_requested" : "existing_host_restart_failed",

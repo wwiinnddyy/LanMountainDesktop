@@ -9,8 +9,10 @@ public sealed class LauncherStartupTimeoutPolicyTests
     {
         var source = ReadRepositoryFile("desktop", "LanMountainDesktop.Launcher", "Startup", "StartupTimeoutPolicy.cs");
 
-        Assert.Contains("SoftTimeout = TimeSpan.FromSeconds(30)", source);
-        Assert.Contains("HardTimeout = TimeSpan.FromSeconds(120)", source);
+        // Slow-device contract: AOT cold start may take >30s, launcher must tolerate at least 45s soft / 180s hard
+        // to avoid false failure when AirAppRuntime pre-start + AirApp discovery runs on first launch.
+        Assert.Contains("SoftTimeout = TimeSpan.FromSeconds(45)", source);
+        Assert.Contains("HardTimeout = TimeSpan.FromSeconds(180)", source);
     }
 
     private static string ReadRepositoryFile(params string[] pathParts)

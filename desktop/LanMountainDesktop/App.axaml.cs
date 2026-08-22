@@ -388,6 +388,8 @@ public partial class App : Application
     private void InitializeDesktopShell()
     {
         _desktopShellInitializationStarted = true;
+        var shellInitStopwatch = System.Diagnostics.Stopwatch.StartNew();
+        AppLogger.Info("App", "Desktop shell initialization started.");
         _desktopShellHost ??= new DesktopShellHost(
             InitializeAirAppRuntime,
             InitializeTrayIcon,
@@ -397,13 +399,16 @@ public partial class App : Application
                 // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
                 DisableAvaloniaDataAnnotationValidation();
                 desktop.ShutdownMode = Avalonia.Controls.ShutdownMode.OnExplicitShutdown;
-                ReportStartupProgress(StartupStage.InitializingUI, 60, "姝ｅ湪鍒濆鍖栫晫闈?..");
+                ReportStartupProgress(StartupStage.InitializingUI, 60, "正在初始化界面...");
                 CreateAndAssignMainWindow(desktop, "FrameworkInitialization");
+                AppLogger.Info("App", $"Desktop shell UI initialized in {shellInitStopwatch.ElapsedMilliseconds}ms.");
             },
             OnDesktopLifetimeExit,
             static () => { },
             StartWeatherLocationRefreshIfNeeded);
         _desktopShellHost.Initialize(this);
+        shellInitStopwatch.Stop();
+        AppLogger.Info("App", $"Desktop shell host initialization dispatched in {shellInitStopwatch.ElapsedMilliseconds}ms. MainWindowCreated={_mainWindow is not null}.");
     }
 
     private void OnDesktopLifetimeExit()
@@ -564,18 +569,72 @@ public partial class App : Application
 
     private void InitializeAirAppRuntime()
     {
-        ReportStartupProgress(StartupStage.LoadingAirApps, 30, "姝ｅ湪鍔犺浇鎻掍欢...");
-        try
+        ReportStartupProgress(StartupStage.LoadingAirApps, 30, "正在加载插件...");
+        var startTimestamp = DateTimeOffset.UtcNow;
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        AppLogger.Info("AirAppRuntime", $"AirApp loading started. Timestamp={startTimestamp:O}.");
+
+        // Offload heavy IO/assembly loading to thread-pool so UI thread stays responsive
+        // and PublicShellControlService.GetShellStatusAsync (which marshals to UI thread) is not blocked.
+        var capturedFacade = _settingsFacade;
+        var capturedPublicIpc = _publicIpcHostService;
+
+        _ = Task.Run(() =>
         {
-            _pluginRuntimeService?.Dispose();
-            _pluginRuntimeService = new AirAppRuntimeService(_settingsFacade, _publicIpcHostService);
-            HostSettingsFacadeProvider.BindAirAppRuntime(_pluginRuntimeService);
-            _pluginRuntimeService.LoadInstalledAirApps();
-        }
-        catch (Exception ex)
-        {
-            AppLogger.Warn("AirAppRuntime", "Failed to initialize plugin runtime.", ex);
-        }
+            AirAppRuntimeService? newService = null;
+            try
+            {
+                newService = new AirAppRuntimeService(capturedFacade, capturedPublicIpc);
+                HostSettingsFacadeProvider.BindAirAppRuntime(newService);
+
+                // Apply any pending startup cleanup before heavy scan
+                newService.LoadInstalledAirApps();
+
+                var elapsedMs = stopwatch.ElapsedMilliseconds;
+                var loadedCount = newService.LoadedAirApps.Count;
+                var failureCount = newService.LoadResults.Count(r => !r.IsSuccess);
+                AppLogger.Info("AirAppRuntime", $"AirApp discovery finished in {elapsedMs}ms. Loaded={loadedCount}; Failures={failureCount}.");
+
+                // Swap on UI thread
+                Dispatcher.UIThread.Post(() =>
+                {
+                    try
+                    {
+                        var previous = _pluginRuntimeService;
+                        _pluginRuntimeService = newService;
+                        previous?.Dispose();
+
+                        // Ensure settings catalog reflects newly loaded AirApps
+                        // (SettingsWindowService will read fresh catalog on next open)
+                        AppLogger.Info("AirAppRuntime", $"AirApp runtime swapped on UI thread. Loaded={loadedCount}. ElapsedTotal={stopwatch.ElapsedMilliseconds}ms.");
+                        ReportStartupProgress(StartupStage.LoadingAirApps, 35, $"插件加载完成 ({loadedCount})");
+
+                        // Complete the loading item if main window already opened; otherwise let OnMainWindowOpened handle it
+                        if (_mainWindowOpened)
+                        {
+                            _loadingStateManager?.CompleteItem("system.init", $"AirApps ready ({loadedCount})");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        AppLogger.Warn("AirAppRuntime", "Failed to finalize AirApp runtime swap on UI thread.", ex);
+                        newService.Dispose();
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                stopwatch.Stop();
+                AppLogger.Warn("AirAppRuntime", $"Failed to initialize plugin runtime after {stopwatch.ElapsedMilliseconds}ms.", ex);
+                newService?.Dispose();
+                Dispatcher.UIThread.Post(() =>
+                {
+                    ReportStartupProgress(StartupStage.LoadingAirApps, 35, "插件加载失败，已跳过");
+                    // Ensure stale AirApp directory marker doesn't block future startups
+                    try { HostSettingsFacadeProvider.BindAirAppRuntime(null); } catch { }
+                });
+            }
+        });
     }
 
     private void InitializeTrayIcon()
@@ -1298,7 +1357,58 @@ public partial class App : Application
             await Task.Delay(TimeSpan.FromSeconds(10)).ConfigureAwait(false);
             if (!_mainWindowOpened)
             {
-                AppLogger.Warn("App", "Main window Opened event did not fire within 10 seconds. DesktopVisible was not reported.");
+                AppLogger.Warn("App", "Main window Opened event did not fire within 10 seconds. DesktopVisible was not reported. Attempting recovery...");
+                // Report to launcher so it can attempt recovery via public IPC instead of waiting until hard timeout
+                try
+                {
+                    QueueOrSendLauncherProgress(new StartupProgressMessage
+                    {
+                        Stage = StartupStage.ActivationFailed,
+                        ProgressPercent = 80,
+                        Message = "Main window failed to open within 10 seconds; host may be stuck.",
+                        Timestamp = DateTimeOffset.UtcNow
+                    }, logSuccess: true);
+                    _loadingStateManager?.FailItem("system.init", "Main window open timeout", "Watchdog: Opened event not fired in 10s");
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Warn("LauncherIpc", $"Watchdog failed to report activation failure: {ex.Message}");
+                }
+
+                // Try to force main window visible on UI thread
+                try
+                {
+                    await Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        try
+                        {
+                            if (!IsShutdownInProgress && mainWindow is not null && !_mainWindowOpened)
+                            {
+                                AppLogger.Warn("App", "Watchdog forcing main window Show/Activate to recover from stuck initialization.");
+                                if (!mainWindow.IsVisible)
+                                    mainWindow.Show();
+                                mainWindow.Activate();
+                                // If still not opened, manually complete to avoid launcher hang
+                                if (!_mainWindowOpened)
+                                {
+                                    _mainWindowOpened = true;
+                                    _loadingStateManager?.CompleteItem("system.init", "Recovered via watchdog");
+                                    ReportStartupProgressSync(StartupStage.DesktopVisible, 100, "Desktop visible (watchdog recovery).");
+                                    ReportStartupProgressSync(StartupStage.Ready, 100, "Ready (watchdog recovery).");
+                                    _loadingStateReporter?.Stop();
+                                }
+                            }
+                        }
+                        catch (Exception innerEx)
+                        {
+                            AppLogger.Warn("App", $"Watchdog recovery on UI thread failed: {innerEx.Message}", innerEx);
+                        }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Warn("App", $"Watchdog recovery dispatch failed: {ex.Message}", ex);
+                }
             }
         });
 
