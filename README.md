@@ -76,7 +76,7 @@ dotnet run --project LanMountainDesktop/LanMountainDesktop.csproj
 dotnet run --project LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj -- launch
 ```
 
-详细说明请参考 [开发文档](docs/DEVELOPMENT.md)。
+详细说明请参考 [开发文档](docs/archive/DEVELOPMENT.md)。
 
 ### 运行测试
 
@@ -136,14 +136,16 @@ LanMountainDesktop/
 
 ## 文档索引
 
-- [产品定位](docs/PRODUCT.md) - 产品愿景与目标用户
-- [架构说明](docs/ARCHITECTURE.md) - 仓库结构与运行时主线
-- [开发指南](docs/DEVELOPMENT.md) - 构建、测试、调试
+- [项目介绍](docs/00-快速开始/01-项目介绍.md) - 产品愿景与目标用户
+- [整体架构](docs/04-架构与实现/01-整体架构.md) - 仓库结构与运行时主线
+- [开发指南](docs/archive/DEVELOPMENT.md) - 构建、测试、调试
 - [AirApp 开发指南](docs/01-AirApp开发/README.md) - 轻应用组件与窗口开发
 - [AirApp 迁移指南](docs/AIRAPP_SDK_V1_MIGRATION.md) - 插件迁移到 AirApp
-- [视觉规范](docs/VISUAL_SPEC.md) - 主题、颜色、玻璃层级
-- [圆角规范](docs/CORNER_RADIUS_SPEC.md) - 圆角层级与动态规则
-- [贡献指南](docs/CONTRIBUTING.md) - PR、spec、文档协作规则
+- [视觉规范](docs/03-组件设计规范/02-视觉规范.md) - 主题、颜色、玻璃层级
+- [圆角规范](docs/archive/CORNER_RADIUS_SPEC.md) - 圆角层级与动态规则
+- [贡献指南](docs/archive/CONTRIBUTING.md) - PR、spec、文档协作规则
+- [跨平台架构](docs/CROSS_PLATFORM.md) - 桌面 + 移动分层约束
+- [技术文档总览](docs/README.md) - 完整文档导航
 
 ## 技术栈
 

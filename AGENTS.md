@@ -11,8 +11,8 @@
 
 边界详情看：
 
-- `docs/ECOSYSTEM_BOUNDARIES.md`
-- `docs/ARCHITECTURE.md`
+- `docs/archive/ECOSYSTEM_BOUNDARIES.md`
+- `docs/archive/ARCHITECTURE.md`（新结构见 `docs/04-架构与实现/01-整体架构.md`）
 
 ## 2. 关键目录地图
 
@@ -64,7 +64,7 @@ AirApp 本地包生成：
 
 ### UI
 
-- 主题、资源和视觉语义优先遵守 `docs/VISUAL_SPEC.md` 与 `docs/CORNER_RADIUS_SPEC.md`
+- 主题、资源和视觉语义优先遵守 `docs/03-组件设计规范/02-视觉规范.md`（归档见 `docs/archive/VISUAL_SPEC.md`）与 `docs/archive/CORNER_RADIUS_SPEC.md`
 - **圆角规范 (AI 强制建议)**：
     - **桌面组件根容器**：必须且仅能使用 `{DynamicResource DesignCornerRadiusComponent}`。
     - **内部元素**：必须根据嵌套层级使用 `DesignCornerRadiusSm/Md/Lg` 等 Token，严禁硬编码像素值。
@@ -77,7 +77,7 @@ AirApp 本地包生成：
 - SDK 公共 API 以 `airapp/LanMountainDesktop.AirAppSdk/` 为准
 - 共享契约以 `core/LanMountainDesktop.Core/` 为准
 - market 数据来源默认是兄弟仓库 `..\\LanAirApp`
-- 迁移或 breaking change 优先同步 `docs/PLUGIN_SDK_V5_MIGRATION.md`
+- 迁移或 breaking change 优先同步 `docs/AIRAPP_SDK_V1_MIGRATION.md`
 
 ### 设置与主题
 
@@ -87,14 +87,14 @@ AirApp 本地包生成：
 
 ## 6. 权威来源
 
-- 产品定位：`docs/PRODUCT.md`
-- 架构与模块职责：`docs/ARCHITECTURE.md`
-- 运行、构建、测试、打包：`docs/DEVELOPMENT.md`
+- 产品定位：`docs/00-快速开始/01-项目介绍.md`（归档见 `docs/archive/PRODUCT.md`）
+- 架构与模块职责：`docs/04-架构与实现/01-整体架构.md`（归档见 `docs/archive/ARCHITECTURE.md`）
+- 运行、构建、测试、打包：`docs/archive/DEVELOPMENT.md`
 - feature 规格：`.trae/specs/`
-- 视觉规范：`docs/VISUAL_SPEC.md`
-- 圆角规范：`docs/CORNER_RADIUS_SPEC.md`
-- 生态边界：`docs/ECOSYSTEM_BOUNDARIES.md`
+- 视觉规范：`docs/03-组件设计规范/02-视觉规范.md`（归档见 `docs/archive/VISUAL_SPEC.md`）
+- 圆角规范：`docs/archive/CORNER_RADIUS_SPEC.md`
+- 生态边界：`docs/archive/ECOSYSTEM_BOUNDARIES.md`
 - 跨平台架构：`docs/CROSS_PLATFORM.md`
-- SDK v5 迁移：`docs/PLUGIN_SDK_V5_MIGRATION.md`
+- AirApp SDK 迁移：`docs/AIRAPP_SDK_V1_MIGRATION.md`
 
 如果多个文档都提到同一件事，以 `docs/ai/DOC_SOURCES.md` 列出的权威来源为准。

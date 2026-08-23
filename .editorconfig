@@ -1,0 +1,37 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{cs,csx}]
+indent_style = space
+indent_size = 4
+
+[*.{axaml,xaml}]
+indent_style = space
+indent_size = 2
+
+[*.{md,json,yml,yaml,xml,props,targets,config}]
+indent_style = space
+indent_size = 2
+
+[*.ps1]
+indent_style = space
+indent_size = 4
+
+[*.cs]
+# 文件作用域命名空间（与现有代码保持一致，按需启用）
+# csharp_style_namespace_declarations = file_scoped:suggestion
+
+# var 偏好：保持现状，不强制
+csharp_style_var_for_built_in_types = false:none
+csharp_style_var_when_type_is_apparent = false:none
+csharp_style_var_elsewhere = false:none
+
+# 表达式主体
+csharp_style_expression_bodied_methods = false:silent
+csharp_style_expression_bodied_constructors = false:silent
+csharp_style_expression_bodied_operators = false:silent

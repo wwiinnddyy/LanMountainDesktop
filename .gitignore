@@ -503,8 +503,11 @@ nul
 /.tmp/
 /publish-test/
 /validator-restore.log
-/temp_old_main.axaml
-/temp_old_main_utf8.axaml
+
+# Private keys - never commit (public-key.pem stays tracked)
+**/*private-key*.pem
+**/update-private-key.pem
+!**/public-key.pem
 
 # LanMountainDesktop local packaging outputs
 /build-installer/
@@ -528,51 +531,32 @@ nul
 .cursor/
 .kilo/
 
-# 临时调试/分析脚本（一次性使用，不属于项目构建脚本）
+# 已清理的根目录临时产物（保留忽略以防再生）
 /test-launcher.ps1
-/size_analysis.ps1
-/size_analysis2.ps1
-/analyze_commits.ps1
-/get_commits.ps1
-/get_commits.bat
-/analyze_commits.py
-/run_analysis.py
-/parse_git_log.py
+/size_analysis*.ps1
+/analyze_commits.*
+/get_commits.*
 /get_git_log.py
+/parse_git_log.py
+/run_analysis.py
 /settings_extractor.py
 /test-omo-resolve.js
-
-# 临时测试项目（本地调试用，不属于正式项目）
-/testicon/
-/TestFluentIcons/
-/CheckIpcAot/
-
-# 临时代码片段和测试文件
 /test_fluenticons.cs
 /check_ipc.cs
-
-# 临时文档和笔记（不属于正式项目文档）
 /noise.md
 /design.md
 /phainon.yml
-/SECURITY_AUDIT_REPORT.md
-/SECURITY_AUDIT_REPORT_2026-05-24.md
-/SECURITY_AUDIT_REPORT_2026-06-01.md
+/SECURITY_AUDIT_REPORT*.md
 /CODE_WIKI.md
-
-# 临时数据文件
 /_b.txt
 /diff.txt
 /tmp.json
 /misans.zip
 /mockup-noise-level.html
-
-# Mock/原型文件
 /mocks/
-
-# Git 命令误输出文件（文件名含空格的异常文件）
 /ago*
-
-# 临时 AXAML 备份文件
-/temp_old_main.axaml
-/temp_old_main_utf8.axaml
+/temp_old_main*.axaml
+/how\ 6a65087
+/testicon/
+/TestFluentIcons/
+/CheckIpcAot/
