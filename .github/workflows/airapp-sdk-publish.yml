@@ -1,0 +1,108 @@
+name: Publish AirApp SDK
+
+# 发布 AirApp 开发者三件套到 GitHub Packages：
+#   LanMountainDesktop.AirAppSdk   —— 轻应用与桌面组件开发的唯一 SDK
+#   LanMountainDesktop.Core        —— SDK 依赖的共享契约与打包基础设施
+#   LanMountainDesktop.AirAppTemplate —— dotnet new lmd-airapp 模板
+#
+# SDK 有独立于宿主的版本线，因此使用独立的 airapp-sdk-v* 标签触发，
+# 不跟随宿主的 v0.x.y.z 发布标签。
+
+on:
+  push:
+    tags:
+      - 'airapp-sdk-v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Package version to publish (defaults to the version in each csproj)'
+        required: false
+        type: string
+      dry_run:
+        description: 'Pack and validate only, do not push'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  DOTNET_gcServer: 1
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    name: Publish_AirApp_Packages
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: 'preview'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/Directory.Packages.props') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          $version = '${{ github.event.inputs.version }}'
+          if ([string]::IsNullOrWhiteSpace($version) -and '${{ github.ref_type }}' -eq 'tag') {
+            # airapp-sdk-v1.0.0 -> 1.0.0
+            $version = '${{ github.ref_name }}' -replace '^airapp-sdk-v', ''
+          }
+          "value=$version" >> $env:GITHUB_OUTPUT
+          if ([string]::IsNullOrWhiteSpace($version)) {
+            Write-Host 'No explicit version supplied; using the version declared in each csproj.'
+          } else {
+            Write-Host "Publishing version $version."
+          }
+
+      - name: Verify the single version line
+        # 版本一致性由 AirAppSdkVersionConsistencyTests 守卫：
+        # AirAppSdkInfo / AirAppSdk 包 / Core 包 / 模板默认版本必须一致。
+        run: >
+          dotnet test tests/LanMountainDesktop.Tests/LanMountainDesktop.Tests.csproj
+          -c Release
+          --filter "FullyQualifiedName~AirAppSdkVersionConsistencyTests"
+
+      - name: Pack
+        shell: pwsh
+        run: |
+          $packArgs = @('-Configuration', 'Release', '-OutputPath', '.\artifacts\nuget')
+          if (-not [string]::IsNullOrWhiteSpace('${{ steps.version.outputs.value }}')) {
+            $packArgs += @('-Version', '${{ steps.version.outputs.value }}')
+          }
+          .\scripts\Pack-AirAppPackages.ps1 @packArgs
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: airapp-packages
+          path: artifacts/nuget/*.nupkg
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Push to GitHub Packages
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: >
+          dotnet nuget push "artifacts/nuget/*.nupkg"
+          --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+          --api-key ${{ secrets.GITHUB_TOKEN }}
+          --skip-duplicate

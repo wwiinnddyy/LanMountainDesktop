@@ -38,6 +38,6 @@ public static class PlondsConstants
         "desktop/LanMountainDesktop",
         "desktop/LanMountainDesktop.Launcher",
         "core/LanMountainDesktop.Core",
-        "airapp/LanMountainDesktop.PluginSdk"
+        "airapp/LanMountainDesktop.AirAppSdk"
     ];
 }

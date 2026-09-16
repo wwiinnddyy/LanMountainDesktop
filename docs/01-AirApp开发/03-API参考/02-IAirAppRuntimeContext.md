@@ -1,717 +1,175 @@
-# IAirAppRuntimeContext 详解
+# IAirAppRuntimeContext
 
-`IAirAppRuntimeContext` 是轻应用与宿主应用交互的主要接口，提供对宿主服务、日志、设置等的访问。
+轻应用的运行时上下文，由宿主在 `IAirApp.OnStartedAsync` 中传入，
+也可以从本轻应用的服务容器解析。命名空间 `LanMountainDesktop.AirAppSdk`。
 
-## 接口定义
+## 成员一览
+
+| 成员 | 类型 | 说明 |
+|---|---|---|
+| `Manifest` | `AirAppManifest` | 本轻应用的清单 |
+| `AirAppDirectory` | `string` | 包所在目录，**只读** |
+| `DataDirectory` | `string` | 持久化数据目录 |
+| `CacheDirectory` | `string` | 缓存目录，可被清理 |
+| `Services` | `IServiceProvider` | 本轻应用的服务容器 |
+| `Properties` | `IReadOnlyDictionary<string, object?>` | 宿主属性 |
+| `Lifetime` | `IHostApplicationLifetime` | 宿主生命周期 |
+| `MessageBus` | `IAirAppMessageBus` | 消息总线 |
+| `Appearance` | `IAirAppAppearanceContext` | 主题与外观 |
+| `Logger` | `IAirAppLogger` | 日志 |
+| `GetService<T>()` | `T?` | 从容器解析服务 |
+| `TryGetProperty<T>(key, out value)` | `bool` | 读取宿主属性 |
+| `OpenWindowAsync(windowId)` | `Task<IAirAppWindow>` | 打开窗口 |
+| `CloseWindow(windowId)` | `void` | 关闭窗口 |
+
+## 目录
+
+三个目录职责不同，不要混用：
 
 ```csharp
-namespace LanMountainDesktop.AirAppSdk;
+context.AirAppDirectory   // 包目录：程序集、资源。升级时整体覆盖，不要写入
+context.DataDirectory     // 用户数据：配置、数据库。升级保留
+context.CacheDirectory    // 缓存：可随时被删除，必须能重建
+```
 
-/// <summary>
-/// 轻应用上下文接口
-/// </summary>
-public interface IAirAppRuntimeContext
+写文件前自行确保目录存在：
+
+```csharp
+Directory.CreateDirectory(context.DataDirectory);
+var path = Path.Combine(context.DataDirectory, "state.json");
+```
+
+## 宿主属性
+
+键定义在 `AirAppHostPropertyKeys`：
+
+| 常量 | 键值 | 含义 |
+|---|---|---|
+| `HostApplicationName` | `HostApplicationName` | 宿主应用名 |
+| `HostVersion` | `HostVersion` | 宿主版本 |
+| `AirAppSdkApiVersion` | `AirAppSdkApiVersion` | 宿主提供的 SDK API 版本 |
+| `HostLanguageCode` | `HostLanguageCode` | 当前界面语言 |
+
+```csharp
+if (context.TryGetProperty<string>(AirAppHostPropertyKeys.HostVersion, out var hostVersion))
 {
-    /// <summary>
-    /// 轻应用根目录
-    /// 包含轻应用的所有文件（DLL、资源等）
-    /// </summary>
-    string AirAppDirectory { get; }
-    
-    /// <summary>
-    /// 轻应用数据目录
-    /// 用于存储轻应用的持久化数据（缓存、数据库等）
-    /// </summary>
-    string DataDirectory { get; }
-    
-    /// <summary>
-    /// 服务提供者
-    /// 用于获取宿主提供的服务
-    /// </summary>
-    IServiceProvider Services { get; }
-    
-    /// <summary>
-    /// 日志记录器
-    /// 用于记录轻应用运行日志
-    /// </summary>
-    ILogger Logger { get; }
-    
-    /// <summary>
-    /// 设置服务
-    /// 用于读写轻应用配置
-    /// </summary>
-    ISettingsService Settings { get; }
+    context.Logger.Info($"Running on host {hostVersion}");
 }
 ```
 
-## 属性详解
+> 从 PluginSdk 迁移时注意：旧的键名是 `PluginSdkApiVersion`，
+> 新键名是 `AirAppSdkApiVersion`。只改常量名而不改字面量的代码会静默读不到值。
 
-### AirAppDirectory
-
-**类型**: `string`
-
-**说明**: 轻应用的根目录，包含轻应用的所有文件。
-
-**典型路径**:
-```
-%LOCALAPPDATA%\LanMountainDesktop\plugins\{AirAppId}\
-```
-
-**用途**:
-- 加载轻应用资源文件
-- 读取配置文件
-- 访问轻应用自带的数据文件
-
-**示例**:
+## 日志
 
 ```csharp
-public async Task InitializeAsync(IAirAppRuntimeContext context)
+public interface IAirAppLogger
 {
-    // 加载轻应用自带的数据文件
-    var dataFile = Path.Combine(context.AirAppDirectory, "data", "cities.json");
-    if (File.Exists(dataFile))
-    {
-        var json = await File.ReadAllTextAsync(dataFile);
-        var cities = JsonSerializer.Deserialize<List<City>>(json);
-    }
-    
-    // 加载图标
-    var iconPath = Path.Combine(context.AirAppDirectory, "Assets", "icon.png");
-    
-    // 加载资源文件（使用 avares 方案更好）
-    // avares://MyAirApp/Assets/icon.png
+    void Debug(string message);
+    void Info(string message);
+    void Warn(string message);
+    void Warn(string message, Exception exception);
+    void Error(string message);
+    void Error(string message, Exception exception);
 }
 ```
 
-**注意事项**:
-- ✅ 只能读取，不要在此目录写入文件
-- ✅ 使用 `Path.Combine` 构建路径
-- ❌ 不要硬编码路径
-- ❌ 不要依赖目录结构（可能变化）
+日志写入宿主的日志系统，自动带上轻应用 id 前缀，便于排查是哪个轻应用出的问题。
 
-### DataDirectory
-
-**类型**: `string`
-
-**说明**: 轻应用的数据目录，用于存储轻应用生成的持久化数据。
-
-**典型路径**:
-```
-%LOCALAPPDATA%\LanMountainDesktop\plugin-data\{AirAppId}\
-```
-
-**用途**:
-- 存储缓存文件
-- 存储本地数据库
-- 存储临时文件
-- 存储下载的文件
-
-**示例**:
+## 消息总线
 
 ```csharp
-public async Task InitializeAsync(IAirAppRuntimeContext context)
+public interface IAirAppMessageBus
 {
-    // 确保数据目录存在
-    Directory.CreateDirectory(context.DataDirectory);
-    
-    // 缓存文件路径
-    var cacheFile = Path.Combine(context.DataDirectory, "weather-cache.json");
-    
-    // SQLite 数据库路径
-    var dbPath = Path.Combine(context.DataDirectory, "todos.db");
-    
-    // 下载文件路径
-    var downloadPath = Path.Combine(context.DataDirectory, "downloads");
+    IDisposable Subscribe<TMessage>(Action<TMessage> handler);
+    void Publish<TMessage>(TMessage message);
+
+    void Publish(string topic, object? payload = null);
+    IDisposable Subscribe(string topic, Action<object?> handler);
+    IDisposable Subscribe<T>(string topic, Action<T?> handler);
 }
 ```
 
-**最佳实践**:
+两种用法：
 
 ```csharp
-public class MyAirApp : IAirApp
+// 强类型：双方需引用同一个消息类型（共享契约程序集）
+context.MessageBus.Publish(new WeatherUpdated("杭州", 21.5));
+var sub = context.MessageBus.Subscribe<WeatherUpdated>(e => { /* ... */ });
+
+// 主题式：不需要共享类型，适合松耦合场景
+context.MessageBus.Publish("weather.updated", new { City = "杭州" });
+var sub2 = context.MessageBus.Subscribe<WeatherPayload>("weather.updated", p => { /* ... */ });
+```
+
+订阅返回 `IDisposable`，**必须在不再需要时释放**，否则会持有对象引用，
+导致轻应用卸载时 `AssemblyLoadContext` 无法回收。
+
+## 外观
+
+```csharp
+public interface IAirAppAppearanceContext
 {
-    private string? _cacheDirectory;
-    private string? _logsDirectory;
-    
-    public async Task InitializeAsync(IAirAppRuntimeContext context)
-    {
-        // 创建子目录组织数据
-        _cacheDirectory = Path.Combine(context.DataDirectory, "cache");
-        _logsDirectory = Path.Combine(context.DataDirectory, "logs");
-        
-        Directory.CreateDirectory(_cacheDirectory);
-        Directory.CreateDirectory(_logsDirectory);
-    }
-    
-    public async Task SaveCacheAsync(string key, string data)
-    {
-        var cacheFile = Path.Combine(_cacheDirectory!, $"{key}.json");
-        await File.WriteAllTextAsync(cacheFile, data);
-    }
+    AirAppAppearanceSnapshot Snapshot { get; }
+    event EventHandler<AppearanceChangedEvent>? Changed;
+    double ResolveScaledCornerRadius(double baseRadius, double? minimum = null, double? maximum = null);
+    double ResolveCornerRadius(AirAppCornerRadiusPreset preset, double? minimum = null, double? maximum = null);
 }
 ```
 
-**清理数据**:
+`Snapshot` 是只读快照，包含主题变体、强调色、种子色、色角色、材质表面、
+圆角令牌等。主题变化时先更新快照再触发 `Changed`，所以在事件处理里
+直接读 `Snapshot` 拿到的就是新值。
+
+圆角一律通过 `ResolveCornerRadius` / `CornerRadiusTokens` 获取，
+不要硬编码——全局圆角缩放设置需要作用到轻应用的界面上。
+
+## 窗口
 
 ```csharp
-public async Task ShutdownAsync()
+var window = await context.OpenWindowAsync("weather-detail");
+context.CloseWindow("weather-detail");
+```
+
+窗口由独立进程承载。如果宿主不支持在当前上下文打开窗口，
+`OpenWindowAsync` 会抛 `NotSupportedException`。
+
+组件里应当用 `AirAppComponentContext.OpenWindowAsync`，语义相同。
+
+## 生命周期
+
+```csharp
+context.Lifetime.ApplicationStopping.Register(() =>
 {
-    // 清理旧的缓存文件
-    if (_cacheDirectory != null)
+    // 宿主开始关闭
+});
+```
+
+需要主动请求宿主退出或重启时，从容器解析 `IHostApplicationLifecycle`：
+
+```csharp
+var lifecycle = context.GetService<IHostApplicationLifecycle>();
+lifecycle?.TryRestart();
+```
+
+## 从容器获取上下文
+
+组件构造函数之外的地方（比如后台服务）可以直接注入：
+
+```csharp
+public sealed class WeatherRefreshService : BackgroundService
+{
+    private readonly IAirAppRuntimeContext _context;
+
+    public WeatherRefreshService(IAirAppRuntimeContext context) => _context = context;
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var files = Directory.GetFiles(_cacheDirectory);
-        foreach (var file in files)
+        while (!stoppingToken.IsCancellationRequested)
         {
-            var fileInfo = new FileInfo(file);
-            if (DateTime.Now - fileInfo.LastWriteTime > TimeSpan.FromDays(7))
-            {
-                File.Delete(file);
-            }
+            _context.Logger.Debug("refreshing weather");
+            await Task.Delay(TimeSpan.FromMinutes(30), stoppingToken);
         }
     }
 }
 ```
-
-### Services
-
-**类型**: `IServiceProvider`
-
-**说明**: 服务提供者，用于获取宿主提供的服务。
-
-**常用服务**:
-
-| 服务接口 | 说明 |
-|---------|------|
-| `IComponentRegistry` | 组件注册表 |
-| `ISettingsPageRegistry` | 设置页注册表 |
-| `IEventBus` | 事件总线 |
-| `INotificationService` | 通知服务 |
-| `IDialogService` | 对话框服务 |
-| `IThemeService` | 主题服务 |
-| `ILocalizationService` | 本地化服务 |
-| `IHttpClientFactory` | HTTP 客户端工厂 |
-
-**使用方法**:
-
-```csharp
-public async Task InitializeAsync(IAirAppRuntimeContext context)
-{
-    // 获取服务
-    var componentRegistry = context.Services
-        .GetService<IComponentRegistry>();
-    
-    var eventBus = context.Services
-        .GetService<IEventBus>();
-    
-    var themeService = context.Services
-        .GetService<IThemeService>();
-    
-    // 检查服务是否可用
-    if (componentRegistry != null)
-    {
-        // 使用服务
-        componentRegistry.RegisterComponent<MyComponent>();
-    }
-    else
-    {
-        context.Logger.LogWarning("IComponentRegistry not available");
-    }
-}
-```
-
-**泛型扩展方法**:
-
-```csharp
-// 使用 Microsoft.Extensions.DependencyInjection 的扩展方法
-using Microsoft.Extensions.DependencyInjection;
-
-var componentRegistry = context.Services.GetService<IComponentRegistry>();
-var eventBus = context.Services.GetRequiredService<IEventBus>(); // 不存在会抛异常
-```
-
-**服务定位器模式**:
-
-```csharp
-public class MyAirApp : IAirApp
-{
-    private IServiceProvider? _services;
-    
-    public async Task InitializeAsync(IAirAppRuntimeContext context)
-    {
-        _services = context.Services;
-    }
-    
-    private void SomeMethod()
-    {
-        // 运行时获取服务
-        var notificationService = _services?
-            .GetService<INotificationService>();
-        
-        notificationService?.ShowNotification(
-            "标题",
-            "内容",
-            NotificationType.Information
-        );
-    }
-}
-```
-
-### Logger
-
-**类型**: `ILogger`
-
-**说明**: 日志记录器，用于记录轻应用运行日志。
-
-**日志级别**:
-
-| 级别 | 方法 | 用途 |
-|-----|------|------|
-| Trace | `LogTrace` | 最详细的信息，用于诊断 |
-| Debug | `LogDebug` | 调试信息 |
-| Information | `LogInformation` | 一般信息 |
-| Warning | `LogWarning` | 警告信息 |
-| Error | `LogError` | 错误信息 |
-| Critical | `LogCritical` | 严重错误 |
-
-**基本用法**:
-
-```csharp
-public async Task InitializeAsync(IAirAppRuntimeContext context)
-{
-    var logger = context.Logger;
-    
-    // 信息日志
-    logger.LogInformation("AirApp is initializing");
-    
-    // 警告日志
-    logger.LogWarning("Configuration is missing, using defaults");
-    
-    // 错误日志
-    try
-    {
-        await LoadDataAsync();
-    }
-    catch (Exception ex)
-    {
-        logger.LogError(ex, "Failed to load data");
-    }
-    
-    // 调试日志
-    logger.LogDebug("Loaded {Count} items", items.Count);
-}
-```
-
-**结构化日志**:
-
-```csharp
-// ✅ 好：使用参数化日志
-logger.LogInformation(
-    "User {UserId} requested weather for {City}",
-    userId,
-    city
-);
-
-// ❌ 差：字符串拼接
-logger.LogInformation(
-    $"User {userId} requested weather for {city}"
-);
-```
-
-**异常日志**:
-
-```csharp
-try
-{
-    await FetchWeatherAsync();
-}
-catch (HttpRequestException ex)
-{
-    // 记录异常和上下文
-    logger.LogError(
-        ex,
-        "Failed to fetch weather for {City}. Retry count: {RetryCount}",
-        city,
-        retryCount
-    );
-}
-catch (Exception ex)
-{
-    // 严重错误
-    logger.LogCritical(
-        ex,
-        "Unexpected error in weather service"
-    );
-}
-```
-
-**条件日志**:
-
-```csharp
-// 检查日志级别以避免不必要的计算
-if (logger.IsEnabled(LogLevel.Debug))
-{
-    var expensiveDebugInfo = CalculateDebugInfo(); // 只在启用 Debug 时计算
-    logger.LogDebug("Debug info: {Info}", expensiveDebugInfo);
-}
-```
-
-**日志作用域**:
-
-```csharp
-using (logger.BeginScope("WeatherFetch-{City}", city))
-{
-    logger.LogInformation("Starting fetch");
-    await FetchWeatherAsync(city);
-    logger.LogInformation("Fetch completed");
-}
-// 所有日志会包含作用域信息
-```
-
-### Settings
-
-**类型**: `ISettingsService`
-
-**说明**: 设置服务，用于读写轻应用配置。详见 [设置系统](../02-核心概念/03-设置系统.md)。
-
-**快速示例**:
-
-```csharp
-public async Task InitializeAsync(IAirAppRuntimeContext context)
-{
-    var settings = context.Settings;
-    
-    // 读取设置
-    var apiKey = settings.GetValue("ApiKey", "");
-    var refreshRate = settings.GetValue("RefreshRate", 10);
-    var cities = settings.GetValue<List<string>>(
-        "FavoriteCities",
-        new List<string>()
-    );
-    
-    // 保存设置
-    settings.SetValue("LastStartTime", DateTime.Now);
-    
-    // 监听设置变更
-    settings.SettingChanged += (sender, e) =>
-    {
-        if (e.Key == "ApiKey")
-        {
-            // 响应变更
-        }
-    };
-}
-```
-
-## 使用模式
-
-### 保存上下文引用
-
-```csharp
-public class MyAirApp : IAirApp
-{
-    private IAirAppRuntimeContext? _context;
-    private ILogger? _logger;
-    private ISettingsService? _settings;
-    
-    public async Task InitializeAsync(IAirAppRuntimeContext context)
-    {
-        // 保存引用供后续使用
-        _context = context;
-        _logger = context.Logger;
-        _settings = context.Settings;
-        
-        // 后续可以在任何方法中使用
-    }
-    
-    private void SomeMethod()
-    {
-        _logger?.LogInformation("Doing something");
-        
-        var value = _settings?.GetValue("Key", "Default");
-    }
-}
-```
-
-### 依赖注入模式
-
-```csharp
-public class MyComponent : ComponentBase
-{
-    private readonly INotificationService? _notificationService;
-    
-    public MyComponent()
-    {
-        // 组件构造时注入依赖
-        _notificationService = Services.GetService<INotificationService>();
-    }
-    
-    public void NotifyUser(string message)
-    {
-        _notificationService?.ShowNotification(
-            "提醒",
-            message,
-            NotificationType.Information
-        );
-    }
-}
-```
-
-### 服务包装
-
-```csharp
-public class MyAirApp : IAirApp
-{
-    private WeatherService? _weatherService;
-    
-    public async Task InitializeAsync(IAirAppRuntimeContext context)
-    {
-        // 创建服务包装类
-        _weatherService = new WeatherService(
-            context.Logger,
-            context.Settings,
-            context.Services.GetService<IHttpClientFactory>()
-        );
-        
-        await _weatherService.InitializeAsync();
-    }
-}
-
-public class WeatherService
-{
-    private readonly ILogger _logger;
-    private readonly ISettingsService _settings;
-    private readonly HttpClient _httpClient;
-    
-    public WeatherService(
-        ILogger logger,
-        ISettingsService settings,
-        IHttpClientFactory? httpFactory)
-    {
-        _logger = logger;
-        _settings = settings;
-        _httpClient = httpFactory?.CreateClient() ?? new HttpClient();
-    }
-    
-    public async Task InitializeAsync()
-    {
-        var apiKey = _settings.GetValue("ApiKey", "");
-        _logger.LogInformation("Weather service initialized");
-    }
-}
-```
-
-## 最佳实践
-
-### ✅ 检查服务可用性
-
-```csharp
-// ✅ 好：检查服务是否存在
-var notificationService = context.Services
-    .GetService<INotificationService>();
-
-if (notificationService != null)
-{
-    notificationService.ShowNotification(...);
-}
-else
-{
-    context.Logger.LogWarning("Notification service not available");
-}
-
-// ❌ 差：不检查直接使用
-var notificationService = context.Services
-    .GetRequiredService<INotificationService>(); // 可能抛异常
-```
-
-### ✅ 使用结构化日志
-
-```csharp
-// ✅ 好：参数化日志
-logger.LogInformation(
-    "Processed {Count} items in {Duration}ms",
-    count,
-    duration
-);
-
-// ❌ 差：字符串插值
-logger.LogInformation(
-    $"Processed {count} items in {duration}ms"
-);
-```
-
-### ✅ 正确处理路径
-
-```csharp
-// ✅ 好：使用 Path.Combine
-var dataFile = Path.Combine(
-    context.DataDirectory,
-    "cache",
-    "data.json"
-);
-
-// ❌ 差：字符串拼接
-var dataFile = context.DataDirectory + "\\cache\\data.json"; // Windows 专用
-```
-
-### ✅ 清理资源
-
-```csharp
-public class MyAirApp : IAirApp
-{
-    private ISettingsService? _settings;
-    
-    public async Task InitializeAsync(IAirAppRuntimeContext context)
-    {
-        _settings = context.Settings;
-        _settings.SettingChanged += OnSettingChanged;
-    }
-    
-    public async Task ShutdownAsync()
-    {
-        // 取消订阅
-        if (_settings != null)
-        {
-            _settings.SettingChanged -= OnSettingChanged;
-        }
-    }
-}
-```
-
-## 完整示例
-
-```csharp
-using LanMountainDesktop.AirAppSdk;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-
-namespace MyAirApp;
-
-public class WeatherAirApp : IAirApp
-{
-    public string Id => "com.example.weatherplugin";
-    public string Name => "天气轻应用";
-    public string Version => "1.0.0";
-    
-    // 上下文引用
-    private IAirAppRuntimeContext? _context;
-    private ILogger? _logger;
-    private ISettingsService? _settings;
-    private string? _dataDirectory;
-    
-    // 服务引用
-    private INotificationService? _notificationService;
-    private IHttpClientFactory? _httpFactory;
-    
-    public async Task InitializeAsync(IAirAppRuntimeContext context)
-    {
-        // 1. 保存上下文引用
-        _context = context;
-        _logger = context.Logger;
-        _settings = context.Settings;
-        _dataDirectory = context.DataDirectory;
-        
-        _logger.LogInformation(
-            "{AirAppName} v{Version} initializing from {Directory}",
-            Name,
-            Version,
-            context.AirAppDirectory
-        );
-        
-        // 2. 获取宿主服务
-        _notificationService = context.Services
-            .GetService<INotificationService>();
-        
-        _httpFactory = context.Services
-            .GetService<IHttpClientFactory>();
-        
-        // 3. 创建数据目录
-        Directory.CreateDirectory(_dataDirectory);
-        
-        var cacheDir = Path.Combine(_dataDirectory, "cache");
-        Directory.CreateDirectory(cacheDir);
-        
-        _logger.LogDebug("Data directory: {Directory}", _dataDirectory);
-        
-        // 4. 加载配置
-        var apiKey = _settings.GetValue("ApiKey", "");
-        if (string.IsNullOrEmpty(apiKey))
-        {
-            _logger.LogWarning("API Key not configured");
-        }
-        
-        // 5. 注册组件和服务
-        RegisterComponents(context);
-        RegisterSettingsPage(context);
-        
-        // 6. 订阅事件
-        SubscribeEvents(context);
-        
-        _logger.LogInformation("{AirAppName} initialized successfully", Name);
-    }
-    
-    private void RegisterComponents(IAirAppRuntimeContext context)
-    {
-        var registry = context.Services.GetService<IComponentRegistry>();
-        if (registry != null)
-        {
-            registry.RegisterComponent<WeatherComponent>();
-            _logger?.LogDebug("Components registered");
-        }
-    }
-    
-    private void RegisterSettingsPage(IAirAppRuntimeContext context)
-    {
-        var settingsRegistry = context.Services
-            .GetService<ISettingsPageRegistry>();
-        
-        if (settingsRegistry != null)
-        {
-            settingsRegistry.RegisterPage(
-                title: Name,
-                category: "轻应用",
-                pageFactory: () => new WeatherSettingsPage(
-                    _settings!,
-                    _logger!
-                )
-            );
-            _logger?.LogDebug("Settings page registered");
-        }
-    }
-    
-    private void SubscribeEvents(IAirAppRuntimeContext context)
-    {
-        var eventBus = context.Services.GetService<IEventBus>();
-        if (eventBus != null)
-        {
-            eventBus.Subscribe<ThemeChangedEvent>(OnThemeChanged);
-            _logger?.LogDebug("Event subscriptions created");
-        }
-    }
-    
-    private void OnThemeChanged(ThemeChangedEvent evt)
-    {
-        _logger?.LogInformation("Theme changed to: {Theme}", evt.NewTheme);
-    }
-    
-    public async Task ShutdownAsync()
-    {
-        _logger?.LogInformation("{AirAppName} shutting down", Name);
-        
-        // 取消订阅
-        var eventBus = _context?.Services.GetService<IEventBus>();
-        if (eventBus != null)
-        {
-            eventBus.Unsubscribe<ThemeChangedEvent>(OnThemeChanged);
-        }
-        
-        _logger?.LogInformation("{AirAppName} shutdown completed", Name);
-        await Task.CompletedTask;
-    }
-}
-```
-
-## 相关文档
-
-- [IAirApp 接口](01-IAirApp接口.md) - 轻应用接口详解
-- [设置系统](../02-核心概念/03-设置系统.md) - 设置服务详解
-- [轻应用生命周期](../02-核心概念/01-轻应用生命周期.md) - 生命周期详解

@@ -7,6 +7,12 @@ namespace LanMountainDesktop.AirAppSdk;
 /// Base class for AirApp implementations.
 /// Inherit from this class and apply the <see cref="AirAppEntranceAttribute"/> attribute.
 /// </summary>
+/// <remarks>
+/// Register everything the AirApp contributes — desktop components, windows, settings
+/// sections, exports and background services — from <see cref="Initialize"/> using the
+/// <see cref="AirAppServiceCollectionExtensions"/> methods. The host reads those
+/// registrations out of the service collection once initialization completes.
+/// </remarks>
 public abstract class AirAppBase : IAirApp
 {
     /// <summary>
@@ -45,74 +51,5 @@ public abstract class AirAppBase : IAirApp
     public virtual Task OnStoppingAsync()
     {
         return Task.CompletedTask;
-    }
-
-    /// <summary>
-    /// Register a desktop component widget.
-    /// </summary>
-    /// <typeparam name="TWidget">Widget implementation type</typeparam>
-    /// <param name="id">Unique component identifier</param>
-    /// <param name="name">Display name</param>
-    /// <param name="configure">Optional configuration</param>
-    protected void RegisterComponent<TWidget>(
-        string id,
-        string name,
-        Action<AirAppComponentOptions>? configure = null)
-        where TWidget : class, IAirAppWidget
-    {
-        if (RuntimeContext == null)
-        {
-            throw new InvalidOperationException(
-                "RegisterComponent can only be called after OnStartedAsync. " +
-                "Use IServiceCollection extension methods in Initialize() instead.");
-        }
-
-        var options = new AirAppComponentOptions
-        {
-            ComponentId = id,
-            DisplayName = name
-        };
-
-        configure?.Invoke(options);
-
-        // Delegate to runtime context
-        RuntimeContext.RegisterComponent(options);
-    }
-
-    /// <summary>
-    /// Register a window.
-    /// </summary>
-    /// <typeparam name="TWindow">Window implementation type</typeparam>
-    /// <param name="id">Unique window identifier</param>
-    /// <param name="name">Display name</param>
-    protected void RegisterWindow<TWindow>(string id, string name)
-        where TWindow : class, IAirAppWindow
-    {
-        if (RuntimeContext == null)
-        {
-            throw new InvalidOperationException(
-                "RegisterWindow can only be called after OnStartedAsync.");
-        }
-
-        RuntimeContext.RegisterWindow(id, name, typeof(TWindow));
-    }
-
-    /// <summary>
-    /// Register a service in the DI container.
-    /// </summary>
-    /// <typeparam name="TService">Service interface</typeparam>
-    /// <typeparam name="TImplementation">Implementation type</typeparam>
-    protected void RegisterService<TService, TImplementation>()
-        where TService : class
-        where TImplementation : class, TService
-    {
-        if (RuntimeContext == null)
-        {
-            throw new InvalidOperationException(
-                "RegisterService can only be called after OnStartedAsync. " +
-                "Use IServiceCollection in Initialize() instead.");
-        }
-
-        RuntimeContext.RegisterService<TService, TImplementation>();
     }
 }

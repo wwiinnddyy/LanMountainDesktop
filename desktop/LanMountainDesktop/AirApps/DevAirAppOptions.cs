@@ -8,10 +8,12 @@ namespace LanMountainDesktop.AirApps;
 
 public sealed class DevAirAppOptions
 {
-    private static readonly string[] DevPluginPathArgs = ["--dev-plugin", "-dp"];
+    // --dev-airapp 是当前命名；--dev-plugin / -dp 是 PluginSdk 时代的别名，保留兼容。
+    private static readonly string[] DevPluginPathArgs = ["--dev-airapp", "--dev-plugin", "-dp"];
     private static readonly string[] DevModeArgs = ["--dev-mode", "-dev"];
     private static readonly string[] HotReloadArgs = ["--hot-reload", "-hr"];
-    private static readonly string EnvDevPluginPath = "LMD_DEV_PLUGIN";
+    private static readonly string EnvDevPluginPath = "LMD_DEV_AIRAPP";
+    private static readonly string EnvDevPluginPathLegacy = "LMD_DEV_PLUGIN";
     private static readonly string EnvDevMode = "LMD_DEV_MODE";
 
     public static DevAirAppOptions Current { get; } = new();
@@ -35,7 +37,8 @@ public sealed class DevAirAppOptions
                             string.Equals(Environment.GetEnvironmentVariable(EnvDevMode), "true", StringComparison.OrdinalIgnoreCase);
 
         options.DevPluginPath = TryGetValue(args, DevPluginPathArgs) ??
-                                Environment.GetEnvironmentVariable(EnvDevPluginPath)?.Trim();
+                                Environment.GetEnvironmentVariable(EnvDevPluginPath)?.Trim() ??
+                                Environment.GetEnvironmentVariable(EnvDevPluginPathLegacy)?.Trim();
 
         options.EnableHotReload = TryGetFlag(args, HotReloadArgs);
 

@@ -58,6 +58,14 @@ public static class AirAppServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Registers a desktop component contributed by this AirApp.
+    /// </summary>
+    /// <typeparam name="TControl">
+    /// The control rendered on the desktop. It is created through
+    /// <see cref="ActivatorUtilities"/>, so its constructor may take an
+    /// <see cref="AirAppComponentContext"/> plus any service registered by this AirApp.
+    /// </typeparam>
     public static IServiceCollection AddAirAppComponent<TControl>(
         this IServiceCollection services,
         AirAppComponentOptions options)
@@ -70,6 +78,35 @@ public static class AirAppServiceCollectionExtensions
             (provider, context) => ActivatorUtilities.CreateInstance<TControl>(provider, context),
             options));
         return services;
+    }
+
+    /// <summary>
+    /// Registers a desktop component using the required identity plus an optional
+    /// configuration callback for the remaining <see cref="AirAppComponentOptions"/>.
+    /// </summary>
+    /// <param name="componentId">Unique component identifier.</param>
+    /// <param name="displayName">Display name shown in the component library.</param>
+    /// <param name="configure">Optional callback to adjust the component options.</param>
+    public static IServiceCollection AddAirAppComponent<TControl>(
+        this IServiceCollection services,
+        string componentId,
+        string displayName,
+        Action<AirAppComponentOptions>? configure = null)
+        where TControl : Control
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentException.ThrowIfNullOrWhiteSpace(componentId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
+
+        var options = new AirAppComponentOptions
+        {
+            ComponentId = componentId,
+            DisplayName = displayName
+        };
+
+        configure?.Invoke(options);
+
+        return services.AddAirAppComponent<TControl>(options);
     }
 
     public static IServiceCollection AddAirAppComponentEditor<TControl>(

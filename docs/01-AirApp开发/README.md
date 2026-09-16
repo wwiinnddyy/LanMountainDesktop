@@ -1,266 +1,82 @@
-# 轻应用开发完整指南
+# 轻应用（AirApp）开发指南
 
-欢迎来到阑山桌面轻应用开发指南！本章节将带你从零开始，掌握轻应用开发的完整流程。
+阑山桌面的扩展形态只有一种：**AirApp（轻应用）**。
+桌面组件和窗口轻应用都由同一个 SDK 提供，不存在第二套插件 API。
 
-## 📚 学习路径
+> **重要**：旧的 `LanMountainDesktop.PluginSdk`（4.x / 5.x）与 `plugin.json`
+> 已经停止支持，宿主不再识别 `plugin.json`，也不会加载基于 `IPlugin` / `PluginBase`
+> 的程序集。已有插件请参考 [AirApp SDK 迁移指南](../AIRAPP_SDK_V1_MIGRATION.md)。
 
-### 初学者路径
+## 唯一基线
 
-如果你是第一次开发阑山桌面轻应用，请按以下顺序学习：
+| 项 | 值 |
+|---|---|
+| SDK 包 | `LanMountainDesktop.AirAppSdk` |
+| SDK / API 版本 | `1.0.0` |
+| 传递依赖 | `LanMountainDesktop.Core` `1.0.0` |
+| 清单文件 | `airapp.json` |
+| 包格式 | `.laapp` |
+| 目标框架 | `net10.0` |
+| 模板 | `dotnet new lmd-airapp` |
+| 包源 | GitHub Packages（需认证，见[环境准备](01-快速开始/01-环境准备.md)） |
 
-1. **[环境准备](01-快速开始/01-环境准备.md)** - 配置开发环境和工具
-2. **[创建第一个轻应用](01-快速开始/02-创建第一个轻应用.md)** - 快速上手
-3. **[轻应用生命周期](02-核心概念/01-轻应用生命周期.md)** - 理解轻应用运行机制
-4. **[组件系统](02-核心概念/02-组件系统.md)** - 创建桌面组件
+宿主按 **API 主版本号** 匹配轻应用：`airapp.json` 中 `apiVersion` 的主版本
+必须与宿主 SDK 的主版本相同，否则加载与市场安装都会被拒绝。
 
-### 进阶路径
+## 一个轻应用能做什么
 
-已经了解基础，想要深入学习？
+- 提供**桌面组件**，在宿主主进程内渲染，可放置到桌面网格
+- 提供**窗口轻应用**，由独立的 AirAppHost 进程承载，与宿主崩溃隔离
+- 注册**设置页**，声明式生成或提供自定义 AXAML 视图
+- 运行**后台服务**（标准 `IHostedService`）
+- 通过**消息总线**与其他轻应用通信
+- 通过**导出契约**向其他轻应用暴露强类型服务
+- 通过**公共 IPC**向宿主外部进程提供服务
 
-1. **[设置系统](02-核心概念/03-设置系统.md)** - 管理轻应用配置
-2. **[主题与外观](02-核心概念/04-主题外观.md)** - 适配暗色/亮色模式
-3. **[轻应用通信](02-核心概念/05-轻应用通信.md)** - 轻应用间数据交互
-4. **[IPC 公共服务](03-API参考/05-IPC公共服务.md)** - 对外提供服务
+## 文档
 
-### 实战路径
+### 快速开始
 
-通过完整案例学习：
+1. [环境准备](01-快速开始/01-环境准备.md) —— .NET SDK、包源认证、安装模板
+2. [创建第一个轻应用](01-快速开始/02-创建第一个轻应用.md) —— 从模板到装进宿主
 
-1. **[天气组件轻应用](04-实战案例/01-天气组件.md)** - 完整的组件开发
-2. **[待办事项轻应用](04-实战案例/02-待办事项.md)** - 数据持久化
-3. **[RSS 阅读器](04-实战案例/03-RSS阅读器.md)** - 网络请求和列表展示
-4. **[系统监控轻应用](04-实战案例/04-系统监控.md)** - 系统信息获取
+### 核心概念
 
-## 🎯 核心概念
+1. [轻应用生命周期](02-核心概念/01-轻应用生命周期.md) —— 发现、加载、启动、停止
+2. [组件系统](02-核心概念/02-组件系统.md) —— 注册桌面组件与组件上下文
+3. [设置系统](02-核心概念/03-设置系统.md) —— 声明式设置与自定义设置页
 
-### 什么是轻应用？
+### API 参考
 
-轻应用是扩展阑山桌面功能的独立模块，可以：
+1. [IAirApp 接口](03-API参考/01-IAirApp接口.md) —— 入口契约与注册扩展方法
+2. [IAirAppRuntimeContext](03-API参考/02-IAirAppRuntimeContext.md) —— 运行时上下文
 
-- ✅ 添加新的桌面组件（Widget）
-- ✅ 注册设置页面
-- ✅ 提供后台服务
-- ✅ 与其他轻应用通信
-- ✅ 对外提供 IPC 服务
+### 相关文档
 
-### 轻应用架构
+- [AirApp 运行时架构](../02-AirApp运行时/README.md) —— 宿主、Runtime、AirAppHost 三进程拓扑
+- [AirApp SDK 迁移指南](../AIRAPP_SDK_V1_MIGRATION.md) —— 从 PluginSdk 迁移
+- [组件设计规范](../03-组件设计规范/README.md) —— 视觉、布局、圆角规范
+
+## 架构速览
 
 ```
-┌─────────────────────────────────────┐
-│      LanMountainDesktop Host        │
-│  (桌面宿主 - 主程序)                  │
-├─────────────────────────────────────┤
-│     AirApp Runtime (轻应用运行时)      │
-│  ┌────────────┐  ┌────────────┐    │
-│  │  AirApp A  │  │  AirApp B  │    │
-│  ├────────────┤  ├────────────┤    │
-│  │ Components │  │ Components │    │
-│  │  Settings  │  │  Settings  │    │
-│  │  Services  │  │  Services  │    │
-│  └────────────┘  └────────────┘    │
-└─────────────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│ LanMountainDesktop（宿主主进程）                │
+│  ├─ 组件系统：渲染 AirApp 贡献的桌面组件          │
+│  ├─ 设置窗口：渲染 AirApp 贡献的设置页            │
+│  └─ AirAppLoader：按 airapp.json 加载程序集      │
+│        每个轻应用一个可回收 AssemblyLoadContext   │
+└───────────────┬──────────────────────────────┘
+                │ 打开窗口请求（IPC）
+┌───────────────▼──────────────┐
+│ AirAppRuntime（独立进程）       │  实例去重、生命周期协调
+└───────────────┬──────────────┘
+                │ 启动/激活
+┌───────────────▼──────────────┐
+│ AirAppHost（每实例一个进程）     │  渲染窗口轻应用内容
+└──────────────────────────────┘
 ```
 
-### 轻应用 SDK 版本
-
-| SDK 版本 | 发布时间 | 主要特性 |
-|---------|---------|---------|
-| **5.0.0** | 2025.05 | 当前版本 - 进程隔离准备、IPC 公共服务 |
-| 4.0.0 | 2025.03 | 组件系统重构、设置域管理 |
-| 3.0.0 | 2025.01 | Avalonia 12 升级 |
-| 2.0.0 | 2024.11 | 稳定 API，轻应用市场支持 |
-| 1.0.0 | 2024.09 | 初始版本 |
-
-## 📖 文档结构
-
-### [01-快速开始](01-快速开始/)
-
-快速上手，从零到一创建轻应用
-
-- [环境准备](01-快速开始/01-环境准备.md) - 安装工具和模板
-- [创建第一个轻应用](01-快速开始/02-创建第一个轻应用.md) - 实现基本功能
-- [调试与测试](01-快速开始/03-调试测试.md) - 调试技巧
-- [打包轻应用](01-快速开始/04-打包轻应用.md) - 生成 .laapp 文件
-
-### [02-核心概念](02-核心概念/)
-
-深入理解轻应用系统的工作原理
-
-- [轻应用生命周期](02-核心概念/01-轻应用生命周期.md) - 加载、初始化、卸载
-- [组件系统](02-核心概念/02-组件系统.md) - 桌面组件的创建和管理
-- [设置系统](02-核心概念/03-设置系统.md) - 配置持久化
-- [主题与外观](02-核心概念/04-主题外观.md) - 适配主题和圆角系统
-- [轻应用通信](02-核心概念/05-轻应用通信.md) - 轻应用间协作
-
-### [03-API参考](03-API参考/)
-
-完整的 API 文档和使用示例
-
-- [IAirApp 接口](03-API参考/01-IAirApp接口.md) - 轻应用入口
-- [IAirAppRuntimeContext](03-API参考/02-IAirAppRuntimeContext.md) - 轻应用上下文
-- [组件 API](03-API参考/03-组件API.md) - 组件开发接口
-- [设置 API](03-API参考/04-设置API.md) - 设置管理接口
-- [IPC 公共服务](03-API参考/05-IPC公共服务.md) - 对外服务接口
-- [日志 API](03-API参考/06-日志API.md) - 日志记录
-
-### [04-实战案例](04-实战案例/)
-
-通过完整示例学习轻应用开发
-
-- [天气组件](04-实战案例/01-天气组件.md) - API 调用、数据展示
-- [待办事项](04-实战案例/02-待办事项.md) - 数据持久化、CRUD
-- [RSS 阅读器](04-实战案例/03-RSS阅读器.md) - 网络请求、列表
-- [系统监控](04-实战案例/04-系统监控.md) - 系统信息、实时更新
-
-### [05-发布维护](05-发布维护/)
-
-轻应用的发布、更新和维护
-
-- [版本管理](05-发布维护/01-版本管理.md) - 语义化版本
-- [CI/CD 配置](05-发布维护/02-CICD配置.md) - 自动构建
-- [发布到市场](05-发布维护/03-发布市场.md) - 轻应用市场发布
-- [用户反馈](05-发布维护/04-用户反馈.md) - 收集和处理反馈
-- [迁移指南](05-发布维护/05-迁移指南.md) - SDK 版本升级
-
-## 🚀 快速参考
-
-### 创建轻应用
-
-```powershell
-# 安装模板
-dotnet new install LanMountainDesktop.AirAppTemplate
-
-# 创建项目
-dotnet new lmd-airapp -n MyAirApp
-
-# 构建
-dotnet build
-```
-
-### 轻应用入口
-
-```csharp
-public class AirApp : IAirApp
-{
-    public string Id => "com.example.myplugin";
-    public string Name => "My AirApp";
-    public string Version => "1.0.0";
-    
-    public async Task InitializeAsync(IAirAppRuntimeContext context)
-    {
-        // 注册组件
-        var registry = context.Services.GetService<IComponentRegistry>();
-        registry?.RegisterComponent<MyComponent>();
-    }
-    
-    public Task ShutdownAsync() => Task.CompletedTask;
-}
-```
-
-### 创建组件
-
-```csharp
-[Component(
-    Id = "com.example.myplugin.mycomponent",
-    Name = "我的组件",
-    Category = "工具"
-)]
-public class MyComponent : ComponentBase
-{
-    public override string Id => "com.example.myplugin.mycomponent";
-    public override string Name => "我的组件";
-}
-```
-
-## 💡 最佳实践
-
-### 代码规范
-
-- ✅ 使用异步编程（`async/await`）
-- ✅ 启用可空引用类型（`nullable enable`）
-- ✅ 编写 XML 文档注释
-- ✅ 遵循 C# 命名约定
-- ✅ 使用依赖注入模式
-
-### 性能优化
-
-- ✅ 避免阻塞 UI 线程
-- ✅ 使用延迟加载
-- ✅ 缓存数据避免重复计算
-- ✅ 及时释放资源（实现 `IDisposable`）
-- ✅ 使用弱事件模式避免内存泄漏
-
-### 用户体验
-
-- ✅ 适配亮色/暗色主题
-- ✅ 支持多语言本地化
-- ✅ 提供友好的错误提示
-- ✅ 响应式设计适配不同分辨率
-- ✅ 提供设置页让用户自定义
-
-## 🔗 相关资源
-
-### 官方资源
-
-- [GitHub 仓库](https://github.com/HelloWRC/LanMountainDesktop)
-- [轻应用示例](https://github.com/HelloWRC/LanMountainDesktop.SampleAirApp)
-- [SDK 源码](https://github.com/HelloWRC/LanMountainDesktop/tree/main/LanMountainDesktop.AirAppSdk)
-- [问题反馈](https://github.com/HelloWRC/LanMountainDesktop/issues)
-
-### 技术文档
-
-- [Avalonia UI 文档](https://docs.avaloniaui.net/)
-- [FluentAvalonia 文档](https://github.com/amwx/FluentAvalonia/wiki)
-- [CommunityToolkit.Mvvm](https://learn.microsoft.com/dotnet/communitytoolkit/mvvm/)
-- [.NET API 浏览器](https://learn.microsoft.com/dotnet/api/)
-
-### 社区
-
-- [GitHub Discussions](https://github.com/HelloWRC/LanMountainDesktop/discussions) - 技术讨论
-- [轻应用市场](https://github.com/HelloWRC/LanMountainDesktop/wiki/AirApps) - 浏览现有轻应用
-
-## ❓ 常见问题
-
-### 我需要什么基础？
-
-- **必需**: C# 基础语法、面向对象编程
-- **推荐**: XAML/Avalonia UI 基础、MVVM 模式
-- **加分**: 异步编程、依赖注入
-
-### 轻应用可以做什么？
-
-轻应用可以：
-- ✅ 添加桌面组件（显示天气、时钟、待办等）
-- ✅ 添加设置页面
-- ✅ 提供后台服务（定时任务、数据同步等）
-- ✅ 与其他轻应用通信
-- ✅ 通过 IPC 对外提供服务
-
-轻应用不能：
-- ❌ 修改宿主核心代码
-- ❌ 直接访问其他轻应用的私有数据
-- ❌ 绕过权限系统访问敏感资源
-
-### 如何调试轻应用？
-
-1. 将轻应用构建到宿主的轻应用目录
-2. 启动宿主应用
-3. 使用 IDE 附加到宿主进程
-4. 在轻应用代码中设置断点
-
-详见 [调试与测试](01-快速开始/03-调试测试.md)
-
-### 轻应用会被隔离运行吗？
-
-当前轻应用运行在宿主进程内（in-process 模式），未来将支持进程隔离模式：
-
-- **当前**: 进程内轻应用，共享内存空间
-- **未来**: 进程隔离轻应用，独立进程运行（计划中）
-
-## 🎯 下一步
-
-准备开始了吗？
-
-- [环境准备](01-快速开始/01-环境准备.md) - 配置开发环境
-- [创建第一个轻应用](01-快速开始/02-创建第一个轻应用.md) - 动手实践
-- [轻应用生命周期](02-核心概念/01-轻应用生命周期.md) - 理解原理
+桌面组件运行在宿主进程内，窗口轻应用运行在独立进程中。
+清单里的 `runtime.mode` 目前仅 `in-proc`（等价写法 `in-process`）被宿主实际执行，
+`isolated-background` / `isolated-window` 属于预留取值，声明后不改变当前加载行为。

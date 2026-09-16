@@ -17,10 +17,10 @@
   },
   "symbols": {
     "airAppId": {
-      "type": "parameter",
-      "datatype": "text",
-      "defaultValue": "LanMountainDesktop.AirAppTemplate",
-      "description": "AirApp manifest id.",
+      "type": "derived",
+      "valueSource": "name",
+      "valueTransform": "identity",
+      "description": "AirApp manifest id. Derived from the project name so that every generated AirApp gets a unique id; edit airapp.json afterwards to change it.",
       "replaces": "__AIRAPP_ID__"
     },
     "airAppAuthor": {

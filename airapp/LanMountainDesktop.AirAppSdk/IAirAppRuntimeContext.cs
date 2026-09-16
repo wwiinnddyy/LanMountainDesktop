@@ -83,21 +83,4 @@ public interface IAirAppRuntimeContext
     /// </summary>
     /// <param name="windowId">Window identifier</param>
     void CloseWindow(string windowId);
-
-    /// <summary>
-    /// Register a desktop component (internal use by <see cref="AirAppBase"/>).
-    /// </summary>
-    void RegisterComponent(AirAppComponentOptions options);
-
-    /// <summary>
-    /// Register a window (internal use by <see cref="AirAppBase"/>).
-    /// </summary>
-    void RegisterWindow(string id, string name, Type windowType);
-
-    /// <summary>
-    /// Register a service (internal use by <see cref="AirAppBase"/>).
-    /// </summary>
-    void RegisterService<TService, TImplementation>()
-        where TService : class
-        where TImplementation : class, TService;
 }

@@ -18,7 +18,7 @@ public sealed class PlondsCommitDeltaBuilder
         ["desktop/LanMountainDesktop"] = ["LanMountainDesktop.dll", "LanMountainDesktop.exe"],
         ["desktop/LanMountainDesktop.Launcher"] = ["LanMountainDesktop.Launcher.exe"],
         ["core/LanMountainDesktop.Core"] = ["LanMountainDesktop.Core.dll"],
-        ["airapp/LanMountainDesktop.PluginSdk"] = ["LanMountainDesktop.PluginSdk.dll"]
+        ["airapp/LanMountainDesktop.AirAppSdk"] = ["LanMountainDesktop.AirAppSdk.dll"]
     };
 
     private static readonly string[] FallbackAllArtifacts =
@@ -27,7 +27,7 @@ public sealed class PlondsCommitDeltaBuilder
         "LanMountainDesktop.exe",
         "LanMountainDesktop.Launcher.exe",
         "LanMountainDesktop.Core.dll",
-        "LanMountainDesktop.PluginSdk.dll"
+        "LanMountainDesktop.AirAppSdk.dll"
     ];
 
     public PlondsDeltaBuildResult Build(PlondsCommitDeltaBuildOptions options)

@@ -1,5 +1,15 @@
 # 插件开发指南
 
+> **⚠️ 已废弃 / DEPRECATED**
+>
+> 本文档描述的是已停止支持的 `LanMountainDesktop.PluginSdk`（`plugin.json` + `IPlugin`）。
+> 宿主自 AirApp SDK 1.0.0 起不再识别 `plugin.json`，也不会加载基于 `IPlugin` / `PluginBase` 的程序集。
+> 阑山桌面现在只有一个 SDK：`LanMountainDesktop.AirAppSdk`，同时覆盖桌面组件与窗口轻应用。
+>
+> 迁移请看 [AirApp SDK 迁移指南](../AIRAPP_SDK_V1_MIGRATION.md)；
+> 新开发请看 [轻应用开发指南](../01-AirApp开发/README.md)。
+> 本文仅作历史归档保留。
+
 > 为 LanMountainDesktop 开发自定义插件
 
 ## 目录

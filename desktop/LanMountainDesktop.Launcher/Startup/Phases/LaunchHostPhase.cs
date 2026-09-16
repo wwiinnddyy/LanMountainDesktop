@@ -113,6 +113,8 @@ internal sealed class LaunchHostPhase : ILaunchPhase
 
         if (!launchOutcome.Result.Success)
         {
+            context.WindowsClosingByOrchestrator = true;
+            await LaunchUiPresenter.CloseWindowsAsync(context.SplashWindow, context.LoadingDetailsWindow).ConfigureAwait(false);
             return new LaunchPhaseResult(
                 LaunchPhaseStatus.Completed,
                 LaunchResultBuilder.WithAdditionalDetails(launchOutcome.Result, context.LauncherContextDetails));
@@ -129,6 +131,8 @@ internal sealed class LaunchHostPhase : ILaunchPhase
 
         if (launchOutcome.Process is null)
         {
+            context.WindowsClosingByOrchestrator = true;
+            await LaunchUiPresenter.CloseWindowsAsync(context.SplashWindow, context.LoadingDetailsWindow).ConfigureAwait(false);
             return new LaunchPhaseResult(
                 LaunchPhaseStatus.Completed,
                 LaunchResultBuilder.Build(

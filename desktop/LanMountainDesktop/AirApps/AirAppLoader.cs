@@ -967,8 +967,6 @@ public sealed class AirAppLoader
         private readonly AirAppAppearanceContext _appearanceContext;
         private readonly AirAppMessageBus _messageBus;
         private readonly IAirAppLogger _logger;
-        private readonly List<AirAppComponentOptions> _runtimeComponents = [];
-        private readonly List<AirAppWindowRegistration> _runtimeWindows = [];
 
         public AirAppRuntimeContext(
             AirAppManifest manifest,
@@ -1023,10 +1021,6 @@ public sealed class AirAppLoader
         /// </summary>
         internal Action<string>? CloseWindowHandler { get; set; }
 
-        internal IReadOnlyList<AirAppComponentOptions> RuntimeComponents => _runtimeComponents;
-
-        internal IReadOnlyList<AirAppWindowRegistration> RuntimeWindows => _runtimeWindows;
-
         public T? GetService<T>()
         {
             return (T?)Services.GetService(typeof(T));
@@ -1068,25 +1062,6 @@ public sealed class AirAppLoader
             }
 
             closer(windowId);
-        }
-
-        public void RegisterComponent(AirAppComponentOptions options)
-        {
-            ArgumentNullException.ThrowIfNull(options);
-            _runtimeComponents.Add(options);
-        }
-
-        public void RegisterWindow(string id, string name, Type windowType)
-        {
-            _runtimeWindows.Add(new AirAppWindowRegistration(id, name, windowType));
-        }
-
-        public void RegisterService<TService, TImplementation>()
-            where TService : class
-            where TImplementation : class, TService
-        {
-            throw new InvalidOperationException(
-                $"AirApp '{Manifest.Id}' called RegisterService after startup. Register services in Initialize via IServiceCollection instead.");
         }
 
         public void SetServices(IServiceProvider services)

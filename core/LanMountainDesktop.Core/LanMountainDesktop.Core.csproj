@@ -3,12 +3,12 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>6.0.0</Version>
+    <Version>1.0.0</Version>
     <PackageId>LanMountainDesktop.Core</PackageId>
     <IsPackable>true</IsPackable>
     <Authors>LanMountainDesktop</Authors>
-    <Description>Shared contracts, IPC infrastructure and plugin packaging for LanMountainDesktop host and plugin ecosystems. (Merged from LanMountainDesktop.Shared.Contracts, LanMountainDesktop.Shared.IPC and LanMountainDesktop.PluginPackaging.)</Description>
-    <PackageTags>LanMountainDesktop;Plugin;SharedContracts;IPC;Packaging;Avalonia</PackageTags>
+    <Description>Shared contracts, IPC infrastructure and AirApp packaging for the LanMountainDesktop host and AirApp ecosystem. Referenced transitively by LanMountainDesktop.AirAppSdk; AirApp authors normally depend on the SDK instead of this package.</Description>
+    <PackageTags>LanMountainDesktop;AirApp;SharedContracts;IPC;Packaging;Avalonia</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/wwiinnddyy/LanMountainDesktop</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
