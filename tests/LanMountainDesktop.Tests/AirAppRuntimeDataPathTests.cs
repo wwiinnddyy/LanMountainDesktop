@@ -3,6 +3,7 @@ using Xunit;
 
 namespace LanMountainDesktop.Tests;
 
+[Collection("AppDataPath")]
 public sealed class AirAppRuntimeDataPathTests : IDisposable
 {
     private readonly string _dataRoot = Path.Combine(

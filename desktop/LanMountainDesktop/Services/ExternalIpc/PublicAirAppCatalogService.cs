@@ -3,11 +3,11 @@ using LanMountainDesktop.Shared.IPC.Abstractions.Services;
 
 namespace LanMountainDesktop.Services.ExternalIpc;
 
-internal sealed class PublicPluginCatalogService : IPublicPluginCatalogService
+internal sealed class PublicAirAppCatalogService : IPublicAirAppCatalogService
 {
     private readonly PublicIpcHostService _publicIpcHostService;
 
-    public PublicPluginCatalogService(PublicIpcHostService publicIpcHostService)
+    public PublicAirAppCatalogService(PublicIpcHostService publicIpcHostService)
     {
         _publicIpcHostService = publicIpcHostService;
     }

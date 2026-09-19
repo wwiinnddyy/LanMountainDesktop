@@ -4,7 +4,7 @@ public sealed class AirAppComponentContext
 {
     public AirAppComponentContext(
         AirAppManifest manifest,
-        string pluginDirectory,
+        string airAppDirectory,
         string dataDirectory,
         IServiceProvider services,
         IReadOnlyDictionary<string, object?> properties,
@@ -12,10 +12,10 @@ public sealed class AirAppComponentContext
         string? placementId,
         double cellSize,
         IAirAppAppearanceContext appearance,
-        IAirAppSettingsService? pluginSettings = null)
+        IAirAppSettingsService? airAppSettings = null)
     {
         ArgumentNullException.ThrowIfNull(manifest);
-        ArgumentException.ThrowIfNullOrWhiteSpace(pluginDirectory);
+        ArgumentException.ThrowIfNullOrWhiteSpace(airAppDirectory);
         ArgumentException.ThrowIfNullOrWhiteSpace(dataDirectory);
         ArgumentException.ThrowIfNullOrWhiteSpace(componentId);
         ArgumentNullException.ThrowIfNull(services);
@@ -23,7 +23,7 @@ public sealed class AirAppComponentContext
         ArgumentNullException.ThrowIfNull(appearance);
 
         Manifest = manifest;
-        AirAppDirectory = pluginDirectory;
+        AirAppDirectory = airAppDirectory;
         DataDirectory = dataDirectory;
         Services = services;
         Properties = properties;
@@ -31,7 +31,7 @@ public sealed class AirAppComponentContext
         PlacementId = string.IsNullOrWhiteSpace(placementId) ? null : placementId.Trim();
         CellSize = Math.Max(1, cellSize);
         Appearance = appearance;
-        AirAppSettings = pluginSettings;
+        AirAppSettings = airAppSettings;
     }
 
     public AirAppManifest Manifest { get; }

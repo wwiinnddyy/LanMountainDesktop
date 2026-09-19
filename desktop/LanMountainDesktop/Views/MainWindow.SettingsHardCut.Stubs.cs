@@ -720,7 +720,7 @@ public partial class MainWindow : Window
             ShowInTaskbar = existingSnapshot.ShowInTaskbar,
             MultiInstanceLaunchBehavior = existingSnapshot.MultiInstanceLaunchBehavior,
             EnableFusedDesktop = existingSnapshot.EnableFusedDesktop,
-            DisabledPluginIds = existingSnapshot.DisabledPluginIds,
+            DisabledAirAppIds = existingSnapshot.DisabledAirAppIds,
             StudyFrameMs = existingSnapshot.StudyFrameMs,
             StudyScoreThresholdDbfs = existingSnapshot.StudyScoreThresholdDbfs,
             StudyFocusDurationMinutes = existingSnapshot.StudyFocusDurationMinutes,

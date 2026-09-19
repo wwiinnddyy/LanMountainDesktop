@@ -37,7 +37,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddPublicIpcService<TContract, TImplementation>(
         this IServiceCollection services,
         string? objectId = null,
-        string? pluginId = null,
+        string? airAppId = null,
         params string[] notifyIds)
         where TContract : class
         where TImplementation : class, TContract
@@ -56,7 +56,7 @@ public static class ServiceCollectionExtensions
                 typeof(TContract),
                 provider => provider.GetRequiredService<TContract>(),
                 objectId,
-                pluginId,
+                airAppId,
                 notifyIds ?? []));
         }
 

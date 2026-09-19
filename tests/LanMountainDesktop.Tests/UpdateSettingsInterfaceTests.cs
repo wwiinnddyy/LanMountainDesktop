@@ -1,4 +1,5 @@
-﻿using CommunityToolkit.Mvvm.Input;
+using Avalonia.Headless.XUnit;
+using CommunityToolkit.Mvvm.Input;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
@@ -15,7 +16,7 @@ namespace LanMountainDesktop.Tests;
 
 public sealed class UpdateSettingsInterfaceTests
 {
-    [Fact]
+    [AvaloniaFact]
     public async Task UpdateSettingsViewModel_RoutesActionsThroughUpdateSettingsService()
     {
         var update = new FakeUpdateSettingsService();
@@ -36,6 +37,7 @@ public sealed class UpdateSettingsInterfaceTests
             null);
 
         await ((IAsyncRelayCommand)viewModel.CheckCommand).ExecuteAsync(null);
+
 
         Assert.Equal(1, update.CheckCalls);
         Assert.Equal("1.2.3", viewModel.LatestVersionText);

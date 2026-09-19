@@ -21,7 +21,12 @@ namespace LanMountainDesktop.Services;
 
 public sealed class AirAppRuntimeService : IDisposable
 {
-    private const string PendingDeletionFileName = ".pending-plugin-deletions.json";
+    private const string PendingDeletionFileName = ".pending-airapp-deletions.json";
+
+    /// <summary>
+    /// 升级前的磁盘文件名，只用于改名归位；新代码不要引用它。
+    /// </summary>
+    private const string LegacyPendingDeletionFileName = ".pending-plugin-deletions.json";
 
     private readonly AirAppLoaderOptions _loaderOptions;
     private readonly AirAppLoader _loader;
@@ -95,11 +100,11 @@ public sealed class AirAppRuntimeService : IDisposable
         Directory.CreateDirectory(AirAppsDirectory);
         UnloadInstalledAirApps();
         ApplyPendingAirAppDeletions();
-        ApplyPendingPluginOperations();
+        ApplyPendingAirAppOperations();
         MergeDevSettingsFromSnapshot();
         AppLogger.Info("AirAppRuntime", $"Loading installed plugins from '{AirAppsDirectory}'.");
 
-        var disabledAirAppIds = GetDisabledPluginIds();
+        var disabledAirAppIds = GetDisabledAirAppIds();
         var settingsSnapshot = LoadAppSettingsSnapshot();
         var hostLanguageCode = AirAppLocalizer.NormalizeLanguageCode(settingsSnapshot.LanguageCode);
         var hostProperties = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
@@ -128,7 +133,7 @@ public sealed class AirAppRuntimeService : IDisposable
                 {
                     AppLogger.Info(
                         "DevAirApp",
-                        $"Developer plugin '{candidate.Manifest.Id}' overrides an already-registered plugin from '{candidate.SourcePath}'.");
+                        $"Developer AirApp '{candidate.Manifest.Id}' overrides an already-registered AirApp from '{candidate.SourcePath}'.");
                 }
                 else
                 {
@@ -136,7 +141,7 @@ public sealed class AirAppRuntimeService : IDisposable
                         candidate.SourcePath,
                         candidate.Manifest,
                         new InvalidOperationException(
-                            $"Duplicate plugin id '{candidate.Manifest.Id}' was found. Source '{candidate.SourcePath}' was ignored because a higher-priority source was already selected."));
+                            $"Duplicate AirApp id '{candidate.Manifest.Id}' was found. Source '{candidate.SourcePath}' was ignored because a higher-priority source was already selected."));
                     _loadResults.Add(duplicateFailure);
                     LogAirAppFailure("CatalogSelection", duplicateFailure, treatAsError: false);
                     continue;
@@ -187,7 +192,7 @@ public sealed class AirAppRuntimeService : IDisposable
 
             AppLogger.Info(
                 "AirAppRuntime",
-                $"Starting plugin load. AirAppId='{candidate.Manifest.Id}'; SourcePath='{candidate.SourcePath}'; SourceKind='{candidate.SourceKind}'.");
+                $"Starting AirApp load. AirAppId='{candidate.Manifest.Id}'; SourcePath='{candidate.SourcePath}'; SourceKind='{candidate.SourceKind}'.");
             var loadResult = candidate.SourceKind switch
             {
                 AirAppCatalogSourceKind.Package => _loader.LoadFromPackage(
@@ -239,48 +244,48 @@ public sealed class AirAppRuntimeService : IDisposable
                 0,
                 IsDevAirApp: isDevAirApp));
             LogAirAppFailure("Load", loadResult, treatAsError: true);
-            Debug.WriteLine($"[AirAppRuntime] Failed to load plugin from '{loadResult.SourcePath}': {loadResult.Error}");
+            Debug.WriteLine($"[AirAppRuntime] Failed to load AirApp from '{loadResult.SourcePath}': {loadResult.Error}");
         }
 
         if (_catalog.Count == 0 && discoveryFailures.Count == 0)
         {
             AppLogger.Info(
                 "AirAppRuntime",
-                $"No plugin packages or loose manifests were discovered under '{AirAppsDirectory}'.");
-            Debug.WriteLine($"[AirAppRuntime] No .laapp packages or loose plugin manifests found under '{AirAppsDirectory}'.");
+                $"No AirApp packages or loose manifests were discovered under '{AirAppsDirectory}'.");
+            Debug.WriteLine($"[AirAppRuntime] No .laapp packages or loose AirApp manifests found under '{AirAppsDirectory}'.");
         }
     }
 
-    public bool SetAirAppEnabled(string pluginId, bool isEnabled)
+    public bool SetAirAppEnabled(string airAppId, bool isEnabled)
     {
-        if (string.IsNullOrWhiteSpace(pluginId))
+        if (string.IsNullOrWhiteSpace(airAppId))
         {
             return false;
         }
 
         var catalogEntry = _catalog.FirstOrDefault(entry =>
-            string.Equals(entry.Manifest.Id, pluginId, StringComparison.OrdinalIgnoreCase));
+            string.Equals(entry.Manifest.Id, airAppId, StringComparison.OrdinalIgnoreCase));
         if (catalogEntry.IsDevAirApp && !isEnabled)
         {
-            AppLogger.Warn("DevAirApp", $"Cannot disable developer plugin '{pluginId}'. Developer plugins are always enabled in dev mode.");
+            AppLogger.Warn("DevAirApp", $"Cannot disable developer AirApp '{airAppId}'. Developer plugins are always enabled in dev mode.");
             return false;
         }
 
         var snapshot = LoadAppSettingsSnapshot();
-        var disabledAirAppIds = snapshot.DisabledPluginIds is { Count: > 0 }
-            ? new HashSet<string>(snapshot.DisabledPluginIds, StringComparer.OrdinalIgnoreCase)
+        var disabledAirAppIds = snapshot.DisabledAirAppIds is { Count: > 0 }
+            ? new HashSet<string>(snapshot.DisabledAirAppIds, StringComparer.OrdinalIgnoreCase)
             : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         var changed = isEnabled
-            ? disabledAirAppIds.Remove(pluginId)
-            : disabledAirAppIds.Add(pluginId);
+            ? disabledAirAppIds.Remove(airAppId)
+            : disabledAirAppIds.Add(airAppId);
 
         if (!changed)
         {
             return false;
         }
 
-        snapshot.DisabledPluginIds = disabledAirAppIds
+        snapshot.DisabledAirAppIds = disabledAirAppIds
             .OrderBy(id => id, StringComparer.OrdinalIgnoreCase)
             .ToList();
         SaveAppSettingsSnapshot(snapshot);
@@ -288,7 +293,7 @@ public sealed class AirAppRuntimeService : IDisposable
 
         for (var i = 0; i < _catalog.Count; i++)
         {
-            if (string.Equals(_catalog[i].Manifest.Id, pluginId, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(_catalog[i].Manifest.Id, airAppId, StringComparison.OrdinalIgnoreCase))
             {
                 _catalog[i] = _catalog[i] with { IsEnabled = isEnabled };
             }
@@ -313,23 +318,23 @@ public sealed class AirAppRuntimeService : IDisposable
         }
     }
 
-    public bool DeleteInstalledAirApp(string pluginId)
+    public bool DeleteInstalledAirApp(string airAppId)
     {
         lock (_packageMutationGate)
         {
-            return DeleteInstalledAirAppCore(pluginId);
+            return DeleteInstalledAirAppCore(airAppId);
         }
     }
 
-    private bool DeleteInstalledAirAppCore(string pluginId)
+    private bool DeleteInstalledAirAppCore(string airAppId)
     {
-        if (string.IsNullOrWhiteSpace(pluginId))
+        if (string.IsNullOrWhiteSpace(airAppId))
         {
             return false;
         }
 
         var entry = _catalog.FirstOrDefault(candidate =>
-            string.Equals(candidate.Manifest.Id, pluginId, StringComparison.OrdinalIgnoreCase));
+            string.Equals(candidate.Manifest.Id, airAppId, StringComparison.OrdinalIgnoreCase));
         if (entry is null)
         {
             return false;
@@ -347,8 +352,8 @@ public sealed class AirAppRuntimeService : IDisposable
             RegisterPendingAirAppDeletion(fullTargetPath);
         }
 
-        RemoveAirAppFromSnapshot(pluginId);
-        RemoveAirAppFromCatalog(pluginId);
+        RemoveAirAppFromSnapshot(airAppId);
+        RemoveAirAppFromCatalog(airAppId);
         PendingRestartStateService.SetPending(PendingRestartStateService.AirAppCatalogReason, true);
         return true;
     }
@@ -432,7 +437,7 @@ public sealed class AirAppRuntimeService : IDisposable
             throw new UnauthorizedAccessException(
                 elevatedResult.ErrorMessage ??
                 elevatedResult.Message ??
-                $"Elevated plugin install failed with code '{elevatedResult.Code ?? "unknown"}'.");
+                $"Elevated AirApp install failed with code '{elevatedResult.Code ?? "unknown"}'.");
         }
 
         var installedPath = !string.IsNullOrWhiteSpace(elevatedResult.InstalledPackagePath)
@@ -482,7 +487,7 @@ public sealed class AirAppRuntimeService : IDisposable
     {
         _ = sender;
 
-        var pluginSnapshot = AirAppAppearanceSnapshotMapper.FromMaterialColorSnapshot(snapshot);
+        var airAppSnapshot = AirAppAppearanceSnapshotMapper.FromMaterialColorSnapshot(snapshot);
         var changedProperties = new[]
         {
             AppearanceProperty.ThemeVariant,
@@ -499,7 +504,7 @@ public sealed class AirAppRuntimeService : IDisposable
         {
             if (loadedAirApp.RuntimeContext.Appearance is AirAppAppearanceContext appearanceContext)
             {
-                appearanceContext.UpdateSnapshot(pluginSnapshot, changedProperties);
+                appearanceContext.UpdateSnapshot(airAppSnapshot, changedProperties);
             }
         }
     }
@@ -508,9 +513,9 @@ public sealed class AirAppRuntimeService : IDisposable
     {
         for (var i = _loadedAirApps.Count - 1; i >= 0; i--)
         {
-            var pluginId = _loadedAirApps[i].Manifest.Id;
-            _exportRegistry.RemoveExports(pluginId);
-            _settingsCatalogService.RemoveAirAppSections(pluginId);
+            var airAppId = _loadedAirApps[i].Manifest.Id;
+            _exportRegistry.RemoveExports(airAppId);
+            _settingsCatalogService.RemoveAirAppSections(airAppId);
             _loadedAirApps[i].Dispose();
         }
 
@@ -522,11 +527,11 @@ public sealed class AirAppRuntimeService : IDisposable
         _desktopComponents.Clear();
     }
 
-    private HashSet<string> GetDisabledPluginIds()
+    private HashSet<string> GetDisabledAirAppIds()
     {
         var snapshot = LoadAppSettingsSnapshot();
-        return snapshot.DisabledPluginIds is { Count: > 0 }
-            ? new HashSet<string>(snapshot.DisabledPluginIds, StringComparer.OrdinalIgnoreCase)
+        return snapshot.DisabledAirAppIds is { Count: > 0 }
+            ? new HashSet<string>(snapshot.DisabledAirAppIds, StringComparer.OrdinalIgnoreCase)
             : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     }
 
@@ -575,14 +580,14 @@ public sealed class AirAppRuntimeService : IDisposable
     private void DiscoverDevAirAppCandidates(List<AirAppCandidate> candidates, List<AirAppLoadResult> failures)
     {
         var devOptions = DevAirAppOptions.Current;
-        if (!devOptions.IsDevMode || devOptions.DevPluginPaths.Count == 0)
+        if (!devOptions.IsDevMode || devOptions.DevAirAppPaths.Count == 0)
         {
             return;
         }
 
-        AppLogger.Info("DevAirApp", $"Scanning developer plugin paths. Count={devOptions.DevPluginPaths.Count}.");
+        AppLogger.Info("DevAirApp", $"Scanning developer AirApp paths. Count={devOptions.DevAirAppPaths.Count}.");
 
-        foreach (var devPath in devOptions.DevPluginPaths)
+        foreach (var devPath in devOptions.DevAirAppPaths)
         {
             if (File.Exists(devPath) && string.Equals(Path.GetExtension(devPath), AirAppSdkInfo.PackageFileExtension, StringComparison.OrdinalIgnoreCase))
             {
@@ -590,13 +595,13 @@ public sealed class AirAppRuntimeService : IDisposable
                 {
                     var manifest = ReadManifestFromPackage(devPath);
                     candidates.Add(new AirAppCandidate(devPath, manifest, AirAppCatalogSourceKind.DevAirApp));
-                    AppLogger.Info("DevAirApp", $"Found developer plugin package. AirAppId='{manifest.Id}'; Path='{devPath}'.");
+                    AppLogger.Info("DevAirApp", $"Found developer AirApp package. AirAppId='{manifest.Id}'; Path='{devPath}'.");
                 }
                 catch (Exception ex)
                 {
                     var failure = AirAppLoadResult.Failure(devPath, null, ex);
                     failures.Add(failure);
-                    AppLogger.Warn("DevAirApp", $"Failed to read developer plugin package '{devPath}'.", ex);
+                    AppLogger.Warn("DevAirApp", $"Failed to read developer AirApp package '{devPath}'.", ex);
                 }
 
                 continue;
@@ -611,30 +616,30 @@ public sealed class AirAppRuntimeService : IDisposable
                     {
                         var manifest = AirAppManifest.Load(manifestPath);
                         candidates.Add(new AirAppCandidate(manifestPath, manifest, AirAppCatalogSourceKind.DevAirApp));
-                        AppLogger.Info("DevAirApp", $"Found developer plugin manifest. AirAppId='{manifest.Id}'; Path='{manifestPath}'.");
+                        AppLogger.Info("DevAirApp", $"Found developer AirApp manifest. AirAppId='{manifest.Id}'; Path='{manifestPath}'.");
                     }
                     catch (Exception ex)
                     {
                         var failure = AirAppLoadResult.Failure(manifestPath, null, ex);
                         failures.Add(failure);
-                        AppLogger.Warn("DevAirApp", $"Failed to load developer plugin manifest '{manifestPath}'.", ex);
+                        AppLogger.Warn("DevAirApp", $"Failed to load developer AirApp manifest '{manifestPath}'.", ex);
                     }
                 }
                 else
                 {
-                    AppLogger.Warn("DevAirApp", $"Developer plugin directory '{devPath}' does not contain '{AirAppSdkInfo.ManifestFileName}'. Skipping.");
+                    AppLogger.Warn("DevAirApp", $"Developer AirApp directory '{devPath}' does not contain '{AirAppSdkInfo.ManifestFileName}'. Skipping.");
                 }
 
                 continue;
             }
 
-            AppLogger.Warn("DevAirApp", $"Developer plugin path '{devPath}' is neither a file nor a directory. Skipping.");
+            AppLogger.Warn("DevAirApp", $"Developer AirApp path '{devPath}' is neither a file nor a directory. Skipping.");
         }
     }
 
     private IEnumerable<string> EnumerateCandidatePaths(string searchPattern)
     {
-        var runtimeRootDirectory = EnsureTrailingSeparator(Path.Combine(Path.GetFullPath(AirAppsDirectory), ".runtime"));
+        var runtimeRootDirectory = EnsureTrailingSeparator(Path.Combine(Path.GetFullPath(AirAppsDirectory), AirAppSdkInfo.RuntimeDirectoryName));
 
         return Directory
             .EnumerateFiles(AirAppsDirectory, searchPattern, SearchOption.AllDirectories)
@@ -664,7 +669,7 @@ public sealed class AirAppRuntimeService : IDisposable
         return AirAppManifest.Load(stream, $"{packagePath}!/{entries[0].FullName}");
     }
 
-    private bool RemoveExistingAirAppPackages(string pluginId, string packagePathToKeep)
+    private bool RemoveExistingAirAppPackages(string airAppId, string packagePathToKeep)
     {
         var replacedExisting = false;
         foreach (var existingPackagePath in EnumerateCandidatePaths($"*{AirAppSdkInfo.PackageFileExtension}"))
@@ -680,7 +685,7 @@ public sealed class AirAppRuntimeService : IDisposable
             try
             {
                 var existingManifest = ReadManifestFromPackage(existingPackagePath);
-                if (!string.Equals(existingManifest.Id, pluginId, StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(existingManifest.Id, airAppId, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -699,7 +704,7 @@ public sealed class AirAppRuntimeService : IDisposable
 
     private void UpdateCatalogAfterPackageInstall(AirAppManifest manifest, string destinationPath)
     {
-        var isEnabled = !GetDisabledPluginIds().Contains(manifest.Id);
+        var isEnabled = !GetDisabledAirAppIds().Contains(manifest.Id);
         var entry = new AirAppCatalogEntry(
             manifest,
             destinationPath,
@@ -722,10 +727,10 @@ public sealed class AirAppRuntimeService : IDisposable
         _catalog.Add(entry);
     }
 
-    private static string BuildInstalledPackageFileName(string pluginId)
+    private static string BuildInstalledPackageFileName(string airAppId)
     {
         var invalidChars = Path.GetInvalidFileNameChars();
-        var fileName = new string(pluginId.Select(ch => invalidChars.Contains(ch) ? '_' : ch).ToArray());
+        var fileName = new string(airAppId.Select(ch => invalidChars.Contains(ch) ? '_' : ch).ToArray());
         return fileName + AirAppSdkInfo.PackageFileExtension;
     }
 
@@ -787,13 +792,13 @@ public sealed class AirAppRuntimeService : IDisposable
 
             if (snapshot.IsDevModeEnabled && !devOptions.IsDevMode)
             {
-                devOptions.ApplySettingsFromSnapshot(isDevMode: true, devAirAppPath: snapshot.DevPluginPath);
-                AppLogger.Info("DevAirApp", $"Developer mode enabled via settings. DevPluginPath='{snapshot.DevPluginPath}'.");
+                devOptions.ApplySettingsFromSnapshot(isDevMode: true, devAirAppPath: snapshot.DevAirAppPath);
+                AppLogger.Info("DevAirApp", $"Developer mode enabled via settings. DevAirAppPath='{snapshot.DevAirAppPath}'.");
             }
-            else if (!string.IsNullOrWhiteSpace(snapshot.DevPluginPath) && string.IsNullOrWhiteSpace(devOptions.DevPluginPath))
+            else if (!string.IsNullOrWhiteSpace(snapshot.DevAirAppPath) && string.IsNullOrWhiteSpace(devOptions.DevAirAppPath))
             {
-                devOptions.ApplySettingsFromSnapshot(isDevMode: devOptions.IsDevMode, devAirAppPath: snapshot.DevPluginPath);
-                AppLogger.Info("DevAirApp", $"Developer plugin path merged from settings. DevPluginPath='{snapshot.DevPluginPath}'.");
+                devOptions.ApplySettingsFromSnapshot(isDevMode: devOptions.IsDevMode, devAirAppPath: snapshot.DevAirAppPath);
+                AppLogger.Info("DevAirApp", $"Developer AirApp path merged from settings. DevAirAppPath='{snapshot.DevAirAppPath}'.");
             }
         }
         catch (Exception ex)
@@ -873,7 +878,7 @@ public sealed class AirAppRuntimeService : IDisposable
         CleanupPendingDeletionDirectory();
     }
 
-    private void ApplyPendingPluginOperations()
+    private void ApplyPendingAirAppOperations()
     {
         var pendingService = new PendingAirAppUpgradeService(AirAppsDirectory);
         var result = pendingService.ApplyPendingOperations(manifest => _sharedContractManager.EnsureInstalled(manifest));
@@ -884,19 +889,19 @@ public sealed class AirAppRuntimeService : IDisposable
 
         AppLogger.Info(
             "AirAppRuntime",
-            $"Pending plugin operations applied before discovery. Success={result.SuccessCount}; Failure={result.FailureCount}; AirAppsDirectory='{AirAppsDirectory}'.");
+            $"Pending AirApp operations applied before discovery. Success={result.SuccessCount}; Failure={result.FailureCount}; AirAppsDirectory='{AirAppsDirectory}'.");
 
         foreach (var failure in result.Failures)
         {
             AppLogger.Warn(
                 "AirAppRuntime",
-                $"Pending plugin operation failed and will remain queued. AirAppId='{failure.PluginId}'; Operation='{failure.Operation}'; Error='{failure.ErrorMessage}'.");
+                $"Pending AirApp operation failed and will remain queued. AirAppId='{failure.PluginId}'; Operation='{failure.Operation}'; Error='{failure.ErrorMessage}'.");
         }
     }
 
     private void CleanupPendingDeletionDirectory()
     {
-        var pendingDeletionDir = Path.Combine(AirAppsDirectory, ".pending-deletions");
+        var pendingDeletionDir = Path.Combine(AirAppsDirectory, AirAppPackaging.AirAppPackagingConstants.PendingDeletionDirectoryName);
         if (!Directory.Exists(pendingDeletionDir))
         {
             return;
@@ -1032,6 +1037,13 @@ public sealed class AirAppRuntimeService : IDisposable
 
     private string GetPendingDeletionFilePath()
     {
+        // 放在路径计算出口而不是某个调用点：Register/Read/Save/Apply 四个方法都用这个路径，
+        // 散点插迁移必有漏径。放在这里则任何入口都自动先归位再读写，且幂等。
+        AppDataPathProvider.TryMoveLegacyPath(
+            Path.Combine(AirAppsDirectory, LegacyPendingDeletionFileName),
+            Path.Combine(AirAppsDirectory, PendingDeletionFileName),
+            "pending-deletion file");
+
         return Path.Combine(AirAppsDirectory, PendingDeletionFileName);
     }
 
@@ -1050,10 +1062,10 @@ public sealed class AirAppRuntimeService : IDisposable
         AppLogger.Warn("AirAppRuntime", message, result.Error);
     }
 
-    private void RemoveAirAppFromSnapshot(string pluginId)
+    private void RemoveAirAppFromSnapshot(string airAppId)
     {
         var snapshot = LoadAppSettingsSnapshot();
-        if (snapshot.DisabledPluginIds.RemoveAll(id => string.Equals(id, pluginId, StringComparison.OrdinalIgnoreCase)) > 0)
+        if (snapshot.DisabledAirAppIds.RemoveAll(id => string.Equals(id, airAppId, StringComparison.OrdinalIgnoreCase)) > 0)
         {
             SaveAppSettingsSnapshot(snapshot);
         }
@@ -1069,13 +1081,13 @@ public sealed class AirAppRuntimeService : IDisposable
         _settingsFacade.Settings.SaveSnapshot(AirAppSettingsScope.App, snapshot);
     }
 
-    private void RemoveAirAppFromCatalog(string pluginId)
+    private void RemoveAirAppFromCatalog(string airAppId)
     {
-        _catalog.RemoveAll(entry => string.Equals(entry.Manifest.Id, pluginId, StringComparison.OrdinalIgnoreCase));
-        _settingsSections.RemoveAll(entry => string.Equals(entry.AirApp.Manifest.Id, pluginId, StringComparison.OrdinalIgnoreCase));
-        _desktopComponents.RemoveAll(entry => string.Equals(entry.AirApp.Manifest.Id, pluginId, StringComparison.OrdinalIgnoreCase));
-        _loadResults.RemoveAll(entry => string.Equals(entry.Manifest?.Id, pluginId, StringComparison.OrdinalIgnoreCase));
-        _settingsCatalogService.RemoveAirAppSections(pluginId);
+        _catalog.RemoveAll(entry => string.Equals(entry.Manifest.Id, airAppId, StringComparison.OrdinalIgnoreCase));
+        _settingsSections.RemoveAll(entry => string.Equals(entry.AirApp.Manifest.Id, airAppId, StringComparison.OrdinalIgnoreCase));
+        _desktopComponents.RemoveAll(entry => string.Equals(entry.AirApp.Manifest.Id, airAppId, StringComparison.OrdinalIgnoreCase));
+        _loadResults.RemoveAll(entry => string.Equals(entry.Manifest?.Id, airAppId, StringComparison.OrdinalIgnoreCase));
+        _settingsCatalogService.RemoveAirAppSections(airAppId);
     }
 
     private enum AirAppCatalogSourceKind

@@ -52,7 +52,7 @@ public sealed class AirAppSettingsSectionRegistration
     /// <summary>
     /// When set, the host application will instantiate this <see cref="AirAppSettingsPageBase"/> subclass
     /// instead of generating a page from <see cref="Options"/>.
-    /// This allows plugins to provide fully custom AXAML views with any Fluent Avalonia controls.
+    /// This allows AirApps to provide fully custom AXAML views with any Fluent Avalonia controls.
     /// </summary>
     public Type? CustomViewType { get; }
 }

@@ -10,7 +10,7 @@ namespace LanMountainDesktop.Services;
 internal static class AirAppAppearanceSnapshotMapper
 {
     /// <summary>
-    /// Normal host-to-plugin appearance mapping for the live material color pipeline.
+    /// Normal host-to-AirApp appearance mapping for the live material color pipeline.
     /// </summary>
     public static AirAppAppearanceSnapshot FromMaterialColorSnapshot(MaterialColorSnapshot snapshot)
     {

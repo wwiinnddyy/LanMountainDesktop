@@ -98,7 +98,7 @@ public sealed record UpdateSettingsState(
     long? PendingUpdatePublishedAtUtcMs,
     long? LastUpdateCheckUtcMs,
     string? PendingUpdateSha256);
-public sealed record AirAppManagementSettingsState(IReadOnlyList<string> DisabledPluginIds);
+public sealed record AirAppManagementSettingsState(IReadOnlyList<string> DisabledAirAppIds);
 public enum AirAppPackageSourceKind
 {
     ReleaseAsset = 0,
@@ -245,7 +245,7 @@ public interface IAirAppCatalogSourceProvider
 
 public interface IAirAppCatalogService : IAirAppCatalogSourceProvider
 {
-    Task<AirAppCatalogInstallResult> InstallAsync(string pluginId, CancellationToken cancellationToken = default);
+    Task<AirAppCatalogInstallResult> InstallAsync(string airAppId, CancellationToken cancellationToken = default);
 }
 
 public interface IPackageSourceResolver
@@ -407,14 +407,14 @@ public interface IAirAppManagementSettingsService
     AirAppManagementSettingsState Get();
     void Save(AirAppManagementSettingsState state);
     IReadOnlyList<AirAppInstalledInfo> GetInstalledAirApps();
-    bool SetAirAppEnabled(string pluginId, bool isEnabled);
-    bool DeleteInstalledAirApp(string pluginId);
+    bool SetAirAppEnabled(string airAppId, bool isEnabled);
+    bool DeleteInstalledAirApp(string airAppId);
 }
 
 public interface IAirAppCatalogSettingsService : IAirAppCatalogSourceProvider
 {
     new Task<AirAppCatalogIndexResult> LoadCatalogAsync(CancellationToken cancellationToken = default);
-    Task<AirAppCatalogInstallResult> InstallAsync(string pluginId, CancellationToken cancellationToken = default);
+    Task<AirAppCatalogInstallResult> InstallAsync(string airAppId, CancellationToken cancellationToken = default);
 }
 
 public interface IApplicationInfoService

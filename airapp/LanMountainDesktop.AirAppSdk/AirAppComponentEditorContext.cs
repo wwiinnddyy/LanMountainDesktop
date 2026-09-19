@@ -4,17 +4,17 @@ public sealed class AirAppComponentEditorContext
 {
     public AirAppComponentEditorContext(
         AirAppManifest manifest,
-        string pluginDirectory,
+        string airAppDirectory,
         string dataDirectory,
         IServiceProvider services,
         IReadOnlyDictionary<string, object?> properties,
         string componentId,
         string? placementId,
-        IAirAppSettingsService? pluginSettings,
+        IAirAppSettingsService? airAppSettings,
         IComponentEditorHostContext hostContext)
     {
         ArgumentNullException.ThrowIfNull(manifest);
-        ArgumentException.ThrowIfNullOrWhiteSpace(pluginDirectory);
+        ArgumentException.ThrowIfNullOrWhiteSpace(airAppDirectory);
         ArgumentException.ThrowIfNullOrWhiteSpace(dataDirectory);
         ArgumentException.ThrowIfNullOrWhiteSpace(componentId);
         ArgumentNullException.ThrowIfNull(services);
@@ -22,13 +22,13 @@ public sealed class AirAppComponentEditorContext
         ArgumentNullException.ThrowIfNull(hostContext);
 
         Manifest = manifest;
-        AirAppDirectory = pluginDirectory;
+        AirAppDirectory = airAppDirectory;
         DataDirectory = dataDirectory;
         Services = services;
         Properties = properties;
         ComponentId = componentId.Trim();
         PlacementId = string.IsNullOrWhiteSpace(placementId) ? null : placementId.Trim();
-        AirAppSettings = pluginSettings;
+        AirAppSettings = airAppSettings;
         HostContext = hostContext;
     }
 

@@ -11,8 +11,8 @@ namespace LanMountainDesktop.Views.SettingsPages;
     AirAppSettingsPageCategory.AirApps,
     IconKey = "PuzzlePiece",
     SortOrder = 30,
-    TitleLocalizationKey = "settings.plugins.title",
-    DescriptionLocalizationKey = "settings.plugins.description")]
+    TitleLocalizationKey = "settings.airapps.title",
+    DescriptionLocalizationKey = "settings.airapps.description")]
 public partial class AirAppsSettingsPage : AirAppSettingsPageBase
 {
     public AirAppsSettingsPage()

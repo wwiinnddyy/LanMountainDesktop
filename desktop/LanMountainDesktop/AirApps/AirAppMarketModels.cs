@@ -313,7 +313,7 @@ internal sealed record AirAppMarketInstallResult(
 
 /// <summary>
 /// The market index document. Self-contained flat schema (schemaVersion 3.0.0).
-/// Every plugin entry carries all of its display and acquisition metadata inline;
+/// Every AirApp entry carries all of its display and acquisition metadata inline;
 /// the host never needs to call back to GitHub to enrich entries.
 /// </summary>
 internal sealed class AirAppMarketIndexDocument
@@ -381,13 +381,13 @@ internal sealed class AirAppMarketIndexDocument
 
         var normalizedAirApps = new List<AirAppMarketAirAppEntry>((AirApps ?? []).Count);
         var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var plugin in AirApps ?? [])
+        foreach (var AirApp in AirApps ?? [])
         {
-            var normalizedAirApp = plugin.ValidateAndNormalize(sourceName);
+            var normalizedAirApp = AirApp.ValidateAndNormalize(sourceName);
             if (!seenIds.Add(normalizedAirApp.Id))
             {
                 throw new InvalidOperationException(
-                    $"Market index '{sourceName}' contains duplicate plugin id '{normalizedAirApp.Id}'.");
+                    $"Market index '{sourceName}' contains duplicate AirApp id '{normalizedAirApp.Id}'.");
             }
 
             normalizedAirApps.Add(normalizedAirApp);
@@ -406,7 +406,7 @@ internal sealed class AirAppMarketIndexDocument
                 .ThenBy(contract => contract.Version, StringComparer.OrdinalIgnoreCase)
                 .ToList(),
             AirApps = normalizedAirApps
-                .OrderBy(plugin => plugin.Name, StringComparer.OrdinalIgnoreCase)
+                .OrderBy(AirApp => AirApp.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList()
         };
     }
@@ -580,7 +580,7 @@ internal sealed class AirAppMarketAirAppDependencyEntry
         {
             Id = NormalizeValue(Id)
                 ?? throw new InvalidOperationException(
-                    $"Market index '{sourceName}' is missing dependency id for a plugin entry."),
+                    $"Market index '{sourceName}' is missing dependency id for a AirApp entry."),
             Version = NormalizeVersion(Version, nameof(Version), sourceName),
             AssemblyName = NormalizeValue(AssemblyName)
                 ?? throw new InvalidOperationException(
@@ -597,21 +597,21 @@ internal sealed class AirAppMarketAirAppPackageSourceEntry
 
     public AirAppPackageSourceKind SourceKind { get; init; } = AirAppPackageSourceKind.ReleaseAsset;
 
-    public AirAppMarketAirAppPackageSourceEntry ValidateAndNormalize(string sourceName, string pluginId)
+    public AirAppMarketAirAppPackageSourceEntry ValidateAndNormalize(string sourceName, string airAppId)
     {
         var normalizedKind = NormalizeValue(Kind)
             ?? throw new InvalidOperationException(
-                $"Market index '{sourceName}' is missing package source kind for plugin '{pluginId}'.");
+                $"Market index '{sourceName}' is missing package source kind for AirApp '{airAppId}'.");
         if (!AirAppMarketDefaults.TryParsePackageSourceKind(normalizedKind, out var sourceKind))
         {
             throw new InvalidOperationException(
-                $"Market index '{sourceName}' declares invalid package source kind '{normalizedKind}' for plugin '{pluginId}'.");
+                $"Market index '{sourceName}' declares invalid package source kind '{normalizedKind}' for AirApp '{airAppId}'.");
         }
 
         var normalizedUrl = NormalizeValue(Url)
             ?? throw new InvalidOperationException(
-                $"Market index '{sourceName}' is missing package source url for plugin '{pluginId}'.");
-        EnsurePackageSourceUrl(normalizedUrl, sourceName, pluginId);
+                $"Market index '{sourceName}' is missing package source url for AirApp '{airAppId}'.");
+        EnsurePackageSourceUrl(normalizedUrl, sourceName, airAppId);
 
         return new AirAppMarketAirAppPackageSourceEntry
         {
@@ -627,12 +627,12 @@ internal sealed class AirAppMarketAirAppPackageSourceEntry
         };
     }
 
-    internal static void EnsurePackageSourceUrl(string url, string sourceName, string pluginId)
+    internal static void EnsurePackageSourceUrl(string url, string sourceName, string airAppId)
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
         {
             throw new InvalidOperationException(
-                $"Market index '{sourceName}' declares invalid package source url '{url}' for plugin '{pluginId}'.");
+                $"Market index '{sourceName}' declares invalid package source url '{url}' for AirApp '{airAppId}'.");
         }
 
         if (uri.IsFile ||
@@ -644,12 +644,12 @@ internal sealed class AirAppMarketAirAppPackageSourceEntry
         }
 
         throw new InvalidOperationException(
-            $"Market index '{sourceName}' declares unsupported package source url scheme '{uri.Scheme}' for plugin '{pluginId}'.");
+            $"Market index '{sourceName}' declares unsupported package source url scheme '{uri.Scheme}' for AirApp '{airAppId}'.");
     }
 }
 
 /// <summary>
-/// A single market plugin entry in the self-contained flat schema.
+/// A single market AirApp entry in the self-contained flat schema.
 /// All display and acquisition metadata lives directly on this object; there are no
 /// nested manifest/compatibility/repository/publication fallback objects.
 /// </summary>
@@ -725,16 +725,16 @@ internal sealed class AirAppMarketAirAppEntry
     public AirAppMarketAirAppEntry ValidateAndNormalize(string sourceName)
     {
         var resolvedId = NormalizeValue(AirAppId) ?? NormalizeValue(Id)
-            ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing plugin id.");
+            ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing AirApp id.");
 
         var resolvedName = NormalizeValue(Name)
-            ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing plugin name for '{resolvedId}'.");
+            ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing AirApp name for '{resolvedId}'.");
 
         var resolvedDescription = NormalizeValue(Description)
-            ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing plugin description for '{resolvedId}'.");
+            ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing AirApp description for '{resolvedId}'.");
 
         var resolvedAuthor = NormalizeValue(Author)
-            ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing plugin author for '{resolvedId}'.");
+            ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing AirApp author for '{resolvedId}'.");
 
         var resolvedVersion = NormalizeVersion(Version, nameof(Version), sourceName);
         var resolvedApiVersion = NormalizeVersion(ApiVersion, nameof(ApiVersion), sourceName);
@@ -746,7 +746,7 @@ internal sealed class AirAppMarketAirAppEntry
 
         var resolvedRepositoryUrl = NormalizeGitHubRepositoryUrl(
             NormalizeValue(RepositoryUrl)
-            ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing repositoryUrl for plugin '{resolvedId}'."),
+            ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing repositoryUrl for AirApp '{resolvedId}'."),
             nameof(RepositoryUrl),
             sourceName);
 
@@ -778,7 +778,7 @@ internal sealed class AirAppMarketAirAppEntry
             (resolvedSha256.Length != 64 || resolvedSha256.Any(ch => !Uri.IsHexDigit(ch))))
         {
             throw new InvalidOperationException(
-                $"Market index '{sourceName}' declares invalid SHA-256 '{resolvedSha256}' for plugin '{resolvedId}'.");
+                $"Market index '{sourceName}' declares invalid SHA-256 '{resolvedSha256}' for AirApp '{resolvedId}'.");
         }
 
         var resolvedMd5 = NormalizeValue(Md5)?.ToLowerInvariant() ?? string.Empty;
@@ -786,14 +786,14 @@ internal sealed class AirAppMarketAirAppEntry
             (resolvedMd5.Length != 32 || resolvedMd5.Any(ch => !Uri.IsHexDigit(ch))))
         {
             throw new InvalidOperationException(
-                $"Market index '{sourceName}' declares invalid MD5 '{resolvedMd5}' for plugin '{resolvedId}'.");
+                $"Market index '{sourceName}' declares invalid MD5 '{resolvedMd5}' for AirApp '{resolvedId}'.");
         }
 
         var normalizedPackageSources = NormalizePackageSources(PackageSources, sourceName, resolvedId);
         if (normalizedPackageSources.Count == 0)
         {
             throw new InvalidOperationException(
-                $"Market index '{sourceName}' is missing package sources for plugin '{resolvedId}'.");
+                $"Market index '{sourceName}' is missing package sources for AirApp '{resolvedId}'.");
         }
 
         return new AirAppMarketAirAppEntry
@@ -850,26 +850,26 @@ internal sealed class AirAppMarketAirAppEntry
     private static List<AirAppMarketAirAppPackageSourceEntry> NormalizePackageSources(
         IReadOnlyList<AirAppMarketAirAppPackageSourceEntry>? packageSources,
         string sourceName,
-        string pluginId)
+        string airAppId)
     {
         var normalizedSources = new List<AirAppMarketAirAppPackageSourceEntry>((packageSources ?? []).Count);
         var seenKinds = new HashSet<AirAppPackageSourceKind>();
         var previousOrder = -1;
         foreach (var source in packageSources ?? [])
         {
-            var normalizedSource = source.ValidateAndNormalize(sourceName, pluginId);
+            var normalizedSource = source.ValidateAndNormalize(sourceName, airAppId);
             var order = AirAppMarketDefaults.GetPackageSourceOrder(normalizedSource.SourceKind);
             if (order < previousOrder)
             {
                 throw new InvalidOperationException(
-                    $"Market index '{sourceName}' declares packageSources out of order for plugin '{pluginId}'. Expected releaseAsset -> rawFallback -> workspaceLocal.");
+                    $"Market index '{sourceName}' declares packageSources out of order for AirApp '{airAppId}'. Expected releaseAsset -> rawFallback -> workspaceLocal.");
             }
 
             previousOrder = order;
             if (!seenKinds.Add(normalizedSource.SourceKind))
             {
                 throw new InvalidOperationException(
-                    $"Market index '{sourceName}' declares duplicate package source kind '{normalizedSource.Kind}' for plugin '{pluginId}'.");
+                    $"Market index '{sourceName}' declares duplicate package source kind '{normalizedSource.Kind}' for AirApp '{airAppId}'.");
             }
 
             normalizedSources.Add(normalizedSource);
@@ -881,7 +881,7 @@ internal sealed class AirAppMarketAirAppEntry
     private static List<AirAppMarketAirAppDependencyEntry> NormalizeDependencies(
         IReadOnlyList<AirAppMarketAirAppDependencyEntry>? dependencies,
         string sourceName,
-        string pluginId)
+        string airAppId)
     {
         var normalizedDependencies = new List<AirAppMarketAirAppDependencyEntry>((dependencies ?? []).Count);
         var seenDependencies = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -892,7 +892,7 @@ internal sealed class AirAppMarketAirAppEntry
             if (!seenDependencies.Add(dependencyKey))
             {
                 throw new InvalidOperationException(
-                    $"Market index '{sourceName}' declares duplicate dependency '{dependencyKey}' for plugin '{pluginId}'.");
+                    $"Market index '{sourceName}' declares duplicate dependency '{dependencyKey}' for AirApp '{airAppId}'.");
             }
 
             normalizedDependencies.Add(normalizedDependency);

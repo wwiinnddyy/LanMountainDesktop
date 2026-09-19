@@ -18,7 +18,7 @@ public sealed class LoadedAirApp : IDisposable, IAsyncDisposable
         string sourcePath,
         string assemblyPath,
         Assembly assembly,
-        IAirApp plugin,
+        IAirApp AirApp,
         IAirAppRuntimeContext runtimeContext,
         IServiceProvider services,
         IReadOnlyList<AirAppSettingsSectionRegistration> settingsSections,
@@ -33,7 +33,7 @@ public sealed class LoadedAirApp : IDisposable, IAsyncDisposable
         SourcePath = sourcePath;
         AssemblyPath = assemblyPath;
         Assembly = assembly;
-        AirApp = plugin;
+        AirApp = AirApp;
         RuntimeContext = runtimeContext;
         Services = services;
         SettingsSections = settingsSections;
@@ -95,7 +95,7 @@ public sealed class LoadedAirApp : IDisposable, IAsyncDisposable
             }
             catch
             {
-                // Ignore plugin hosted service shutdown failures to allow unload cleanup.
+                // Ignore AirApp hosted service shutdown failures to allow unload cleanup.
             }
         }
 

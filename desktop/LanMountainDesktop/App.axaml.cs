@@ -75,7 +75,7 @@ public partial class App : Application
 
     private DesktopTrayService? _desktopTrayService;
     private DispatcherTimer? _shellRecoveryTimer;
-    private AirAppRuntimeService? _pluginRuntimeService;
+    private AirAppRuntimeService? _airAppRuntimeService;
     private MainWindow? _mainWindow;
     private FusedDesktopComponentLibraryWindow? _fusedComponentLibraryWindow;
     private bool _mainWindowClosed;
@@ -103,7 +103,7 @@ public partial class App : Application
         CurrentPrivacyPolicyViewRequested?.Invoke();
     }
 
-    public AirAppRuntimeService? AirAppRuntimeService => _pluginRuntimeService;
+    public AirAppRuntimeService? AirAppRuntimeService => _airAppRuntimeService;
     public ISettingsFacadeService SettingsFacade => _settingsFacade;
     public IHostApplicationLifecycle HostApplicationLifecycle => _hostApplicationLifecycle;
     internal ISettingsWindowService? SettingsWindowService => _settingsWindowService;
@@ -600,8 +600,8 @@ public partial class App : Application
                 {
                     try
                     {
-                        var previous = _pluginRuntimeService;
-                        _pluginRuntimeService = newService;
+                        var previous = _airAppRuntimeService;
+                        _airAppRuntimeService = newService;
                         previous?.Dispose();
 
                         // Ensure settings catalog reflects newly loaded AirApps
@@ -625,7 +625,7 @@ public partial class App : Application
             catch (Exception ex)
             {
                 stopwatch.Stop();
-                AppLogger.Warn("AirAppRuntime", $"Failed to initialize plugin runtime after {stopwatch.ElapsedMilliseconds}ms.", ex);
+                AppLogger.Warn("AirAppRuntime", $"Failed to initialize AirApp runtime after {stopwatch.ElapsedMilliseconds}ms.", ex);
                 newService?.Dispose();
                 Dispatcher.UIThread.Post(() =>
                 {
@@ -799,7 +799,7 @@ public partial class App : Application
             _settingsFacade,
             _hostApplicationLifecycle,
             _localizationService,
-            () => _pluginRuntimeService);
+            () => _airAppRuntimeService);
         _settingsWindowService ??= new SettingsWindowService(
             _settingsPageRegistry,
             _hostApplicationLifecycle,
@@ -1243,15 +1243,15 @@ public partial class App : Application
 
         try
         {
-            _pluginRuntimeService?.Dispose();
+            _airAppRuntimeService?.Dispose();
         }
         catch (Exception ex)
         {
-            AppLogger.Warn("AirAppRuntime", "Failed to dispose plugin runtime during shutdown.", ex);
+            AppLogger.Warn("AirAppRuntime", "Failed to dispose AirApp runtime during shutdown.", ex);
         }
         finally
         {
-            _pluginRuntimeService = null;
+            _airAppRuntimeService = null;
         }
 
         try
@@ -1962,13 +1962,13 @@ public partial class App : Application
         {
             var versionInfo = AppVersionProvider.ResolveForCurrentProcess();
             _publicIpcHostService = new PublicIpcHostService();
-            _publicIpcHostService.PluginDescriptorProvider = BuildPublicPluginDescriptors;
+            _publicIpcHostService.AirAppDescriptorProvider = BuildPublicAirAppDescriptors;
             _publicIpcHostService.RegisterPublicService<IPublicAppInfoService>(
                 new PublicAppInfoService(_startupAt));
             _publicIpcHostService.RegisterPublicService<IPublicShellControlService>(
                 new PublicShellControlService());
-            _publicIpcHostService.RegisterPublicService<IPublicPluginCatalogService>(
-                new PublicPluginCatalogService(_publicIpcHostService));
+            _publicIpcHostService.RegisterPublicService<IPublicAirAppCatalogService>(
+                new PublicAirAppCatalogService(_publicIpcHostService));
             _publicIpcHostService.Start();
             AppLogger.Info(
                 "PublicIpc",
@@ -2045,16 +2045,16 @@ public partial class App : Application
         }
     }
 
-    private IReadOnlyList<PublicPluginDescriptor> BuildPublicPluginDescriptors()
+    private IReadOnlyList<PublicAirAppDescriptor> BuildPublicAirAppDescriptors()
     {
-        var runtime = _pluginRuntimeService;
+        var runtime = _airAppRuntimeService;
         if (runtime is null)
         {
-            return Array.Empty<PublicPluginDescriptor>();
+            return Array.Empty<PublicAirAppDescriptor>();
         }
 
         return runtime.Catalog
-            .Select(entry => new PublicPluginDescriptor(
+            .Select(entry => new PublicAirAppDescriptor(
                 entry.Manifest.Id,
                 entry.Manifest.Name,
                 entry.Manifest.Version,

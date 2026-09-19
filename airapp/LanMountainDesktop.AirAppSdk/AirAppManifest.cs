@@ -39,7 +39,7 @@ public sealed record AirAppManifest(
         var manifest = JsonSerializer.Deserialize<AirAppManifest>(stream, SerializerOptions);
         if (manifest is null)
         {
-            throw new InvalidOperationException($"Failed to deserialize plugin manifest '{sourceName}'.");
+            throw new InvalidOperationException($"Failed to deserialize the AirApp manifest '{sourceName}'.");
         }
 
         return manifest.NormalizeAndValidate(sourceName);
@@ -99,7 +99,7 @@ public sealed record AirAppManifest(
             throw new InvalidOperationException(
                 $"AirApp '{normalized.Id}' targets API version '{normalized.ApiVersion}', " +
                 $"but the host provides '{AirAppSdkInfo.ApiVersion}'. " +
-                $"This host only supports API {AirAppSdkInfo.ApiVersion} plugins.");
+                $"This host only supports AirApp SDK API {AirAppSdkInfo.ApiVersion}.");
         }
 
         return normalized;

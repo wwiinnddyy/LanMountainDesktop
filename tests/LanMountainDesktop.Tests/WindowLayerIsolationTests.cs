@@ -164,16 +164,25 @@ public sealed class WindowLayerIsolationTests
     [Fact]
     public void MainWindowDesktopLayerService_DoesNotUseFusedDesktopPassthroughBoundary()
     {
-        var source = ReadRepositoryFile("desktop", "LanMountainDesktop", "Services", "MainWindowDesktopLayerService.cs");
+        // desktop 侧的服务已缩成工厂，Win32 实现整体迁到平台层。
+        // 隔离断言必须指向真正实现，否则它只是在守一个 33 行的空壳。
+        var factorySource = ReadRepositoryFile("desktop", "LanMountainDesktop", "Services", "MainWindowDesktopLayerService.cs");
 
-        Assert.Contains("IMainWindowDesktopLayerService", source);
-        Assert.Contains("SetParent", source);
-        Assert.Contains("HWND_BOTTOM", source);
-        Assert.DoesNotContain("WindowBottomMostServiceFactory", source);
-        Assert.DoesNotContain("IRegionPassthroughService", source);
-        Assert.DoesNotContain("SetInteractiveRegions", source);
-        Assert.DoesNotContain("HTTRANSPARENT", source);
-        Assert.DoesNotContain("WS_EX_NOACTIVATE", source);
+        Assert.Contains("IMainWindowDesktopLayerService", factorySource);
+        Assert.DoesNotContain("WindowBottomMostServiceFactory", factorySource);
+
+        var windowsSource = ReadRepositoryFile(
+            "platform",
+            "LanMountainDesktop.Platform",
+            "WindowsMainWindowDesktopLayerService.cs");
+
+        Assert.Contains("SetParent", windowsSource);
+        Assert.Contains("HWND_BOTTOM", windowsSource);
+        Assert.DoesNotContain("WindowBottomMostServiceFactory", windowsSource);
+        Assert.DoesNotContain("IRegionPassthroughService", windowsSource);
+        Assert.DoesNotContain("SetInteractiveRegions", windowsSource);
+        Assert.DoesNotContain("HTTRANSPARENT", windowsSource);
+        Assert.DoesNotContain("WS_EX_NOACTIVATE", windowsSource);
     }
 
     [Fact]

@@ -230,7 +230,7 @@ public partial class GeneratedAirAppSettingsPage : AirAppSettingsPageBase
 
     private static AirAppGeneratedSettingsPageViewModel CreateDesignTimeViewModel()
     {
-        const string pluginId = "preview.plugin";
+        const string airAppId = "preview.AirApp";
         var settingsService = new DesignTimeSettingsService();
         var section = new AirAppSettingsSectionRegistration(
             "desktop_preview",
@@ -246,7 +246,7 @@ public partial class GeneratedAirAppSettingsPage : AirAppSettingsPageBase
                     "refresh_minutes",
                     AirAppSettingOptionType.Number,
                     "Refresh interval",
-                    "How often the plugin refreshes its cached content.",
+                    "How often the AirApp refreshes its cached content.",
                     30d,
                     minimum: 5d,
                     maximum: 120d),
@@ -265,7 +265,7 @@ public partial class GeneratedAirAppSettingsPage : AirAppSettingsPageBase
                     "content_path",
                     AirAppSettingOptionType.Path,
                     "Content folder",
-                    "Local folder used by the plugin for mock assets.",
+                    "Local folder used by the AirApp for mock assets.",
                     @"C:\Preview\AirAppAssets"),
                 new AirAppSettingOptionDefinition(
                     "keywords",
@@ -274,42 +274,42 @@ public partial class GeneratedAirAppSettingsPage : AirAppSettingsPageBase
                     "Comma-separated topics that will be emphasized in the widget.",
                     new[] { "avalonia", "preview", "design-time" })
             ],
-            "Mock plugin settings shown only in Avalonia design mode.");
+            "Mock AirApp settings shown only in Avalonia design mode.");
 
         settingsService.SetValue(
             AirAppSettingsScope.AirApp,
             "enable_glow",
             true,
-            pluginId,
+            airAppId,
             sectionId: section.Id);
         settingsService.SetValue(
             AirAppSettingsScope.AirApp,
             "refresh_minutes",
             30d,
-            pluginId,
+            airAppId,
             sectionId: section.Id);
         settingsService.SetValue(
             AirAppSettingsScope.AirApp,
             "layout_density",
             "balanced",
-            pluginId,
+            airAppId,
             sectionId: section.Id);
         settingsService.SetValue(
             AirAppSettingsScope.AirApp,
             "content_path",
             @"C:\Preview\AirAppAssets",
-            pluginId,
+            airAppId,
             sectionId: section.Id);
         settingsService.SetValue(
             AirAppSettingsScope.AirApp,
             "keywords",
             new[] { "avalonia", "preview", "design-time" },
-            pluginId,
+            airAppId,
             sectionId: section.Id);
 
         return new AirAppGeneratedSettingsPageViewModel(
             settingsService,
-            pluginId,
+            airAppId,
             section,
             new AirAppLocalizer(AppContext.BaseDirectory, "en-US"));
     }

@@ -39,13 +39,13 @@ internal sealed class AirAppMarketInstallService : IDisposable
     }
 
     public async Task<AirAppMarketInstallResult> InstallAsync(
-        AirAppMarketAirAppEntry plugin,
+        AirAppMarketAirAppEntry airApp,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(plugin);
+        ArgumentNullException.ThrowIfNull(airApp);
 
         Directory.CreateDirectory(_downloadsDirectory);
-        var sources = plugin.GetPackageSourcesInInstallOrder();
+        var sources = airApp.GetPackageSourcesInInstallOrder();
         if (sources.Count == 0)
         {
             return new AirAppMarketInstallResult(
@@ -56,24 +56,24 @@ internal sealed class AirAppMarketInstallService : IDisposable
 
         AppLogger.Info(
             "AirAppMarket",
-            $"Starting install. AirAppId='{plugin.Id}'; Version='{plugin.Version}'; Sources='{string.Join(", ", sources.Select(source => source.SourceKind.ToString()))}'.");
+            $"Starting install. AirAppId='{airApp.Id}'; Version='{airApp.Version}'; Sources='{string.Join(", ", sources.Select(source => source.SourceKind.ToString()))}'.");
 
-        var compatibilityError = ValidateCompatibility(plugin);
+        var compatibilityError = ValidateCompatibility(airApp);
         if (!string.IsNullOrWhiteSpace(compatibilityError))
         {
-            AppLogger.Warn("AirAppMarket", $"Compatibility check failed. AirAppId='{plugin.Id}'; Error='{compatibilityError}'.");
+            AppLogger.Warn("AirAppMarket", $"Compatibility check failed. AirAppId='{airApp.Id}'; Error='{compatibilityError}'.");
             return new AirAppMarketInstallResult(false, null, compatibilityError);
         }
 
         return await StageInstallOrUpgradeAsync(
-            plugin,
+            airApp,
             sources,
-            IsAirAppInstalled(plugin.Id),
+            IsAirAppInstalled(airApp.Id),
             cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<AirAppMarketInstallResult> StageInstallOrUpgradeAsync(
-        AirAppMarketAirAppEntry plugin,
+        AirAppMarketAirAppEntry airApp,
         IReadOnlyList<AirAppMarketAirAppPackageSourceEntry> sources,
         bool isUpgrade,
         CancellationToken cancellationToken)
@@ -81,12 +81,12 @@ internal sealed class AirAppMarketInstallService : IDisposable
         var canWriteAirAppsDirectory = AirAppInstallTargetAccess.CanWriteDirectory(_runtime.AirAppsDirectory);
         AppLogger.Info(
             "AirAppMarket",
-            $"Detected {(isUpgrade ? "upgrade" : "new install")} scenario. Downloading package for {(canWriteAirAppsDirectory ? "deferred" : "elevated")} install. AirAppId='{plugin.Id}'; AirAppsDirectory='{_runtime.AirAppsDirectory}'; CanWriteAirAppsDirectory={canWriteAirAppsDirectory}.");
+            $"Detected {(isUpgrade ? "upgrade" : "new install")} scenario. Downloading package for {(canWriteAirAppsDirectory ? "deferred" : "elevated")} install. AirAppId='{airApp.Id}'; AirAppsDirectory='{_runtime.AirAppsDirectory}'; CanWriteAirAppsDirectory={canWriteAirAppsDirectory}.");
 
         var sourceErrors = new List<string>();
         foreach (var source in sources)
         {
-            var downloadResult = await DownloadPackageAsync(plugin, source, cancellationToken).ConfigureAwait(false);
+            var downloadResult = await DownloadPackageAsync(airApp, source, cancellationToken).ConfigureAwait(false);
             if (!downloadResult.Success || string.IsNullOrWhiteSpace(downloadResult.PackagePath))
             {
                 if (!string.IsNullOrWhiteSpace(downloadResult.ErrorMessage))
@@ -114,7 +114,7 @@ internal sealed class AirAppMarketInstallService : IDisposable
 
                     AppLogger.Info(
                         "AirAppMarket",
-                        $"AirApp package installed through elevated installer. AirAppId='{manifest.Id}'; Version='{manifest.Version ?? plugin.Version}'; PackagePath='{downloadResult.PackagePath}'; IsUpgrade={isUpgrade}.");
+                        $"AirApp package installed through elevated installer. AirAppId='{manifest.Id}'; Version='{manifest.Version ?? airApp.Version}'; PackagePath='{downloadResult.PackagePath}'; IsUpgrade={isUpgrade}.");
 
                     return new AirAppMarketInstallResult(true, manifest, null, RestartRequired: true);
                 }
@@ -122,11 +122,11 @@ internal sealed class AirAppMarketInstallService : IDisposable
                 _pendingUpgradeService.AddPendingInstallOrUpgrade(
                     manifest.Id,
                     downloadResult.PackagePath,
-                    manifest.Version ?? plugin.Version);
+                    manifest.Version ?? airApp.Version);
 
                 AppLogger.Info(
                     "AirAppMarket",
-                    $"AirApp package queued for next restart. AirAppId='{manifest.Id}'; Version='{manifest.Version ?? plugin.Version}'; PackagePath='{downloadResult.PackagePath}'; IsUpgrade={isUpgrade}.");
+                    $"AirApp package queued for next restart. AirAppId='{manifest.Id}'; Version='{manifest.Version ?? airApp.Version}'; PackagePath='{downloadResult.PackagePath}'; IsUpgrade={isUpgrade}.");
 
                 return new AirAppMarketInstallResult(true, manifest, null, RestartRequired: true);
             }
@@ -138,22 +138,22 @@ internal sealed class AirAppMarketInstallService : IDisposable
         }
 
         var combinedMessage = sourceErrors.Count == 0
-            ? $"Failed to stage plugin '{plugin.Id}' from all available package sources."
-            : $"Failed to stage plugin '{plugin.Id}' from all available package sources. {string.Join(" ", sourceErrors)}";
+            ? $"Failed to stage airApp '{airApp.Id}' from all available package sources."
+            : $"Failed to stage airApp '{airApp.Id}' from all available package sources. {string.Join(" ", sourceErrors)}";
         return new AirAppMarketInstallResult(false, null, combinedMessage);
     }
 
-    private bool IsAirAppInstalled(string pluginId)
+    private bool IsAirAppInstalled(string airAppId)
     {
         return _runtime.Catalog.Any(entry =>
-            string.Equals(entry.Manifest.Id, pluginId, StringComparison.OrdinalIgnoreCase));
+            string.Equals(entry.Manifest.Id, airAppId, StringComparison.OrdinalIgnoreCase));
     }
 
-    private string? ValidateCompatibility(AirAppMarketAirAppEntry plugin) =>
-        AirAppMarketCompatibility.Validate(plugin, _hostVersion, AirAppSdkInfo.ApiVersion);
+    private string? ValidateCompatibility(AirAppMarketAirAppEntry airApp) =>
+        AirAppMarketCompatibility.Validate(airApp, _hostVersion, AirAppSdkInfo.ApiVersion);
 
     private async Task<AirAppMarketAcquisitionResult> AcquirePackageAsync(
-        AirAppMarketAirAppEntry plugin,
+        AirAppMarketAirAppEntry airApp,
         AirAppMarketAirAppPackageSourceEntry source,
         string resolvedDownloadUrl,
         string attemptPath,
@@ -165,13 +165,13 @@ internal sealed class AirAppMarketInstallService : IDisposable
             {
                 AppLogger.Info(
                     "AirAppMarket",
-                    $"Copying workspace package for '{plugin.Id}' from '{localPackagePath}' to '{attemptPath}'.");
+                    $"Copying workspace package for '{airApp.Id}' from '{localPackagePath}' to '{attemptPath}'.");
             }
 
             var localCopyResult = await _downloadService.DownloadAsync(
                 localPackagePath,
                 attemptPath,
-                new DownloadOptions(ExpectedSizeBytes: plugin.PackageSizeBytes > 0 ? plugin.PackageSizeBytes : null),
+                new DownloadOptions(ExpectedSizeBytes: airApp.PackageSizeBytes > 0 ? airApp.PackageSizeBytes : null),
                 cancellationToken: cancellationToken).ConfigureAwait(false);
             if (!localCopyResult.Success)
             {
@@ -191,7 +191,7 @@ internal sealed class AirAppMarketInstallService : IDisposable
         var downloadResult = await _downloadService.DownloadAsync(
             resolvedDownloadUrl,
             attemptPath,
-            new DownloadOptions(ExpectedSizeBytes: plugin.PackageSizeBytes > 0 ? plugin.PackageSizeBytes : null),
+            new DownloadOptions(ExpectedSizeBytes: airApp.PackageSizeBytes > 0 ? airApp.PackageSizeBytes : null),
             cancellationToken: cancellationToken).ConfigureAwait(false);
         if (!downloadResult.Success)
         {
@@ -202,7 +202,7 @@ internal sealed class AirAppMarketInstallService : IDisposable
     }
 
     private async Task<AirAppMarketVerificationResult> VerifyPackageAsync(
-        AirAppMarketAirAppEntry plugin,
+        AirAppMarketAirAppEntry airApp,
         string attemptPath,
         CancellationToken cancellationToken)
     {
@@ -214,25 +214,25 @@ internal sealed class AirAppMarketInstallService : IDisposable
             actualHash = Convert.ToHexString(hashBytes).ToLowerInvariant();
         }
 
-        if (plugin.PackageSizeBytes > 0 && actualSize != plugin.PackageSizeBytes)
+        if (airApp.PackageSizeBytes > 0 && actualSize != airApp.PackageSizeBytes)
         {
             AppLogger.Error(
                 "AirAppMarket",
-                $"Package verification failed. AirAppId='{plugin.Id}'; Version='{plugin.Version}'; DownloadPath='{attemptPath}'; ExpectedSize='{plugin.PackageSizeBytes}'; ActualSize='{actualSize}'.");
+                $"Package verification failed. AirAppId='{airApp.Id}'; Version='{airApp.Version}'; DownloadPath='{attemptPath}'; ExpectedSize='{airApp.PackageSizeBytes}'; ActualSize='{actualSize}'.");
             return new AirAppMarketVerificationResult(
                 false,
-                $"Package verification failed. Expected size {plugin.PackageSizeBytes}, actual size {actualSize}.");
+                $"Package verification failed. Expected size {airApp.PackageSizeBytes}, actual size {actualSize}.");
         }
 
-        if (!string.IsNullOrWhiteSpace(plugin.Sha256) &&
-            !string.Equals(actualHash, plugin.Sha256, StringComparison.OrdinalIgnoreCase))
+        if (!string.IsNullOrWhiteSpace(airApp.Sha256) &&
+            !string.Equals(actualHash, airApp.Sha256, StringComparison.OrdinalIgnoreCase))
         {
             AppLogger.Error(
                 "AirAppMarket",
-                $"Package hash verification failed. AirAppId='{plugin.Id}'; Version='{plugin.Version}'; DownloadPath='{attemptPath}'; ExpectedHash='{plugin.Sha256}'; ActualHash='{actualHash}'.");
+                $"Package hash verification failed. AirAppId='{airApp.Id}'; Version='{airApp.Version}'; DownloadPath='{attemptPath}'; ExpectedHash='{airApp.Sha256}'; ActualHash='{actualHash}'.");
             return new AirAppMarketVerificationResult(
                 false,
-                $"Package verification failed. Expected SHA-256 {plugin.Sha256}, actual {actualHash}.");
+                $"Package verification failed. Expected SHA-256 {airApp.Sha256}, actual {actualHash}.");
         }
 
         return new AirAppMarketVerificationResult(true, null);
@@ -269,29 +269,29 @@ internal sealed class AirAppMarketInstallService : IDisposable
     }
 
     private async Task<DownloadPackageResult> DownloadPackageAsync(
-        AirAppMarketAirAppEntry plugin,
+        AirAppMarketAirAppEntry airApp,
         AirAppMarketAirAppPackageSourceEntry source,
         CancellationToken cancellationToken)
     {
         var packagePath = Path.Combine(
             _downloadsDirectory,
-            $"{SanitizeFileName(plugin.Id)}-{SanitizeFileName(plugin.Version)}-{SanitizeFileName(source.SourceKind.ToString())}-{Guid.NewGuid():N}.laapp");
+            $"{SanitizeFileName(airApp.Id)}-{SanitizeFileName(airApp.Version)}-{SanitizeFileName(source.SourceKind.ToString())}-{Guid.NewGuid():N}.laapp");
 
         try
         {
-            var resolvedDownloadUrl = await _releaseResolverService.ResolveDownloadUrlAsync(plugin, source, cancellationToken).ConfigureAwait(false);
+            var resolvedDownloadUrl = await _releaseResolverService.ResolveDownloadUrlAsync(airApp, source, cancellationToken).ConfigureAwait(false);
             AppLogger.Info(
                 "AirAppMarket",
-                $"Downloading package for deferred plugin install. AirAppId='{plugin.Id}'; Source='{resolvedDownloadUrl}'.");
+                $"Downloading package for deferred airApp install. AirAppId='{airApp.Id}'; Source='{resolvedDownloadUrl}'.");
 
-            var acquireResult = await AcquirePackageAsync(plugin, source, resolvedDownloadUrl, packagePath, cancellationToken).ConfigureAwait(false);
+            var acquireResult = await AcquirePackageAsync(airApp, source, resolvedDownloadUrl, packagePath, cancellationToken).ConfigureAwait(false);
             if (!acquireResult.Success)
             {
                 TryDeleteFile(packagePath);
                 return new DownloadPackageResult(false, null, acquireResult.ErrorMessage);
             }
 
-            var verificationResult = await VerifyPackageAsync(plugin, packagePath, cancellationToken).ConfigureAwait(false);
+            var verificationResult = await VerifyPackageAsync(airApp, packagePath, cancellationToken).ConfigureAwait(false);
             if (!verificationResult.Success)
             {
                 TryDeleteFile(packagePath);
@@ -361,35 +361,35 @@ internal sealed class AirAppMarketInstallService : IDisposable
 internal static class AirAppMarketCompatibility
 {
     public static string? Validate(
-        AirAppMarketAirAppEntry plugin,
+        AirAppMarketAirAppEntry airApp,
         Version? hostVersion,
         string? hostApiVersion)
     {
-        ArgumentNullException.ThrowIfNull(plugin);
+        ArgumentNullException.ThrowIfNull(airApp);
 
-        if (hostVersion is not null && !string.IsNullOrWhiteSpace(plugin.MinHostVersion))
+        if (hostVersion is not null && !string.IsNullOrWhiteSpace(airApp.MinHostVersion))
         {
-            if (!AirAppMarketIndexDocument.TryParseVersion(plugin.MinHostVersion, out var minHostVersion) ||
+            if (!AirAppMarketIndexDocument.TryParseVersion(airApp.MinHostVersion, out var minHostVersion) ||
                 minHostVersion is null)
             {
-                return $"AirApp '{plugin.Id}' declares invalid minimum host version '{plugin.MinHostVersion}'.";
+                return $"AirApp '{airApp.Id}' declares invalid minimum host version '{airApp.MinHostVersion}'.";
             }
 
             if (hostVersion < minHostVersion)
             {
-                return $"AirApp '{plugin.Id}' requires host version {plugin.MinHostVersion} or newer. Current host version is {hostVersion}.";
+                return $"AirApp '{airApp.Id}' requires host version {airApp.MinHostVersion} or newer. Current host version is {hostVersion}.";
             }
         }
 
-        if (string.IsNullOrWhiteSpace(plugin.ApiVersion))
+        if (string.IsNullOrWhiteSpace(airApp.ApiVersion))
         {
             return null;
         }
 
-        if (!AirAppMarketIndexDocument.TryParseVersion(plugin.ApiVersion, out var pluginApiVersion) ||
-            pluginApiVersion is null)
+        if (!AirAppMarketIndexDocument.TryParseVersion(airApp.ApiVersion, out var airAppApiVersion) ||
+            airAppApiVersion is null)
         {
-            return $"AirApp '{plugin.Id}' declares invalid API version '{plugin.ApiVersion}'.";
+            return $"AirApp '{airApp.Id}' declares invalid API version '{airApp.ApiVersion}'.";
         }
 
         if (string.IsNullOrWhiteSpace(hostApiVersion) ||
@@ -402,8 +402,8 @@ internal static class AirAppMarketCompatibility
             return null;
         }
 
-        return pluginApiVersion.Major != hostApiVersionParsed.Major
-            ? $"AirApp '{plugin.Id}' uses incompatible API version {plugin.ApiVersion}. Host API version is {hostApiVersion}. Major version must match."
+        return airAppApiVersion.Major != hostApiVersionParsed.Major
+            ? $"AirApp '{airApp.Id}' uses incompatible API version {airApp.ApiVersion}. Host API version is {hostApiVersion}. Major version must match."
             : null;
     }
 }

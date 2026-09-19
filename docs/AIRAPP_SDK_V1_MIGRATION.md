@@ -6,6 +6,13 @@
 
 AirApp 取代插件成为阑山桌面的统一扩展系统。旧插件不再被加载；请按本指南迁移。
 
+**支持状态**：`LanMountainDesktop.PluginSdk`（4.x / 5.x）与 `plugin.json` 已停止支持。宿主不再识别
+`plugin.json`，也不会加载基于 `IPlugin` / `PluginBase` / `[PluginEntrance]` 的程序集；`AirAppLoader`
+里不存在任何回退到旧清单或旧入口契约的分支。`apiVersion` 的主版本必须等于 `AirAppSdkInfo.ApiVersion`
+（当前 `1.0.0`），否则加载直接抛错——这也是仍停留在 PluginSdk 5.x 的轻应用在当前宿主上无法加载的原因。
+
+代码中剩余的 `plugin` 字样哪些可改、哪些是有意保留，见 `docs/ai/NAMING_AND_FROZEN_IDENTIFIERS.md`。
+
 | 项目 | 旧（插件系统） | 新（AirApp） |
 |------|---------------|-------------|
 | SDK 包 | `LanMountainDesktop.PluginSdk` | `LanMountainDesktop.AirAppSdk` |

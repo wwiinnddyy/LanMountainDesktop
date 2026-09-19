@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.IO.Compression;
 
+using LanMountainDesktop.AirAppSdk;
+
 namespace LanMountainDesktop.AirAppDevServer;
 
 /// <summary>
@@ -65,7 +67,7 @@ public sealed class AirAppPackager
         using (var archive = ZipFile.Open(outputPath, ZipArchiveMode.Create))
         {
             var filesToPackage = Directory.GetFiles(binPath, "*.*", SearchOption.AllDirectories)
-                .Where(f => !f.Contains(".pdb") && !f.EndsWith(".laapp"))
+                .Where(f => !f.Contains(".pdb") && !f.EndsWith(AirAppSdkInfo.PackageFileExtension, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
             Console.WriteLine($"📄 打包 {filesToPackage.Count} 个文件...");

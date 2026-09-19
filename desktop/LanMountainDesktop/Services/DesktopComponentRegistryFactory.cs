@@ -18,7 +18,7 @@ namespace LanMountainDesktop.Services;
 
 public static class DesktopComponentRegistryFactory
 {
-    public static ComponentRegistry Create(AirAppRuntimeService? pluginRuntimeService)
+    public static ComponentRegistry Create(AirAppRuntimeService? airAppRuntimeService)
     {
         var registry = ComponentRegistry
             .CreateDefault()
@@ -26,15 +26,15 @@ public static class DesktopComponentRegistryFactory
                 JsonComponentExtensionProvider.LoadProvidersFromDirectory(
                     Path.Combine(AppContext.BaseDirectory, "Extensions", "Components")));
 
-        var pluginDefinitions = GetAirAppDefinitions(registry, pluginRuntimeService);
-        return pluginDefinitions.Count == 0
+        var airAppDefinitions = GetAirAppDefinitions(registry, airAppRuntimeService);
+        return airAppDefinitions.Count == 0
             ? registry
-            : registry.RegisterComponents(pluginDefinitions);
+            : registry.RegisterComponents(airAppDefinitions);
     }
 
     public static DesktopComponentRuntimeRegistry CreateRuntimeRegistry(
         ComponentRegistry componentRegistry,
-        AirAppRuntimeService? pluginRuntimeService,
+        AirAppRuntimeService? airAppRuntimeService,
         ISettingsFacadeService settingsFacade,
         IMaterialColorService? materialColorService = null)
     {
@@ -44,9 +44,9 @@ public static class DesktopComponentRegistryFactory
             StringComparer.OrdinalIgnoreCase);
         var resolvedMaterialColorService = materialColorService ?? HostMaterialColorProvider.GetOrCreate();
 
-        if (pluginRuntimeService is not null)
+        if (airAppRuntimeService is not null)
         {
-            foreach (var contribution in pluginRuntimeService.DesktopComponents)
+            foreach (var contribution in airAppRuntimeService.DesktopComponents)
             {
                 var registration = contribution.Registration;
                 if (!componentRegistry.TryGetDefinition(registration.ComponentId, out _))
@@ -57,7 +57,7 @@ public static class DesktopComponentRegistryFactory
                 if (!registeredIds.Add(registration.ComponentId))
                 {
                     Debug.WriteLine(
-                        $"[AirAppRuntime] Skipped plugin widget '{registration.ComponentId}' from '{contribution.AirApp.Manifest.Id}' because a runtime registration already exists.");
+                        $"[AirAppRuntime] Skipped AirApp widget '{registration.ComponentId}' from '{contribution.AirApp.Manifest.Id}' because a runtime registration already exists.");
                     continue;
                 }
 
@@ -79,10 +79,10 @@ public static class DesktopComponentRegistryFactory
 
     private static List<DesktopComponentDefinition> GetAirAppDefinitions(
         ComponentRegistry baseRegistry,
-        AirAppRuntimeService? pluginRuntimeService)
+        AirAppRuntimeService? airAppRuntimeService)
     {
         var definitions = new List<DesktopComponentDefinition>();
-        if (pluginRuntimeService is null)
+        if (airAppRuntimeService is null)
         {
             return definitions;
         }
@@ -91,13 +91,13 @@ public static class DesktopComponentRegistryFactory
             baseRegistry.GetAll().Select(definition => definition.Id),
             StringComparer.OrdinalIgnoreCase);
 
-        foreach (var contribution in pluginRuntimeService.DesktopComponents)
+        foreach (var contribution in airAppRuntimeService.DesktopComponents)
         {
             var registration = contribution.Registration;
             if (!knownIds.Add(registration.ComponentId))
             {
                 Debug.WriteLine(
-                    $"[AirAppRuntime] Skipped plugin widget '{registration.ComponentId}' from '{contribution.AirApp.Manifest.Id}' because the component id already exists.");
+                    $"[AirAppRuntime] Skipped AirApp widget '{registration.ComponentId}' from '{contribution.AirApp.Manifest.Id}' because the component id already exists.");
                 continue;
             }
 
@@ -129,13 +129,13 @@ public static class DesktopComponentRegistryFactory
         {
             var settingsService = contribution.AirApp.Services.GetService(typeof(ISettingsService)) as ISettingsService
                 ?? context.SettingsService;
-            var pluginSettings = new AirAppScopedSettingsService(
+            var airAppSettings = new AirAppScopedSettingsService(
                 contribution.AirApp.Manifest.Id,
                 settingsService);
-            var pluginAppearance = new AirAppAppearanceContext(
+            var airAppAppearance = new AirAppAppearanceContext(
                 AirAppAppearanceSnapshotMapper.FromMaterialColorSnapshot(
                     materialColorService.GetMaterialColorSnapshot()));
-            var pluginContext = new AirAppComponentContext(
+            var airAppContext = new AirAppComponentContext(
                 contribution.AirApp.Manifest,
                 contribution.AirApp.Context.AirAppDirectory,
                 contribution.AirApp.Context.DataDirectory,
@@ -144,8 +144,8 @@ public static class DesktopComponentRegistryFactory
                 contribution.Registration.ComponentId,
                 context.PlacementId,
                 context.CellSize,
-                pluginAppearance,
-                pluginSettings)
+                airAppAppearance,
+                airAppSettings)
             {
                 OpenWindowHandler = windowId =>
                 {
@@ -160,7 +160,7 @@ public static class DesktopComponentRegistryFactory
                 }
             };
 
-            return contribution.Registration.ControlFactory(contribution.AirApp.Services, pluginContext);
+            return contribution.Registration.ControlFactory(contribution.AirApp.Services, airAppContext);
         }
         catch (Exception ex)
         {

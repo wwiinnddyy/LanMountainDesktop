@@ -41,7 +41,7 @@ public sealed class AirAppSettingsSectionBuilder
     /// Sets a custom AXAML view for this settings section.
     /// The view type must be a subclass of <see cref="AirAppSettingsPageBase"/>.
     /// When a custom view is provided, the host application will use it directly
-    /// instead of generating a page from the declared options, allowing the plugin
+    /// instead of generating a page from the declared options, allowing the AirApp
     /// to use any Fluent Avalonia controls and custom layouts.
     /// </summary>
     /// <typeparam name="TView">A <see cref="AirAppSettingsPageBase"/> subclass that defines the settings UI.</typeparam>

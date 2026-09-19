@@ -25,7 +25,9 @@ public sealed class DataStorageService
     private static readonly string[] SettingsRootFiles =
     [
         "settings.json",
-        "plugin-settings.json",
+        Settings.SettingsService.AirAppSettingsFileName,
+        // 改名过渡期内两份都可能真实存在（首次加载前旧名还在），都要计入占用。
+        Settings.SettingsService.LegacyAirAppSettingsFileName,
         "launcher-settings.json",
         "app.db",
         "app.db-shm",

@@ -8,23 +8,23 @@ namespace LanMountainDesktop.AirApps;
 
 public sealed class DevAirAppOptions
 {
-    // --dev-airapp 是当前命名；--dev-plugin / -dp 是 PluginSdk 时代的别名，保留兼容。
-    private static readonly string[] DevPluginPathArgs = ["--dev-airapp", "--dev-plugin", "-dp"];
+    // --dev-airapp 是当前命名；--dev-AirApp / -dp 是 PluginSdk 时代的别名，保留兼容。
+    private static readonly string[] DevAirAppPathArgs = ["--dev-airapp", "--dev-AirApp", "-dp"];
     private static readonly string[] DevModeArgs = ["--dev-mode", "-dev"];
     private static readonly string[] HotReloadArgs = ["--hot-reload", "-hr"];
-    private static readonly string EnvDevPluginPath = "LMD_DEV_AIRAPP";
-    private static readonly string EnvDevPluginPathLegacy = "LMD_DEV_PLUGIN";
+    private static readonly string EnvAirAppPath = "LMD_DEV_AIRAPP";
+    private static readonly string EnvAirAppPathLegacy = "LMD_DEV_PLUGIN";
     private static readonly string EnvDevMode = "LMD_DEV_MODE";
 
     public static DevAirAppOptions Current { get; } = new();
 
     public bool IsDevMode { get; private set; }
 
-    public string? DevPluginPath { get; private set; }
+    public string? DevAirAppPath { get; private set; }
 
     public bool EnableHotReload { get; private set; }
 
-    public IReadOnlyList<string> DevPluginPaths { get; private set; } = Array.Empty<string>();
+    public IReadOnlyList<string> DevAirAppPaths { get; private set; } = Array.Empty<string>();
 
     private DevAirAppOptions() { }
 
@@ -36,24 +36,24 @@ public sealed class DevAirAppOptions
                             string.Equals(Environment.GetEnvironmentVariable(EnvDevMode), "1", StringComparison.Ordinal) ||
                             string.Equals(Environment.GetEnvironmentVariable(EnvDevMode), "true", StringComparison.OrdinalIgnoreCase);
 
-        options.DevPluginPath = TryGetValue(args, DevPluginPathArgs) ??
-                                Environment.GetEnvironmentVariable(EnvDevPluginPath)?.Trim() ??
-                                Environment.GetEnvironmentVariable(EnvDevPluginPathLegacy)?.Trim();
+        options.DevAirAppPath = TryGetValue(args, DevAirAppPathArgs) ??
+                                Environment.GetEnvironmentVariable(EnvAirAppPath)?.Trim() ??
+                                Environment.GetEnvironmentVariable(EnvAirAppPathLegacy)?.Trim();
 
         options.EnableHotReload = TryGetFlag(args, HotReloadArgs);
 
-        if (!options.IsDevMode && !string.IsNullOrWhiteSpace(options.DevPluginPath))
+        if (!options.IsDevMode && !string.IsNullOrWhiteSpace(options.DevAirAppPath))
         {
             options.IsDevMode = true;
         }
 
-        options.DevPluginPaths = ResolveDevPluginPaths(options.DevPluginPath);
+        options.DevAirAppPaths = ResolveDevAirAppPaths(options.DevAirAppPath);
 
         if (options.IsDevMode)
         {
             AppLogger.Info(
                 "DevAirApp",
-                $"Developer mode enabled. DevPluginPath='{options.DevPluginPath}'; EnableHotReload={options.EnableHotReload}; ResolvedPaths={options.DevPluginPaths.Count}.");
+                $"Developer mode enabled. DevAirAppPath='{options.DevAirAppPath}'; EnableHotReload={options.EnableHotReload}; ResolvedPaths={options.DevAirAppPaths.Count}.");
         }
 
         return options;
@@ -66,15 +66,15 @@ public sealed class DevAirAppOptions
             IsDevMode = true;
         }
 
-        if (!string.IsNullOrWhiteSpace(devAirAppPath) && string.IsNullOrWhiteSpace(DevPluginPath))
+        if (!string.IsNullOrWhiteSpace(devAirAppPath) && string.IsNullOrWhiteSpace(DevAirAppPath))
         {
-            DevPluginPath = devAirAppPath;
+            DevAirAppPath = devAirAppPath;
         }
 
-        var allPaths = new List<string>(DevPluginPaths);
+        var allPaths = new List<string>(DevAirAppPaths);
         if (!string.IsNullOrWhiteSpace(devAirAppPath))
         {
-            foreach (var path in ResolveDevPluginPaths(devAirAppPath))
+            foreach (var path in ResolveDevAirAppPaths(devAirAppPath))
             {
                 if (!allPaths.Contains(path, StringComparer.OrdinalIgnoreCase))
                 {
@@ -83,10 +83,10 @@ public sealed class DevAirAppOptions
             }
         }
 
-        DevPluginPaths = allPaths;
+        DevAirAppPaths = allPaths;
     }
 
-    private static IReadOnlyList<string> ResolveDevPluginPaths(string? rawPath)
+    private static IReadOnlyList<string> ResolveDevAirAppPaths(string? rawPath)
     {
         if (string.IsNullOrWhiteSpace(rawPath))
         {
@@ -107,12 +107,12 @@ public sealed class DevAirAppOptions
                 }
                 else
                 {
-                    AppLogger.Warn("DevAirApp", $"Developer plugin path '{path}' does not exist. It will be skipped.");
+                    AppLogger.Warn("DevAirApp", $"Developer AirApp path '{path}' does not exist. It will be skipped.");
                 }
             }
             catch (Exception ex)
             {
-                AppLogger.Warn("DevAirApp", $"Failed to resolve developer plugin path '{path}': {ex.Message}");
+                AppLogger.Warn("DevAirApp", $"Failed to resolve developer AirApp path '{path}': {ex.Message}");
             }
         }
 

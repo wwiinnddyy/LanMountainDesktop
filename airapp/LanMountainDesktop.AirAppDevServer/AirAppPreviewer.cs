@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Text.Json;
 
+using LanMountainDesktop.AirAppSdk;
+
 namespace LanMountainDesktop.AirAppDevServer;
 
 /// <summary>
@@ -94,7 +96,7 @@ public sealed class AirAppPreviewer
 
     private async Task<ManifestModel?> LoadManifestAsync()
     {
-        var manifestPath = Path.Combine(_projectPath, "airapp.json");
+        var manifestPath = Path.Combine(_projectPath, AirAppSdkInfo.ManifestFileName);
         if (!File.Exists(manifestPath))
         {
             return null;

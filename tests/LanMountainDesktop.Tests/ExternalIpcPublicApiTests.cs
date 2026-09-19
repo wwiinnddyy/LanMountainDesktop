@@ -13,9 +13,9 @@ public sealed class ExternalIpcPublicApiTests
     {
         var pipeName = "LanMountainDesktop.Test." + Guid.NewGuid().ToString("N");
         using var host = new PublicIpcHostService(pipeName);
-        host.PluginDescriptorProvider = () =>
+        host.AirAppDescriptorProvider = () =>
         [
-            new PublicPluginDescriptor("sample.plugin", "Sample AirApp", "1.0.0", true, true)
+            new PublicAirAppDescriptor("sample.plugin", "Sample AirApp", "1.0.0", true, true)
         ];
 
         var appInfo = new PublicAppInfoSnapshot(
@@ -37,8 +37,11 @@ public sealed class ExternalIpcPublicApiTests
 
         await client.ConnectAsync(pipeName);
 
-        var proxy = client.CreateProxy<IPublicAppInfoService>();
-        var remoteInfo = proxy.GetAppInfo();
+        // IPublicAppInfoService.GetAppInfo() 是同步契约，生成的代理内部用 Task.Wait() 等回包。
+        // 而 ConnectAsync 的延续跑在 dotnetCampus 自己的读循环线程上（栈可见 WaitForPeerConnectFinishedAsync），
+        // 在这条线程上同步等回包 = 等一条只有当前线程才能投递的响应，必死锁。
+        // 真实调用方从别的线程发起，所以这里也必须换线程，而不是掩盖成"测试超时"。
+        var remoteInfo = await Task.Run(() => client.CreateProxy<IPublicAppInfoService>().GetAppInfo());
         Assert.Equal(appInfo.ApplicationName, remoteInfo.ApplicationName);
         Assert.Equal(appInfo.Version, remoteInfo.Version);
         Assert.Equal(appInfo.Codename, remoteInfo.Codename);
@@ -48,9 +51,9 @@ public sealed class ExternalIpcPublicApiTests
         Assert.Contains(initialCatalog!.Services, service => service.ContractTypeName == typeof(IPublicAppInfoService).FullName);
         Assert.Contains(initialCatalog.Plugins, plugin => plugin.PluginId == "sample.plugin");
 
-        host.RegisterPublicService<IPublicPluginCatalogService>(new TestPublicPluginCatalogService(initialCatalog));
+        host.RegisterPublicService<IPublicAirAppCatalogService>(new TestPublicPluginCatalogService(initialCatalog));
         var updatedCatalog = await catalogChanged.Task.WaitAsync(TimeSpan.FromSeconds(10));
-        Assert.Contains(updatedCatalog.Services, service => service.ContractTypeName == typeof(IPublicPluginCatalogService).FullName);
+        Assert.Contains(updatedCatalog.Services, service => service.ContractTypeName == typeof(IPublicAirAppCatalogService).FullName);
 
         var sessionInfo = await client.GetSessionInfoAsync();
         Assert.NotNull(sessionInfo);
@@ -88,7 +91,7 @@ public sealed class ExternalIpcPublicApiTests
         }
     }
 
-    private sealed class TestPublicPluginCatalogService : IPublicPluginCatalogService
+    private sealed class TestPublicPluginCatalogService : IPublicAirAppCatalogService
     {
         private readonly PublicIpcCatalogSnapshot _snapshot;
 

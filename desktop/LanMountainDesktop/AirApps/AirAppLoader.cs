@@ -31,19 +31,19 @@ public sealed class AirAppLoader
     }
 
     public IReadOnlyList<AirAppLoadResult> LoadAll(
-        string pluginsRootDirectory,
+        string airAppsRootDirectory,
         IServiceProvider? services = null,
         IReadOnlyDictionary<string, object?>? properties = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(pluginsRootDirectory);
+        ArgumentException.ThrowIfNullOrWhiteSpace(airAppsRootDirectory);
 
-        if (!Directory.Exists(pluginsRootDirectory))
+        if (!Directory.Exists(airAppsRootDirectory))
         {
             return Array.Empty<AirAppLoadResult>();
         }
 
         var results = new List<AirAppLoadResult>();
-        var candidates = DiscoverCandidates(pluginsRootDirectory, results);
+        var candidates = DiscoverCandidates(airAppsRootDirectory, results);
         var selectedAirAppIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var candidate in candidates)
@@ -54,7 +54,7 @@ public sealed class AirAppLoader
                     candidate.SourcePath,
                     candidate.Manifest,
                     new InvalidOperationException(
-                        $"Duplicate plugin id '{candidate.Manifest.Id}' was found. Source '{candidate.SourcePath}' was ignored because a higher-priority source was already selected.")));
+                        $"Duplicate AirApp id '{candidate.Manifest.Id}' was found. Source '{candidate.SourcePath}' was ignored because a higher-priority source was already selected.")));
                 continue;
             }
 
@@ -62,7 +62,7 @@ public sealed class AirAppLoader
             {
                 AirAppSourceKind.Package => LoadFromPackage(
                     candidate.SourcePath,
-                    pluginsRootDirectory,
+                    airAppsRootDirectory,
                     candidate.Manifest,
                     services,
                     properties),
@@ -97,7 +97,7 @@ public sealed class AirAppLoader
 
     public AirAppLoadResult LoadFromPackage(
         string packagePath,
-        string pluginsRootDirectory,
+        string airAppsRootDirectory,
         IServiceProvider? services = null,
         IReadOnlyDictionary<string, object?>? properties = null)
     {
@@ -106,7 +106,7 @@ public sealed class AirAppLoader
         try
         {
             manifest = ReadManifestFromPackage(packagePath);
-            return LoadFromPackage(packagePath, pluginsRootDirectory, manifest, services, properties);
+            return LoadFromPackage(packagePath, airAppsRootDirectory, manifest, services, properties);
         }
         catch (Exception ex)
         {
@@ -124,78 +124,78 @@ public sealed class AirAppLoader
         ArgumentNullException.ThrowIfNull(manifest);
 
         var fullAssemblyPath = Path.GetFullPath(assemblyPath);
-        var pluginDirectory = Path.GetDirectoryName(fullAssemblyPath)
-            ?? throw new InvalidOperationException($"Failed to determine the plugin directory of '{fullAssemblyPath}'.");
-        var dataDirectory = Path.Combine(pluginDirectory, _options.DataDirectoryName);
-        return LoadCore(fullAssemblyPath, fullAssemblyPath, pluginDirectory, dataDirectory, manifest, services, properties);
+        var airAppDirectory = Path.GetDirectoryName(fullAssemblyPath)
+            ?? throw new InvalidOperationException($"Failed to determine the AirApp directory of '{fullAssemblyPath}'.");
+        var dataDirectory = Path.Combine(airAppDirectory, _options.DataDirectoryName);
+        return LoadCore(fullAssemblyPath, fullAssemblyPath, airAppDirectory, dataDirectory, manifest, services, properties);
     }
 
     private AirAppLoadResult LoadCore(
         string sourcePath,
         string assemblyPath,
-        string pluginDirectory,
+        string airAppDirectory,
         string dataDirectory,
         AirAppManifest manifest,
         IServiceProvider? services,
         IReadOnlyDictionary<string, object?>? properties)
     {
         AirAppLoadContext? loadContext = null;
-        IAirApp? plugin = null;
+        IAirApp? AirApp = null;
         AirAppRuntimeContext? runtimeContext = null;
-        ServiceProvider? pluginServices = null;
+        ServiceProvider? airAppServices = null;
         IReadOnlyList<IHostedService> hostedServices = Array.Empty<IHostedService>();
 
         try
         {
             Directory.CreateDirectory(dataDirectory);
-            ValidateAirAppRuntimeAssets(manifest, assemblyPath, pluginDirectory, _options.IsDevMode);
+            ValidateAirAppRuntimeAssets(manifest, assemblyPath, airAppDirectory, _options.IsDevMode);
             AppLogger.Info(
                 "AirAppLoader",
-                $"LoadCore starting. AirAppId='{manifest.Id}'; AssemblyPath='{assemblyPath}'; AirAppDirectory='{pluginDirectory}'; DataDirectory='{dataDirectory}'.");
+                $"LoadCore starting. AirAppId='{manifest.Id}'; AssemblyPath='{assemblyPath}'; AirAppDirectory='{airAppDirectory}'; DataDirectory='{dataDirectory}'.");
 
             loadContext = new AirAppLoadContext(assemblyPath, _options.SharedAssemblyNames);
             var assembly = loadContext.LoadFromAssemblyPath(assemblyPath);
             AppLogger.Info("AirAppLoader", $"Assembly loaded. AirAppId='{manifest.Id}'; Assembly='{assembly.FullName}'.");
-            var pluginType = ResolveAirAppType(assembly);
-            plugin = CreateAirAppInstance(pluginType);
-            AppLogger.Info("AirAppLoader", $"AirApp instance created. AirAppId='{manifest.Id}'; AirAppType='{pluginType.FullName}'.");
-            runtimeContext = CreateRuntimeContext(manifest, pluginDirectory, dataDirectory, properties, services);
+            var airAppType = ResolveAirAppType(assembly);
+            AirApp = CreateAirAppInstance(airAppType);
+            AppLogger.Info("AirAppLoader", $"AirApp instance created. AirAppId='{manifest.Id}'; AirAppType='{airAppType.FullName}'.");
+            runtimeContext = CreateRuntimeContext(manifest, airAppDirectory, dataDirectory, properties, services);
             var serviceCollection = CreateServiceCollection(runtimeContext, services);
             var hostBuilderContext = CreateHostBuilderContext(runtimeContext);
 
-            plugin.Initialize(hostBuilderContext, serviceCollection);
+            AirApp.Initialize(hostBuilderContext, serviceCollection);
             AppLogger.Info("AirAppLoader", $"AirApp Initialize completed. AirAppId='{manifest.Id}'.");
 
-            pluginServices = serviceCollection.BuildServiceProvider(new ServiceProviderOptions
+            airAppServices = serviceCollection.BuildServiceProvider(new ServiceProviderOptions
             {
                 ValidateScopes = false,
                 ValidateOnBuild = true
             });
             AppLogger.Info("AirAppLoader", $"Service provider built. AirAppId='{manifest.Id}'.");
-            runtimeContext.SetServices(pluginServices);
-            plugin.OnStartedAsync(runtimeContext).GetAwaiter().GetResult();
+            runtimeContext.SetServices(airAppServices);
+            AirApp.OnStartedAsync(runtimeContext).GetAwaiter().GetResult();
             AppLogger.Info("AirAppLoader", $"AirApp OnStartedAsync completed. AirAppId='{manifest.Id}'.");
 
-            var settingsSections = pluginServices
+            var settingsSections = airAppServices
                 .GetServices<AirAppSettingsSectionRegistration>()
                 .OrderBy(section => section.SortOrder)
                 .ThenBy(section => section.TitleLocalizationKey, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
-            var desktopComponents = pluginServices
+            var desktopComponents = airAppServices
                 .GetServices<AirAppComponentRegistration>()
                 .OrderBy(component => component.Category, StringComparer.OrdinalIgnoreCase)
                 .ThenBy(component => component.DisplayName, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
-            var desktopComponentEditors = pluginServices
+            var desktopComponentEditors = airAppServices
                 .GetServices<AirAppComponentEditorRegistration>()
                 .OrderBy(editor => editor.ComponentId, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
-            var exportedServices = ResolveExports(manifest, pluginServices);
-            var publicIpcServices = ResolvePublicIpcServices(manifest, pluginServices);
+            var exportedServices = ResolveExports(manifest, airAppServices);
+            var publicIpcServices = ResolvePublicIpcServices(manifest, airAppServices);
             AppLogger.Info(
                 "AirAppLoader",
                 $"AirApp contributions resolved. AirAppId='{manifest.Id}'; SettingsSections={settingsSections.Length}; Widgets={desktopComponents.Length}; Editors={desktopComponentEditors.Length}; Exports={exportedServices.Count}; PublicIpcServices={publicIpcServices.Count}."); 
-            hostedServices = pluginServices.GetServices<IHostedService>().ToArray();
+            hostedServices = airAppServices.GetServices<IHostedService>().ToArray();
             StartHostedServices(hostedServices);
             AppLogger.Info("AirAppLoader", $"Hosted services started. AirAppId='{manifest.Id}'; HostedServices={hostedServices.Count}."); 
 
@@ -204,9 +204,9 @@ public sealed class AirAppLoader
                 sourcePath,
                 assemblyPath,
                 assembly,
-                plugin,
+                AirApp,
                 runtimeContext,
-                pluginServices,
+                airAppServices,
                 settingsSections,
                 desktopComponents,
                 desktopComponentEditors,
@@ -220,8 +220,8 @@ public sealed class AirAppLoader
         catch (Exception ex)
         {
             StopHostedServices(hostedServices);
-            DisposeInstance(pluginServices);
-            DisposeInstance(plugin);
+            DisposeInstance(airAppServices);
+            DisposeInstance(AirApp);
             DisposeInstance(runtimeContext);
             loadContext?.Unload();
             return AirAppLoadResult.Failure(sourcePath, manifest, ex);
@@ -245,10 +245,10 @@ public sealed class AirAppLoader
                     assemblyPath);
             }
 
-            var pluginDirectory = Path.GetDirectoryName(assemblyPath)
-                ?? throw new InvalidOperationException($"Failed to determine the plugin directory of '{assemblyPath}'.");
-            var dataDirectory = Path.Combine(pluginDirectory, _options.DataDirectoryName);
-            return LoadCore(fullManifestPath, assemblyPath, pluginDirectory, dataDirectory, manifest, services, properties);
+            var airAppDirectory = Path.GetDirectoryName(assemblyPath)
+                ?? throw new InvalidOperationException($"Failed to determine the AirApp directory of '{assemblyPath}'.");
+            var dataDirectory = Path.Combine(airAppDirectory, _options.DataDirectoryName);
+            return LoadCore(fullManifestPath, assemblyPath, airAppDirectory, dataDirectory, manifest, services, properties);
         }
         catch (Exception ex)
         {
@@ -258,7 +258,7 @@ public sealed class AirAppLoader
 
     private AirAppLoadResult LoadFromPackage(
         string packagePath,
-        string pluginsRootDirectory,
+        string airAppsRootDirectory,
         AirAppManifest manifest,
         IServiceProvider? services,
         IReadOnlyDictionary<string, object?>? properties)
@@ -266,7 +266,7 @@ public sealed class AirAppLoader
         try
         {
             var fullPackagePath = Path.GetFullPath(packagePath);
-            var extractionDirectory = ExtractPackage(fullPackagePath, pluginsRootDirectory);
+            var extractionDirectory = ExtractPackage(fullPackagePath, airAppsRootDirectory);
             var extractedManifestPath = Path.Combine(extractionDirectory, _options.ManifestFileName);
 
             if (!File.Exists(extractedManifestPath))
@@ -291,7 +291,7 @@ public sealed class AirAppLoader
                     assemblyPath);
             }
 
-            var dataDirectory = GetPackagedDataDirectory(pluginsRootDirectory, extractedManifest);
+            var dataDirectory = GetPackagedDataDirectory(airAppsRootDirectory, extractedManifest);
             return LoadCore(fullPackagePath, assemblyPath, extractionDirectory, dataDirectory, extractedManifest, services, properties);
         }
         catch (Exception ex)
@@ -302,14 +302,14 @@ public sealed class AirAppLoader
 
     private AirAppRuntimeContext CreateRuntimeContext(
         AirAppManifest manifest,
-        string pluginDirectory,
+        string airAppDirectory,
         string dataDirectory,
         IReadOnlyDictionary<string, object?>? properties,
         IServiceProvider? hostServices)
     {
         return new AirAppRuntimeContext(
             manifest,
-            pluginDirectory,
+            airAppDirectory,
             dataDirectory,
             CreateReadOnlyProperties(properties),
             BuildAppearanceSnapshot(hostServices));
@@ -337,7 +337,7 @@ public sealed class AirAppLoader
         RegisterHostService<ISettingsFacadeService>(services, hostServices);
         RegisterHostService<ISettingsService>(services, hostServices);
         RegisterHostService<ISettingsCatalog>(services, hostServices);
-        // Legacy compatibility only. Normal plugin appearance snapshots come from IMaterialColorService.
+        // Legacy compatibility only. Normal AirApp appearance snapshots come from IMaterialColorService.
         RegisterHostService<IAppearanceThemeService>(services, hostServices);
         RegisterHostService<IMaterialColorService>(services, hostServices);
         RegisterHostService<IExternalIpcNotificationPublisher>(services, hostServices);
@@ -365,7 +365,7 @@ public sealed class AirAppLoader
         }
         catch (Exception ex)
         {
-            AppLogger.Warn("AirAppLoader", "Failed to resolve host appearance snapshot for plugin runtime context.", ex);
+            AppLogger.Warn("AirAppLoader", "Failed to resolve host appearance snapshot for AirApp runtime context.", ex);
             return defaultSnapshot;
         }
     }
@@ -556,13 +556,13 @@ public sealed class AirAppLoader
     }
 
     private IReadOnlyList<AirAppCandidate> DiscoverCandidates(
-        string pluginsRootDirectory,
+        string airAppsRootDirectory,
         List<AirAppLoadResult> preparationFailures)
     {
         var candidates = new List<AirAppCandidate>();
 
         foreach (var packagePath in EnumerateCandidatePaths(
-                     pluginsRootDirectory,
+                     airAppsRootDirectory,
                      "*" + NormalizePackageExtension(_options.PackageFileExtension)))
         {
             try
@@ -576,7 +576,7 @@ public sealed class AirAppLoader
             }
         }
 
-        foreach (var manifestPath in EnumerateCandidatePaths(pluginsRootDirectory, _options.ManifestFileName))
+        foreach (var manifestPath in EnumerateCandidatePaths(airAppsRootDirectory, _options.ManifestFileName))
         {
             try
             {
@@ -595,12 +595,12 @@ public sealed class AirAppLoader
             .ToArray();
     }
 
-    private IEnumerable<string> EnumerateCandidatePaths(string pluginsRootDirectory, string searchPattern)
+    private IEnumerable<string> EnumerateCandidatePaths(string airAppsRootDirectory, string searchPattern)
     {
-        var runtimeRootDirectory = EnsureTrailingSeparator(GetRuntimeRootDirectory(pluginsRootDirectory));
+        var runtimeRootDirectory = EnsureTrailingSeparator(GetRuntimeRootDirectory(airAppsRootDirectory));
 
         return Directory
-            .EnumerateFiles(pluginsRootDirectory, searchPattern, SearchOption.AllDirectories)
+            .EnumerateFiles(airAppsRootDirectory, searchPattern, SearchOption.AllDirectories)
             .Select(Path.GetFullPath)
             .Where(path => !path.StartsWith(runtimeRootDirectory, StringComparison.OrdinalIgnoreCase))
             .OrderBy(path => path, StringComparer.OrdinalIgnoreCase);
@@ -639,9 +639,9 @@ public sealed class AirAppLoader
         return AirAppManifest.Load(stream, $"{fullPackagePath}!/{manifestEntries[0].FullName}");
     }
 
-    private string ExtractPackage(string packagePath, string pluginsRootDirectory)
+    private string ExtractPackage(string packagePath, string airAppsRootDirectory)
     {
-        var extractionDirectory = GetPackageExtractionDirectory(pluginsRootDirectory, packagePath);
+        var extractionDirectory = GetPackageExtractionDirectory(airAppsRootDirectory, packagePath);
         
         // 检查是否可以跳过解压（缓存有效）
         if (ShouldSkipExtraction(packagePath, extractionDirectory))
@@ -664,7 +664,7 @@ public sealed class AirAppLoader
         return extractionDirectory;
     }
 
-    private string GetPackageExtractionDirectory(string pluginsRootDirectory, string packagePath)
+    private string GetPackageExtractionDirectory(string airAppsRootDirectory, string packagePath)
     {
         var packageName = SanitizeDirectoryName(Path.GetFileNameWithoutExtension(packagePath));
         var packageHash = Convert.ToHexString(
@@ -672,22 +672,22 @@ public sealed class AirAppLoader
             .Substring(0, 12);
 
         return Path.Combine(
-            GetRuntimeRootDirectory(pluginsRootDirectory),
+            GetRuntimeRootDirectory(airAppsRootDirectory),
             _options.ExtractedPackagesDirectoryName,
             $"{packageName}_{packageHash}");
     }
 
-    private string GetPackagedDataDirectory(string pluginsRootDirectory, AirAppManifest manifest)
+    private string GetPackagedDataDirectory(string airAppsRootDirectory, AirAppManifest manifest)
     {
         return Path.Combine(
-            GetRuntimeRootDirectory(pluginsRootDirectory),
+            GetRuntimeRootDirectory(airAppsRootDirectory),
             _options.PackagedDataDirectoryName,
             SanitizeDirectoryName(manifest.Id));
     }
 
-    private string GetRuntimeRootDirectory(string pluginsRootDirectory)
+    private string GetRuntimeRootDirectory(string airAppsRootDirectory)
     {
-        return Path.Combine(Path.GetFullPath(pluginsRootDirectory), _options.RuntimeDirectoryName);
+        return Path.Combine(Path.GetFullPath(airAppsRootDirectory), _options.RuntimeDirectoryName);
     }
 
     private static void RecreateDirectory(string directoryPath)
@@ -827,7 +827,7 @@ public sealed class AirAppLoader
     private static void ValidateAirAppRuntimeAssets(
         AirAppManifest manifest,
         string assemblyPath,
-        string pluginDirectory,
+        string airAppDirectory,
         bool isDevMode)
     {
         var depsFilePath = Path.ChangeExtension(assemblyPath, ".deps.json");
@@ -846,12 +846,12 @@ public sealed class AirAppLoader
             }
         }
 
-        var runtimesDirectory = Path.Combine(pluginDirectory, "runtimes");
+        var runtimesDirectory = Path.Combine(airAppDirectory, "runtimes");
         if (Directory.Exists(runtimesDirectory) &&
             !Directory.EnumerateFiles(runtimesDirectory, "*", SearchOption.AllDirectories).Any())
         {
             throw new InvalidOperationException(
-                $"AirApp '{manifest.Id}' contains an empty 'runtimes' directory. Native/runtime assets must be packaged together with the plugin.");
+                $"AirApp '{manifest.Id}' contains an empty 'runtimes' directory. Native/runtime assets must be packaged together with the AirApp.");
         }
     }
 
@@ -883,7 +883,7 @@ public sealed class AirAppLoader
         if (attributedTypes.Length > 1)
         {
             throw new InvalidOperationException(
-                $"Assembly '{assembly.Location}' contains multiple plugin entrance types. Mark only one type with '{nameof(AirAppEntranceAttribute)}'.");
+                $"Assembly '{assembly.Location}' contains multiple AirApp entrance types. Mark only one type with '{nameof(AirAppEntranceAttribute)}'.");
         }
 
         if (candidateTypes.Length == 1)
@@ -895,21 +895,21 @@ public sealed class AirAppLoader
             $"Assembly '{assembly.Location}' contains multiple '{nameof(IAirApp)}' implementations. Mark the intended entrance type with '{nameof(AirAppEntranceAttribute)}'.");
     }
 
-    private static IAirApp CreateAirAppInstance(Type pluginType)
+    private static IAirApp CreateAirAppInstance(Type airAppType)
     {
-        if (pluginType.GetConstructor(Type.EmptyTypes) is null)
+        if (airAppType.GetConstructor(Type.EmptyTypes) is null)
         {
             throw new InvalidOperationException(
-                $"AirApp type '{pluginType.FullName}' must expose a public parameterless constructor.");
+                $"AirApp type '{airAppType.FullName}' must expose a public parameterless constructor.");
         }
 
-        if (Activator.CreateInstance(pluginType) is not IAirApp plugin)
+        if (Activator.CreateInstance(airAppType) is not IAirApp AirApp)
         {
             throw new InvalidOperationException(
-                $"Failed to create plugin instance of type '{pluginType.FullName}'.");
+                $"Failed to create AirApp instance of type '{airAppType.FullName}'.");
         }
 
-        return plugin;
+        return AirApp;
     }
 
     private static void DisposeInstance(object? instance)
@@ -957,7 +957,7 @@ public sealed class AirAppLoader
                 : string.Join(Environment.NewLine, loaderMessages);
 
             throw new InvalidOperationException(
-                $"Failed to inspect plugin assembly '{assembly.Location}'.{Environment.NewLine}{detail}",
+                $"Failed to inspect AirApp assembly '{assembly.Location}'.{Environment.NewLine}{detail}",
                 ex);
         }
     }
@@ -970,15 +970,15 @@ public sealed class AirAppLoader
 
         public AirAppRuntimeContext(
             AirAppManifest manifest,
-            string pluginDirectory,
+            string airAppDirectory,
             string dataDirectory,
             IReadOnlyDictionary<string, object?> properties,
             AirAppAppearanceSnapshot appearanceSnapshot)
         {
             Manifest = manifest;
-            AirAppDirectory = pluginDirectory;
+            AirAppDirectory = airAppDirectory;
             DataDirectory = dataDirectory;
-            CacheDirectory = Path.Combine(pluginDirectory, "Cache");
+            CacheDirectory = Path.Combine(airAppDirectory, "Cache");
             Properties = properties;
             _appearanceContext = new AirAppAppearanceContext(appearanceSnapshot);
             Appearance = _appearanceContext;

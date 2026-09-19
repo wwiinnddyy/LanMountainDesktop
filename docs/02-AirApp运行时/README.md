@@ -46,6 +46,24 @@ AirAppWindowLoader → 创建 IAirAppWindow → 内容嵌入 FAAppWindow 外壳
 
 `world-clock`、`whiteboard`、`rss-reader` 三个内置窗口保持原有路径（不携带 `--app-package`），行为不变。
 
+## 对外的 IPC 契约：只写异步方法
+
+宿主用 `[IpcPublic]` 接口向外部进程暴露服务（`IPublicAppInfoService`、`IPublicAirAppCatalogService`、
+`IPublicShellControlService`、`IAirAppLifecycleService`、`IAirAppRuntimeControlService`）。
+**新增方法必须返回 `Task`/`Task<T>`（或 `ValueTask`），不要写同步方法。**
+
+原因是死锁而不是风格：`dotnetCampus.Ipc` 为同步方法生成的代理内部用 `Task.Wait()` 等回包，
+而库在自己的读循环线程上投递通知、也在那条线程上续接 `ConnectAsync` 的延续。
+调用方一旦在这类线程上同步等，回包就只能由当前线程投递 → 进程静默挂死，不报错、不超时。
+`ExternalIpcPublicApiTests` 曾因为直接同步调 `GetAppInfo()` 挂死整个测试子进程。
+
+例外只有已随 `LanMountainDesktop.Core` 1.0.0 发出的两个历史同步方法
+（`IPublicAppInfoService.GetAppInfo`、`IPublicAirAppCatalogService.GetCatalog`）：它们是公开 API，
+只能"加异步版本 + 标废弃"两步撤，不能直接改签名。宿主自己要目录/会话信息时走
+`LanMountainDesktopIpcClient.GetCatalogAsync()` / `GetSessionInfoAsync()`，不要改用那两个同步代理。
+
+约束由 `IpcPublicContractArchitectureTests` 机器检查（新增同步方法会测试失败，例外名单只减不增）。
+
 ## 相关文档
 
 - [AirApp 开发指南](../01-AirApp开发/)

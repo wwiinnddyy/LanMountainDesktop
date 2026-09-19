@@ -13,7 +13,7 @@ public static class LoadingStateUsageExample
     public static async Task LoadAirAppsExample(LoadingStateManager manager)
     {
         // 注册插件加载项
-        var pluginItem = manager.RegisterItem(
+        var airAppItem = manager.RegisterItem(
             "plugins.core",
             LoadingItemType.AirApp,
             "核心插件",

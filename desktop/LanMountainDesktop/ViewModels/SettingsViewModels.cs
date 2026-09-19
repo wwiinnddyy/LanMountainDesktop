@@ -1403,8 +1403,8 @@ public sealed partial class AirAppsSettingsPageViewModel : ViewModelBase
         _languageCode = _localizationService.NormalizeLanguageCode(_settingsFacade.Region.Get().LanguageCode);
         RefreshLocalizedText();
         StatusMessage = L(
-            "settings.plugins.initial_status",
-            "Refresh plugin state to see the latest installed and marketplace entries.");
+            "settings.airapps.initial_status",
+            "Refresh AirApp state to see the latest installed and marketplace entries.");
     }
 
     public event Action? RestartRequested;
@@ -1461,15 +1461,15 @@ public sealed partial class AirAppsSettingsPageViewModel : ViewModelBase
             IsBusy = true;
 
             InstalledAirApps.Clear();
-            foreach (var plugin in _settingsFacade.AirAppManagement.GetInstalledAirApps())
+            foreach (var AirApp in _settingsFacade.AirAppManagement.GetInstalledAirApps())
             {
-                InstalledAirApps.Add(new InstalledAirAppItemViewModel(plugin));
+                InstalledAirApps.Add(new InstalledAirAppItemViewModel(AirApp));
             }
 
             StatusMessage = string.Format(
                 CultureInfo.CurrentCulture,
                 L(
-                    "settings.plugins.refresh_success_installed_format",
+                    "settings.airapps.refresh_success_installed_format",
                     "Loaded {0} installed plugins."),
                 InstalledAirApps.Count);
         }
@@ -1492,12 +1492,12 @@ public sealed partial class AirAppsSettingsPageViewModel : ViewModelBase
             StatusMessage = string.Format(
                 CultureInfo.CurrentCulture,
                 L(
-                    "settings.plugins.toggle_result_format",
+                    "settings.airapps.toggle_result_format",
                     "AirApp '{0}' was {1} for the next launch. Restart the app to apply page and widget changes."),
                 item.Name,
                 item.IsEnabled
-                    ? L("settings.plugins.toggle_state_enabled", "enabled")
-                    : L("settings.plugins.toggle_state_disabled", "disabled"));
+                    ? L("settings.airapps.toggle_state_enabled", "enabled")
+                    : L("settings.airapps.toggle_state_disabled", "disabled"));
             RestartRequested?.Invoke();
         }
         else
@@ -1505,7 +1505,7 @@ public sealed partial class AirAppsSettingsPageViewModel : ViewModelBase
             item.IsEnabled = !item.IsEnabled;
             StatusMessage = string.Format(
                 CultureInfo.CurrentCulture,
-                L("settings.plugins.toggle_unchanged_format", "AirApp '{0}' did not change."),
+                L("settings.airapps.toggle_unchanged_format", "AirApp '{0}' did not change."),
                 item.Name);
         }
     }
@@ -1524,7 +1524,7 @@ public sealed partial class AirAppsSettingsPageViewModel : ViewModelBase
             StatusMessage = string.Format(
                 CultureInfo.CurrentCulture,
                 L(
-                    "settings.plugins.delete_success_format",
+                    "settings.airapps.delete_success_format",
                     "AirApp '{0}' was staged for deletion. Restart the app to finish removing it."),
                 item.Name);
             RestartRequested?.Invoke();
@@ -1533,20 +1533,20 @@ public sealed partial class AirAppsSettingsPageViewModel : ViewModelBase
         {
             StatusMessage = string.Format(
                 CultureInfo.CurrentCulture,
-                L("settings.plugins.delete_failed_name_format", "Failed to remove plugin '{0}'."),
+                L("settings.airapps.delete_failed_name_format", "Failed to remove AirApp '{0}'."),
                 item.Name);
         }
     }
 
     private void RefreshLocalizedText()
     {
-        PageTitle = L("settings.plugins.title", "AirApps");
-        PageDescription = L("settings.plugins.description", "Manage installed plugins and review their runtime state.");
-        RefreshButtonText = L("settings.plugins.refresh_button", "Refresh AirApps");
-        InstalledHeader = L("settings.plugins.installed_header", "Installed AirApps");
-        DeleteButtonText = L("settings.plugins.delete_button_short", "Delete");
-        EmptyInstalledText = L("settings.plugins.empty", "No plugins found.");
-        RestartRequiredMessage = L("settings.plugins.restart_required", "AirApp changes take effect after restart.");
+        PageTitle = L("settings.airapps.title", "AirApps");
+        PageDescription = L("settings.airapps.description", "Manage installed plugins and review their runtime state.");
+        RefreshButtonText = L("settings.airapps.refresh_button", "Refresh AirApps");
+        InstalledHeader = L("settings.airapps.installed_header", "Installed AirApps");
+        DeleteButtonText = L("settings.airapps.delete_button_short", "Delete");
+        EmptyInstalledText = L("settings.airapps.empty", "No plugins found.");
+        RestartRequiredMessage = L("settings.airapps.restart_required", "AirApp changes take effect after restart.");
     }
 
     private string L(string key, string fallback)
@@ -2319,12 +2319,12 @@ public sealed class AirAppGeneratedSettingsPageViewModel
 {
     public AirAppGeneratedSettingsPageViewModel(
         ISettingsService settingsService,
-        string pluginId,
+        string airAppId,
         AirAppSettingsSectionRegistration section,
         AirAppLocalizer localizer)
     {
         SettingsService = settingsService;
-        AirAppId = pluginId;
+        AirAppId = airAppId;
         Section = section;
         Localizer = localizer;
         Title = localizer.GetString(section.TitleLocalizationKey, section.TitleLocalizationKey);
@@ -2466,7 +2466,7 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
     private void RefreshLocalizedText()
     {
         InfoBarTitle = L("settings.dev.infobar.title", "Preview and developer features");
-        InfoBarMessage = L("settings.dev.infobar.message", "These options are intended for debugging and local plugin development.");
+        InfoBarMessage = L("settings.dev.infobar.message", "These options are intended for debugging and local AirApp development.");
         DevModeHeader = L("settings.dev.mode_header", "Developer mode");
         DevModeDescription = L("settings.dev.mode_description", "Enable developer-focused startup helpers and diagnostics.");
         ThreeFingerHeader = L("settings.dev.three_finger_header", "Three-finger desktop swipe");
@@ -2480,15 +2480,15 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
         DesktopLayerConflictEnableFusedMessage = L("settings.dev.desktop_layer_conflict_enable_fused", "Fused desktop and main desktop layer mode cannot run at the same time. Enabling fused desktop will turn off main desktop layer mode.");
         DesktopLayerConflictConfirmText = L("settings.dev.desktop_layer_conflict_confirm", "Switch");
         DesktopLayerConflictCancelText = L("settings.dev.desktop_layer_conflict_cancel", "Cancel");
-        AirAppPathHeader = L("settings.dev.plugin_path_header", "Development plugin path");
-        AirAppPathDescription = L("settings.dev.plugin_path_description", "Load a local plugin output directory without packaging.");
-        AirAppPathPlaceholder = L("settings.dev.plugin_path_placeholder", "e.g. C:\\path\\to\\plugin\\bin\\Debug\\net10.0");
+        AirAppPathHeader = L("settings.dev.airapp_path_header", "Development AirApp path");
+        AirAppPathDescription = L("settings.dev.airapp_path_description", "Load a local AirApp output directory without packaging.");
+        AirAppPathPlaceholder = L("settings.dev.airapp_path_placeholder", "e.g. C:\\path\\to\\AirApp\\bin\\Debug\\net10.0");
         StartupArgsHeader = L("settings.dev.startup_args_header", "Developer startup arguments");
         StartupArgsDescription = L("settings.dev.startup_args_description", "Command-line arguments and environment variables for development.");
         CliLabel = L("settings.dev.cli_label", "Command-line arguments:");
         EnvLabel = L("settings.dev.env_label", "Environment variables:");
         OtherArgsLabel = L("settings.dev.other_args_label", "Other arguments:");
-        CliExample = L("settings.dev.cli_example", "--dev-plugin <path>   or -dp <path>");
+        CliExample = L("settings.dev.cli_example", "--dev-AirApp <path>   or -dp <path>");
         EnvExample = L("settings.dev.env_example", "LMD_DEV_PLUGIN=<path>");
         OtherDevModeLine = L("settings.dev.other_dev_mode", "--dev-mode / -dev     Enable developer mode startup helpers.");
         OtherHotReloadLine = L("settings.dev.other_hot_reload", "--hot-reload / -hr    Enable hot reload for development builds.");
@@ -2506,7 +2506,7 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
     partial void OnDevAirAppPathChanged(string value)
     {
         if (_isInitializing) return;
-        SaveField(nameof(AppSettingsSnapshot.DevPluginPath), value);
+        SaveField(nameof(AppSettingsSnapshot.DevAirAppPath), value);
     }
 
     partial void OnEnableThreeFingerSwipeChanged(bool value)
@@ -2531,7 +2531,7 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
     {
         var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
         IsDevModeEnabled = snapshot.IsDevModeEnabled;
-        DevAirAppPath = snapshot.DevPluginPath ?? string.Empty;
+        DevAirAppPath = snapshot.DevAirAppPath ?? string.Empty;
         EnableThreeFingerSwipe = snapshot.EnableThreeFingerSwipe;
         EnableFusedDesktop = snapshot.EnableFusedDesktop;
         EnableMainWindowDesktopLayer = snapshot.EnableMainWindowDesktopLayer;

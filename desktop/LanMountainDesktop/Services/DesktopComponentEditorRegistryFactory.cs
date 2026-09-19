@@ -15,7 +15,7 @@ public static class DesktopComponentEditorRegistryFactory
 {
     public static DesktopComponentEditorRegistry Create(
         ComponentRegistry componentRegistry,
-        AirAppRuntimeService? pluginRuntimeService)
+        AirAppRuntimeService? airAppRuntimeService)
     {
         ArgumentNullException.ThrowIfNull(componentRegistry);
 
@@ -24,9 +24,9 @@ public static class DesktopComponentEditorRegistryFactory
             registrations.Select(registration => registration.ComponentId),
             StringComparer.OrdinalIgnoreCase);
 
-        if (pluginRuntimeService is not null)
+        if (airAppRuntimeService is not null)
         {
-            foreach (var contribution in pluginRuntimeService.DesktopComponentEditors)
+            foreach (var contribution in airAppRuntimeService.DesktopComponentEditors)
             {
                 var registration = contribution.Registration;
                 if (!componentRegistry.TryGetDefinition(registration.ComponentId, out var definition) ||
@@ -378,10 +378,10 @@ public static class DesktopComponentEditorRegistryFactory
     {
         var settingsService = contribution.AirApp.Services.GetService(typeof(ISettingsService)) as ISettingsService
             ?? context.SettingsService;
-        var pluginSettings = new AirAppScopedSettingsService(
+        var airAppSettings = new AirAppScopedSettingsService(
             contribution.AirApp.Manifest.Id,
             settingsService);
-        var pluginContext = new AirAppComponentEditorContext(
+        var airAppContext = new AirAppComponentEditorContext(
             contribution.AirApp.Manifest,
             contribution.AirApp.Context.AirAppDirectory,
             contribution.AirApp.Context.DataDirectory,
@@ -389,9 +389,9 @@ public static class DesktopComponentEditorRegistryFactory
             contribution.AirApp.Context.Properties,
             context.ComponentId,
             context.PlacementId,
-            pluginSettings,
+            airAppSettings,
             context.HostContext);
 
-        return contribution.Registration.EditorFactory(contribution.AirApp.Services, pluginContext);
+        return contribution.Registration.EditorFactory(contribution.AirApp.Services, airAppContext);
     }
 }

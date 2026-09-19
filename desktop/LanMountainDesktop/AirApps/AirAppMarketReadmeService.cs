@@ -8,7 +8,7 @@ using LanMountainDesktop.Services.Settings;
 namespace LanMountainDesktop.Services.AirAppMarket;
 
 /// <summary>
-/// Loads plugin README markdown from the local workspace, the on-disk asset cache, or the network,
+/// Loads AirApp README markdown from the local workspace, the on-disk asset cache, or the network,
 /// writing successful network fetches back into the cache so subsequent loads are offline-friendly.
 /// </summary>
 public sealed class AirAppMarketReadmeService : IDisposable
@@ -32,18 +32,18 @@ public sealed class AirAppMarketReadmeService : IDisposable
     }
 
     public async Task<string> LoadAsync(
-        AirAppCatalogItemInfo plugin,
+        AirAppCatalogItemInfo airApp,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(plugin);
+        ArgumentNullException.ThrowIfNull(airApp);
 
-        if (AirAppMarketDefaults.TryResolveWorkspaceFile(plugin.ReadmeUrl, out var localReadmePath))
+        if (AirAppMarketDefaults.TryResolveWorkspaceFile(airApp.ReadmeUrl, out var localReadmePath))
         {
             return await File.ReadAllTextAsync(localReadmePath, cancellationToken);
         }
 
         if (_cache is not null &&
-            _cache.TryGetReadme(plugin.Id, plugin.ReadmeUrl, plugin.Version) is { } cachedReadmePath)
+            _cache.TryGetReadme(airApp.Id, airApp.ReadmeUrl, airApp.Version) is { } cachedReadmePath)
         {
             try
             {
@@ -55,7 +55,7 @@ public sealed class AirAppMarketReadmeService : IDisposable
             }
         }
 
-        using var response = await _httpClient.GetAsync(plugin.ReadmeUrl, cancellationToken);
+        using var response = await _httpClient.GetAsync(airApp.ReadmeUrl, cancellationToken);
         response.EnsureSuccessStatusCode();
         await using var networkStream = await response.Content.ReadAsStreamAsync(cancellationToken);
 
@@ -65,7 +65,7 @@ public sealed class AirAppMarketReadmeService : IDisposable
             await networkStream.CopyToAsync(cachedCopy, cancellationToken);
             cachedCopy.Position = 0;
             using var storeCopy = new MemoryStream(cachedCopy.ToArray());
-            await _cache.StoreReadmeAsync(plugin.Id, plugin.ReadmeUrl, plugin.Version, storeCopy, cancellationToken);
+            await _cache.StoreReadmeAsync(airApp.Id, airApp.ReadmeUrl, airApp.Version, storeCopy, cancellationToken);
 
             cachedCopy.Position = 0;
             using var reader = new StreamReader(cachedCopy);

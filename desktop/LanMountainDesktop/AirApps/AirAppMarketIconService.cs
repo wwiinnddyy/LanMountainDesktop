@@ -9,7 +9,7 @@ using LanMountainDesktop.Services.Settings;
 namespace LanMountainDesktop.Services.AirAppMarket;
 
 /// <summary>
-/// Loads plugin icons from the local workspace, the on-disk asset cache, or the network,
+/// Loads AirApp icons from the local workspace, the on-disk asset cache, or the network,
 /// writing successful network fetches back into the cache so subsequent loads are offline-friendly.
 /// </summary>
 public sealed class AirAppMarketIconService : IDisposable
@@ -33,18 +33,18 @@ public sealed class AirAppMarketIconService : IDisposable
     }
 
     public async Task<Bitmap> LoadAsync(
-        AirAppCatalogItemInfo plugin,
+        AirAppCatalogItemInfo airApp,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(plugin);
+        ArgumentNullException.ThrowIfNull(airApp);
 
-        if (AirAppMarketDefaults.TryResolveWorkspaceFile(plugin.IconUrl, out var localIconPath))
+        if (AirAppMarketDefaults.TryResolveWorkspaceFile(airApp.IconUrl, out var localIconPath))
         {
             return new Bitmap(localIconPath);
         }
 
         if (_cache is not null &&
-            _cache.TryGetIcon(plugin.Id, plugin.IconUrl, plugin.Version) is { } cachedIconPath)
+            _cache.TryGetIcon(airApp.Id, airApp.IconUrl, airApp.Version) is { } cachedIconPath)
         {
             try
             {
@@ -56,7 +56,7 @@ public sealed class AirAppMarketIconService : IDisposable
             }
         }
 
-        using var response = await _httpClient.GetAsync(plugin.IconUrl, cancellationToken);
+        using var response = await _httpClient.GetAsync(airApp.IconUrl, cancellationToken);
         response.EnsureSuccessStatusCode();
         await using var networkStream = await response.Content.ReadAsStreamAsync(cancellationToken);
 
@@ -66,7 +66,7 @@ public sealed class AirAppMarketIconService : IDisposable
             await networkStream.CopyToAsync(cachedCopy, cancellationToken);
             cachedCopy.Position = 0;
             using var storeCopy = new MemoryStream(cachedCopy.ToArray());
-            await _cache.StoreIconAsync(plugin.Id, plugin.IconUrl, plugin.Version, storeCopy, cancellationToken);
+            await _cache.StoreIconAsync(airApp.Id, airApp.IconUrl, airApp.Version, storeCopy, cancellationToken);
 
             cachedCopy.Position = 0;
             return new Bitmap(cachedCopy);

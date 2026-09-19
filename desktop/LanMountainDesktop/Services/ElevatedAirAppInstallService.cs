@@ -21,19 +21,19 @@ internal sealed class ElevatedAirAppInstallService
 {
     public async Task<ElevatedAirAppInstallResult> InstallAsync(
         string sourcePackagePath,
-        string pluginsDirectory,
+        string airAppsDirectory,
         CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePackagePath);
-        ArgumentException.ThrowIfNullOrWhiteSpace(pluginsDirectory);
+        ArgumentException.ThrowIfNullOrWhiteSpace(airAppsDirectory);
 
         if (!OperatingSystem.IsWindows())
         {
             return new ElevatedAirAppInstallResult(
                 false,
                 "elevation_unsupported",
-                "Elevated plugin installation is only supported on Windows.",
-                "Elevated plugin installation is only supported on Windows.",
+                "Elevated AirApp installation is only supported on Windows.",
+                "Elevated AirApp installation is only supported on Windows.",
                 null,
                 null,
                 null);
@@ -45,7 +45,7 @@ internal sealed class ElevatedAirAppInstallService
             return new ElevatedAirAppInstallResult(
                 false,
                 "launcher_not_found",
-                "Launcher executable was not found for elevated plugin installation.",
+                "Launcher executable was not found for elevated AirApp installation.",
                 $"Launcher executable was not found. ResolvedPath='{launcherPath ?? string.Empty}'.",
                 null,
                 null,
@@ -63,14 +63,14 @@ internal sealed class ElevatedAirAppInstallService
                 FileName = launcherPath,
                 UseShellExecute = true,
                 Verb = "runas",
-                WorkingDirectory = Path.GetDirectoryName(launcherPath) ?? AppContext.BaseDirectory
+                WorkingDirectory = ResolveLauncherWorkingDirectory(launcherPath)
             };
-            startInfo.ArgumentList.Add("plugin");
+            startInfo.ArgumentList.Add("AirApp");
             startInfo.ArgumentList.Add("install");
             startInfo.ArgumentList.Add("--source");
             startInfo.ArgumentList.Add(Path.GetFullPath(sourcePackagePath));
             startInfo.ArgumentList.Add("--plugins-dir");
-            startInfo.ArgumentList.Add(Path.GetFullPath(pluginsDirectory));
+            startInfo.ArgumentList.Add(Path.GetFullPath(airAppsDirectory));
             startInfo.ArgumentList.Add("--result");
             startInfo.ArgumentList.Add(resultPath);
 
@@ -87,8 +87,8 @@ internal sealed class ElevatedAirAppInstallService
                 return new ElevatedAirAppInstallResult(
                     false,
                     "launch_failed",
-                    "Elevated plugin installer did not start.",
-                    "Elevated plugin installer did not start.",
+                    "Elevated AirApp installer did not start.",
+                    "Elevated AirApp installer did not start.",
                     null,
                     null,
                     null);
@@ -129,7 +129,7 @@ internal sealed class ElevatedAirAppInstallService
             return new ElevatedAirAppInstallResult(
                 false,
                 "elevation_failed",
-                "Elevated plugin installation failed.",
+                "Elevated AirApp installation failed.",
                 ex.Message,
                 null,
                 null,
@@ -161,7 +161,7 @@ internal sealed class ElevatedAirAppInstallService
             return new ElevatedAirAppInstallResult(
                 false,
                 "invalid_result",
-                "Elevated plugin installer returned an invalid result.",
+                "Elevated AirApp installer returned an invalid result.",
                 ex.Message,
                 null,
                 null,
@@ -233,5 +233,19 @@ internal sealed class ElevatedAirAppInstallService
         catch
         {
         }
+    }
+
+    /// <summary>
+    /// 解析提升进程的启动工作目录。
+    /// 注意 Path.GetDirectoryName 对"只有文件名"的路径返回空串而不是 null，
+    /// 所以原先的 `?? AppContext.BaseDirectory` 兜底永远不会触发；这里把空值也算作缺失。
+    /// </summary>
+    internal static string ResolveLauncherWorkingDirectory(string launcherPath)
+    {
+        var directory = Path.GetDirectoryName(launcherPath);
+
+        return string.IsNullOrEmpty(directory)
+            ? AppContext.BaseDirectory
+            : directory;
     }
 }

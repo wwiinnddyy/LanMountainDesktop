@@ -123,7 +123,7 @@ public partial class AboutSettingsPage : AirAppSettingsPageBase
         var dialog = new FAContentDialog
         {
             Title = "Enable developer mode",
-            Content = "Developer mode exposes experimental settings, diagnostics, and local plugin debugging options.\n\nUse it only when you are actively testing or troubleshooting the desktop host.",
+            Content = "Developer mode exposes experimental settings, diagnostics, and local AirApp debugging options.\n\nUse it only when you are actively testing or troubleshooting the desktop host.",
             PrimaryButtonText = "Enable",
             CloseButtonText = "Not now",
             DefaultButton = FAContentDialogButton.Close

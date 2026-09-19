@@ -18,7 +18,7 @@
 
 - `desktop/LanMountainDesktop/`: 主宿主应用，包含 UI、服务、组件系统、主题与 AirApp 运行时接入
 - `desktop/LanMountainDesktop/ComponentSystem/`: 内置组件定义、注册、扩展加载
-- `desktop/LanMountainDesktop/plugins/`: 宿主侧 AirApp 运行时、安装与 market 集成
+- `desktop/LanMountainDesktop/AirApps/`: 宿主侧 AirApp 运行时、安装与 market 集成
 - `desktop/LanMountainDesktop/Views/` and `ViewModels/`: UI 页面、窗口与视图模型
 - `desktop/LanMountainDesktop/Services/`: 设置、遥测、启动、持久化、业务服务
 - `airapp/LanMountainDesktop.AirAppSdk/`: AirApp SDK 公共接口和默认打包行为（含隔离层与宿主桥接契约）
@@ -78,6 +78,8 @@ AirApp 本地包生成：
 - 共享契约以 `core/LanMountainDesktop.Core/` 为准
 - market 数据来源默认是兄弟仓库 `..\\LanAirApp`
 - 迁移或 breaking change 优先同步 `docs/AIRAPP_SDK_V1_MIGRATION.md`
+- 统一用 AirApp 措辞：新增的类型、目录、设置键、日志文案不要再引入 `plugin` / `Plugin`
+- 改名前先查 `docs/ai/NAMING_AND_FROZEN_IDENTIFIERS.md`：其中第 3 节是跨进程/跨仓协议冻结项，第 2 节是需要一次性迁移器的本地数据标识符，两者都不能当作"漏改"直接重命名
 
 ### 设置与主题
 
@@ -96,5 +98,6 @@ AirApp 本地包生成：
 - 生态边界：`docs/archive/ECOSYSTEM_BOUNDARIES.md`
 - 跨平台架构：`docs/CROSS_PLATFORM.md`
 - AirApp SDK 迁移：`docs/AIRAPP_SDK_V1_MIGRATION.md`
+- 命名与标识符冻结：`docs/ai/NAMING_AND_FROZEN_IDENTIFIERS.md`
 
 如果多个文档都提到同一件事，以 `docs/ai/DOC_SOURCES.md` 列出的权威来源为准。

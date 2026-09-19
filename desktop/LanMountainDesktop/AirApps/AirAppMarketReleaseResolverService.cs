@@ -17,31 +17,31 @@ internal sealed class AirAppMarketReleaseResolverService
     }
 
     public async Task<string> ResolveDownloadUrlAsync(
-        AirAppMarketAirAppEntry plugin,
+        AirAppMarketAirAppEntry airApp,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(plugin);
+        ArgumentNullException.ThrowIfNull(airApp);
 
-        var firstSource = plugin.GetPackageSourcesInInstallOrder().FirstOrDefault();
+        var firstSource = airApp.GetPackageSourcesInInstallOrder().FirstOrDefault();
         if (firstSource is null)
         {
-            return plugin.DownloadUrl;
+            return airApp.DownloadUrl;
         }
 
-        return await ResolveDownloadUrlAsync(plugin, firstSource, cancellationToken).ConfigureAwait(false);
+        return await ResolveDownloadUrlAsync(airApp, firstSource, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<string> ResolveDownloadUrlAsync(
-        AirAppMarketAirAppEntry plugin,
+        AirAppMarketAirAppEntry airApp,
         AirAppMarketAirAppPackageSourceEntry source,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(plugin);
+        ArgumentNullException.ThrowIfNull(airApp);
         ArgumentNullException.ThrowIfNull(source);
 
         return source.SourceKind switch
         {
-            AirAppPackageSourceKind.ReleaseAsset => await ResolveReleaseAssetDownloadUrlAsync(plugin, source, cancellationToken).ConfigureAwait(false),
+            AirAppPackageSourceKind.ReleaseAsset => await ResolveReleaseAssetDownloadUrlAsync(airApp, source, cancellationToken).ConfigureAwait(false),
             AirAppPackageSourceKind.RawFallback => source.Url,
             AirAppPackageSourceKind.WorkspaceLocal => source.Url,
             _ => source.Url
@@ -49,17 +49,17 @@ internal sealed class AirAppMarketReleaseResolverService
     }
 
     private async Task<string> ResolveReleaseAssetDownloadUrlAsync(
-        AirAppMarketAirAppEntry plugin,
+        AirAppMarketAirAppEntry airApp,
         AirAppMarketAirAppPackageSourceEntry source,
         CancellationToken cancellationToken)
     {
         var sourceUrl = source.Url;
-        if (!plugin.HasReleaseDownloadMetadata)
+        if (!airApp.HasReleaseDownloadMetadata)
         {
             return sourceUrl;
         }
 
-        if (!TryGetRepositoryIdentity(plugin, out var owner, out var repositoryName))
+        if (!TryGetRepositoryIdentity(airApp, out var owner, out var repositoryName))
         {
             return sourceUrl;
         }
@@ -67,8 +67,8 @@ internal sealed class AirAppMarketReleaseResolverService
         var releaseDownloadUrl = AirAppMarketDefaults.BuildGitHubReleaseDownloadUrl(
             owner,
             repositoryName,
-            plugin.ReleaseTag,
-            plugin.ReleaseAssetName);
+            airApp.ReleaseTag,
+            airApp.ReleaseAssetName);
 
         if (AirAppMarketDefaults.TryResolveWorkspaceFile(releaseDownloadUrl, out _))
         {
@@ -78,9 +78,9 @@ internal sealed class AirAppMarketReleaseResolverService
         try
         {
             using var updateService = new GitHubReleaseUpdateService(owner, repositoryName, _httpClient);
-            var release = await updateService.GetReleaseByTagAsync(plugin.ReleaseTag, cancellationToken).ConfigureAwait(false);
+            var release = await updateService.GetReleaseByTagAsync(airApp.ReleaseTag, cancellationToken).ConfigureAwait(false);
             var asset = release?.Assets.FirstOrDefault(candidate =>
-                string.Equals(candidate.Name, plugin.ReleaseAssetName, StringComparison.OrdinalIgnoreCase));
+                string.Equals(candidate.Name, airApp.ReleaseAssetName, StringComparison.OrdinalIgnoreCase));
 
             return asset?.BrowserDownloadUrl ?? releaseDownloadUrl;
         }
@@ -91,14 +91,14 @@ internal sealed class AirAppMarketReleaseResolverService
     }
 
     private static bool TryGetRepositoryIdentity(
-        AirAppMarketAirAppEntry plugin,
+        AirAppMarketAirAppEntry airApp,
         out string owner,
         out string repositoryName)
     {
         owner = string.Empty;
         repositoryName = string.Empty;
 
-        return AirAppMarketDefaults.TryParseGitHubRepositoryUrl(plugin.RepositoryUrl, out owner, out repositoryName) ||
-               AirAppMarketDefaults.TryParseGitHubRepositoryUrl(plugin.ProjectUrl, out owner, out repositoryName);
+        return AirAppMarketDefaults.TryParseGitHubRepositoryUrl(airApp.RepositoryUrl, out owner, out repositoryName) ||
+               AirAppMarketDefaults.TryParseGitHubRepositoryUrl(airApp.ProjectUrl, out owner, out repositoryName);
     }
 }

@@ -1,6 +1,6 @@
 namespace LanMountainDesktop.Shared.IPC;
 
-public sealed record PublicPluginDescriptor(
+public sealed record PublicAirAppDescriptor(
     string PluginId,
     string DisplayName,
     string? Version,

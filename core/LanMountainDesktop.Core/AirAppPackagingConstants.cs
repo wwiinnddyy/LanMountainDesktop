@@ -1,6 +1,6 @@
 namespace LanMountainDesktop.AirAppPackaging;
 
-public static class PluginPackagingConstants
+public static class AirAppPackagingConstants
 {
     public const string ManifestFileName = "airapp.json";
     public const string LegacyManifestFileName = "manifest.json";

@@ -1641,84 +1641,84 @@ internal sealed class LauncherPolicyService : ILauncherPolicyService
 internal sealed class AirAppManagementSettingsService : IAirAppManagementSettingsService
 {
     private readonly ISettingsService _settingsService;
-    private AirAppRuntimeService? _pluginRuntimeService;
+    private AirAppRuntimeService? _airAppRuntimeService;
 
-    public AirAppManagementSettingsService(ISettingsService settingsService, AirAppRuntimeService? pluginRuntimeService)
+    public AirAppManagementSettingsService(ISettingsService settingsService, AirAppRuntimeService? airAppRuntimeService)
     {
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
-        _pluginRuntimeService = pluginRuntimeService;
+        _airAppRuntimeService = airAppRuntimeService;
     }
 
-    public void SetAirAppRuntime(AirAppRuntimeService? pluginRuntimeService)
+    public void SetAirAppRuntime(AirAppRuntimeService? airAppRuntimeService)
     {
-        _pluginRuntimeService = pluginRuntimeService;
+        _airAppRuntimeService = airAppRuntimeService;
     }
 
     public AirAppManagementSettingsState Get()
     {
         var snapshot = _settingsService.Load();
-        return new AirAppManagementSettingsState(snapshot.DisabledPluginIds?.ToArray() ?? []);
+        return new AirAppManagementSettingsState(snapshot.DisabledAirAppIds?.ToArray() ?? []);
     }
 
     public void Save(AirAppManagementSettingsState state)
     {
         var snapshot = _settingsService.Load();
-        snapshot.DisabledPluginIds = state.DisabledPluginIds?.ToList() ?? [];
+        snapshot.DisabledAirAppIds = state.DisabledAirAppIds?.ToList() ?? [];
         _settingsService.SaveSnapshot(
             AirAppSettingsScope.App,
             snapshot,
-            changedKeys: [nameof(AppSettingsSnapshot.DisabledPluginIds)]);
+            changedKeys: [nameof(AppSettingsSnapshot.DisabledAirAppIds)]);
     }
 
     public IReadOnlyList<AirAppInstalledInfo> GetInstalledAirApps()
     {
-        return _pluginRuntimeService?.GetInstalledAirAppsSnapshot() ?? [];
+        return _airAppRuntimeService?.GetInstalledAirAppsSnapshot() ?? [];
     }
 
-    public bool SetAirAppEnabled(string pluginId, bool isEnabled)
+    public bool SetAirAppEnabled(string airAppId, bool isEnabled)
     {
-        return _pluginRuntimeService?.SetAirAppEnabled(pluginId, isEnabled) ?? false;
+        return _airAppRuntimeService?.SetAirAppEnabled(airAppId, isEnabled) ?? false;
     }
 
-    public bool DeleteInstalledAirApp(string pluginId)
+    public bool DeleteInstalledAirApp(string airAppId)
     {
-        return _pluginRuntimeService?.DeleteInstalledAirApp(pluginId) ?? false;
+        return _airAppRuntimeService?.DeleteInstalledAirApp(airAppId) ?? false;
     }
 }
 
 internal sealed class AirAppCatalogSettingsService : IAirAppCatalogSettingsService, IDisposable
 {
-    private AirAppRuntimeService? _pluginRuntimeService;
+    private AirAppRuntimeService? _airAppRuntimeService;
     private AirAppMarketIndexService _indexService;
     private AirAppMarketInstallService? _installService;
     private readonly Dictionary<string, AirAppMarketAirAppEntry> _cachedAirApps = new(StringComparer.OrdinalIgnoreCase);
 
-    public AirAppCatalogSettingsService(AirAppRuntimeService? pluginRuntimeService)
+    public AirAppCatalogSettingsService(AirAppRuntimeService? airAppRuntimeService)
     {
-        _pluginRuntimeService = pluginRuntimeService;
+        _airAppRuntimeService = airAppRuntimeService;
 
         var dataRoot = AppDataPathProvider.GetAirAppMarketDirectory();
         var cacheService = new AirAppMarketCacheService(dataRoot);
         _indexService = new AirAppMarketIndexService(cacheService);
-        if (_pluginRuntimeService is not null)
+        if (_airAppRuntimeService is not null)
         {
-            _installService = new AirAppMarketInstallService(_pluginRuntimeService, dataRoot);
+            _installService = new AirAppMarketInstallService(_airAppRuntimeService, dataRoot);
         }
     }
 
-    public void SetAirAppRuntime(AirAppRuntimeService? pluginRuntimeService)
+    public void SetAirAppRuntime(AirAppRuntimeService? airAppRuntimeService)
     {
-        _pluginRuntimeService = pluginRuntimeService;
+        _airAppRuntimeService = airAppRuntimeService;
         _installService?.Dispose();
         _installService = null;
 
-        if (_pluginRuntimeService is null)
+        if (_airAppRuntimeService is null)
         {
             return;
         }
 
         var dataRoot = AppDataPathProvider.GetAirAppMarketDirectory();
-        _installService = new AirAppMarketInstallService(_pluginRuntimeService, dataRoot);
+        _installService = new AirAppMarketInstallService(_airAppRuntimeService, dataRoot);
     }
 
     public Task<AirAppCatalogIndexResult> LoadCatalogAsync(CancellationToken cancellationToken = default)
@@ -1727,10 +1727,10 @@ internal sealed class AirAppCatalogSettingsService : IAirAppCatalogSettingsServi
     }
 
     public Task<AirAppCatalogInstallResult> InstallAsync(
-        string pluginId,
+        string airAppId,
         CancellationToken cancellationToken = default)
     {
-        return InstallCatalogCoreAsync(pluginId, cancellationToken);
+        return InstallCatalogCoreAsync(airAppId, cancellationToken);
     }
 
     private async Task<AirAppCatalogIndexResult> LoadCatalogCoreAsync(CancellationToken cancellationToken = default)
@@ -1770,10 +1770,10 @@ internal sealed class AirAppCatalogSettingsService : IAirAppCatalogSettingsServi
     }
 
     private async Task<AirAppCatalogInstallResult> InstallCatalogCoreAsync(
-        string pluginId,
+        string airAppId,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(pluginId))
+        if (string.IsNullOrWhiteSpace(airAppId))
         {
             return new AirAppCatalogInstallResult(
                 false,
@@ -1784,36 +1784,36 @@ internal sealed class AirAppCatalogSettingsService : IAirAppCatalogSettingsServi
                 "AirApp id is required.");
         }
 
-        if (_installService is null || _pluginRuntimeService is null)
+        if (_installService is null || _airAppRuntimeService is null)
         {
             return new AirAppCatalogInstallResult(
                 false,
-                pluginId,
+                airAppId,
                 null,
                 null,
                 [new AirAppInstallDiagnostic("runtime_unavailable", "AirApp runtime is unavailable.")],
                 "AirApp runtime is unavailable.");
         }
 
-        if (!_cachedAirApps.TryGetValue(pluginId, out var entry))
+        if (!_cachedAirApps.TryGetValue(airAppId, out var entry))
         {
             var load = await LoadCatalogCoreAsync(cancellationToken).ConfigureAwait(false);
             if (!load.Success)
             {
                 return new AirAppCatalogInstallResult(
                     false,
-                    pluginId,
+                    airAppId,
                     null,
                     null,
-                    [new AirAppInstallDiagnostic("catalog_load_failed", load.ErrorMessage ?? "Failed to load the plugin catalog.")],
+                    [new AirAppInstallDiagnostic("catalog_load_failed", load.ErrorMessage ?? "Failed to load the AirApp catalog.")],
                     load.ErrorMessage);
             }
 
-            if (!_cachedAirApps.TryGetValue(pluginId, out entry))
+            if (!_cachedAirApps.TryGetValue(airAppId, out entry))
             {
                 return new AirAppCatalogInstallResult(
                     false,
-                    pluginId,
+                    airAppId,
                     null,
                     null,
                     [new AirAppInstallDiagnostic("not_found", "AirApp was not found in the official catalog.")],
@@ -2049,11 +2049,11 @@ internal sealed class ApplicationInfoService : IApplicationInfoService
 internal sealed class SettingsFacadeService : ISettingsFacadeService, IDisposable
 {
     private readonly UpdateSettingsService _updateSettingsService;
-    private readonly AirAppCatalogSettingsService _pluginCatalogSettingsService;
-    private readonly AirAppManagementSettingsService _pluginManagementSettingsService;
+    private readonly AirAppCatalogSettingsService _airAppCatalogSettingsService;
+    private readonly AirAppManagementSettingsService _airAppManagementSettingsService;
     private readonly WeatherSettingsService _weatherSettingsService;
 
-    public SettingsFacadeService(AirAppRuntimeService? pluginRuntimeService = null)
+    public SettingsFacadeService(AirAppRuntimeService? airAppRuntimeService = null)
     {
         Settings = new SettingsService();
         Catalog = new SettingsCatalogService();
@@ -2071,10 +2071,10 @@ internal sealed class SettingsFacadeService : ISettingsFacadeService, IDisposabl
         Update = _updateSettingsService;
         LauncherCatalog = new LauncherCatalogService();
         LauncherPolicy = new LauncherPolicyService();
-        _pluginManagementSettingsService = new AirAppManagementSettingsService(Settings, pluginRuntimeService);
-        AirAppManagement = _pluginManagementSettingsService;
-        _pluginCatalogSettingsService = new AirAppCatalogSettingsService(pluginRuntimeService);
-        AirAppCatalog = _pluginCatalogSettingsService;
+        _airAppManagementSettingsService = new AirAppManagementSettingsService(Settings, airAppRuntimeService);
+        AirAppManagement = _airAppManagementSettingsService;
+        _airAppCatalogSettingsService = new AirAppCatalogSettingsService(airAppRuntimeService);
+        AirAppCatalog = _airAppCatalogSettingsService;
         ApplicationInfo = new ApplicationInfoService();
     }
 
@@ -2112,16 +2112,16 @@ internal sealed class SettingsFacadeService : ISettingsFacadeService, IDisposabl
 
     public IApplicationInfoService ApplicationInfo { get; }
 
-    public void BindAirAppRuntime(AirAppRuntimeService? pluginRuntimeService)
+    public void BindAirAppRuntime(AirAppRuntimeService? airAppRuntimeService)
     {
-        _pluginManagementSettingsService.SetAirAppRuntime(pluginRuntimeService);
-        _pluginCatalogSettingsService.SetAirAppRuntime(pluginRuntimeService);
+        _airAppManagementSettingsService.SetAirAppRuntime(airAppRuntimeService);
+        _airAppCatalogSettingsService.SetAirAppRuntime(airAppRuntimeService);
     }
 
     public void Dispose()
     {
         _weatherSettingsService.Dispose();
         _updateSettingsService.Dispose();
-        _pluginCatalogSettingsService.Dispose();
+        _airAppCatalogSettingsService.Dispose();
     }
 }

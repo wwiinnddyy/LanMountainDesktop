@@ -30,9 +30,9 @@ public static class AirAppServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers a plugin settings section with a custom AXAML view.
+    /// Registers a AirApp settings section with a custom AXAML view.
     /// The host application will display <typeparamref name="TView"/> directly
-    /// in the settings window, allowing the plugin to use any Fluent Avalonia controls
+    /// in the settings window, allowing the AirApp to use any Fluent Avalonia controls
     /// and custom layouts — just like built-in settings pages.
     /// </summary>
     /// <typeparam name="TView">A <see cref="AirAppSettingsPageBase"/> subclass that defines the settings UI using AXAML.</typeparam>

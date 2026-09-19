@@ -58,6 +58,11 @@ public sealed class AppSettingsService
                     ? LoadSnapshotFromDisk()
                     : new AppSettingsSnapshot();
 
+                if (hasFile && TryMergeLegacySettingsKeys(loadedSnapshot))
+                {
+                    writeTimeUtc = WriteSnapshotToFile(loadedSnapshot);
+                }
+
                 UpdateCache(loadedSnapshot, writeTimeUtc, nowUtc);
                 return loadedSnapshot.Clone();
             }
@@ -75,20 +80,7 @@ public sealed class AppSettingsService
 
         try
         {
-            var directory = Path.GetDirectoryName(_settingsPath);
-            if (!string.IsNullOrWhiteSpace(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
-            var json = JsonSerializer.Serialize(snapshotToPersist, SerializerOptions);
-            var tempPath = $"{_settingsPath}.{Guid.NewGuid():N}.tmp";
-            File.WriteAllText(tempPath, json);
-            File.Move(tempPath, _settingsPath, overwrite: true);
-
-            var writeTimeUtc = File.Exists(_settingsPath)
-                ? File.GetLastWriteTimeUtc(_settingsPath)
-                : DateTime.UtcNow;
+            var writeTimeUtc = WriteSnapshotToFile(snapshotToPersist);
 
             lock (CacheGate)
             {
@@ -101,6 +93,57 @@ public sealed class AppSettingsService
         {
             AppLogger.Warn("AppSettings", $"Failed to save settings to '{_settingsPath}'.", ex);
         }
+    }
+
+    private DateTime WriteSnapshotToFile(AppSettingsSnapshot snapshot)
+    {
+        var directory = Path.GetDirectoryName(_settingsPath);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        var json = JsonSerializer.Serialize(snapshot, SerializerOptions);
+        var tempPath = $"{_settingsPath}.{Guid.NewGuid():N}.tmp";
+        File.WriteAllText(tempPath, json);
+        File.Move(tempPath, _settingsPath, overwrite: true);
+
+        return File.Exists(_settingsPath)
+            ? File.GetLastWriteTimeUtc(_settingsPath)
+            : DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// 把升级前 settings.json 里的旧键并入新键，并清掉别名以免再写回磁盘。
+    /// 新旧并存时以新键为准（用户可能在升级后又改过设置）。
+    /// </summary>
+    internal static bool TryMergeLegacySettingsKeys(AppSettingsSnapshot snapshot)
+    {
+        var migrated = false;
+
+        if (snapshot.LegacyDisabledPluginIds is { Count: > 0 } legacyDisabledIds)
+        {
+            migrated = true;
+            if (snapshot.DisabledAirAppIds.Count == 0)
+            {
+                snapshot.DisabledAirAppIds = new List<string>(legacyDisabledIds);
+            }
+        }
+
+        snapshot.LegacyDisabledPluginIds = null;
+
+        if (!string.IsNullOrWhiteSpace(snapshot.LegacyDevPluginPath))
+        {
+            migrated = true;
+            if (string.IsNullOrWhiteSpace(snapshot.DevAirAppPath))
+            {
+                snapshot.DevAirAppPath = snapshot.LegacyDevPluginPath;
+            }
+        }
+
+        snapshot.LegacyDevPluginPath = null;
+
+        return migrated;
     }
 
     private bool TryGetCachedWithoutProbe(DateTime nowUtc, out AppSettingsSnapshot snapshot)

@@ -186,11 +186,21 @@ public sealed class AppSettingsSnapshot
 
     public bool EnableMainWindowDesktopLayer { get; set; } = false;
 
-    public List<string> DisabledPluginIds { get; set; } = [];
+    public List<string> DisabledAirAppIds { get; set; } = [];
 
     public bool IsDevModeEnabled { get; set; }
 
-    public string? DevPluginPath { get; set; }
+    public string? DevAirAppPath { get; set; }
+
+    // 旧设置键的只读别名：用于读取升级前写下的 settings.json。一旦在加载时被合并进上面的新成员
+    // 就会被置 null，配合 WhenWritingNull 保证迁移后磁盘上不再出现旧键。不要在新代码里读写它们。
+    [JsonPropertyName("DisabledPluginIds")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<string>? LegacyDisabledPluginIds { get; set; }
+
+    [JsonPropertyName("DevPluginPath")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? LegacyDevPluginPath { get; set; }
 
     #region Study Settings
 
@@ -284,9 +294,13 @@ public sealed class AppSettingsSnapshot
         clone.PinnedTaskbarActions = PinnedTaskbarActions is { Count: > 0 }
             ? new List<string>(PinnedTaskbarActions)
             : [];
-        clone.DisabledPluginIds = DisabledPluginIds is { Count: > 0 }
-            ? new List<string>(DisabledPluginIds)
+        clone.DisabledAirAppIds = DisabledAirAppIds is { Count: > 0 }
+            ? new List<string>(DisabledAirAppIds)
             : [];
+        // 保留 null 语义：合并后为 null 才不会把旧键写回磁盘。
+        clone.LegacyDisabledPluginIds = LegacyDisabledPluginIds is { Count: > 0 }
+            ? new List<string>(LegacyDisabledPluginIds)
+            : null;
         clone.NotificationBoxBlockedApps = NotificationBoxBlockedApps is { Count: > 0 }
             ? new List<string>(NotificationBoxBlockedApps)
             : [];

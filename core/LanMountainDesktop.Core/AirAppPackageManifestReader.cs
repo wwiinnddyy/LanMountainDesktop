@@ -3,29 +3,29 @@ using System.Text.Json;
 
 namespace LanMountainDesktop.AirAppPackaging;
 
-public static class PluginPackageManifestReader
+public static class AirAppPackageManifestReader
 {
-    public static PluginPackageManifest Read(string packagePath, bool includeLegacyManifest = false)
+    public static AirAppPackageManifest Read(string packagePath, bool includeLegacyManifest = false)
     {
         using var archive = ZipFile.OpenRead(packagePath);
-        var entries = FindManifestEntries(archive, PluginPackagingConstants.ManifestFileName);
+        var entries = FindManifestEntries(archive, AirAppPackagingConstants.ManifestFileName);
         if (entries.Length == 0 && includeLegacyManifest)
         {
-            entries = FindManifestEntries(archive, PluginPackagingConstants.LegacyManifestFileName);
+            entries = FindManifestEntries(archive, AirAppPackagingConstants.LegacyManifestFileName);
         }
 
         if (entries.Length == 0)
         {
             var expected = includeLegacyManifest
-                ? $"'{PluginPackagingConstants.ManifestFileName}' or '{PluginPackagingConstants.LegacyManifestFileName}'"
-                : $"'{PluginPackagingConstants.ManifestFileName}'";
-            throw new InvalidOperationException($"Plugin package '{packagePath}' does not contain {expected}.");
+                ? $"'{AirAppPackagingConstants.ManifestFileName}' or '{AirAppPackagingConstants.LegacyManifestFileName}'"
+                : $"'{AirAppPackagingConstants.ManifestFileName}'";
+            throw new InvalidOperationException($"AirApp package '{packagePath}' does not contain {expected}.");
         }
 
         if (entries.Length > 1)
         {
             throw new InvalidOperationException(
-                $"Plugin package '{packagePath}' contains multiple '{PluginPackagingConstants.ManifestFileName}' files.");
+                $"AirApp package '{packagePath}' contains multiple '{AirAppPackagingConstants.ManifestFileName}' files.");
         }
 
         using var stream = entries[0].Open();
@@ -36,7 +36,7 @@ public static class PluginPackageManifestReader
         var id = ReadRequiredString(root, "id");
         var name = ReadRequiredString(root, "name");
         var version = ReadOptionalString(root, "version") ?? string.Empty;
-        return new PluginPackageManifest(id, name, version);
+        return new AirAppPackageManifest(id, name, version);
     }
 
     private static ZipArchiveEntry[] FindManifestEntries(ZipArchive archive, string manifestFileName)
@@ -52,7 +52,7 @@ public static class PluginPackageManifestReader
             value.ValueKind != JsonValueKind.String ||
             string.IsNullOrWhiteSpace(value.GetString()))
         {
-            throw new InvalidOperationException($"Plugin manifest is missing required property '{propertyName}'.");
+            throw new InvalidOperationException($"AirApp manifest is missing required property '{propertyName}'.");
         }
 
         return value.GetString()!;

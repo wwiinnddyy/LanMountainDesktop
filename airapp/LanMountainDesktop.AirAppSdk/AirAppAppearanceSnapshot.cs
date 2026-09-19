@@ -1,7 +1,7 @@
 namespace LanMountainDesktop.AirAppSdk;
 
 /// <remarks>
-/// This is the runtime snapshot shape consumed by plugins inside the host process.
+/// This is the runtime snapshot shape consumed by AirApps inside the host process.
 /// It is intentionally distinct from the wire DTO with the same name in
 /// <c>LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshot</c>.
 /// </remarks>
@@ -12,7 +12,7 @@ public sealed record AirAppMaterialSurfaceSnapshot(
     double Opacity);
 
 /// <remarks>
-/// Runtime-facing appearance snapshot for plugins. This is not the same contract as the
+/// Runtime-facing appearance snapshot for AirApps. This is not the same contract as the
 /// wire-format snapshot in <c>LanMountainDesktop.AirAppIsolation.Contracts</c>, even though the
 /// type name matches.
 /// </remarks>

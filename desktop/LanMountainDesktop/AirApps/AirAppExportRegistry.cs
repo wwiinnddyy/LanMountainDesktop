@@ -49,27 +49,27 @@ internal sealed class AirAppExportRegistry : IAirAppExportRegistry
         return GetExport(typeof(TContract), providerAirAppId)?.ServiceInstance as TContract;
     }
 
-    public void ReplaceExports(string pluginId, IEnumerable<AirAppServiceExportDescriptor> descriptors)
+    public void ReplaceExports(string airAppId, IEnumerable<AirAppServiceExportDescriptor> descriptors)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(pluginId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(airAppId);
         ArgumentNullException.ThrowIfNull(descriptors);
 
         lock (_gate)
         {
             _exports.RemoveAll(descriptor =>
-                string.Equals(descriptor.ProviderAirAppId, pluginId, StringComparison.OrdinalIgnoreCase));
+                string.Equals(descriptor.ProviderAirAppId, airAppId, StringComparison.OrdinalIgnoreCase));
             _exports.AddRange(descriptors);
         }
     }
 
-    public void RemoveExports(string pluginId)
+    public void RemoveExports(string airAppId)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(pluginId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(airAppId);
 
         lock (_gate)
         {
             _exports.RemoveAll(descriptor =>
-                string.Equals(descriptor.ProviderAirAppId, pluginId, StringComparison.OrdinalIgnoreCase));
+                string.Equals(descriptor.ProviderAirAppId, airAppId, StringComparison.OrdinalIgnoreCase));
         }
     }
 

@@ -28,7 +28,7 @@ internal sealed class AirAppMarketIndexService : IDisposable
     {
         Exception? networkError = null;
 
-        // The index is self-contained, so there is no per-plugin enrichment step anymore.
+        // The index is self-contained, so there is no per-AirApp enrichment step anymore.
         if (AirAppMarketDefaults.TryGetWorkspaceIndexPath() is { } localIndexPath)
         {
             try

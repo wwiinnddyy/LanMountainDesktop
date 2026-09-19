@@ -201,10 +201,10 @@ public partial class MainWindow : Window
 
     public MainWindow()
     {
-        var pluginRuntimeService = Design.IsDesignMode
+        var airAppRuntimeService = Design.IsDesignMode
             ? null
             : (Application.Current as App)?.AirAppRuntimeService;
-        _componentRegistry = DesktopComponentRegistryFactory.Create(pluginRuntimeService);
+        _componentRegistry = DesktopComponentRegistryFactory.Create(airAppRuntimeService);
         _settingsService = _settingsFacade.Settings;
         _gridSettingsService = _settingsFacade.Grid;
         _themeSettingsService = _settingsFacade.Theme;
@@ -218,11 +218,11 @@ public partial class MainWindow : Window
         Icon = _appLogoService.CreateWindowIcon();
         _componentRuntimeRegistry = DesktopComponentRegistryFactory.CreateRuntimeRegistry(
             _componentRegistry,
-            pluginRuntimeService,
+            airAppRuntimeService,
             _settingsFacade);
         _componentEditorRegistry = DesktopComponentEditorRegistryFactory.Create(
             _componentRegistry,
-            pluginRuntimeService);
+            airAppRuntimeService);
         _componentLibraryService = new ComponentLibraryService(_componentRegistry, _componentRuntimeRegistry);
         _componentEditorWindowService = new ComponentEditorWindowService(_settingsFacade);
 

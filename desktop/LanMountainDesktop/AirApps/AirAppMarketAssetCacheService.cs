@@ -10,9 +10,9 @@ using LanMountainDesktop.AirAppSdk;
 namespace LanMountainDesktop.Services.AirAppMarket;
 
 /// <summary>
-/// Local disk cache for plugin market assets (README markdown and icon images).
+/// Local disk cache for AirApp market assets (README markdown and icon images).
 /// Cache validity is driven by index refresh: an entry is reused while its source URL and
-/// plugin version are unchanged, and refreshed only when the market index reports a change.
+/// AirApp version are unchanged, and refreshed only when the market index reports a change.
 /// </summary>
 public sealed class AirAppMarketAssetCacheService : IDisposable
 {
@@ -29,11 +29,11 @@ public sealed class AirAppMarketAssetCacheService : IDisposable
     private readonly object _manifestGate = new();
     private AssetCacheManifest _manifest;
 
-    public AirAppMarketAssetCacheService(string pluginMarketDataDirectory)
+    public AirAppMarketAssetCacheService(string airAppMarketDataDirectory)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(pluginMarketDataDirectory);
+        ArgumentException.ThrowIfNullOrWhiteSpace(airAppMarketDataDirectory);
 
-        _cacheDirectory = Path.Combine(pluginMarketDataDirectory, "cache", "assets");
+        _cacheDirectory = Path.Combine(airAppMarketDataDirectory, "cache", "assets");
         _readmeDirectory = Path.Combine(_cacheDirectory, "readme");
         _iconsDirectory = Path.Combine(_cacheDirectory, "icons");
         _manifestPath = Path.Combine(_cacheDirectory, "manifest.json");
@@ -41,68 +41,68 @@ public sealed class AirAppMarketAssetCacheService : IDisposable
     }
 
     /// <summary>
-    /// Returns the cached README path for the plugin when the cache is fresh, or null when it
+    /// Returns the cached README path for the AirApp when the cache is fresh, or null when it
     /// must be (re)fetched. Callers then download and store via <see cref="StoreReadmeAsync"/>.
     /// </summary>
-    public string? TryGetReadme(string pluginId, string sourceUrl, string pluginVersion)
+    public string? TryGetReadme(string airAppId, string sourceUrl, string airAppVersion)
     {
-        return TryGetAsset(pluginId, sourceUrl, pluginVersion, "readme", _readmeDirectory, ".md");
+        return TryGetAsset(airAppId, sourceUrl, airAppVersion, "readme", _readmeDirectory, ".md");
     }
 
     public async Task StoreReadmeAsync(
-        string pluginId,
+        string airAppId,
         string sourceUrl,
-        string pluginVersion,
+        string airAppVersion,
         Stream content,
         CancellationToken cancellationToken)
     {
         Directory.CreateDirectory(_readmeDirectory);
-        var path = Path.Combine(_readmeDirectory, SanitizeFileName(pluginId) + ".md");
+        var path = Path.Combine(_readmeDirectory, SanitizeFileName(airAppId) + ".md");
         await WriteAtomicallyAsync(path, content, cancellationToken).ConfigureAwait(false);
-        RecordEntry(pluginId, sourceUrl, pluginVersion, AssetKind.Readme);
+        RecordEntry(airAppId, sourceUrl, airAppVersion, AssetKind.Readme);
     }
 
     /// <summary>
-    /// Returns the cached icon path for the plugin when the cache is fresh, or null when it
+    /// Returns the cached icon path for the AirApp when the cache is fresh, or null when it
     /// must be (re)fetched.
     /// </summary>
-    public string? TryGetIcon(string pluginId, string sourceUrl, string pluginVersion)
+    public string? TryGetIcon(string airAppId, string sourceUrl, string airAppVersion)
     {
         var extension = InferIconExtension(sourceUrl);
-        return TryGetAsset(pluginId, sourceUrl, pluginVersion, "icon", _iconsDirectory, extension);
+        return TryGetAsset(airAppId, sourceUrl, airAppVersion, "icon", _iconsDirectory, extension);
     }
 
     public async Task StoreIconAsync(
-        string pluginId,
+        string airAppId,
         string sourceUrl,
-        string pluginVersion,
+        string airAppVersion,
         Stream content,
         CancellationToken cancellationToken)
     {
         Directory.CreateDirectory(_iconsDirectory);
         var extension = InferIconExtension(sourceUrl);
-        var path = Path.Combine(_iconsDirectory, SanitizeFileName(pluginId) + extension);
+        var path = Path.Combine(_iconsDirectory, SanitizeFileName(airAppId) + extension);
         await WriteAtomicallyAsync(path, content, cancellationToken).ConfigureAwait(false);
-        RecordEntry(pluginId, sourceUrl, pluginVersion, AssetKind.Icon);
+        RecordEntry(airAppId, sourceUrl, airAppVersion, AssetKind.Icon);
     }
 
     /// <summary>
-    /// Removes the cached assets for a plugin (for example after an uninstall).
+    /// Removes the cached assets for a AirApp (for example after an uninstall).
     /// </summary>
-    public void Invalidate(string pluginId)
+    public void Invalidate(string airAppId)
     {
         lock (_manifestGate)
         {
-            if (!_manifest.Entries.Remove(pluginId))
+            if (!_manifest.Entries.Remove(airAppId))
             {
                 return;
             }
         }
 
-        TryDelete(Path.Combine(_readmeDirectory, SanitizeFileName(pluginId) + ".md"));
+        TryDelete(Path.Combine(_readmeDirectory, SanitizeFileName(airAppId) + ".md"));
         foreach (var extension in new[] { ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp" })
         {
-            TryDelete(Path.Combine(_iconsDirectory, SanitizeFileName(pluginId) + extension));
+            TryDelete(Path.Combine(_iconsDirectory, SanitizeFileName(airAppId) + extension));
         }
 
         SaveManifest();
@@ -129,16 +129,16 @@ public sealed class AirAppMarketAssetCacheService : IDisposable
     }
 
     private string? TryGetAsset(
-        string pluginId,
+        string airAppId,
         string sourceUrl,
-        string pluginVersion,
+        string airAppVersion,
         string assetLabel,
         string directory,
         string extension)
     {
         lock (_manifestGate)
         {
-            if (!_manifest.Entries.TryGetValue(pluginId, out var entry))
+            if (!_manifest.Entries.TryGetValue(airAppId, out var entry))
             {
                 return null;
             }
@@ -150,24 +150,24 @@ public sealed class AirAppMarketAssetCacheService : IDisposable
             }
 
             if (!string.Equals(entry.SourceUrl, sourceUrl, StringComparison.OrdinalIgnoreCase) ||
-                !string.Equals(entry.AirAppVersion, pluginVersion, StringComparison.OrdinalIgnoreCase))
+                !string.Equals(entry.AirAppVersion, airAppVersion, StringComparison.OrdinalIgnoreCase))
             {
                 return null;
             }
         }
 
-        var path = Path.Combine(directory, SanitizeFileName(pluginId) + extension);
+        var path = Path.Combine(directory, SanitizeFileName(airAppId) + extension);
         return File.Exists(path) ? path : null;
     }
 
-    private void RecordEntry(string pluginId, string sourceUrl, string pluginVersion, AssetKind assetKind)
+    private void RecordEntry(string airAppId, string sourceUrl, string airAppVersion, AssetKind assetKind)
     {
         lock (_manifestGate)
         {
-            _manifest.Entries[pluginId] = new AssetCacheEntry(
+            _manifest.Entries[airAppId] = new AssetCacheEntry(
                 assetKind,
                 sourceUrl,
-                pluginVersion,
+                airAppVersion,
                 DateTimeOffset.UtcNow);
         }
 
@@ -313,11 +313,11 @@ public sealed class AirAppMarketAssetCacheService : IDisposable
         {
         }
 
-        public AssetCacheEntry(AssetKind assetKind, string sourceUrl, string pluginVersion, DateTimeOffset cachedAt)
+        public AssetCacheEntry(AssetKind assetKind, string sourceUrl, string airAppVersion, DateTimeOffset cachedAt)
         {
             AssetKind = assetKind;
             SourceUrl = sourceUrl;
-            AirAppVersion = pluginVersion;
+            AirAppVersion = airAppVersion;
             CachedAt = cachedAt;
         }
 

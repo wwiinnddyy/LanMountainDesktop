@@ -26,7 +26,7 @@ public sealed class SettingsPageDescriptor
         string? selectedIconKey,
         AirAppSettingsPageCategory category,
         int sortOrder,
-        string? pluginId,
+        string? airAppId,
         bool isBuiltIn,
         bool hideDefault,
         bool hidePageTitle,
@@ -46,7 +46,7 @@ public sealed class SettingsPageDescriptor
         SelectedIconKey = string.IsNullOrWhiteSpace(selectedIconKey) ? IconKey : selectedIconKey.Trim();
         Category = category;
         SortOrder = sortOrder;
-        AirAppId = string.IsNullOrWhiteSpace(pluginId) ? null : pluginId.Trim();
+        AirAppId = string.IsNullOrWhiteSpace(airAppId) ? null : airAppId.Trim();
         IsBuiltIn = isBuiltIn;
         HideDefault = hideDefault;
         HidePageTitle = hidePageTitle;
@@ -98,7 +98,7 @@ internal sealed class SettingsPageRegistry : ISettingsPageRegistry, IDisposable
     private readonly ISettingsFacadeService _settingsFacade;
     private readonly IHostApplicationLifecycle _hostApplicationLifecycle;
     private readonly LocalizationService _localizationService;
-    private readonly Func<AirAppRuntimeService?> _pluginRuntimeAccessor;
+    private readonly Func<AirAppRuntimeService?> _airAppRuntimeAccessor;
     private readonly object _gate = new();
     private readonly List<SettingsPageDescriptor> _pages = [];
     private ServiceProvider? _hostServices;
@@ -107,12 +107,12 @@ internal sealed class SettingsPageRegistry : ISettingsPageRegistry, IDisposable
         ISettingsFacadeService settingsFacade,
         IHostApplicationLifecycle hostApplicationLifecycle,
         LocalizationService localizationService,
-        Func<AirAppRuntimeService?> pluginRuntimeAccessor)
+        Func<AirAppRuntimeService?> airAppRuntimeAccessor)
     {
         _settingsFacade = settingsFacade ?? throw new ArgumentNullException(nameof(settingsFacade));
         _hostApplicationLifecycle = hostApplicationLifecycle ?? throw new ArgumentNullException(nameof(hostApplicationLifecycle));
         _localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
-        _pluginRuntimeAccessor = pluginRuntimeAccessor ?? throw new ArgumentNullException(nameof(pluginRuntimeAccessor));
+        _airAppRuntimeAccessor = airAppRuntimeAccessor ?? throw new ArgumentNullException(nameof(airAppRuntimeAccessor));
     }
 
     public void Rebuild()
@@ -125,17 +125,17 @@ internal sealed class SettingsPageRegistry : ISettingsPageRegistry, IDisposable
             RegisterAssemblyPages(
                 typeof(App).Assembly,
                 _hostServices!,
-                pluginId: null,
+                airAppId: null,
                 isBuiltIn: true);
 
-            var pluginRuntime = _pluginRuntimeAccessor();
-            if (pluginRuntime is null)
+            var airAppRuntime = _airAppRuntimeAccessor();
+            if (airAppRuntime is null)
             {
                 SortPages();
                 return;
             }
 
-            foreach (var loadedAirApp in pluginRuntime.LoadedAirApps)
+            foreach (var loadedAirApp in airAppRuntime.LoadedAirApps)
             {
                 RegisterAirAppPages(loadedAirApp);
                 RegisterLegacyAirAppSections(loadedAirApp);
@@ -185,10 +185,10 @@ internal sealed class SettingsPageRegistry : ISettingsPageRegistry, IDisposable
         services.AddSingleton<ILocationService>(_ => HostLocationServiceProvider.GetOrCreate());
         services.AddSingleton<WeatherLocationRefreshService>();
 
-        var pluginRuntime = _pluginRuntimeAccessor();
-        if (pluginRuntime is not null)
+        var airAppRuntime = _airAppRuntimeAccessor();
+        if (airAppRuntime is not null)
         {
-            services.AddSingleton(pluginRuntime);
+            services.AddSingleton(airAppRuntime);
         }
 
         _hostServices = services.BuildServiceProvider(new ServiceProviderOptions
@@ -201,7 +201,7 @@ internal sealed class SettingsPageRegistry : ISettingsPageRegistry, IDisposable
     private void RegisterAssemblyPages(
         Assembly assembly,
         IServiceProvider services,
-        string? pluginId,
+        string? airAppId,
         bool isBuiltIn)
     {
         var isDevModeEnabled = _settingsFacade.Settings
@@ -235,7 +235,7 @@ internal sealed class SettingsPageRegistry : ISettingsPageRegistry, IDisposable
                 pageInfo.SelectedIconKey,
                 category,
                 sortOrder,
-                pluginId,
+                airAppId,
                 isBuiltIn,
                 pageInfo.HideDefault,
                 pageInfo.HidePageTitle,
@@ -260,7 +260,7 @@ internal sealed class SettingsPageRegistry : ISettingsPageRegistry, IDisposable
 
         foreach (var section in loadedAirApp.SettingsSections)
         {
-            var pageId = $"plugin:{loadedAirApp.Manifest.Id}:{section.Id}";
+            var pageId = $"AirApp:{loadedAirApp.Manifest.Id}:{section.Id}";
             var title = localizer.GetString(section.TitleLocalizationKey, section.TitleLocalizationKey);
             var description = string.IsNullOrWhiteSpace(section.DescriptionLocalizationKey)
                 ? null
@@ -271,8 +271,8 @@ internal sealed class SettingsPageRegistry : ISettingsPageRegistry, IDisposable
             if (section.CustomViewType is not null)
             {
                 var customViewType = section.CustomViewType;
-                var pluginServices = loadedAirApp.Services;
-                factory = hostContext => CreatePage(pluginServices, customViewType, hostContext);
+                var airAppServices = loadedAirApp.Services;
+                factory = hostContext => CreatePage(airAppServices, customViewType, hostContext);
             }
             else
             {
@@ -323,10 +323,10 @@ internal sealed class SettingsPageRegistry : ISettingsPageRegistry, IDisposable
                 return sortOrderCompare;
             }
 
-            var pluginCompare = string.Compare(left.AirAppId, right.AirAppId, StringComparison.OrdinalIgnoreCase);
-            if (pluginCompare != 0)
+            var airAppCompare = string.Compare(left.AirAppId, right.AirAppId, StringComparison.OrdinalIgnoreCase);
+            if (airAppCompare != 0)
             {
-                return pluginCompare;
+                return airAppCompare;
             }
 
             return string.Compare(left.PageId, right.PageId, StringComparison.OrdinalIgnoreCase);

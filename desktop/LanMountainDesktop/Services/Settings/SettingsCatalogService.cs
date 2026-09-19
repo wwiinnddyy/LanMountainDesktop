@@ -20,7 +20,7 @@ internal sealed class SettingsCatalogService : ISettingsCatalog
             new AirAppSettingsSectionDefinition("appearance", AirAppSettingsCategories.Appearance, AirAppSettingsScope.App, "settings.appearance.title", iconKey: "DesignIdeas", sortOrder: 10),
             new AirAppSettingsSectionDefinition("wallpaper", AirAppSettingsCategories.Appearance, AirAppSettingsScope.App, "settings.wallpaper.title", iconKey: "Image", sortOrder: 15),
             new AirAppSettingsSectionDefinition("components", AirAppSettingsCategories.Components, AirAppSettingsScope.ComponentInstance, "settings.components.title", iconKey: "Apps", sortOrder: 20),
-            new AirAppSettingsSectionDefinition("plugins", AirAppSettingsCategories.AirApps, AirAppSettingsScope.AirApp, "settings.plugins.title", iconKey: "PuzzlePiece", sortOrder: 30),
+            new AirAppSettingsSectionDefinition("plugins", AirAppSettingsCategories.AirApps, AirAppSettingsScope.AirApp, "settings.airapps.title", iconKey: "PuzzlePiece", sortOrder: 30),
             new AirAppSettingsSectionDefinition("about", AirAppSettingsCategories.About, AirAppSettingsScope.App, "settings.about.title", iconKey: "Info", sortOrder: 40)
         ]);
     }
@@ -48,10 +48,10 @@ internal sealed class SettingsCatalogService : ISettingsCatalog
         }
     }
 
-    public void RegisterAirAppSections(string pluginId, IReadOnlyList<AirAppSettingsSectionRegistration> sections)
+    public void RegisterAirAppSections(string airAppId, IReadOnlyList<AirAppSettingsSectionRegistration> sections)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(pluginId);
-        var normalizedAirAppId = pluginId.Trim();
+        ArgumentException.ThrowIfNullOrWhiteSpace(airAppId);
+        var normalizedAirAppId = airAppId.Trim();
 
         lock (_gate)
         {
@@ -76,9 +76,9 @@ internal sealed class SettingsCatalogService : ISettingsCatalog
         }
     }
 
-    public void RemoveAirAppSections(string pluginId)
+    public void RemoveAirAppSections(string airAppId)
     {
-        if (string.IsNullOrWhiteSpace(pluginId))
+        if (string.IsNullOrWhiteSpace(airAppId))
         {
             return;
         }
@@ -87,7 +87,7 @@ internal sealed class SettingsCatalogService : ISettingsCatalog
         {
             _sections.RemoveAll(section =>
                 section.Scope == AirAppSettingsScope.AirApp &&
-                string.Equals(section.SubjectId, pluginId, StringComparison.OrdinalIgnoreCase));
+                string.Equals(section.SubjectId, airAppId, StringComparison.OrdinalIgnoreCase));
         }
     }
 }

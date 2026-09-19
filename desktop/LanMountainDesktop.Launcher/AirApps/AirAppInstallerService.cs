@@ -1,18 +1,23 @@
 using System.IO.Compression;
 using System.Text.Json;
+using LanMountainDesktop.AirAppPackaging;
 using LanMountainDesktop.Launcher.Models;
 
 namespace LanMountainDesktop.Launcher.AirApps;
 
 /// <summary>
-/// 插件安装服务 - 简化版，不依赖 AirAppSdk
+/// AirApp 安装服务 - 简化版，不依赖 AirAppSdk
 /// </summary>
 internal sealed class AirAppInstallerService
 {
-    private const string ManifestFileName = "airapp.json";
-    private const string LegacyManifestFileName = "manifest.json";
-    private const string PackageFileExtension = ".laapp";
-    private const string LegacyPackageFileExtension = ".lmdp";
+    private const string ManifestFileName = AirAppPackagingConstants.ManifestFileName;
+    private const string LegacyManifestFileName = AirAppPackagingConstants.LegacyManifestFileName;
+    private const string PackageFileExtension = AirAppPackagingConstants.PackageFileExtension;
+    private const string LegacyPackageFileExtension = AirAppPackagingConstants.LegacyPackageFileExtension;
+
+    // 宿主的运行时目录是 AirAppPackagingConstants.RuntimeDirectoryName（".runtime"）。这里故意不取该值：
+    // 当前字面量使 RemoveExistingAirAppPackages 的排除条件不生效，从而连带删掉本应用在 .runtime 下的旧包副本。
+    // 对齐成 ".runtime" 会让旧副本存活，而 AirAppLoader 是递归扫描候选包的，可能出现重复加载。改动需单独决策。
     private const string RuntimeDirectoryName = "runtime";
     
     private static readonly TimeSpan[] RetryDelays =
@@ -22,10 +27,10 @@ internal sealed class AirAppInstallerService
         TimeSpan.FromMilliseconds(500)
     ];
 
-    public LauncherResult InstallPackage(string sourcePath, string pluginsDirectory, string? appRoot = null)
+    public LauncherResult InstallPackage(string sourcePath, string airAppsDirectory, string? appRoot = null)
     {
         var fullSourcePath = Path.GetFullPath(sourcePath);
-        var fullAirAppsDirectory = Path.GetFullPath(pluginsDirectory);
+        var fullAirAppsDirectory = Path.GetFullPath(airAppsDirectory);
 
         if (!File.Exists(fullSourcePath))
         {
@@ -58,7 +63,7 @@ internal sealed class AirAppInstallerService
         };
     }
 
-    private static LauncherResult? TryBuildElevationRequiredResult(string pluginsDirectory, string? appRoot)
+    private static LauncherResult? TryBuildElevationRequiredResult(string airAppsDirectory, string? appRoot)
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -89,7 +94,7 @@ internal sealed class AirAppInstallerService
             allowedRoot = EnsureTrailingSeparator(Path.Combine(Path.GetFullPath(localAppData), "LanMountainDesktop"));
         }
 
-        var normalizedAirAppsDirectory = EnsureTrailingSeparator(Path.GetFullPath(pluginsDirectory));
+        var normalizedAirAppsDirectory = EnsureTrailingSeparator(Path.GetFullPath(airAppsDirectory));
         if (normalizedAirAppsDirectory.StartsWith(allowedRoot, StringComparison.OrdinalIgnoreCase))
         {
             return null;
@@ -97,7 +102,7 @@ internal sealed class AirAppInstallerService
 
         Logger.Warn(
             $"AirApp installation requires explicit elevation. Reason='plugin_requires_elevation'; " +
-            $"AirAppsDirectory='{pluginsDirectory}'; AllowedRoot='{allowedRoot}'.");
+            $"AirAppsDirectory='{airAppsDirectory}'; AllowedRoot='{allowedRoot}'.");
 
         return new LauncherResult
         {
@@ -108,7 +113,7 @@ internal sealed class AirAppInstallerService
             ErrorMessage = "AirApp installation target is outside the current user's LanMountainDesktop data directory.",
             Details = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                ["pluginsDirectory"] = pluginsDirectory,
+                ["airAppsDirectory"] = airAppsDirectory,
                 ["allowedRoot"] = allowedRoot,
                 ["elevationReason"] = "outside_user_scope"
             }
@@ -154,14 +159,14 @@ internal sealed class AirAppInstallerService
             .ToArray();
     }
 
-    private void RemoveExistingAirAppPackages(string pluginsDirectory, string pluginId, string destinationPath, string stagingPath)
+    private void RemoveExistingAirAppPackages(string airAppsDirectory, string airAppId, string destinationPath, string stagingPath)
     {
-        var runtimeRootDirectory = EnsureTrailingSeparator(Path.Combine(Path.GetFullPath(pluginsDirectory), RuntimeDirectoryName));
-        var pendingDeletionDir = Path.Combine(pluginsDirectory, ".pending-deletions");
+        var runtimeRootDirectory = EnsureTrailingSeparator(Path.Combine(Path.GetFullPath(airAppsDirectory), RuntimeDirectoryName));
+        var pendingDeletionDir = Path.Combine(airAppsDirectory, AirAppPackagingConstants.PendingDeletionDirectoryName);
         Directory.CreateDirectory(pendingDeletionDir);
 
         foreach (var existingPackagePath in Directory
-                     .EnumerateFiles(pluginsDirectory, "*", SearchOption.AllDirectories)
+                     .EnumerateFiles(airAppsDirectory, "*", SearchOption.AllDirectories)
                      .Select(Path.GetFullPath)
                      .Where(path =>
                          path.EndsWith(PackageFileExtension, StringComparison.OrdinalIgnoreCase) ||
@@ -177,7 +182,7 @@ internal sealed class AirAppInstallerService
                 }
 
                 var existingManifest = ReadManifestFromPackage(existingPackagePath);
-                if (!string.Equals(existingManifest.Id, pluginId, StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(existingManifest.Id, airAppId, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -274,10 +279,10 @@ internal sealed class AirAppInstallerService
         }
     }
 
-    private static string BuildInstalledPackageFileName(string pluginId)
+    private static string BuildInstalledPackageFileName(string airAppId)
     {
         var invalidChars = Path.GetInvalidFileNameChars();
-        var fileName = new string(pluginId.Select(ch => invalidChars.Contains(ch) ? '_' : ch).ToArray());
+        var fileName = new string(airAppId.Select(ch => invalidChars.Contains(ch) ? '_' : ch).ToArray());
         return fileName + PackageFileExtension;
     }
 

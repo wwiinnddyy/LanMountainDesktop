@@ -1,11 +1,12 @@
 using System.Text.Json;
+using LanMountainDesktop.AirAppPackaging;
 using LanMountainDesktop.Launcher.Models;
 
 namespace LanMountainDesktop.Launcher.AirApps;
 
 internal sealed class AirAppUpgradeQueueService
 {
-    private const string PendingUpgradesFileName = ".pending-plugin-upgrades.json";
+    private const string PendingUpgradesFileName = AirAppPackagingConstants.PendingUpgradesFileName;
 
     private readonly AirAppInstallerService _installerService;
 
@@ -14,9 +15,9 @@ internal sealed class AirAppUpgradeQueueService
         _installerService = installerService;
     }
 
-    public LauncherResult ApplyPendingUpgrades(string pluginsDirectory, string? appRoot = null)
+    public LauncherResult ApplyPendingUpgrades(string airAppsDirectory, string? appRoot = null)
     {
-        var pendingPath = Path.Combine(pluginsDirectory, PendingUpgradesFileName);
+        var pendingPath = Path.Combine(airAppsDirectory, PendingUpgradesFileName);
         if (!File.Exists(pendingPath))
         {
             return new LauncherResult
@@ -43,7 +44,7 @@ internal sealed class AirAppUpgradeQueueService
 
             try
             {
-                _installerService.InstallPackage(item.SourcePackagePath, pluginsDirectory, appRoot);
+                _installerService.InstallPackage(item.SourcePackagePath, airAppsDirectory, appRoot);
                 succeeded.Add(item);
             }
             catch

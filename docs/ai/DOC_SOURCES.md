@@ -19,9 +19,10 @@
 | feature 验收 | `.trae/specs/<feature>/checklist.md` | 回归与验收项 |
 | 视觉规范 | `docs/03-组件设计规范/02-视觉规范.md`（归档见 `docs/archive/VISUAL_SPEC.md`） | 颜色、语义资源、玻璃层级 |
 | 圆角规范 | `docs/archive/CORNER_RADIUS_SPEC.md` | 圆角层级与动态规则 |
-| 插件生态边界 | `docs/archive/ECOSYSTEM_BOUNDARIES.md` | 仓库边界和 market 所属 |
+| AirApp 生态边界 | `docs/archive/ECOSYSTEM_BOUNDARIES.md` | 仓库边界和 market 所属 |
 | 跨平台架构 | `docs/CROSS_PLATFORM.md` | 桌面 + 移动分层约束 |
 | AirApp SDK 迁移 | `docs/AIRAPP_SDK_V1_MIGRATION.md` | 插件 → AirApp 迁移 |
+| 命名与标识符冻结 | `docs/ai/NAMING_AND_FROZEN_IDENTIFIERS.md` | 哪些 `plugin` 字样可改、哪些必须保留、哪些需迁移器 |
 
 ## 已废弃来源
 

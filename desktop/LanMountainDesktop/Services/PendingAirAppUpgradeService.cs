@@ -6,89 +6,89 @@ namespace LanMountainDesktop.Services;
 
 public sealed class PendingAirAppUpgradeService
 {
-    private readonly string _pluginsDirectory;
-    private readonly PendingPluginUpgradeStore _store;
-    private readonly PluginPackageInstaller _installer = new();
+    private readonly string _airAppsDirectory;
+    private readonly PendingAirAppUpgradeStore _store;
+    private readonly AirAppPackageInstaller _installer = new();
 
-    public PendingAirAppUpgradeService(string pluginsDirectory)
+    public PendingAirAppUpgradeService(string airAppsDirectory)
     {
-        _pluginsDirectory = Path.GetFullPath(pluginsDirectory);
-        _store = new PendingPluginUpgradeStore(_pluginsDirectory);
+        _airAppsDirectory = Path.GetFullPath(airAppsDirectory);
+        _store = new PendingAirAppUpgradeStore(_airAppsDirectory);
     }
 
-    public IReadOnlyList<PendingPluginUpgrade> GetPendingUpgrades() => _store.GetPendingUpgrades();
+    public IReadOnlyList<PendingAirAppUpgrade> GetPendingUpgrades() => _store.GetPendingUpgrades();
 
-    public void AddPendingUpgrade(string pluginId, string sourcePackagePath, string targetVersion)
+    public void AddPendingUpgrade(string airAppId, string sourcePackagePath, string targetVersion)
     {
-        AddPendingInstallOrUpgrade(pluginId, sourcePackagePath, targetVersion);
+        AddPendingInstallOrUpgrade(airAppId, sourcePackagePath, targetVersion);
     }
 
-    public void AddPendingInstallOrUpgrade(string pluginId, string sourcePackagePath, string targetVersion)
+    public void AddPendingInstallOrUpgrade(string airAppId, string sourcePackagePath, string targetVersion)
     {
-        _store.AddPendingInstallOrUpgrade(pluginId, sourcePackagePath, targetVersion);
+        _store.AddPendingInstallOrUpgrade(airAppId, sourcePackagePath, targetVersion);
         AppLogger.Info(
-            "PendingPluginUpgrade",
-            $"Added pending plugin operation. AirAppId='{pluginId}'; TargetVersion='{targetVersion}'; Operation='{PendingPluginOperation.InstallOrUpgrade}'; SourcePath='{sourcePackagePath}'.");
+            "PendingAirAppUpgrade",
+            $"Added pending AirApp operation. AirAppId='{airAppId}'; TargetVersion='{targetVersion}'; Operation='{PendingAirAppOperation.InstallOrUpgrade}'; SourcePath='{sourcePackagePath}'.");
     }
 
-    public void RemovePendingUpgrade(string pluginId)
+    public void RemovePendingUpgrade(string airAppId)
     {
         var hadPending = _store.GetPendingUpgrades()
-            .Any(u => string.Equals(u.PluginId, pluginId, StringComparison.OrdinalIgnoreCase));
-        _store.RemovePendingUpgrade(pluginId);
+            .Any(u => string.Equals(u.PluginId, airAppId, StringComparison.OrdinalIgnoreCase));
+        _store.RemovePendingUpgrade(airAppId);
         if (hadPending)
         {
-            AppLogger.Info("PendingPluginUpgrade", $"Removed pending upgrade. AirAppId='{pluginId}'.");
+            AppLogger.Info("PendingAirAppUpgrade", $"Removed pending upgrade. AirAppId='{airAppId}'.");
         }
     }
 
     public void ClearPendingUpgrades()
     {
         _store.ClearPendingUpgrades();
-        AppLogger.Info("PendingPluginUpgrade", "Cleared all pending upgrades.");
+        AppLogger.Info("PendingAirAppUpgrade", "Cleared all pending upgrades.");
     }
 
     public bool HasPendingUpgrades() => _store.HasPendingUpgrades();
 
-    public PendingPluginOperationApplySummary ApplyPendingOperations(
+    public PendingAirAppOperationApplySummary ApplyPendingOperations(
         Action<AirAppManifest>? prepareManifest = null)
     {
         var pending = _store.GetPendingUpgrades();
         if (pending.Count == 0)
         {
-            return new PendingPluginOperationApplySummary(0, 0, []);
+            return new PendingAirAppOperationApplySummary(0, 0, []);
         }
 
-        Directory.CreateDirectory(_pluginsDirectory);
-        var succeeded = new List<PendingPluginUpgrade>();
-        var failures = new List<PendingPluginOperationFailure>();
+        Directory.CreateDirectory(_airAppsDirectory);
+        var succeeded = new List<PendingAirAppUpgrade>();
+        var failures = new List<PendingAirAppOperationFailure>();
 
         foreach (var operation in pending)
         {
             try
             {
-                if (operation.Operation != PendingPluginOperation.InstallOrUpgrade)
+                if (operation.Operation != PendingAirAppOperation.InstallOrUpgrade)
                 {
-                    throw new InvalidOperationException($"Unsupported pending plugin operation '{operation.Operation}'.");
+                    throw new InvalidOperationException($"Unsupported pending AirApp operation '{operation.Operation}'.");
                 }
 
                 var manifest = ReadManifestFromPackage(operation.SourcePackagePath);
                 prepareManifest?.Invoke(manifest);
-                _installer.Install(operation.SourcePackagePath, _pluginsDirectory);
+                _installer.Install(operation.SourcePackagePath, _airAppsDirectory);
                 succeeded.Add(operation);
                 AppLogger.Info(
-                    "PendingPluginUpgrade",
-                    $"Applied pending plugin operation. AirAppId='{operation.PluginId}'; TargetVersion='{operation.TargetVersion}'; Operation='{operation.Operation}'.");
+                    "PendingAirAppUpgrade",
+                    $"Applied pending AirApp operation. AirAppId='{operation.PluginId}'; TargetVersion='{operation.TargetVersion}'; Operation='{operation.Operation}'.");
             }
             catch (Exception ex)
             {
-                failures.Add(new PendingPluginOperationFailure(
+                failures.Add(new PendingAirAppOperationFailure(
                     operation.PluginId,
                     operation.Operation,
                     ex.Message));
                 AppLogger.Warn(
-                    "PendingPluginUpgrade",
-                    $"Failed to apply pending plugin operation. AirAppId='{operation.PluginId}'; TargetVersion='{operation.TargetVersion}'; Operation='{operation.Operation}'.",
+                    "PendingAirAppUpgrade",
+                    $"Failed to apply pending AirApp operation. AirAppId='{operation.PluginId}'; TargetVersion='{operation.TargetVersion}'; Operation='{operation.Operation}'.",
                     ex);
             }
         }
@@ -98,7 +98,7 @@ public sealed class PendingAirAppUpgradeService
             _store.RemovePendingUpgrade(operation.PluginId);
         }
 
-        return new PendingPluginOperationApplySummary(succeeded.Count, failures.Count, failures);
+        return new PendingAirAppOperationApplySummary(succeeded.Count, failures.Count, failures);
     }
 
     private static AirAppManifest ReadManifestFromPackage(string packagePath)

@@ -8,9 +8,9 @@ internal sealed class AirAppScopedSettingsService : IAirAppSettingsService
 {
     private readonly ISettingsService _settingsService;
 
-    public AirAppScopedSettingsService(string pluginId, ISettingsService settingsService)
+    public AirAppScopedSettingsService(string airAppId, ISettingsService settingsService)
     {
-        AirAppId = string.IsNullOrWhiteSpace(pluginId) ? "__unknown__" : pluginId.Trim();
+        AirAppId = string.IsNullOrWhiteSpace(airAppId) ? "__unknown__" : airAppId.Trim();
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
     }
 

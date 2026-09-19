@@ -38,8 +38,8 @@ public sealed class PublicIpcHostService : IDisposable, IExternalIpcNotification
 
     public JsonIpcDirectRoutedProvider RoutedProvider { get; }
 
-    public Func<IReadOnlyList<PublicPluginDescriptor>> PluginDescriptorProvider { get; set; } =
-        static () => Array.Empty<PublicPluginDescriptor>();
+    public Func<IReadOnlyList<PublicAirAppDescriptor>> AirAppDescriptorProvider { get; set; } =
+        static () => Array.Empty<PublicAirAppDescriptor>();
 
     public void Start()
     {
@@ -58,18 +58,18 @@ public sealed class PublicIpcHostService : IDisposable, IExternalIpcNotification
     public void RegisterPublicService<TContract>(
         TContract implementation,
         string? objectId = null,
-        string? pluginId = null,
+        string? airAppId = null,
         params string[] notifyIds)
         where TContract : class
     {
-        RegisterPublicService(typeof(TContract), implementation, objectId, pluginId, notifyIds);
+        RegisterPublicService(typeof(TContract), implementation, objectId, airAppId, notifyIds);
     }
 
     public void RegisterPublicService(
         Type contractType,
         object implementation,
         string? objectId = null,
-        string? pluginId = null,
+        string? airAppId = null,
         IEnumerable<string>? notifyIds = null)
     {
         ArgumentNullException.ThrowIfNull(contractType);
@@ -97,7 +97,7 @@ public sealed class PublicIpcHostService : IDisposable, IExternalIpcNotification
                 contractType,
                 implementation,
                 string.IsNullOrEmpty(normalizedObjectId) ? null : normalizedObjectId,
-                pluginId,
+                airAppId,
                 normalizedNotifyIds);
         }
 
@@ -126,8 +126,8 @@ public sealed class PublicIpcHostService : IDisposable, IExternalIpcNotification
                 .ToArray();
         }
 
-        var plugins = PluginDescriptorProvider()?.ToArray() ?? Array.Empty<PublicPluginDescriptor>();
-        return new PublicIpcCatalogSnapshot(services, plugins, DateTimeOffset.UtcNow);
+        var airApps = AirAppDescriptorProvider()?.ToArray() ?? Array.Empty<PublicAirAppDescriptor>();
+        return new PublicIpcCatalogSnapshot(services, airApps, DateTimeOffset.UtcNow);
     }
 
     public Task PublishStartupProgressAsync(
@@ -209,6 +209,13 @@ public sealed class PublicIpcHostService : IDisposable, IExternalIpcNotification
         }
 
         _disposed = true;
+
+        // 每个 peer 的 PeerConnectionBroken 是用 this 作接收者的实例方法，不退订就会让已释放的
+        // 宿主服务被库持有的 peer 反向引用住。必须在 Clear() 之前做，否则就没有 peer 可枚举了。
+        foreach (var peer in _connectedPeers.Values)
+        {
+            peer.PeerConnectionBroken -= OnPeerConnectionBroken;
+        }
 
         _connectedPeers.Clear();
 

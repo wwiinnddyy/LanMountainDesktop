@@ -14,11 +14,11 @@ public sealed class AirAppLocalizer
     private readonly Dictionary<string, Dictionary<string, string>> _cache =
         new(StringComparer.OrdinalIgnoreCase);
 
-    public AirAppLocalizer(string pluginDirectory, string? languageCode)
+    public AirAppLocalizer(string airAppDirectory, string? languageCode)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(pluginDirectory);
+        ArgumentException.ThrowIfNullOrWhiteSpace(airAppDirectory);
 
-        AirAppDirectory = pluginDirectory;
+        AirAppDirectory = airAppDirectory;
         LanguageCode = NormalizeLanguageCode(languageCode);
     }
 
@@ -105,7 +105,7 @@ public sealed class AirAppLocalizer
         }
         catch
         {
-            // Keep empty localization table for plugin resilience.
+            // Keep empty localization table for AirApp resilience.
         }
 
         _cache[languageCode] = result;

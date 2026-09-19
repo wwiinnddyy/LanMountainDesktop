@@ -317,7 +317,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
                 null,
                 "09:30"),
             new DailyNewsItemSnapshot(
-                "Weather, artwork, and plugin market cards render without live network calls.",
+                "Weather, artwork, and AirApp market cards render without live network calls.",
                 null,
                 "https://example.com/news/preview-2",
                 null,

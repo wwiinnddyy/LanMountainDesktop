@@ -31,17 +31,17 @@ public sealed partial class AirAppCatalogItemViewModel : ViewModelBase, IDisposa
     private bool _isLoadingIcon;
 
     public AirAppCatalogItemViewModel(
-        AirAppCatalogItemInfo plugin,
+        AirAppCatalogItemInfo airApp,
         LocalizationService localizationService,
         string languageCode)
     {
-        Info = plugin;
+        Info = airApp;
         _localizationService = localizationService;
         _languageCode = languageCode;
         DeveloperInfo = ResolveDeveloperInfo();
-        IconFallbackText = string.IsNullOrWhiteSpace(plugin.Name)
+        IconFallbackText = string.IsNullOrWhiteSpace(airApp.Name)
             ? "?"
-            : plugin.Name.Trim()[0].ToString().ToUpperInvariant();
+            : airApp.Name.Trim()[0].ToString().ToUpperInvariant();
         ActionSymbol = Symbol.ArrowDownload;
         ActionTooltip = L("market.button.install", "Install");
     }
@@ -225,7 +225,7 @@ public sealed partial class AirAppCatalogItemViewModel : ViewModelBase, IDisposa
     private string ResolveDeveloperInfo()
     {
         return string.IsNullOrWhiteSpace(Author)
-            ? L("settings.plugins.publisher_unknown", "Unknown publisher")
+            ? L("settings.airapps.publisher_unknown", "Unknown publisher")
             : Author;
     }
 
@@ -276,7 +276,7 @@ public sealed partial class AirAppCatalogDetailViewModel : ViewModelBase
         MinHostVersionLabel = L("market.detail.min_host_version", "Minimum Host Version");
         ReadmeHeader = L("market.detail.readme", "README");
         DependenciesHeader = L("market.detail.dependencies", "Dependencies");
-        EmptyDependenciesText = L("market.detail.dependencies_empty", "No dependencies were declared by this plugin.");
+        EmptyDependenciesText = L("market.detail.dependencies_empty", "No dependencies were declared by this airApp.");
     }
 
     public AirAppCatalogItemViewModel Item { get; }
@@ -384,7 +384,7 @@ public sealed partial class AirAppCatalogDetailViewModel : ViewModelBase
 public sealed partial class AirAppCatalogSettingsPageViewModel : ViewModelBase, IDisposable
 {
     private readonly ISettingsFacadeService _settingsFacade;
-    private readonly IAirAppCatalogSettingsService _pluginCatalog;
+    private readonly IAirAppCatalogSettingsService _airAppCatalog;
     private readonly LocalizationService _localizationService;
     private readonly AirAppMarketIconService _iconService;
     private readonly AirAppMarketReadmeService _readmeService;
@@ -402,14 +402,14 @@ public sealed partial class AirAppCatalogSettingsPageViewModel : ViewModelBase, 
         AirAppMarketReadmeService readmeService)
     {
         _settingsFacade = settingsFacade;
-        _pluginCatalog = _settingsFacade.AirAppCatalog;
+        _airAppCatalog = _settingsFacade.AirAppCatalog;
         _localizationService = localizationService;
         _iconService = iconService;
         _readmeService = readmeService;
         _languageCode = _localizationService.NormalizeLanguageCode(_settingsFacade.Region.Get().LanguageCode);
         Version.TryParse(_settingsFacade.ApplicationInfo.GetAppVersionText(), out _hostVersion);
         RefreshLocalizedText();
-        StatusMessage = L("market.status.loading", "Loading the official plugin catalog...");
+        StatusMessage = L("market.status.loading", "Loading the official AirApp catalog...");
     }
 
     public event Action<string?>? RestartRequested;
@@ -495,10 +495,10 @@ public sealed partial class AirAppCatalogSettingsPageViewModel : ViewModelBase, 
         try
         {
             IsBusy = true;
-            StatusMessage = L("market.status.loading", "Loading the official plugin catalog...");
+            StatusMessage = L("market.status.loading", "Loading the official AirApp catalog...");
             RefreshInstalledSnapshot();
 
-            var result = await _pluginCatalog.LoadCatalogAsync();
+            var result = await _airAppCatalog.LoadCatalogAsync();
             if (!result.Success)
             {
                 _hasLoadedCatalog = false;
@@ -506,23 +506,23 @@ public sealed partial class AirAppCatalogSettingsPageViewModel : ViewModelBase, 
                 FilteredAirApps.Clear();
                 ShowEmptyState = true;
                 EmptyStateText = string.IsNullOrWhiteSpace(result.ErrorMessage)
-                    ? L("market.list.empty", "The plugin catalog has not been loaded yet.")
+                    ? L("market.list.empty", "The AirApp catalog has not been loaded yet.")
                     : result.ErrorMessage;
                 StatusMessage = string.IsNullOrWhiteSpace(result.ErrorMessage)
-                    ? L("market.status.load_failed_format", "Failed to load the plugin catalog: Unknown")
+                    ? L("market.status.load_failed_format", "Failed to load the AirApp catalog: Unknown")
                     : string.Format(
                         CultureInfo.CurrentCulture,
-                        L("market.status.load_failed_format", "Failed to load the plugin catalog: {0}"),
+                        L("market.status.load_failed_format", "Failed to load the AirApp catalog: {0}"),
                         result.ErrorMessage);
                 return;
             }
 
             _hasLoadedCatalog = true;
             CatalogAirApps.Clear();
-            foreach (var plugin in result.AirApps)
+            foreach (var airApp in result.AirApps)
             {
-                var item = new AirAppCatalogItemViewModel(plugin, _localizationService, _languageCode);
-                item.ApplyInstallState(ResolveInstalledAirApp(plugin.Id), _hostVersion);
+                var item = new AirAppCatalogItemViewModel(airApp, _localizationService, _languageCode);
+                item.ApplyInstallState(ResolveInstalledAirApp(airApp.Id), _hostVersion);
                 CatalogAirApps.Add(item);
                 _ = item.EnsureIconLoadedAsync(_iconService);
             }
@@ -532,12 +532,12 @@ public sealed partial class AirAppCatalogSettingsPageViewModel : ViewModelBase, 
             StatusMessage = string.Equals(result.Source, "Cache", StringComparison.OrdinalIgnoreCase)
                 ? string.Format(
                     CultureInfo.CurrentCulture,
-                    L("market.status.loaded_cache_format", "Official source unavailable. Loaded {0} plugin(s) from cache. Reason: {1}"),
+                    L("market.status.loaded_cache_format", "Official source unavailable. Loaded {0} AirApp(s) from cache. Reason: {1}"),
                     CatalogAirApps.Count,
                     result.WarningMessage ?? L("market.detail.unknown", "Unknown"))
                 : string.Format(
                     CultureInfo.CurrentCulture,
-                    L("market.status.loaded_network_format", "Loaded {0} plugin(s) from the official source."),
+                    L("market.status.loaded_network_format", "Loaded {0} AirApp(s) from the official source."),
                     CatalogAirApps.Count);
         }
         finally
@@ -586,10 +586,10 @@ public sealed partial class AirAppCatalogSettingsPageViewModel : ViewModelBase, 
             item.SetInstalling(true);
             StatusMessage = string.Format(
                 CultureInfo.CurrentCulture,
-                L("market.status.installing_format", "Downloading and staging plugin '{0}'..."),
+                L("market.status.installing_format", "Downloading and staging AirApp '{0}'..."),
                 item.Name);
 
-            var result = await _pluginCatalog.InstallAsync(item.AirAppId);
+            var result = await _airAppCatalog.InstallAsync(item.AirAppId);
             if (result.Success)
             {
                 _pendingRestartAirAppIds.Add(result.AirAppId ?? item.AirAppId);
@@ -597,28 +597,28 @@ public sealed partial class AirAppCatalogSettingsPageViewModel : ViewModelBase, 
                 RefreshItemStates();
                 
                 // 设置更明显的状态消息
-                var pluginName = result.AirAppName ?? item.Name;
+                var airAppName = result.AirAppName ?? item.Name;
                 StatusMessage = string.Format(
                     CultureInfo.CurrentCulture,
                     L("market.status.install_success_restart_format", "AirApp '{0}' has been staged. Restart the app to apply it."),
-                    pluginName);
+                    airAppName);
                 
                 // 触发重启提醒
                 RestartRequested?.Invoke(string.Format(
                     CultureInfo.CurrentCulture,
-                    L("market.dialog.restart_message_format", "AirApp '{0}' has been installed successfully.\n\nTo use this plugin, you need to restart the application now.\n\nWould you like to restart?"),
-                    pluginName));
+                    L("market.dialog.restart_message_format", "AirApp '{0}' has been installed successfully.\n\nTo use this airApp, you need to restart the application now.\n\nWould you like to restart?"),
+                    airAppName));
                 return;
             }
 
             StatusMessage = string.IsNullOrWhiteSpace(result.ErrorMessage)
                 ? string.Format(
                     CultureInfo.CurrentCulture,
-                    L("market.status.install_failed_format", "Failed to install plugin: {0}"),
+                    L("market.status.install_failed_format", "Failed to install AirApp: {0}"),
                     item.Name)
                 : string.Format(
                     CultureInfo.CurrentCulture,
-                    L("market.status.install_failed_format", "Failed to install plugin: {0}"),
+                    L("market.status.install_failed_format", "Failed to install AirApp: {0}"),
                     result.ErrorMessage);
         }
         finally
@@ -649,15 +649,15 @@ public sealed partial class AirAppCatalogSettingsPageViewModel : ViewModelBase, 
     private void RefreshInstalledSnapshot()
     {
         _installedAirApps.Clear();
-        foreach (var plugin in _settingsFacade.AirAppManagement.GetInstalledAirApps())
+        foreach (var airApp in _settingsFacade.AirAppManagement.GetInstalledAirApps())
         {
-            _installedAirApps[plugin.Manifest.Id] = plugin;
+            _installedAirApps[airApp.Manifest.Id] = airApp;
         }
     }
 
-    private AirAppInstalledInfo? ResolveInstalledAirApp(string pluginId)
+    private AirAppInstalledInfo? ResolveInstalledAirApp(string airAppId)
     {
-        return _installedAirApps.TryGetValue(pluginId, out var installedAirApp)
+        return _installedAirApps.TryGetValue(airAppId, out var installedAirApp)
             ? installedAirApp
             : null;
     }
@@ -685,20 +685,20 @@ public sealed partial class AirAppCatalogSettingsPageViewModel : ViewModelBase, 
 
         ShowEmptyState = FilteredAirApps.Count == 0;
         EmptyStateText = !_hasLoadedCatalog
-            ? L("market.list.empty", "The plugin catalog has not been loaded yet.")
+            ? L("market.list.empty", "The AirApp catalog has not been loaded yet.")
             : string.IsNullOrWhiteSpace(query)
-                ? L("settings.plugins.marketplace_empty", "No marketplace plugins are available right now.")
+                ? L("settings.airapps.marketplace_empty", "No marketplace plugins are available right now.")
                 : L("market.list.no_results", "No plugins match the current search.");
     }
 
     private void RefreshLocalizedText()
     {
-        PageTitle = L("settings.plugin_catalog.title", "AirApp Catalog");
-        PageDescription = L("settings.plugin_catalog.subtitle", "Browse plugins from the official LanAirApp source and stage installs.");
+        PageTitle = L("settings.airapp_catalog.title", "AirApp Catalog");
+        PageDescription = L("settings.airapp_catalog.subtitle", "Browse plugins from the official LanAirApp source and stage installs.");
         SearchPlaceholder = L("market.toolbar.search_placeholder", "Search plugins");
         RefreshButtonText = L("market.toolbar.refresh", "Refresh");
-        RestartRequiredMessage = L("settings.plugins.restart_required", "AirApp changes take effect after restart.");
-        EmptyStateText = L("market.list.empty", "The plugin catalog has not been loaded yet.");
+        RestartRequiredMessage = L("settings.airapps.restart_required", "AirApp changes take effect after restart.");
+        EmptyStateText = L("market.list.empty", "The AirApp catalog has not been loaded yet.");
     }
 
     private string L(string key, string fallback)

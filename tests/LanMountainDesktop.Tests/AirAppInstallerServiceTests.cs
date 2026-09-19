@@ -35,10 +35,10 @@ public sealed class AirAppInstallerServiceTests : IDisposable
         Directory.CreateDirectory(_tempRoot);
         CreateAirAppPackage(packagePath, "airapp.json", "plugin.install.sample", "Sample AirApp");
 
-        var pluginsDirectory = CreateConfiguredPortableAirAppsDirectory(out var appRoot);
+        var airAppsDirectory = CreateConfiguredPortableAirAppsDirectory(out var appRoot);
         var service = new AirAppInstallerService();
 
-        var result = service.InstallPackage(packagePath, pluginsDirectory, appRoot);
+        var result = service.InstallPackage(packagePath, airAppsDirectory, appRoot);
 
         Assert.True(result.Success);
         Assert.Equal("ok", result.Code);
@@ -47,7 +47,7 @@ public sealed class AirAppInstallerServiceTests : IDisposable
         Assert.NotNull(result.InstalledPackagePath);
         Assert.True(File.Exists(result.InstalledPackagePath));
         Assert.EndsWith(".laapp", result.InstalledPackagePath, StringComparison.OrdinalIgnoreCase);
-        Assert.Empty(Directory.EnumerateFiles(pluginsDirectory, "*.incoming", SearchOption.AllDirectories));
+        Assert.Empty(Directory.EnumerateFiles(airAppsDirectory, "*.incoming", SearchOption.AllDirectories));
     }
 
     [Fact]
@@ -75,10 +75,10 @@ public sealed class AirAppInstallerServiceTests : IDisposable
         var packagePath = Path.Combine(_tempRoot, "portable.laapp");
         CreateAirAppPackage(packagePath, "airapp.json", "plugin.portable.sample", "Portable AirApp");
 
-        var pluginsDirectory = Path.Combine(portableDataRoot, "Extensions", "AirApps");
+        var airAppsDirectory = Path.Combine(portableDataRoot, "Extensions", "AirApps");
         var service = new AirAppInstallerService();
 
-        var result = service.InstallPackage(packagePath, pluginsDirectory, appRoot);
+        var result = service.InstallPackage(packagePath, airAppsDirectory, appRoot);
 
         Assert.True(result.Success);
         Assert.Equal("ok", result.Code);
@@ -95,15 +95,15 @@ public sealed class AirAppInstallerServiceTests : IDisposable
         CreateAirAppPackage(firstPackagePath, "airapp.json", "plugin.replace.sample", "Sample AirApp v1");
         CreateAirAppPackage(secondPackagePath, "airapp.json", "plugin.replace.sample", "Sample AirApp v2");
 
-        var pluginsDirectory = CreateConfiguredPortableAirAppsDirectory(out var appRoot);
+        var airAppsDirectory = CreateConfiguredPortableAirAppsDirectory(out var appRoot);
         var service = new AirAppInstallerService();
 
-        var first = service.InstallPackage(firstPackagePath, pluginsDirectory, appRoot);
-        var second = service.InstallPackage(secondPackagePath, pluginsDirectory, appRoot);
+        var first = service.InstallPackage(firstPackagePath, airAppsDirectory, appRoot);
+        var second = service.InstallPackage(secondPackagePath, airAppsDirectory, appRoot);
 
         Assert.True(first.Success);
         Assert.True(second.Success);
-        Assert.Single(Directory.EnumerateFiles(pluginsDirectory, "*.laapp", SearchOption.TopDirectoryOnly));
+        Assert.Single(Directory.EnumerateFiles(airAppsDirectory, "*.laapp", SearchOption.TopDirectoryOnly));
         Assert.True(File.Exists(second.InstalledPackagePath));
     }
 
@@ -114,17 +114,17 @@ public sealed class AirAppInstallerServiceTests : IDisposable
         Directory.CreateDirectory(_tempRoot);
         CreateAirAppPackage(packagePath, "manifest.json", "plugin.legacy.sample", "Legacy AirApp");
 
-        var pluginsDirectory = CreateConfiguredPortableAirAppsDirectory(out var appRoot);
+        var airAppsDirectory = CreateConfiguredPortableAirAppsDirectory(out var appRoot);
         var service = new AirAppInstallerService();
 
-        var result = service.InstallPackage(packagePath, pluginsDirectory, appRoot);
+        var result = service.InstallPackage(packagePath, airAppsDirectory, appRoot);
 
         Assert.True(result.Success);
         Assert.Equal("plugin.legacy.sample", result.ManifestId);
         Assert.True(File.Exists(result.InstalledPackagePath));
     }
 
-    private static void CreateAirAppPackage(string packagePath, string manifestFileName, string pluginId, string pluginName)
+    private static void CreateAirAppPackage(string packagePath, string manifestFileName, string airAppId, string pluginName)
     {
         using var archive = ZipFile.Open(packagePath, ZipArchiveMode.Create);
         var entry = archive.CreateEntry(manifestFileName);
@@ -133,7 +133,7 @@ public sealed class AirAppInstallerServiceTests : IDisposable
         writer.Write(
             $$"""
               {
-                "id": "{{pluginId}}",
+                "id": "{{airAppId}}",
                 "name": "{{pluginName}}",
                 "version": "1.0.0"
               }
@@ -155,9 +155,9 @@ public sealed class AirAppInstallerServiceTests : IDisposable
                 PortableDataPath = portableDataRoot
             }));
 
-        var pluginsDirectory = Path.Combine(portableDataRoot, "Extensions", "AirApps");
-        Directory.CreateDirectory(pluginsDirectory);
-        return pluginsDirectory;
+        var airAppsDirectory = Path.Combine(portableDataRoot, "Extensions", "AirApps");
+        Directory.CreateDirectory(airAppsDirectory);
+        return airAppsDirectory;
     }
 
     public void Dispose()

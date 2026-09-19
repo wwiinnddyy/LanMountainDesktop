@@ -1,6 +1,6 @@
 namespace LanMountainDesktop.AirAppPackaging;
 
-public sealed class PluginPackageInstaller
+public sealed class AirAppPackageInstaller
 {
     private static readonly TimeSpan[] RetryDelays =
     [
@@ -9,48 +9,48 @@ public sealed class PluginPackageInstaller
         TimeSpan.FromMilliseconds(500)
     ];
 
-    public PluginPackageInstallResult Install(
+    public AirAppPackageInstallResult Install(
         string sourcePackagePath,
-        string pluginsDirectory,
-        PluginPackageInstallOptions? options = null,
-        Action<PluginPackageManifest>? prepareManifest = null)
+        string airAppsDirectory,
+        AirAppPackageInstallOptions? options = null,
+        Action<AirAppPackageManifest>? prepareManifest = null)
     {
-        options ??= PluginPackageInstallOptions.Default;
+        options ??= AirAppPackageInstallOptions.Default;
         var fullSourcePath = Path.GetFullPath(sourcePackagePath);
-        var fullPluginsDirectory = Path.GetFullPath(pluginsDirectory);
+        var fullAirAppsDirectory = Path.GetFullPath(airAppsDirectory);
 
         if (!File.Exists(fullSourcePath))
         {
-            throw new FileNotFoundException($"Plugin package '{fullSourcePath}' was not found.", fullSourcePath);
+            throw new FileNotFoundException($"AirApp package '{fullSourcePath}' was not found.", fullSourcePath);
         }
 
-        var manifest = PluginPackageManifestReader.Read(fullSourcePath, options.IncludeLegacyPackages);
+        var manifest = AirAppPackageManifestReader.Read(fullSourcePath, options.IncludeLegacyPackages);
         prepareManifest?.Invoke(manifest);
 
-        Directory.CreateDirectory(fullPluginsDirectory);
-        var destinationPath = Path.Combine(fullPluginsDirectory, BuildInstalledPackageFileName(manifest.Id));
+        Directory.CreateDirectory(fullAirAppsDirectory);
+        var destinationPath = Path.Combine(fullAirAppsDirectory, BuildInstalledPackageFileName(manifest.Id));
         var stagingPath = destinationPath + ".incoming";
         DeleteFileWithRetry(stagingPath);
         CopyWithRetry(fullSourcePath, stagingPath, overwrite: true);
-        RemoveExistingPluginPackages(fullPluginsDirectory, manifest.Id, destinationPath, stagingPath, options);
+        RemoveExistingAirAppPackages(fullAirAppsDirectory, manifest.Id, destinationPath, stagingPath, options);
         MoveWithOverwriteRetry(stagingPath, destinationPath);
 
-        return new PluginPackageInstallResult(destinationPath, manifest);
+        return new AirAppPackageInstallResult(destinationPath, manifest);
     }
 
-    private static void RemoveExistingPluginPackages(
-        string pluginsDirectory,
-        string pluginId,
+    private static void RemoveExistingAirAppPackages(
+        string airAppsDirectory,
+        string airAppId,
         string destinationPath,
         string stagingPath,
-        PluginPackageInstallOptions options)
+        AirAppPackageInstallOptions options)
     {
         var runtimeRootDirectory = EnsureTrailingSeparator(
-            Path.Combine(Path.GetFullPath(pluginsDirectory), PluginPackagingConstants.RuntimeDirectoryName));
-        var pendingDeletionDir = Path.Combine(pluginsDirectory, PluginPackagingConstants.PendingDeletionDirectoryName);
+            Path.Combine(Path.GetFullPath(airAppsDirectory), AirAppPackagingConstants.RuntimeDirectoryName));
+        var pendingDeletionDir = Path.Combine(airAppsDirectory, AirAppPackagingConstants.PendingDeletionDirectoryName);
         Directory.CreateDirectory(pendingDeletionDir);
 
-        foreach (var existingPackagePath in EnumerateExistingPackages(pluginsDirectory, options)
+        foreach (var existingPackagePath in EnumerateExistingPackages(airAppsDirectory, options)
                      .Select(Path.GetFullPath)
                      .Where(path => !path.StartsWith(runtimeRootDirectory, StringComparison.OrdinalIgnoreCase)))
         {
@@ -62,8 +62,8 @@ public sealed class PluginPackageInstaller
                     continue;
                 }
 
-                var existingManifest = PluginPackageManifestReader.Read(existingPackagePath, options.IncludeLegacyPackages);
-                if (!string.Equals(existingManifest.Id, pluginId, StringComparison.OrdinalIgnoreCase))
+                var existingManifest = AirAppPackageManifestReader.Read(existingPackagePath, options.IncludeLegacyPackages);
+                if (!string.Equals(existingManifest.Id, airAppId, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -72,27 +72,27 @@ public sealed class PluginPackageInstaller
             }
             catch
             {
-                // Ignore unrelated or malformed packages while replacing one plugin id.
+                // Ignore unrelated or malformed packages while replacing one AirApp id.
             }
         }
 
         CleanupPendingDeletions(pendingDeletionDir);
     }
 
-    private static IEnumerable<string> EnumerateExistingPackages(string pluginsDirectory, PluginPackageInstallOptions options)
+    private static IEnumerable<string> EnumerateExistingPackages(string airAppsDirectory, AirAppPackageInstallOptions options)
     {
         if (options.IncludeLegacyPackages)
         {
             return Directory
-                .EnumerateFiles(pluginsDirectory, "*", SearchOption.AllDirectories)
+                .EnumerateFiles(airAppsDirectory, "*", SearchOption.AllDirectories)
                 .Where(path =>
-                    path.EndsWith(PluginPackagingConstants.PackageFileExtension, StringComparison.OrdinalIgnoreCase) ||
-                    path.EndsWith(PluginPackagingConstants.LegacyPackageFileExtension, StringComparison.OrdinalIgnoreCase));
+                    path.EndsWith(AirAppPackagingConstants.PackageFileExtension, StringComparison.OrdinalIgnoreCase) ||
+                    path.EndsWith(AirAppPackagingConstants.LegacyPackageFileExtension, StringComparison.OrdinalIgnoreCase));
         }
 
         return Directory.EnumerateFiles(
-            pluginsDirectory,
-            $"*{PluginPackagingConstants.PackageFileExtension}",
+            airAppsDirectory,
+            $"*{AirAppPackagingConstants.PackageFileExtension}",
             SearchOption.AllDirectories);
     }
 
@@ -179,11 +179,11 @@ public sealed class PluginPackageInstaller
         }
     }
 
-    private static string BuildInstalledPackageFileName(string pluginId)
+    private static string BuildInstalledPackageFileName(string airAppId)
     {
         var invalidChars = Path.GetInvalidFileNameChars();
-        var fileName = new string(pluginId.Select(ch => invalidChars.Contains(ch) ? '_' : ch).ToArray());
-        return fileName + PluginPackagingConstants.PackageFileExtension;
+        var fileName = new string(airAppId.Select(ch => invalidChars.Contains(ch) ? '_' : ch).ToArray());
+        return fileName + AirAppPackagingConstants.PackageFileExtension;
     }
 
     private static string EnsureTrailingSeparator(string path)

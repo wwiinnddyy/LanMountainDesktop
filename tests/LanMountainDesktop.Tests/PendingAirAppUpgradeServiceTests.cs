@@ -17,10 +17,10 @@ public sealed class PendingAirAppUpgradeServiceTests : IDisposable
     [Fact]
     public void AddPendingInstallOrUpgrade_ReplacesExistingOperationForSameAirApp()
     {
-        var pluginsDirectory = CreateAirAppsDirectory();
+        var airAppsDirectory = CreateAirAppsDirectory();
         var firstPackage = CreateAirAppPackage("first.laapp", "plugin.queue.sample", "Sample AirApp", "1.0.0");
         var secondPackage = CreateAirAppPackage("second.laapp", "plugin.queue.sample", "Sample AirApp", "2.0.0");
-        var service = new PendingAirAppUpgradeService(pluginsDirectory);
+        var service = new PendingAirAppUpgradeService(airAppsDirectory);
 
         service.AddPendingInstallOrUpgrade("plugin.queue.sample", firstPackage, "1.0.0");
         service.AddPendingInstallOrUpgrade("plugin.queue.sample", secondPackage, "2.0.0");
@@ -29,41 +29,41 @@ public sealed class PendingAirAppUpgradeServiceTests : IDisposable
         var operation = Assert.Single(pending);
         Assert.Equal("plugin.queue.sample", operation.PluginId);
         Assert.Equal("2.0.0", operation.TargetVersion);
-        Assert.Equal(PendingPluginOperation.InstallOrUpgrade, operation.Operation);
+        Assert.Equal(PendingAirAppOperation.InstallOrUpgrade, operation.Operation);
         Assert.Equal(Path.GetFullPath(secondPackage), operation.SourcePackagePath);
     }
 
     [Fact]
     public void ApplyPendingOperations_InstallsPackageAndClearsSuccessfulOperation()
     {
-        var pluginsDirectory = CreateAirAppsDirectory();
+        var airAppsDirectory = CreateAirAppsDirectory();
         var packagePath = CreateAirAppPackage("sample.laapp", "plugin.install.queue", "Queued AirApp", "1.0.0");
-        var service = new PendingAirAppUpgradeService(pluginsDirectory);
+        var service = new PendingAirAppUpgradeService(airAppsDirectory);
         service.AddPendingInstallOrUpgrade("plugin.install.queue", packagePath, "1.0.0");
 
         var result = service.ApplyPendingOperations();
 
         Assert.Equal(1, result.SuccessCount);
         Assert.Equal(0, result.FailureCount);
-        Assert.True(File.Exists(Path.Combine(pluginsDirectory, "plugin.install.queue.laapp")));
+        Assert.True(File.Exists(Path.Combine(airAppsDirectory, "plugin.install.queue.laapp")));
         Assert.Empty(service.GetPendingUpgrades());
     }
 
     [Fact]
     public void ApplyPendingOperations_ReplacesExistingPackageWithSameAirAppId()
     {
-        var pluginsDirectory = CreateAirAppsDirectory();
+        var airAppsDirectory = CreateAirAppsDirectory();
         var firstPackage = CreateAirAppPackage("first.laapp", "plugin.replace.queue", "Old AirApp", "1.0.0");
         var secondPackage = CreateAirAppPackage("second.laapp", "plugin.replace.queue", "New AirApp", "2.0.0");
-        File.Copy(firstPackage, Path.Combine(pluginsDirectory, "plugin.replace.queue.laapp"));
+        File.Copy(firstPackage, Path.Combine(airAppsDirectory, "plugin.replace.queue.laapp"));
 
-        var service = new PendingAirAppUpgradeService(pluginsDirectory);
+        var service = new PendingAirAppUpgradeService(airAppsDirectory);
         service.AddPendingInstallOrUpgrade("plugin.replace.queue", secondPackage, "2.0.0");
 
         var result = service.ApplyPendingOperations();
 
         Assert.Equal(1, result.SuccessCount);
-        var installedPackages = Directory.EnumerateFiles(pluginsDirectory, "*.laapp", SearchOption.TopDirectoryOnly).ToArray();
+        var installedPackages = Directory.EnumerateFiles(airAppsDirectory, "*.laapp", SearchOption.TopDirectoryOnly).ToArray();
         var installedPackage = Assert.Single(installedPackages);
         var manifest = ReadManifestFromPackage(installedPackage);
         Assert.Equal("plugin.replace.queue", manifest.Id);
@@ -74,14 +74,14 @@ public sealed class PendingAirAppUpgradeServiceTests : IDisposable
     [Fact]
     public void ApplyPendingOperations_KeepsFailedOperationQueued()
     {
-        var pluginsDirectory = CreateAirAppsDirectory();
+        var airAppsDirectory = CreateAirAppsDirectory();
         var invalidPackage = Path.Combine(_tempRoot, "invalid.laapp");
         Directory.CreateDirectory(_tempRoot);
         using (ZipFile.Open(invalidPackage, ZipArchiveMode.Create))
         {
         }
 
-        var service = new PendingAirAppUpgradeService(pluginsDirectory);
+        var service = new PendingAirAppUpgradeService(airAppsDirectory);
         service.AddPendingInstallOrUpgrade("plugin.invalid.queue", invalidPackage, "1.0.0");
 
         var result = service.ApplyPendingOperations();
@@ -94,9 +94,9 @@ public sealed class PendingAirAppUpgradeServiceTests : IDisposable
     [Fact]
     public void ApplyPendingOperations_KeepsMissingPackageOperationQueued()
     {
-        var pluginsDirectory = CreateAirAppsDirectory();
+        var airAppsDirectory = CreateAirAppsDirectory();
         var missingPackage = Path.Combine(_tempRoot, "missing.laapp");
-        var service = new PendingAirAppUpgradeService(pluginsDirectory);
+        var service = new PendingAirAppUpgradeService(airAppsDirectory);
         service.AddPendingInstallOrUpgrade("plugin.missing.queue", missingPackage, "1.0.0");
 
         var result = service.ApplyPendingOperations();
@@ -113,7 +113,7 @@ public sealed class PendingAirAppUpgradeServiceTests : IDisposable
         return directory;
     }
 
-    private string CreateAirAppPackage(string fileName, string pluginId, string pluginName, string version)
+    private string CreateAirAppPackage(string fileName, string airAppId, string pluginName, string version)
     {
         Directory.CreateDirectory(_tempRoot);
         var packagePath = Path.Combine(_tempRoot, fileName);
@@ -124,11 +124,11 @@ public sealed class PendingAirAppUpgradeServiceTests : IDisposable
         writer.Write(
             $$"""
               {
-                "id": "{{pluginId}}",
+                "id": "{{airAppId}}",
                 "name": "{{pluginName}}",
                 "version": "{{version}}",
                 "apiVersion": "1.0.0",
-                "entranceAssembly": "{{pluginId}}.dll"
+                "entranceAssembly": "{{airAppId}}.dll"
               }
               """);
         return packagePath;

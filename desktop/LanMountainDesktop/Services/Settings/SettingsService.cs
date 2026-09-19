@@ -10,6 +10,16 @@ namespace LanMountainDesktop.Services.Settings;
 
 internal sealed class SettingsService : ISettingsService
 {
+    /// <summary>
+    /// AirApp 作用域设置的落盘文件名。
+    /// </summary>
+    internal const string AirAppSettingsFileName = "airapp-settings.json";
+
+    /// <summary>
+    /// 升级前的磁盘文件名，只用于首次加载时改名归位；新代码不要引用它。
+    /// </summary>
+    internal const string LegacyAirAppSettingsFileName = "plugin-settings.json";
+
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -21,13 +31,20 @@ internal sealed class SettingsService : ISettingsService
     private readonly LauncherSettingsService _launcherSettingsService = new();
     private readonly IComponentStateStore _componentStateStore = ComponentDomainStorageProvider.Instance;
     private readonly IComponentMessageStore _componentMessageStore = ComponentDomainStorageProvider.Instance;
-    private readonly string _pluginSettingsPath;
-    private readonly object _pluginSettingsGate = new();
+    private readonly string _airAppSettingsPath;
+    private readonly object _airAppSettingsGate = new();
 
     public SettingsService()
     {
         var root = AppDataPathProvider.GetDataRoot();
-        _pluginSettingsPath = Path.Combine(root, "plugin-settings.json");
+
+        // 必须在算出新路径之前归位，否则本次运行会读到旧文件、写进新文件，把用户设置拆成两份。
+        AppDataPathProvider.TryMoveLegacyPath(
+            Path.Combine(root, LegacyAirAppSettingsFileName),
+            Path.Combine(root, AirAppSettingsFileName),
+            "AirApp settings file");
+
+        _airAppSettingsPath = Path.Combine(root, AirAppSettingsFileName);
     }
 
     public event EventHandler<SettingsChangedEvent>? Changed;
@@ -87,11 +104,11 @@ internal sealed class SettingsService : ISettingsService
             return new T();
         }
 
-        lock (_pluginSettingsGate)
+        lock (_airAppSettingsGate)
         {
             var document = LoadAirAppDocumentLocked();
-            if (!document.Sections.TryGetValue(EnsureKey(subjectId), out var pluginSections) ||
-                !pluginSections.TryGetValue(EnsureKey(sectionId), out var payload))
+            if (!document.Sections.TryGetValue(EnsureKey(subjectId), out var airAppSections) ||
+                !airAppSections.TryGetValue(EnsureKey(sectionId), out var payload))
             {
                 return new T();
             }
@@ -120,17 +137,17 @@ internal sealed class SettingsService : ISettingsService
             return;
         }
 
-        lock (_pluginSettingsGate)
+        lock (_airAppSettingsGate)
         {
             var document = LoadAirAppDocumentLocked();
-            var pluginId = EnsureKey(subjectId);
-            if (!document.Sections.TryGetValue(pluginId, out var pluginSections))
+            var airAppId = EnsureKey(subjectId);
+            if (!document.Sections.TryGetValue(airAppId, out var airAppSections))
             {
-                pluginSections = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
-                document.Sections[pluginId] = pluginSections;
+                airAppSections = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
+                document.Sections[airAppId] = airAppSections;
             }
 
-            pluginSections[EnsureKey(sectionId)] = JsonSerializer.SerializeToElement(section, SerializerOptions).Clone();
+            airAppSections[EnsureKey(sectionId)] = JsonSerializer.SerializeToElement(section, SerializerOptions).Clone();
             PersistAirAppDocumentLocked(document);
         }
 
@@ -151,16 +168,16 @@ internal sealed class SettingsService : ISettingsService
             return;
         }
 
-        lock (_pluginSettingsGate)
+        lock (_airAppSettingsGate)
         {
             var document = LoadAirAppDocumentLocked();
-            var pluginId = EnsureKey(subjectId);
-            if (document.Sections.TryGetValue(pluginId, out var sections) &&
+            var airAppId = EnsureKey(subjectId);
+            if (document.Sections.TryGetValue(airAppId, out var sections) &&
                 sections.Remove(EnsureKey(sectionId)))
             {
                 if (sections.Count == 0)
                 {
-                    document.Sections.Remove(pluginId);
+                    document.Sections.Remove(airAppId);
                 }
 
                 PersistAirAppDocumentLocked(document);
@@ -333,17 +350,17 @@ internal sealed class SettingsService : ISettingsService
     {
         try
         {
-            if (!File.Exists(_pluginSettingsPath))
+            if (!File.Exists(_airAppSettingsPath))
             {
                 return new AirAppSettingsDocument();
             }
 
-            var json = File.ReadAllText(_pluginSettingsPath);
+            var json = File.ReadAllText(_airAppSettingsPath);
             return JsonSerializer.Deserialize<AirAppSettingsDocument>(json, SerializerOptions) ?? new AirAppSettingsDocument();
         }
         catch (Exception ex)
         {
-            AppLogger.Warn("SettingsService", $"Failed to load plugin settings '{_pluginSettingsPath}'.", ex);
+            AppLogger.Warn("SettingsService", $"Failed to load AirApp settings '{_airAppSettingsPath}'.", ex);
             return new AirAppSettingsDocument();
         }
     }
@@ -352,19 +369,19 @@ internal sealed class SettingsService : ISettingsService
     {
         try
         {
-            var directory = Path.GetDirectoryName(_pluginSettingsPath);
+            var directory = Path.GetDirectoryName(_airAppSettingsPath);
             if (!string.IsNullOrWhiteSpace(directory))
             {
                 Directory.CreateDirectory(directory);
             }
 
-            var tempPath = $"{_pluginSettingsPath}.{Guid.NewGuid():N}.tmp";
+            var tempPath = $"{_airAppSettingsPath}.{Guid.NewGuid():N}.tmp";
             File.WriteAllText(tempPath, JsonSerializer.Serialize(document, SerializerOptions));
-            File.Move(tempPath, _pluginSettingsPath, overwrite: true);
+            File.Move(tempPath, _airAppSettingsPath, overwrite: true);
         }
         catch (Exception ex)
         {
-            AppLogger.Warn("SettingsService", $"Failed to persist plugin settings '{_pluginSettingsPath}'.", ex);
+            AppLogger.Warn("SettingsService", $"Failed to persist AirApp settings '{_airAppSettingsPath}'.", ex);
         }
     }
 

@@ -54,7 +54,7 @@ public static class AirAppRuntimeModes
             AirAppRuntimeMode.InProcess => InProcess,
             AirAppRuntimeMode.IsolatedBackground => IsolatedBackground,
             AirAppRuntimeMode.IsolatedWindow => IsolatedWindow,
-            _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unsupported plugin runtime mode.")
+            _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unsupported AirApp runtime mode.")
         };
     }
 }

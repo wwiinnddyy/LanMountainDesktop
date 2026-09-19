@@ -14,8 +14,8 @@ namespace LanMountainDesktop.Views.SettingsPages;
     AirAppSettingsPageCategory.AirAppCatalog,
     IconKey = "ShoppingBag",
     SortOrder = 35,
-    TitleLocalizationKey = "settings.plugin_catalog.title",
-    DescriptionLocalizationKey = "settings.plugin_catalog.subtitle")]
+    TitleLocalizationKey = "settings.airapp_catalog.title",
+    DescriptionLocalizationKey = "settings.airapp_catalog.subtitle")]
 public partial class AirAppCatalogSettingsPage : AirAppSettingsPageBase
 {
     public AirAppCatalogSettingsPage()
@@ -142,7 +142,7 @@ public partial class AirAppCatalogSettingsPage : AirAppSettingsPageBase
                 CreateCatalogItem(
                     "glass-panels",
                     "Glass Panels",
-                    "Adds experimental acrylic surfaces for plugin-powered widgets.",
+                    "Adds experimental acrylic surfaces for AirApp-powered widgets.",
                     "Aster Team",
                     "0.8.0",
                     "1.0.0",
@@ -189,14 +189,14 @@ public partial class AirAppCatalogSettingsPage : AirAppSettingsPageBase
     }
 
     private static AirAppCatalogItemViewModel CreateCatalogItemViewModel(
-        AirAppCatalogItemInfo plugin,
+        AirAppCatalogItemInfo AirApp,
         LocalizationService localizationService,
         AirAppInstalledInfo? installedAirApp,
         Version hostVersion)
     {
         var languageCode = localizationService.NormalizeLanguageCode(
             HostSettingsFacadeProvider.GetOrCreate().Region.Get().LanguageCode);
-        var item = new AirAppCatalogItemViewModel(plugin, localizationService, languageCode);
+        var item = new AirAppCatalogItemViewModel(AirApp, localizationService, languageCode);
         item.ApplyInstallState(installedAirApp, hostVersion);
         return item;
     }

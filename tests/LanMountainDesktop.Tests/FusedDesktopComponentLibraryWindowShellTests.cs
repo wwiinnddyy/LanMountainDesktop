@@ -52,8 +52,15 @@ public sealed class FusedDesktopComponentLibraryWindowShellTests
 
         Assert.Contains("Win32Properties.SetWindowCornerPreference(", codeBehind);
         Assert.Contains("Win32Properties.WindowCornerPreference.DoNotRound", codeBehind);
-        Assert.Contains("DwmWindowAttributeBorderColor = 34", codeBehind);
-        Assert.Contains("DwmColorNone = 0xFFFFFFFE", codeBehind);
+
+        // DWM 细节已在 commit 1ac2784 下沉到平台层，窗口代码改为委托 helper，
+        // 所以断言分成两半：窗口侧必须调用 helper，helper 侧必须用那两个 DWM 哨兵值。
+        Assert.Contains("WindowsDwmInterop.TryDisableWindowBorder(", codeBehind);
+
+        var dwmInterop = ReadRepositoryFile("platform", "LanMountainDesktop.Platform", "WindowsDwmInterop.cs");
+
+        Assert.Contains("WindowAttributeBorderColor = 34", dwmInterop);
+        Assert.Contains("ColorNone = 0xFFFFFFFE", dwmInterop);
     }
 
     private static string ExtractElementStart(string source, string startToken)

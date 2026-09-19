@@ -3,17 +3,20 @@ using System.Text.Json.Serialization;
 
 namespace LanMountainDesktop.AirAppPackaging;
 
-public enum PendingPluginOperation
+public enum PendingAirAppOperation
 {
     InstallOrUpgrade = 0
 }
 
-public sealed record PendingPluginUpgrade(
+// PluginId 成员名即 .pending-plugin-upgrades.json 的磁盘字段名（SerializerOptions 未设
+// PropertyNamingPolicy，按成员名原样序列化）。改它会读不到已安装实例里排队的升级，冻结。
+// 下方 PendingAirAppOperationFailure.PluginId 同理。
+public sealed record PendingAirAppUpgrade(
     string PluginId,
     string SourcePackagePath,
     string TargetVersion,
     DateTimeOffset CreatedAt,
-    PendingPluginOperation Operation = PendingPluginOperation.InstallOrUpgrade)
+    PendingAirAppOperation Operation = PendingAirAppOperation.InstallOrUpgrade)
 {
     public bool IsValid()
     {
@@ -23,17 +26,17 @@ public sealed record PendingPluginUpgrade(
     }
 }
 
-public sealed record PendingPluginOperationApplySummary(
+public sealed record PendingAirAppOperationApplySummary(
     int SuccessCount,
     int FailureCount,
-    IReadOnlyList<PendingPluginOperationFailure> Failures);
+    IReadOnlyList<PendingAirAppOperationFailure> Failures);
 
-public sealed record PendingPluginOperationFailure(
+public sealed record PendingAirAppOperationFailure(
     string PluginId,
-    PendingPluginOperation Operation,
+    PendingAirAppOperation Operation,
     string ErrorMessage);
 
-public sealed class PendingPluginUpgradeStore
+public sealed class PendingAirAppUpgradeStore
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -41,17 +44,17 @@ public sealed class PendingPluginUpgradeStore
         Converters = { new JsonStringEnumConverter() }
     };
 
-    private readonly string _pluginsDirectory;
+    private readonly string _airAppsDirectory;
     private readonly string _pendingUpgradesFilePath;
     private readonly object _gate = new();
 
-    public PendingPluginUpgradeStore(string pluginsDirectory)
+    public PendingAirAppUpgradeStore(string airAppsDirectory)
     {
-        _pluginsDirectory = Path.GetFullPath(pluginsDirectory);
-        _pendingUpgradesFilePath = Path.Combine(_pluginsDirectory, PluginPackagingConstants.PendingUpgradesFileName);
+        _airAppsDirectory = Path.GetFullPath(airAppsDirectory);
+        _pendingUpgradesFilePath = Path.Combine(_airAppsDirectory, AirAppPackagingConstants.PendingUpgradesFileName);
     }
 
-    public IReadOnlyList<PendingPluginUpgrade> GetPendingUpgrades()
+    public IReadOnlyList<PendingAirAppUpgrade> GetPendingUpgrades()
     {
         lock (_gate)
         {
@@ -59,20 +62,20 @@ public sealed class PendingPluginUpgradeStore
         }
     }
 
-    public void AddPendingInstallOrUpgrade(string pluginId, string sourcePackagePath, string targetVersion)
+    public void AddPendingInstallOrUpgrade(string airAppId, string sourcePackagePath, string targetVersion)
     {
-        AddPendingOperation(pluginId, sourcePackagePath, targetVersion, PendingPluginOperation.InstallOrUpgrade);
+        AddPendingOperation(airAppId, sourcePackagePath, targetVersion, PendingAirAppOperation.InstallOrUpgrade);
     }
 
-    public void RemovePendingUpgrade(string pluginId)
+    public void RemovePendingUpgrade(string airAppId)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(pluginId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(airAppId);
 
         lock (_gate)
         {
             var upgrades = ReadPendingUpgradesCore().ToList();
             var removed = upgrades.RemoveAll(u =>
-                string.Equals(u.PluginId, pluginId, StringComparison.OrdinalIgnoreCase));
+                string.Equals(u.PluginId, airAppId, StringComparison.OrdinalIgnoreCase));
 
             if (removed > 0)
             {
@@ -100,40 +103,40 @@ public sealed class PendingPluginUpgradeStore
         }
     }
 
-    public PendingPluginOperationApplySummary ApplyPendingOperations(
-        PluginPackageInstaller installer,
-        PluginPackageInstallOptions? options = null,
-        Action<PluginPackageManifest>? prepareManifest = null)
+    public PendingAirAppOperationApplySummary ApplyPendingOperations(
+        AirAppPackageInstaller installer,
+        AirAppPackageInstallOptions? options = null,
+        Action<AirAppPackageManifest>? prepareManifest = null)
     {
-        options ??= PluginPackageInstallOptions.Default;
+        options ??= AirAppPackageInstallOptions.Default;
 
         lock (_gate)
         {
             var pending = ReadPendingUpgradesCore();
             if (pending.Count == 0)
             {
-                return new PendingPluginOperationApplySummary(0, 0, []);
+                return new PendingAirAppOperationApplySummary(0, 0, []);
             }
 
-            Directory.CreateDirectory(_pluginsDirectory);
-            var succeeded = new List<PendingPluginUpgrade>();
-            var failures = new List<PendingPluginOperationFailure>();
+            Directory.CreateDirectory(_airAppsDirectory);
+            var succeeded = new List<PendingAirAppUpgrade>();
+            var failures = new List<PendingAirAppOperationFailure>();
 
             foreach (var operation in pending)
             {
                 try
                 {
-                    if (operation.Operation != PendingPluginOperation.InstallOrUpgrade)
+                    if (operation.Operation != PendingAirAppOperation.InstallOrUpgrade)
                     {
-                        throw new InvalidOperationException($"Unsupported pending plugin operation '{operation.Operation}'.");
+                        throw new InvalidOperationException($"Unsupported pending AirApp operation '{operation.Operation}'.");
                     }
 
-                    installer.Install(operation.SourcePackagePath, _pluginsDirectory, options, prepareManifest);
+                    installer.Install(operation.SourcePackagePath, _airAppsDirectory, options, prepareManifest);
                     succeeded.Add(operation);
                 }
                 catch (Exception ex)
                 {
-                    failures.Add(new PendingPluginOperationFailure(
+                    failures.Add(new PendingAirAppOperationFailure(
                         operation.PluginId,
                         operation.Operation,
                         ex.Message));
@@ -142,17 +145,17 @@ public sealed class PendingPluginUpgradeStore
 
             var remaining = pending.Except(succeeded).ToList();
             SavePendingUpgradesCore(remaining);
-            return new PendingPluginOperationApplySummary(succeeded.Count, failures.Count, failures);
+            return new PendingAirAppOperationApplySummary(succeeded.Count, failures.Count, failures);
         }
     }
 
     private void AddPendingOperation(
-        string pluginId,
+        string airAppId,
         string sourcePackagePath,
         string targetVersion,
-        PendingPluginOperation operation)
+        PendingAirAppOperation operation)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(pluginId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(airAppId);
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePackagePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(targetVersion);
 
@@ -160,10 +163,10 @@ public sealed class PendingPluginUpgradeStore
         {
             var upgrades = ReadPendingUpgradesCore().ToList();
             upgrades.RemoveAll(u =>
-                string.Equals(u.PluginId, pluginId, StringComparison.OrdinalIgnoreCase));
+                string.Equals(u.PluginId, airAppId, StringComparison.OrdinalIgnoreCase));
 
-            upgrades.Add(new PendingPluginUpgrade(
-                pluginId,
+            upgrades.Add(new PendingAirAppUpgrade(
+                airAppId,
                 Path.GetFullPath(sourcePackagePath),
                 targetVersion,
                 DateTimeOffset.UtcNow,
@@ -173,7 +176,7 @@ public sealed class PendingPluginUpgradeStore
         }
     }
 
-    private List<PendingPluginUpgrade> ReadPendingUpgradesCore()
+    private List<PendingAirAppUpgrade> ReadPendingUpgradesCore()
     {
         if (!File.Exists(_pendingUpgradesFilePath))
         {
@@ -183,7 +186,7 @@ public sealed class PendingPluginUpgradeStore
         try
         {
             var json = File.ReadAllText(_pendingUpgradesFilePath);
-            var upgrades = JsonSerializer.Deserialize<List<PendingPluginUpgrade>>(json, SerializerOptions);
+            var upgrades = JsonSerializer.Deserialize<List<PendingAirAppUpgrade>>(json, SerializerOptions);
             return upgrades?.Where(u => u.IsValid()).ToList() ?? [];
         }
         catch
@@ -192,7 +195,7 @@ public sealed class PendingPluginUpgradeStore
         }
     }
 
-    private void SavePendingUpgradesCore(List<PendingPluginUpgrade> upgrades)
+    private void SavePendingUpgradesCore(List<PendingAirAppUpgrade> upgrades)
     {
         var directory = Path.GetDirectoryName(_pendingUpgradesFilePath);
         if (!string.IsNullOrWhiteSpace(directory))

@@ -26,9 +26,9 @@ internal sealed class AirAppSharedContractManager : IDisposable
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(dataDirectory);
 
-        // Shared contracts live alongside the rest of the plugin market data so that a single
+        // Shared contracts live alongside the rest of the AirApp market data so that a single
         // storage location (driven by AppDataPathProvider.GetDataRoot() / the OOBE-chosen path)
-        // owns every plugin asset: index cache, downloads, and shared contracts.
+        // owns every AirApp asset: index cache, downloads, and shared contracts.
         _contractsDirectory = Path.Combine(dataDirectory, "SharedContracts");
         _indexService = new AirAppMarketIndexService(new AirAppMarketCacheService(dataDirectory));
         _httpClient = new HttpClient
@@ -52,7 +52,7 @@ internal sealed class AirAppSharedContractManager : IDisposable
         var document = LoadIndex(cancellationToken);
         AppLogger.Info(
             "AirAppSharedContracts",
-            $"Shared contract index loaded for plugin '{manifest.Id}'. SourceContracts={document.Contracts.Count}.");
+            $"Shared contract index loaded for AirApp '{manifest.Id}'. SourceContracts={document.Contracts.Count}.");
         foreach (var reference in manifest.SharedContracts)
         {
             EnsureInstalled(document, reference, cancellationToken);
@@ -78,7 +78,7 @@ internal sealed class AirAppSharedContractManager : IDisposable
                 document ??= LoadIndex(cancellationToken);
                 AppLogger.Info(
                     "AirAppSharedContracts",
-                    $"Installing missing shared contract during plugin load. AirAppId='{manifest.Id}'; ContractId='{reference.Id}'; Version='{reference.Version}'; Destination='{assemblyPath}'.");
+                    $"Installing missing shared contract during AirApp load. AirAppId='{manifest.Id}'; ContractId='{reference.Id}'; Version='{reference.Version}'; Destination='{assemblyPath}'.");
                 EnsureInstalled(document, reference, cancellationToken);
             }
 
@@ -195,7 +195,7 @@ internal sealed class AirAppSharedContractManager : IDisposable
                     !string.Equals(existing.ContractVersion, reference.Version, StringComparison.OrdinalIgnoreCase))
                 {
                     throw new InvalidOperationException(
-                        $"Shared contract assembly '{assemblyName}' is already loaded as '{existing.ContractId}' version '{existing.ContractVersion}', so plugin dependency '{reference.Id}' version '{reference.Version}' cannot be activated in the same host process.");
+                        $"Shared contract assembly '{assemblyName}' is already loaded as '{existing.ContractId}' version '{existing.ContractVersion}', so AirApp dependency '{reference.Id}' version '{reference.Version}' cannot be activated in the same host process.");
                 }
 
                 return existing;
