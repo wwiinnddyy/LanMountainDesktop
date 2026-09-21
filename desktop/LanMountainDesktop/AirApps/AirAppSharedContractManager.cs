@@ -35,7 +35,7 @@ internal sealed class AirAppSharedContractManager : IDisposable
         {
             Timeout = TimeSpan.FromMinutes(2)
         };
-        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("LanMountainDesktop-SharedContracts/1.0");
+        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(HttpUserAgents.SharedContracts);
     }
 
     public string ContractsDirectory => _contractsDirectory;

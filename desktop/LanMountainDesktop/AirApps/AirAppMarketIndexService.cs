@@ -19,7 +19,7 @@ internal sealed class AirAppMarketIndexService : IDisposable
         {
             Timeout = TimeSpan.FromSeconds(20)
         };
-        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("LanMountainDesktop-AirAppMarketplace/1.0");
+        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(HttpUserAgents.AirAppMarketplace);
         _httpClient.DefaultRequestHeaders.Accept.Add(
             new MediaTypeWithQualityHeaderValue("application/json"));
     }

@@ -357,6 +357,16 @@ helper 住在 Core 是因为写同一批磁盘文件的是三个进程（宿主�
 **滑杆的 `Minimum`/`Maximum` 不许写死数字**，要绑视图模型上从 `DesktopGridLimits` 读的那四个量程属性——
 设置页量程是这套数的第四份副本，漂了的症状不是崩，而是"拖到尽头网格不动"或"存进去被运行期悄悄钳掉"。
 
+**对外报出去的身份只有一处字面量**：所有 HTTP 请求的 User-Agent 都写进
+`desktop/LanMountainDesktop/Services/HttpUserAgents.cs`，别处只引用不再抄（守卫
+`HttpRequestIdentityStrings_LiveInOnePlace`；允许的字面量只有请求头名 `"User-Agent"` 本身）。
+2026-09-21 收口时同一份 Chrome 指纹在 4 个组件里逐字抄了 4 遍、市场身份在 4 个市场服务里抄了 4 遍、
+裸产品名抄了 3 遍，另有 3 份单一副本一并登记进去。
+**两件事登记等拍板，没有顺手改**（都会改变真正发出去的字节）：
+① `RecommendationDataService` 那 9 个第三方接口报的是短指纹 `Mozilla/5.0`，其余组件报的是完整 Chrome 指纹——
+统一成哪一种都是对外行为变更；② 除 `Plonds/PlondsHttpClientFactory`（现拼程序集版本，会随发布走）以外，
+其余 6 份身份里的 `/1.0` 全是写死的，产品版本涨了就没人动它。
+
 **同一个 using 块里不许把同一条指令写两遍**（编译器 CS0105）。守卫
 `UsingDirectives_AreNotDeclaredTwiceInAFile`，只查文件开头那段 using（namespace 块内部的 using 只对自身生效，
 删兄弟块的同名指令会真的改变解析结果）。2026-09-21 那次 `plugin → airapp` 批量改名按目录补 using，

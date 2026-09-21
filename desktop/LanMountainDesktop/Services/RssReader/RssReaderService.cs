@@ -483,7 +483,7 @@ public sealed class RssReaderService : IDisposable
     {
         var client = new HttpClient(new SocketsHttpHandler { AutomaticDecompression = DecompressionMethods.All })
         { Timeout = RequestTimeout };
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("LanMountainDesktop-RssReader/1.0");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd(HttpUserAgents.RssReader);
         return client;
     }
 

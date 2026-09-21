@@ -34,7 +34,7 @@ internal sealed class AirAppMarketInstallService : IDisposable
         {
             Timeout = TimeSpan.FromMinutes(2)
         };
-        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("LanMountainDesktop-AirAppMarketplace/1.0");
+        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(HttpUserAgents.AirAppMarketplace);
         _downloadService = new ResumableDownloadService(_httpClient);
         _releaseResolverService = new AirAppMarketReleaseResolverService(_httpClient);
         _pendingUpgradeService = new PendingAirAppUpgradeService(runtime.AirAppsDirectory);

@@ -1487,6 +1487,51 @@ public sealed class SourceIntegrityTests
             $"{offenders.Count} 处把两条成员声明写在同一行：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
     }
 
+    /// <summary>
+    /// 发往对端的身份字符串只有 <c>desktop/.../Services/HttpUserAgents.cs</c> 一处字面量。
+    /// 收口前同一个完整 Chrome UA 在 4 个组件里逐字抄了 4 遍、市场身份在 4 个市场服务里抄了 4 遍、
+    /// 裸产品名抄了 3 遍。这类副本漂移不会崩，只会"某个组件的图片突然 403"，而且只在那一家 CDN 改口径时出现。
+    /// 允许出现的字面量只有 <c>"User-Agent"</c> 本身（那是请求头的名字，不是身份）。
+    /// </summary>
+    [Fact]
+    public void HttpRequestIdentityStrings_LiveInOnePlace()
+    {
+        var allowedFile = @"desktop\LanMountainDesktop\Services\HttpUserAgents.cs";
+        var mentionsIdentity = new Regex(@"User-?Agent");
+        var anyLiteral = new Regex(@"""(?:[^""\\]|\\.)*""");
+        var offenders = new List<string>();
+
+        foreach (var file in SourceFiles())
+        {
+            if (string.Equals(RelativeToRepo(file), allowedFile, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            foreach (var (line, number) in CodeLines(file))
+            {
+                if (!mentionsIdentity.IsMatch(line) && !line.Contains("Mozilla/", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                foreach (Match literal in anyLiteral.Matches(line))
+                {
+                    if (literal.Value == "\"User-Agent\"")
+                    {
+                        continue;
+                    }
+
+                    offenders.Add($"{RelativeToRepo(file)}:{number} 自带了一份请求身份字面量 {literal.Value}，请用 HttpUserAgents");
+                }
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 处自带请求身份字面量：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
     private static IEnumerable<(string Line, int Number)> CodeLines(string file)
     {
         var all = File.ReadAllLines(file);

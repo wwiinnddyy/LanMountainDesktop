@@ -80,7 +80,7 @@ public sealed class GitHubReleaseUpdateService : IDisposable
 
         if (!_httpClient.DefaultRequestHeaders.UserAgent.Any())
         {
-            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("LanMountainDesktop-Updater/1.0");
+            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(HttpUserAgents.Updater);
         }
 
         if (!_httpClient.DefaultRequestHeaders.Accept.Any())

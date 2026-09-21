@@ -45,8 +45,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         Timeout = TimeSpan.FromSeconds(10)
     };
 
-    private const string BrowserUserAgent =
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36";
+    private const string BrowserUserAgent = HttpUserAgents.Browser;
     private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 2;
 

@@ -18,7 +18,7 @@ namespace LanMountainDesktop.Services;
 
 public sealed class RecommendationDataService : IRecommendationInfoService, IDisposable
 {
-    private const string UserAgent = "Mozilla/5.0";
+    private const string UserAgent = HttpUserAgents.BrowserMinimal;
     private static readonly Regex CnrListAnchorRegex = new(
         "<a\\s+href=\"(?<url>https?://[^\"]*?t\\d+_\\d+\\.shtml(?:\\?[^\"]*)?)\"[^>]*>(?<inner>.*?)</a>",
         RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline);
@@ -3249,7 +3249,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         var images = new List<ZhiJiaoHubImageItem>();
 
         using var request = new HttpRequestMessage(HttpMethod.Get, contentsUrl);
-        request.Headers.TryAddWithoutValidation("User-Agent", "LanMountainDesktop/1.0");
+        request.Headers.TryAddWithoutValidation("User-Agent", HttpUserAgents.Product);
         request.Headers.TryAddWithoutValidation("Accept", "application/vnd.github+json");
         request.Headers.TryAddWithoutValidation("X-GitHub-Api-Version", "2022-11-28");
 
@@ -3355,7 +3355,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         }
 
         using var request = new HttpRequestMessage(HttpMethod.Get, jsonUrl);
-        request.Headers.TryAddWithoutValidation("User-Agent", "LanMountainDesktop/1.0");
+        request.Headers.TryAddWithoutValidation("User-Agent", HttpUserAgents.Product);
 
         using var response = await _httpClient.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();

@@ -59,7 +59,7 @@ public sealed class ZhiJiaoHubCacheService : IDisposable
         {
             Timeout = TimeSpan.FromSeconds(30)
         };
-        DownloadClient.DefaultRequestHeaders.UserAgent.ParseAdd("LanMountainDesktop/1.0");
+        DownloadClient.DefaultRequestHeaders.UserAgent.ParseAdd(HttpUserAgents.Product);
     }
 
     public ZhiJiaoHubCacheService()

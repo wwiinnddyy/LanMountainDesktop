@@ -28,7 +28,7 @@ public sealed class AirAppMarketReadmeService : IDisposable
         {
             Timeout = TimeSpan.FromSeconds(20)
         };
-        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("LanMountainDesktop-AirAppMarketplace/1.0");
+        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(HttpUserAgents.AirAppMarketplace);
     }
 
     public async Task<string> LoadAsync(
