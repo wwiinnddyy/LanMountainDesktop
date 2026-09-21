@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using LanMountainDesktop.Launcher.Models;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanMountainDesktop.Launcher.Oobe;
 
@@ -109,7 +110,7 @@ internal sealed class PrivacyAgreementService
 
             // 保存到文件
             var json = JsonSerializer.Serialize(state, AppJsonContext.Default.PrivacyAgreementState);
-            File.WriteAllText(_storagePath, json);
+            AtomicFileWriter.WriteText(_storagePath, json, "PrivacyAgreement");
 
             Logger.Info($"[PrivacyAgreementService] 隐私协议同意状态已保存: IsAgreed={isAgreed}");
             return true;

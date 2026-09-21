@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanDesktopPLONDS.Installer.Services;
 
@@ -89,18 +90,10 @@ public sealed partial class InstallerPrivacyConsentStore
 
     private void Save(InstallerPrivacyConsentDocument document)
     {
-        var directory = Path.GetDirectoryName(_consentPath);
-        if (!string.IsNullOrWhiteSpace(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-
-        var tempPath = $"{_consentPath}.{Guid.NewGuid():N}.tmp";
         var json = JsonSerializer.Serialize(
             document,
             InstallerPrivacyConsentJsonContext.Default.InstallerPrivacyConsentDocument);
-        File.WriteAllText(tempPath, json);
-        File.Move(tempPath, _consentPath, overwrite: true);
+        AtomicFileWriter.WriteText(_consentPath, json, "InstallerPrivacyConsent");
     }
 
     private sealed record InstallerPrivacyConsentDocument(

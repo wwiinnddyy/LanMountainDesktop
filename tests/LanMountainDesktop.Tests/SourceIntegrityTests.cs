@@ -654,22 +654,24 @@ public sealed class SourceIntegrityTests
     }
 
     /// <summary>
-    /// "整体替换一个文件"只认 <c>Services/AtomicFileWriter.cs</c> 一处。宿主里此前有 10 处各搓一份
-    /// "写临时文件 + Move 覆盖"，差异是会咬人的：目标被瞬时锁住时没人重试（用户看到的就是"设置没存上"）、
+    /// "整体替换一个文件"只认 <c>core/.../IO/AtomicFileWriter.cs</c> 一处。此前宿主里有 10 处、
+    /// 启动器与安装器又各有自己的版本，差异是会咬人的：目标被瞬时锁住时没人重试（用户看到的就是"设置没存上"）、
     /// 固定 ".tmp" 名让两个写者互相覆盖、<c>Delete</c>+<c>Move</c> 之间断电就把文件丢了、
     /// Move 失败后 .tmp 永远留在 AppData 里。
     ///
-    /// 只管宿主自己的二进制：<c>Launcher/Oobe/OobeStateService</c> 与 <c>Launcher/Shell/LauncherBackgroundService</c>
-    /// 是另一个进程，要收口得先把helper挪到共享面，另议。写权限探针
-    /// （<c>AppLogger</c>、<c>AirAppInstallTargetAccess</c>）拿 .tmp 是为了试写，不属这一族。
+    /// helper 挪进 Core 之后这条覆盖全部二进制（原先只管宿主，剩下的启动器两处就是这么漏掉的）。
+    /// 免检的两类：<c>.write-test-</c> 开头的是"这块盘能不能写"的探针，不是替换文件；
+    /// <c>LauncherBackgroundService</c> 是"把用户选中的图片搬成目标名"，需要的是"原子落一个已有文件"
+    /// 这个原语（现在还只有 WriteText / WriteStreamAsync），已登记待办，不是漏网。
+    /// 写权限探针（<c>AppLogger</c>、<c>AirAppInstallTargetAccess</c>）拿 .tmp 也是为了试写。
     /// </summary>
     [Fact]
     public void AtomicFileReplacement_LivesInExactlyOnePlace()
     {
-        string[] handWrittenProbes = ["AppLogger.cs", "AirAppInstallTargetAccess.cs"];
+        string[] handWrittenProbes = ["AppLogger.cs", "AirAppInstallTargetAccess.cs", "LauncherBackgroundService.cs"];
         var offenders = new List<string>();
 
-        foreach (var file in SourceFiles().Where(IsHostProjectFile))
+        foreach (var file in SourceFiles())
         {
             if (Path.GetFileName(file).Equals("AtomicFileWriter.cs", StringComparison.OrdinalIgnoreCase) ||
                 handWrittenProbes.Contains(Path.GetFileName(file), StringComparer.OrdinalIgnoreCase))
@@ -681,10 +683,17 @@ public sealed class SourceIntegrityTests
             for (var index = 0; index < lines.Length; index++)
             {
                 // 只认代码里的临时文件名收尾（$"...{x}.tmp" 或 ".tmp"），注释里提到 .tmp 不算。
-                if (lines[index].Contains(".tmp\"", StringComparison.Ordinal))
+                if (!lines[index].Contains(".tmp\"", StringComparison.Ordinal))
                 {
-                    offenders.Add($"{RelativeToRepo(file)}:{index + 1} 自己搓了临时文件写盘，请用 AtomicFileWriter");
+                    continue;
                 }
+
+                if (lines[index].Contains(".write-test-", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                offenders.Add($"{RelativeToRepo(file)}:{index + 1} 自己搓了临时文件写盘，请用 AtomicFileWriter");
             }
         }
 

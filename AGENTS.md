@@ -266,14 +266,17 @@ live 路径各自走 `TryGetSnappedCell`+`GetCellRect`）和一个 `[Obsolete]` 
 宿主读清单时必须同时认 filemap 的 `action`/`sha256` 和分布元数据的 `op`/`contentHash`
 （服务端样例里全是后者），契约由 `PlondsDistributionContractTests` 拿 `sample-data` 真实文件钉住。
 
-**整体替换一个文件只认一处**：设置、缓存、清单、白板笔记这类"把新内容换成旧文件"的落盘，
-一律走 `Services/AtomicFileWriter.cs`（文本 `WriteText`、流 `WriteStreamAsync`），不要再手搓
-"写 `.tmp` + `File.Move`"。收口前宿主里有 10 处各写一份，差异里有两个会真实咬人的：
+**整体替换一个文件只认一处**：设置、缓存、清单、白板笔记、隐私同意书这类"把新内容换成旧文件"的落盘，
+一律走 `core/LanMountainDesktop.Core/IO/AtomicFileWriter.cs`（文本 `WriteText`、流 `WriteStreamAsync`），不要再手搓
+"写 `.tmp` + `File.Move`"。收口前宿主里有 10 处各写一份，启动器与 Core 又各有自己的版本，差异里有两个会真实咬人的：
 目标被资源管理器/杀毒瞬时锁住时没人重试（症状就是用户说的"设置没存上"，而 `FileOperationRetryHelper`
 本来就是为这种情况写的却没被用上），以及 Move 失败后 `.tmp` 留在 AppData 里不清理。
 `Encoding.UTF8` 那个重载只为磁盘上已经带 BOM 的旧文件保留（白板笔记），新代码别用。
-守卫 `SourceIntegrityTests.AtomicFileReplacement_LivesInExactlyOnePlace`；
-Launcher 进程里的 `OobeStateService` / `LauncherBackgroundService` 属另一份二进制，还没并进来。
+helper 住在 Core 是因为写同一批磁盘文件的是三个进程（宿主、首启向导 Launcher、安装器），
+跨二进制没有共享日志器，所以重试告警走 `FileOperationRetryHelper.FailureNotice`，各入口在启动时接自己的日志。
+守卫 `SourceIntegrityTests.AtomicFileReplacement_LivesInExactlyOnePlace` 现已覆盖全部二进制；
+唯一挂名的例外是 `LauncherBackgroundService`（"把用户选中的图片搬成目标名"，需要的是"原子落一个已有文件"
+这个原语，现在只有 WriteText / WriteStreamAsync），以及 `.write-test-` 开头的可写性探针。
 
 **安装根目录下那个 `.Launcher` 数据目录名只认一处**：一律用 `core/LanMountainDesktop.Core/Deployment/DeploymentLayout.cs`
 的 `LauncherStateDirectoryName`，不要在 Core / 宿主 / 启动器里再抄字面量（该类注释本来就写着"禁止在任何一侧硬编码"，

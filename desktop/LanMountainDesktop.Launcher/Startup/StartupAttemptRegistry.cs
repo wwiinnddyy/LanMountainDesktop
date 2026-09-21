@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using LanMountainDesktop.Launcher.Models;
 using LanMountainDesktop.Shared.Contracts.Launcher;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanMountainDesktop.Launcher.Startup;
 
@@ -477,7 +478,10 @@ internal sealed class StartupAttemptRegistry
             Directory.CreateDirectory(directory);
         }
 
-        File.WriteAllText(_statePath, JsonSerializer.Serialize(record, AppJsonContext.Default.StartupAttemptRecord));
+        AtomicFileWriter.WriteText(
+            _statePath,
+            JsonSerializer.Serialize(record, AppJsonContext.Default.StartupAttemptRecord),
+            "StartupAttempt");
     }
 
     private static bool IsAttachable(StartupAttemptRecord record)

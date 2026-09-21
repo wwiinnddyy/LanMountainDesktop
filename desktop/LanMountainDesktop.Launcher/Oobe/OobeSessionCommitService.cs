@@ -1,5 +1,6 @@
 using System.Text.Json;
 using LanMountainDesktop.Launcher.Models;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanMountainDesktop.Launcher.Oobe;
 
@@ -60,7 +61,7 @@ internal sealed class OobeSessionCommitService
 
             var privacyConfigPath = Path.Combine(launcherDataPath, "privacy-config.json");
             var privacyJson = JsonSerializer.Serialize(draft.PrivacyConfig, AppJsonContext.Default.PrivacyConfig);
-            File.WriteAllText(privacyConfigPath, privacyJson);
+            AtomicFileWriter.WriteText(privacyConfigPath, privacyJson, "OOBE");
 
             var agreementService = new PrivacyAgreementService(launcherDataPath);
             if (!agreementService.SaveAgreement(

@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using LanMountainDesktop.Launcher.Models;
 using LanMountainDesktop.Launcher.Shell;
+using LanMountainDesktop.Shared.IO;
 namespace LanMountainDesktop.Launcher;
 
 public static class Program
@@ -15,6 +16,9 @@ public static class Program
         var commandContext = CommandContext.FromArgs(args);
         var execution = LauncherExecutionContext.Capture();
         Logger.Initialize();
+        // Core 的原子写盘/重试不带日志器（宿主、启动器、安装器共用一个类），在这接上启动器自己的。
+        FileOperationRetryHelper.FailureNotice =
+            (category, message, exception) => Logger.Warn($"[{category}] {message} Error='{exception.Message}'.");
         Logger.Info(
             $"Program entry. Command='{commandContext.Command}'; SubCommand='{commandContext.SubCommand}'; " +
             $"IsGuiMode={commandContext.IsGuiCommand}; IsDebugMode={commandContext.IsDebugMode}; " +

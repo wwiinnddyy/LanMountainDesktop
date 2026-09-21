@@ -1,6 +1,7 @@
 using System.Text.Json;
 using LanMountainDesktop.Launcher.Models;
 using LanMountainDesktop.Shared.Contracts.Deployment;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanMountainDesktop.Launcher.Infrastructure;
 
@@ -202,7 +203,7 @@ internal sealed class DataLocationResolver
 
             var configPath = ResolveConfigPath();
             var json = JsonSerializer.Serialize(config, AppJsonContext.Default.DataLocationConfig);
-            File.WriteAllText(configPath, json);
+            AtomicFileWriter.WriteText(configPath, json, "DataLocation");
             return true;
         }
         catch (Exception ex)

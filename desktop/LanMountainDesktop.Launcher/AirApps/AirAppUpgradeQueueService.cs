@@ -1,6 +1,7 @@
 using System.Text.Json;
 using LanMountainDesktop.AirAppPackaging;
 using LanMountainDesktop.Launcher.Models;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanMountainDesktop.Launcher.AirApps;
 
@@ -64,7 +65,10 @@ internal sealed class AirAppUpgradeQueueService
         }
         else
         {
-            File.WriteAllText(pendingPath, JsonSerializer.Serialize(remaining, AppJsonContext.Default.Options));
+            AtomicFileWriter.WriteText(
+                pendingPath,
+                JsonSerializer.Serialize(remaining, AppJsonContext.Default.Options),
+                "AirAppUpgrade");
         }
 
         return new LauncherResult

@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanMountainDesktop.Shared.Contracts.Privacy;
 
@@ -70,18 +71,10 @@ public sealed partial class PrivacyDeviceIdentityProvider : IPrivacyDeviceIdenti
 
     private void Save(PrivacyDeviceIdentityDocument document)
     {
-        var directory = Path.GetDirectoryName(_identityPath);
-        if (!string.IsNullOrWhiteSpace(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-
-        var tempPath = $"{_identityPath}.{Guid.NewGuid():N}.tmp";
         var json = JsonSerializer.Serialize(
             document,
             PrivacyDeviceIdentityJsonContext.Default.PrivacyDeviceIdentityDocument);
-        File.WriteAllText(tempPath, json);
-        File.Move(tempPath, _identityPath, overwrite: true);
+        AtomicFileWriter.WriteText(_identityPath, json, "PrivacyDeviceIdentity");
     }
 
     private static string GenerateDeviceId()

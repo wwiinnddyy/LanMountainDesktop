@@ -1,3 +1,5 @@
+using LanMountainDesktop.Shared.IO;
+
 namespace LanMountainDesktop.Launcher.Infrastructure;
 
 internal sealed record LauncherDebugSettings(bool DevModeEnabled, string? CustomHostPath);
@@ -29,8 +31,11 @@ internal static class LauncherDebugSettingsStore
         try
         {
             Directory.CreateDirectory(ConfigBaseDirectory);
-            File.WriteAllText(GetPath(DevModeFileName), settings.DevModeEnabled.ToString());
-            File.WriteAllText(GetPath(CustomHostPathFileName), settings.CustomHostPath ?? string.Empty);
+            AtomicFileWriter.WriteText(GetPath(DevModeFileName), settings.DevModeEnabled.ToString(), "LauncherDebug");
+            AtomicFileWriter.WriteText(
+                GetPath(CustomHostPathFileName),
+                settings.CustomHostPath ?? string.Empty,
+                "LauncherDebug");
         }
         catch (Exception ex)
         {

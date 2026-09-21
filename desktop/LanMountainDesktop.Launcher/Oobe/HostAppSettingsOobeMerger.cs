@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using LanMountainDesktop.Shared.Contracts.Launcher;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanMountainDesktop.Launcher.Oobe;
 
@@ -130,7 +131,7 @@ public static class HostAppSettingsOobeMerger
             : choices.ThemeMode;
 
         var options = new JsonSerializerOptions { WriteIndented = true };
-        File.WriteAllText(settingsPath, root.ToJsonString(options));
+        AtomicFileWriter.WriteText(settingsPath, root.ToJsonString(options), "OOBE");
     }
 
     private static bool ReadBool(JsonObject root, string key, bool defaultValue)

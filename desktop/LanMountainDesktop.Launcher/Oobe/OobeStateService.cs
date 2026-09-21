@@ -1,5 +1,6 @@
 using System.Text.Json;
 using LanMountainDesktop.Launcher.Models;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanMountainDesktop.Launcher.Oobe;
 
@@ -71,10 +72,8 @@ internal sealed class OobeStateService
                 LaunchSource = context.LaunchSource
             };
 
-            var tempPath = Path.Combine(stateDirectory, $"oobe-state.{Guid.NewGuid():N}.tmp");
             var json = JsonSerializer.Serialize(payload, AppJsonContext.Default.OobeStateFile);
-            File.WriteAllText(tempPath, json);
-            File.Move(tempPath, statePath, overwrite: true);
+            AtomicFileWriter.WriteText(statePath, json, "OOBE");
             TryDeleteLegacyMarker();
 
             Logger.Info(
