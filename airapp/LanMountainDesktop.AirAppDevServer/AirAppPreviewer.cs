@@ -80,16 +80,12 @@ public sealed class AirAppPreviewer
             return;
         }
 
-        Console.WriteLine($"📁 输出路径: {binPath}");
-        Console.WriteLine("🚀 启动预览窗口...");
-        Console.WriteLine();
-        Console.WriteLine("💡 提示: 关闭预览窗口以退出");
-        Console.WriteLine();
-
-        // TODO: 这里需要启动一个预览宿主应用
-        // 预览宿主会加载 AirApp 并显示指定的组件或窗口
-        Console.WriteLine("⚠️ 预览功能需要配合 LanMountainDesktop 宿主运行");
-        Console.WriteLine("   暂时请使用: dotnet run --project LanMountainDesktop.csproj -- --debug-airapp <path>");
+        // 这里曾经打印"启动预览窗口 / 关闭窗口以退出"，并让人用
+        // dotnet run ... -- --debug-airapp <path> —— 那个参数宿主根本不存在（全仓零命中）。
+        // 预览宿主至今没实现，所以这里只报事实，不编下一步。
+        Console.WriteLine($"📁 构建输出: {binPath}");
+        Console.WriteLine($"🔍 要预览的是 {type} '{id}'，但预览宿主还没实现（见本方法注释）；");
+        Console.WriteLine("   本命令到此为止只负责确认清单与构建输出，不会打开任何窗口。");
 
         await Task.CompletedTask;
     }

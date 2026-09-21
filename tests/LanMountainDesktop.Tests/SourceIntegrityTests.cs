@@ -795,6 +795,50 @@ public sealed class SourceIntegrityTests
             $"{offenders.Count} 处绕开统一入口的主题资源读取：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
     }
 
+    /// <summary>
+    /// <c>airapp dev/preview</c> 不许再声称自己在监听什么。它实际只做"构建 + 文件监视"，
+    /// 但曾打印 `预览地址: http://localhost:{port}` 并让作者去用一个宿主根本没有的参数
+    /// <c>--debug-airapp</c> —— 照着做的人半天得不到任何结果，还以为是自己的包坏了。
+    /// </summary>
+    [Fact]
+    public void AirAppDevServer_DoesNotClaimAPreviewEndpoint()
+    {
+        var directory = Path.Combine(RepoRoot, "airapp", "LanMountainDesktop.AirAppDevServer");
+        if (!Directory.Exists(directory))
+        {
+            return;
+        }
+
+        string[] forbidden = ["http://localhost", "--debug-airapp", "\"--port\""];
+        var offenders = new List<string>();
+
+        foreach (var file in Directory.EnumerateFiles(directory, "*.cs", SearchOption.AllDirectories)
+                     .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                     .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)))
+        {
+            var lines = File.ReadAllLines(file);
+            for (var index = 0; index < lines.Length; index++)
+            {
+                // 注释里讲"当年打印过 localhost"是这段历史的一部分，只拦真代码。
+                var trimmed = lines[index].AsSpan().TrimStart();
+                if (trimmed.StartsWith("//") || trimmed.StartsWith('*'))
+                {
+                    continue;
+                }
+
+                var hit = forbidden.FirstOrDefault(marker => lines[index].Contains(marker, StringComparison.Ordinal));
+                if (hit is not null)
+                {
+                    offenders.Add($"{RelativeToRepo(file)}:{index + 1} 声称了不存在的监听（{hit}）");
+                }
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 处假承诺：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
     private static bool IsHostProjectFile(string file) => RelativeToRepo(file)
         .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
         .StartsWith($"desktop{Path.DirectorySeparatorChar}LanMountainDesktop{Path.DirectorySeparatorChar}", StringComparison.Ordinal);

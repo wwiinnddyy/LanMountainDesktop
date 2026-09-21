@@ -4,8 +4,8 @@ using System.Diagnostics;
 namespace LanMountainDesktop.AirAppDevServer;
 
 /// <summary>
-/// AirApp 开发服务器主程序
-/// 提供热重载、实时预览等开发功能
+/// AirApp 开发工具入口：dev = 改文件自动重建；preview = 报清单与构建输出；package = 打 .laapp。
+/// 三个命令都不开端口、不起窗口。
 /// </summary>
 class Program
 {
@@ -21,30 +21,23 @@ class Program
             DefaultValueFactory = _ => Directory.GetCurrentDirectory(),
             Recursive = true
         };
-        var portOption = new Option<int>("--port")
-        {
-            Description = "开发服务器端口",
-            DefaultValueFactory = _ => 5000
-        };
         var verboseOption = new Option<bool>("--verbose", "-v")
         {
             Description = "显示详细日志"
         };
 
         rootCommand.Options.Add(projectPathOption);
-        devCommand.Options.Add(portOption);
         devCommand.Options.Add(verboseOption);
 
         devCommand.SetAction(async parseResult =>
         {
             await RunDevServerAsync(
                 parseResult.GetValue(projectPathOption) ?? Directory.GetCurrentDirectory(),
-                parseResult.GetValue(portOption),
                 parseResult.GetValue(verboseOption));
         });
 
         // 预览命令
-        var previewCommand = new Command("preview", "预览 AirApp（无需安装到宿主）");
+        var previewCommand = new Command("preview", "列出 AirApp 清单声明的组件/窗口并确认构建输出（不会打开窗口）");
         var componentOption = new Option<string?>("--component", "-c")
         {
             Description = "要预览的组件 ID"
@@ -88,21 +81,20 @@ class Program
         return await rootCommand.Parse(args).InvokeAsync();
     }
 
-    static async Task RunDevServerAsync(string projectPath, int port, bool verbose)
+    static async Task RunDevServerAsync(string projectPath, bool verbose)
     {
-        Console.WriteLine("🚀 启动 AirApp 开发服务器...");
+        Console.WriteLine("🔨 AirApp 开发监视（改文件自动重建）...");
         Console.WriteLine($"📁 项目路径: {projectPath}");
-        Console.WriteLine($"🔌 端口: {port}");
         Console.WriteLine();
 
-        var server = new AirAppDevServer(projectPath, port, verbose);
+        var server = new AirAppDevServer(projectPath, verbose);
         await server.StartAsync();
 
         Console.WriteLine();
-        Console.WriteLine("✅ 开发服务器已启动");
-        Console.WriteLine($"🌐 预览地址: http://localhost:{port}");
+        Console.WriteLine("✅ 监视已启动");
+        Console.WriteLine("本命令只做构建与监视，不开任何端口；要看效果请把产物装进宿主（package 命令或宿主开发模式）。");
         Console.WriteLine();
-        Console.WriteLine("按 Ctrl+C 停止服务器...");
+        Console.WriteLine("按 Ctrl+C 停止...");
         Console.WriteLine();
 
         // 等待取消信号

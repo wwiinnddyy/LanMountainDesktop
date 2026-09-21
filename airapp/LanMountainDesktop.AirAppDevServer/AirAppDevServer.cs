@@ -5,23 +5,22 @@ using Microsoft.Build.Execution;
 namespace LanMountainDesktop.AirAppDevServer;
 
 /// <summary>
-/// AirApp 开发服务器
-/// 提供文件监视、自动编译、热重载功能
+/// AirApp 开发监视器：改文件 → 自动重建。
+/// 名字里的 "Server" 只有"常驻监视"这一层意思 —— 它不开端口、不预览，
+/// 之前 CLI 打印的 http://localhost:N 是本类根本没有的监听，已删。
 /// </summary>
 public sealed class AirAppDevServer
 {
     private readonly string _projectPath;
-    private readonly int _port;
     private readonly bool _verbose;
     private FileSystemWatcher? _watcher;
     private DateTime _lastBuildTime = DateTime.MinValue;
     private readonly object _buildLock = new();
     private bool _isBuilding;
 
-    public AirAppDevServer(string projectPath, int port, bool verbose)
+    public AirAppDevServer(string projectPath, bool verbose)
     {
         _projectPath = Path.GetFullPath(projectPath);
-        _port = port;
         _verbose = verbose;
     }
 
