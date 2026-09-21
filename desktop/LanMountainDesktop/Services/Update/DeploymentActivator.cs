@@ -1,4 +1,5 @@
 using LanMountainDesktop.Shared.Contracts.Update;
+using LanMountainDesktop.Shared.Contracts.Deployment;
 
 namespace LanMountainDesktop.Services.Update;
 
@@ -6,11 +7,11 @@ internal sealed class DeploymentActivator(AppDeploymentLocator deploymentLocator
 {
     public void Activate(string fromDeployment, string toDeployment)
     {
-        var toCurrent = Path.Combine(toDeployment, ".current");
-        var fromCurrent = Path.Combine(fromDeployment, ".current");
-        var fromDestroy = Path.Combine(fromDeployment, ".destroy");
-        var toDestroy = Path.Combine(toDeployment, ".destroy");
-        var toPartial = Path.Combine(toDeployment, ".partial");
+        var toCurrent = Path.Combine(toDeployment, DeploymentLayout.CurrentMarkerFileName);
+        var fromCurrent = Path.Combine(fromDeployment, DeploymentLayout.CurrentMarkerFileName);
+        var fromDestroy = Path.Combine(fromDeployment, DeploymentLayout.DestroyMarkerFileName);
+        var toDestroy = Path.Combine(toDeployment, DeploymentLayout.DestroyMarkerFileName);
+        var toPartial = Path.Combine(toDeployment, DeploymentLayout.PartialMarkerFileName);
 
         File.WriteAllText(toCurrent, string.Empty);
         if (File.Exists(toDestroy)) File.Delete(toDestroy);
@@ -34,10 +35,10 @@ internal sealed class DeploymentActivator(AppDeploymentLocator deploymentLocator
                 return new RollbackAttemptResult(false, "Source deployment is missing.");
             }
 
-            var destroyMarker = Path.Combine(snapshot.SourceDirectory, ".destroy");
+            var destroyMarker = Path.Combine(snapshot.SourceDirectory, DeploymentLayout.DestroyMarkerFileName);
             if (File.Exists(destroyMarker)) File.Delete(destroyMarker);
 
-            var currentMarker = Path.Combine(snapshot.SourceDirectory, ".current");
+            var currentMarker = Path.Combine(snapshot.SourceDirectory, DeploymentLayout.CurrentMarkerFileName);
             if (!File.Exists(currentMarker)) File.WriteAllText(currentMarker, string.Empty);
 
             return new RollbackAttemptResult(true, null);

@@ -8,6 +8,8 @@ namespace LanMountainDesktop.Shared.Contracts.Deployment;
 /// 部署目录布局的单一权威约定。
 /// 安装器（LanDesktopPLONDS.installer）与启动器（LanMountainDesktop.Launcher）
 /// 必须共同引用本类，禁止在任何一侧硬编码这些标记文件名或目录前缀。
+/// 这条由 <c>SourceIntegrityTests.DeploymentMarkerFileNames_LiveInExactlyOnePlace</c> 把关（2026-09-22 之前
+/// 这里只有一句注释，宿主与 Core 里实际攒了 35 处字面量）。
 /// </summary>
 public static class DeploymentLayout
 {

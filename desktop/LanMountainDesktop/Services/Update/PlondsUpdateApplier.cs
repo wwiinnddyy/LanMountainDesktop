@@ -1,6 +1,7 @@
 using System.Text.Json;
 using LanMountainDesktop.Shared.Contracts.Update;
 using LanMountainDesktop.Services.Plonds;
+using LanMountainDesktop.Shared.Contracts.Deployment;
 
 namespace LanMountainDesktop.Services.Update;
 
@@ -83,7 +84,7 @@ internal sealed class PlondsUpdateApplier(
                         && string.Equals(existingCheckpoint.TargetVersion, targetVersion, StringComparison.OrdinalIgnoreCase)
                         && string.Equals(existingCheckpoint.SourceDirectory ?? string.Empty, currentDeployment ?? string.Empty, StringComparison.OrdinalIgnoreCase)
                         && Directory.Exists(existingCheckpoint.TargetDirectory)
-                        && File.Exists(Path.Combine(existingCheckpoint.TargetDirectory, ".partial"));
+                        && File.Exists(Path.Combine(existingCheckpoint.TargetDirectory, DeploymentLayout.PartialMarkerFileName));
 
         if (existingCheckpoint is not null && !canResume)
         {
@@ -103,7 +104,7 @@ internal sealed class PlondsUpdateApplier(
                 if (Directory.Exists(targetDeployment)) Directory.Delete(targetDeployment, true);
                 progressReporter.ReportProgress(new InstallProgressReport(InstallStage.CreateTarget, "Creating target deployment...", 20, null, 0, fileEntries.Count));
                 Directory.CreateDirectory(targetDeployment);
-                File.WriteAllText(Path.Combine(targetDeployment, ".partial"), string.Empty);
+                File.WriteAllText(Path.Combine(targetDeployment, DeploymentLayout.PartialMarkerFileName), string.Empty);
             }
 
             checkpointStore.Save(checkpoint);
@@ -112,8 +113,8 @@ internal sealed class PlondsUpdateApplier(
 
             if (isInitialDeployment)
             {
-                File.WriteAllText(Path.Combine(targetDeployment, ".current"), string.Empty);
-                var partialMarker = Path.Combine(targetDeployment, ".partial");
+                File.WriteAllText(Path.Combine(targetDeployment, DeploymentLayout.CurrentMarkerFileName), string.Empty);
+                var partialMarker = Path.Combine(targetDeployment, DeploymentLayout.PartialMarkerFileName);
                 if (File.Exists(partialMarker)) File.Delete(partialMarker);
             }
             else

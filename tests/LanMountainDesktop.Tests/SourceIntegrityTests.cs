@@ -1,3 +1,4 @@
+using LanMountainDesktop.Shared.Contracts.Deployment;
 using System.Text.RegularExpressions;
 
 using Xunit;
@@ -1530,6 +1531,75 @@ public sealed class SourceIntegrityTests
         Assert.True(
             offenders.Count == 0,
             $"{offenders.Count} 处自带请求身份字面量：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
+    /// <summary>
+    /// 部署标记文件名（<c>.current</c> / <c>.partial</c> / <c>.destroy</c>）只准写
+    /// <c>core/.../Deployment/DeploymentLayout.cs</c> 那一处。这条规则 2026-09 就写在了那个类的注释里
+    /// （"禁止在任何一侧硬编码这些标记文件名"），却一条守卫都没配，于是宿主与 Core 里攒了 33 处字面量。
+    /// 这是跨二进制的磁盘契约：安装器打的标记、启动器与宿主按名字判"这份部署能不能用"，
+    /// 任何一侧改了拼写都不会编译报错——症状是把没复制完的目录当可用版本启动（或永远清不掉旧版本）。
+    /// 发布侧 PLONDS 工具链在另一份解决方案里、不引用 Core，所以它那份抄写单独按字节钉住（见方法末尾）。
+    /// </summary>
+    [Fact]
+    public void DeploymentMarkerFileNames_LiveInExactlyOnePlace()
+    {
+        var allowedFile = @"core\LanMountainDesktop.Core\Deployment\DeploymentLayout.cs";
+        var markers = new[] { "\".current\"", "\".partial\"", "\".destroy\"" };
+        var offenders = new List<string>();
+
+        foreach (var file in SourceFiles())
+        {
+            if (string.Equals(RelativeToRepo(file), allowedFile, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            foreach (var (line, number) in CodeLines(file))
+            {
+                foreach (var marker in markers)
+                {
+                    if (line.Contains(marker, StringComparison.Ordinal))
+                    {
+                        offenders.Add($"{RelativeToRepo(file)}:{number} 自带了部署标记 {marker}，请用 DeploymentLayout");
+                    }
+                }
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 处硬编码的部署标记文件名：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+
+        // 发布侧（PLONDS 工具链）是另一份解决方案，也不引用 Core，拿不到上面那三个常量，
+        // 所以它只能自己抄一份。这里不引入工程引用（那是构建结构决定，不是收口能顺手做的），
+        // 改成把它的字面量按字节钉住：任何一侧改拼写，这条都会红并点名两边。
+        var publisher = Path.Combine(
+            RepoRoot,
+            @"PenguinLogisticsOnlineNetworkDistributionSystem\src\Plonds.Core\Publishing\PayloadUtilities.cs");
+        Assert.True(
+            File.Exists(publisher),
+            $"找不到发布侧的标记判定 {RelativeToRepo(publisher)}；它搬走或改名了，请把上面那段契约检查一起挪过去，别让它静默失效");
+
+        var publisherSource = File.ReadAllText(publisher);
+        var diverged = new List<string>();
+        foreach (var (name, value) in new[]
+                 {
+                     ("CurrentMarkerFileName", DeploymentLayout.CurrentMarkerFileName),
+                     ("PartialMarkerFileName", DeploymentLayout.PartialMarkerFileName),
+                     ("DestroyMarkerFileName", DeploymentLayout.DestroyMarkerFileName),
+                 })
+        {
+            if (!publisherSource.Contains("\"" + value + "\"", StringComparison.Ordinal))
+            {
+                diverged.Add($"{name} = \"{value}\"");
+            }
+        }
+
+        Assert.True(
+            diverged.Count == 0,
+            $"发布侧与部署契约对不上，改一边另一边不会编译报错，只会把没复制完的目录当可用版本启动："
+            + $"{Environment.NewLine}{string.Join(Environment.NewLine, diverged)}");
     }
 
     private static IEnumerable<(string Line, int Number)> CodeLines(string file)

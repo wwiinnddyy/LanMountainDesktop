@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json;
+using LanMountainDesktop.Shared.Contracts.Deployment;
 
 namespace LanMountainDesktop.Shared.Contracts.Launcher;
 
@@ -291,12 +292,12 @@ public static class AppVersionProvider
         try
         {
             var candidates = Directory.GetDirectories(packageRoot, "app-*", SearchOption.TopDirectoryOnly)
-                .Where(path => !File.Exists(Path.Combine(path, ".destroy")))
-                .Where(path => !File.Exists(Path.Combine(path, ".partial")))
+                .Where(path => !File.Exists(Path.Combine(path, DeploymentLayout.DestroyMarkerFileName)))
+                .Where(path => !File.Exists(Path.Combine(path, DeploymentLayout.PartialMarkerFileName)))
                 .Select(path => new
                 {
                     Path = path,
-                    IsCurrent = File.Exists(Path.Combine(path, ".current")),
+                    IsCurrent = File.Exists(Path.Combine(path, DeploymentLayout.CurrentMarkerFileName)),
                     HasExecutable = string.IsNullOrWhiteSpace(executableName) || File.Exists(Path.Combine(path, executableName)),
                     Version = TryParseVersionFromDeploymentDirectory(path)
                 })

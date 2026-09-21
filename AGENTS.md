@@ -299,6 +299,17 @@ helper 住在 Core 是因为写同一批磁盘文件的是三个进程（宿主�
 唯一保留的字面量是 `OobeStateService` 里改名前的 `.launcher/state`（只读旧数据，与 `Launcher/state` 不是同一个目录）。
 守卫 `SourceIntegrityTests.LauncherStateDirectoryName_LivesInExactlyOnePlace`。
 
+**部署标记文件名同样只认那一处**：`.current` / `.partial` / `.destroy` 一律用 `DeploymentLayout` 的
+`CurrentMarkerFileName` / `PartialMarkerFileName` / `DestroyMarkerFileName`。2026-09-22 量出来宿主与 Core 里
+攒了 **35 处字面量**（`AppVersionProvider`、`PlondsPreparedPackageInstaller`、`AppDeploymentLocator`、
+`DeploymentActivator`、`PlondsUpdateApplier` 五个文件），而这个类的注释从 2026-09 起就写着"禁止在任何一侧硬编码"。
+**写在类注释里的规则如果没配守卫，它就只是一句愿望**——同一条注释既管住了安装器（用了常量）也管不住宿主（抄了 35 遍）。
+守卫 `SourceIntegrityTests.DeploymentMarkerFileNames_LiveInExactlyOnePlace`；它另外把**发布侧**
+`PenguinLogisticsOnlineNetworkDistributionSystem/src/Plonds.Core/Publishing/PayloadUtilities.cs`
+的同一组字面量按字节钉住：发布工具链是另一份解决方案、不引用 Core，拿不到那三个常量，
+所以这里没有引入工程引用（那是构建结构决定，等拍板），改成"两边拼写一旦不同就红并点名两边"。
+这条也是哨兵：发布侧那个文件搬走或改名，守卫会直接要求把检查一起挪过去，不让它静默失效。
+
 **崩溃转储的磁盘契约只认一处**：宿主崩溃时写 `LocalApplicationData/LanMountainDesktop/crashes/`，
 启动器与错误窗口再读它——两个二进制之间没有共享类型，全靠 `crashes` / `crash-*.txt` / `latest.txt`
 三个名字逐字对齐。收口前这三个名字在 4 个文件里各抄一份，抄错一个字母的症状是崩溃对话框什么都不显示

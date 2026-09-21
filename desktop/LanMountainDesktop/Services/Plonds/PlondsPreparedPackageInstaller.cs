@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using LanMountainDesktop.Shared.Contracts.Update;
+using LanMountainDesktop.Shared.Contracts.Deployment;
 
 namespace LanMountainDesktop.Services.Plonds;
 
@@ -233,7 +234,7 @@ internal sealed class PlondsPreparedPackageInstaller
         }
 
         Directory.CreateDirectory(targetDeployment);
-        File.WriteAllText(Path.Combine(targetDeployment, ".partial"), string.Empty);
+        File.WriteAllText(Path.Combine(targetDeployment, DeploymentLayout.PartialMarkerFileName), string.Empty);
     }
 
     private static void CopyDirectory(
@@ -274,14 +275,14 @@ internal sealed class PlondsPreparedPackageInstaller
 
         var executable = OperatingSystem.IsWindows() ? "LanMountainDesktop.exe" : "LanMountainDesktop";
         return Directory.GetDirectories(launcherRoot, "app-*", SearchOption.TopDirectoryOnly)
-            .Where(path => !File.Exists(Path.Combine(path, ".destroy")))
-            .Where(path => !File.Exists(Path.Combine(path, ".partial")))
-            .Where(path => File.Exists(Path.Combine(path, executable)) || File.Exists(Path.Combine(path, ".current")))
+            .Where(path => !File.Exists(Path.Combine(path, DeploymentLayout.DestroyMarkerFileName)))
+            .Where(path => !File.Exists(Path.Combine(path, DeploymentLayout.PartialMarkerFileName)))
+            .Where(path => File.Exists(Path.Combine(path, executable)) || File.Exists(Path.Combine(path, DeploymentLayout.CurrentMarkerFileName)))
             .Select(path => new
             {
                 Path = path,
                 Version = ParseVersionFromDirectory(path),
-                HasCurrent = File.Exists(Path.Combine(path, ".current"))
+                HasCurrent = File.Exists(Path.Combine(path, DeploymentLayout.CurrentMarkerFileName))
             })
             .OrderBy(x => x.HasCurrent ? 0 : 1)
             .ThenByDescending(x => x.Version)
@@ -342,14 +343,14 @@ internal sealed class PlondsPreparedPackageInstaller
 
     private static void ActivateDeployment(string? currentDeployment, string targetDeployment)
     {
-        File.WriteAllText(Path.Combine(targetDeployment, ".current"), string.Empty);
-        TryDeleteFile(Path.Combine(targetDeployment, ".partial"));
-        TryDeleteFile(Path.Combine(targetDeployment, ".destroy"));
+        File.WriteAllText(Path.Combine(targetDeployment, DeploymentLayout.CurrentMarkerFileName), string.Empty);
+        TryDeleteFile(Path.Combine(targetDeployment, DeploymentLayout.PartialMarkerFileName));
+        TryDeleteFile(Path.Combine(targetDeployment, DeploymentLayout.DestroyMarkerFileName));
 
         if (!string.IsNullOrWhiteSpace(currentDeployment) && Directory.Exists(currentDeployment))
         {
-            TryDeleteFile(Path.Combine(currentDeployment, ".current"));
-            File.WriteAllText(Path.Combine(currentDeployment, ".destroy"), string.Empty);
+            TryDeleteFile(Path.Combine(currentDeployment, DeploymentLayout.CurrentMarkerFileName));
+            File.WriteAllText(Path.Combine(currentDeployment, DeploymentLayout.DestroyMarkerFileName), string.Empty);
         }
     }
 
@@ -391,7 +392,7 @@ internal sealed class PlondsPreparedPackageInstaller
 
     private static bool IsDeploymentMarker(string relativePath)
     {
-        return relativePath is ".current" or ".partial" or ".destroy";
+        return relativePath is DeploymentLayout.CurrentMarkerFileName or DeploymentLayout.PartialMarkerFileName or DeploymentLayout.DestroyMarkerFileName;
     }
 
     private static string SanitizePathSegment(string value)

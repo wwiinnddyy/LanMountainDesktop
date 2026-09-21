@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using LanMountainDesktop.Shared.Contracts.Update;
+using LanMountainDesktop.Shared.Contracts.Deployment;
 
 namespace LanMountainDesktop.Services.Update;
 
@@ -19,14 +20,14 @@ internal sealed class AppDeploymentLocator(string launcherRoot)
         var candidates = Directory.GetDirectories(LauncherRoot, "app-*", SearchOption.TopDirectoryOnly);
 
         return candidates
-            .Where(path => !File.Exists(Path.Combine(path, ".destroy")))
-            .Where(path => !File.Exists(Path.Combine(path, ".partial")))
+            .Where(path => !File.Exists(Path.Combine(path, DeploymentLayout.DestroyMarkerFileName)))
+            .Where(path => !File.Exists(Path.Combine(path, DeploymentLayout.PartialMarkerFileName)))
             .Where(path => File.Exists(Path.Combine(path, executable)))
             .Select(path => new
             {
                 Path = path,
                 Version = ParseVersionFromDirectory(path),
-                HasCurrent = File.Exists(Path.Combine(path, ".current"))
+                HasCurrent = File.Exists(Path.Combine(path, DeploymentLayout.CurrentMarkerFileName))
             })
             .OrderBy(x => x.HasCurrent ? 0 : 1)
             .ThenByDescending(x => x.Version)
@@ -67,13 +68,13 @@ internal sealed class AppDeploymentLocator(string launcherRoot)
 
             var candidates = Directory.GetDirectories(LauncherRoot, "app-*", SearchOption.TopDirectoryOnly);
             var validDeployments = candidates
-                .Where(path => !File.Exists(Path.Combine(path, ".partial")))
+                .Where(path => !File.Exists(Path.Combine(path, DeploymentLayout.PartialMarkerFileName)))
                 .Select(path => new
                 {
                     Path = path,
                     Version = ParseVersionFromDirectory(path),
-                    IsDestroyed = File.Exists(Path.Combine(path, ".destroy")),
-                    IsCurrent = File.Exists(Path.Combine(path, ".current"))
+                    IsDestroyed = File.Exists(Path.Combine(path, DeploymentLayout.DestroyMarkerFileName)),
+                    IsCurrent = File.Exists(Path.Combine(path, DeploymentLayout.CurrentMarkerFileName))
                 })
                 .OrderByDescending(item => item.Version)
                 .ToList();
@@ -121,7 +122,7 @@ internal sealed class AppDeploymentLocator(string launcherRoot)
                 {
                     if (deployment.IsDestroyed)
                     {
-                        try { File.Delete(Path.Combine(deployment.Path, ".destroy")); } catch { }
+                        try { File.Delete(Path.Combine(deployment.Path, DeploymentLayout.DestroyMarkerFileName)); } catch { }
                     }
 
                     continue;
@@ -129,7 +130,7 @@ internal sealed class AppDeploymentLocator(string launcherRoot)
 
                 if (!deployment.IsDestroyed)
                 {
-                    try { File.WriteAllText(Path.Combine(deployment.Path, ".destroy"), string.Empty); } catch { }
+                    try { File.WriteAllText(Path.Combine(deployment.Path, DeploymentLayout.DestroyMarkerFileName), string.Empty); } catch { }
                 }
 
                 try { Directory.Delete(deployment.Path, true); } catch { }
