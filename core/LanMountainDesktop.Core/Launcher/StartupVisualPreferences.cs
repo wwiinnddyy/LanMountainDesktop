@@ -71,7 +71,7 @@ public static class StartupVisualPreferencesResolver
     public static string GetDefaultSettingsPath()
     {
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        return Path.Combine(appData, UserDataRoot.FolderName, "settings.json");
+        return Path.Combine(appData, UserDataRoot.FolderName, UserDataRoot.SettingsFileName);
     }
 
     private static bool? TryGetBoolean(JsonElement root, string propertyName)

@@ -14,14 +14,14 @@ public static class UserDataRoot
     /// <summary>数据根目录名本身，给"还要再往下拼子目录"的调用点用。</summary>
     public const string FolderName = "LanMountainDesktop";
 
-    /// <summary>settings.json 的文件名，宿主读、首启向导写。</summary>
+    /// <summary>
+    /// 主程序设置文件名。宿主读写、首启向导写、Core 的启动偏好读——三个二进制指向的是同一个文件，
+    /// 但各自的目录不同（数据根 / 便携根），所以这里只统一名字。
+    /// </summary>
     public const string SettingsFileName = "settings.json";
 
     /// <summary>完整的数据根；拿不到 LocalApplicationData 时返回空串，由调用点决定兜底。</summary>
     public static string Resolve() => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         FolderName);
-
-    /// <summary><c>{数据根}/settings.json</c>。</summary>
-    public static string ResolveSettingsPath() => Path.Combine(Resolve(), SettingsFileName);
 }

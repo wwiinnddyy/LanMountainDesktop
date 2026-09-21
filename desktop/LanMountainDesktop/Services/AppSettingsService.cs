@@ -1,4 +1,5 @@
 using System;
+using LanMountainDesktop.Shared.Data;
 using System.IO;
 using System.Text.Json;
 using LanMountainDesktop.Models;
@@ -29,7 +30,7 @@ public sealed class AppSettingsService
     public AppSettingsService()
     {
         var settingsDirectory = AppDataPathProvider.GetSettingsDirectory();
-        _settingsPath = Path.Combine(settingsDirectory, "settings.json");
+        _settingsPath = Path.Combine(settingsDirectory, UserDataRoot.SettingsFileName);
     }
 
     public AppSettingsSnapshot Load()

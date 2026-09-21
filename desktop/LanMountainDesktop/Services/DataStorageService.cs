@@ -1,4 +1,5 @@
 using System;
+using LanMountainDesktop.Shared.Data;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -24,7 +25,7 @@ public sealed class DataStorageService
 {
     private static readonly string[] SettingsRootFiles =
     [
-        "settings.json",
+            UserDataRoot.SettingsFileName,
         Settings.SettingsService.AirAppSettingsFileName,
         // 改名过渡期内两份都可能真实存在（首次加载前旧名还在），都要计入占用。
         Settings.SettingsService.LegacyAirAppSettingsFileName,

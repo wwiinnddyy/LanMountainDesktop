@@ -1,4 +1,5 @@
 using System;
+using LanMountainDesktop.Shared.Data;
 using System.IO;
 using System.Text.Json;
 using LanMountainDesktop.Services;
@@ -16,7 +17,7 @@ public sealed class ClockAirAppSettingsStore
     private readonly string _settingsPath;
 
     public ClockAirAppSettingsStore()
-        : this(Path.Combine(AppDataPathProvider.GetDataRoot(), "AirApps", "Clock", "settings.json"))
+        : this(Path.Combine(AppDataPathProvider.GetDataRoot(), "AirApps", "Clock", UserDataRoot.SettingsFileName))
     {
     }
 

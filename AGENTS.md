@@ -318,6 +318,10 @@ helper 住在 Core 是因为写同一批磁盘文件的是三个进程（宿主�
 `PublicAppInfoService` 里那个是应用显示名、`"LanMountainDesktop.exe"` 是 exe 名（用
 `DeploymentLayout.GetHostExecutableName()`）。守卫
 `SourceIntegrityTests.UserDataRootFolderName_LivesInExactlyOnePlace` 只拦"根是用户资料目录 + 拼了这个名字"的组合。
+**`settings.json` 这个文件名同样只认一处**：读写它的是三个二进制（宿主读写、首启向导写、Core 的启动偏好读），
+目录各不相同但文件名必须同一个；收口前字面量在生产代码里有 7 份，现在一律用
+`UserDataRoot.SettingsFileName`，守卫 `SourceIntegrityTests.SettingsFileName_LivesInExactlyOnePlace`。
+漂了的后果不是崩，而是"设置读不到、界面回到默认值"。
 
 **更新快照元数据只有一个模型**：`{数据根}/update/snapshots/*.json` 由宿主写、宿主与启动器各自读，
 一律用 `core/LanMountainDesktop.Core/Update/SnapshotMetadata.cs`（键名用显式 `[JsonPropertyName]` 钉住，

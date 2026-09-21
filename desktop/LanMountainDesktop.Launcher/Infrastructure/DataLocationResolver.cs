@@ -256,7 +256,7 @@ internal sealed class DataLocationResolver
 
         var markerFiles = new[]
         {
-            Path.Combine(desktopPath, "settings.json"),
+            Path.Combine(desktopPath, UserDataRoot.SettingsFileName),
             Path.Combine(desktopPath, "component-state.db"),
             Path.Combine(desktopPath, "app.db")
         };

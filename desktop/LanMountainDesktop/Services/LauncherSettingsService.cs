@@ -1,4 +1,5 @@
 using System;
+using LanMountainDesktop.Shared.Data;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -33,7 +34,7 @@ public sealed class LauncherSettingsService
     {
         var settingsDirectory = AppDataPathProvider.GetSettingsDirectory();
         _settingsPath = Path.Combine(settingsDirectory, "launcher-settings.json");
-        _legacyAppSettingsPath = Path.Combine(settingsDirectory, "settings.json");
+        _legacyAppSettingsPath = Path.Combine(settingsDirectory, UserDataRoot.SettingsFileName);
     }
 
     public LauncherSettingsSnapshot Load()

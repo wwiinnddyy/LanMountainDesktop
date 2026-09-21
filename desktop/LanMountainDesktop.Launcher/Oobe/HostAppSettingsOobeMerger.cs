@@ -1,4 +1,5 @@
 using System.Text.Json;
+using LanMountainDesktop.Shared.Data;
 using System.Text.Json.Nodes;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 using LanMountainDesktop.Shared.IO;
@@ -30,7 +31,7 @@ public static class HostAppSettingsOobeMerger
     public const string ThemeModeDarkValue = "dark";
 
     public static string GetSettingsFilePath(string dataRoot) =>
-        Path.Combine(Path.GetFullPath(dataRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)), "settings.json");
+        Path.Combine(Path.GetFullPath(dataRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)), UserDataRoot.SettingsFileName);
 
     public static HostAppSettingsStartupDefaults LoadStartupDefaults(string settingsPath)
     {
