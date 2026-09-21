@@ -23,10 +23,7 @@ namespace LanMountainDesktop.Views.Components;
 public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget
 {
     private static readonly Regex MultiWhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
-    private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationDataService();
-
-    private const double BaseCellSize = 48d;
-    private const int BaseWidthCells = 4;
+    private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationDataService();    private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 2;
     private const int MaxDisplayItemCount = 4;
     private static readonly IReadOnlyList<int> SupportedAutoRefreshIntervalsMinutes = RefreshIntervalCatalog.SupportedIntervalsMinutes;
@@ -45,7 +42,7 @@ public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget
     private IRecommendationInfoService _recommendationService = DefaultRecommendationService;
     private CancellationTokenSource? _refreshCts;
     private string _languageCode = LocalizationService.DefaultLanguageCode;
-    private double _currentCellSize = BaseCellSize;
+    private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private bool _isAttached;
     private bool _isRefreshing;
     private bool _autoRefreshEnabled = true;

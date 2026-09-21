@@ -30,7 +30,6 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
     };
 
     private const string RssUrl = "https://imjuya.github.io/juya-ai-daily/rss.xml";
-    private const double BaseCellSize = 48d;
     private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 4;
     private const int InitialLoadDays = 3;
@@ -39,7 +38,7 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
     private readonly List<DateTime> _loadedDates = new();
     private readonly List<DailyNewsView> _dailyViews = new();
     
-    private double _currentCellSize = BaseCellSize;
+    private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private bool _isAttached;
     private bool _isLoading;
     private bool _isNightVisual;

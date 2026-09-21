@@ -8,7 +8,6 @@ using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Update;
 using LanMountainDesktop.Services.AirAppMarket;
-using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Shared.Contracts.Update;
 
 namespace LanMountainDesktop.Services.Settings

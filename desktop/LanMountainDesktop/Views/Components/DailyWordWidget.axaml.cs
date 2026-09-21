@@ -19,10 +19,7 @@ namespace LanMountainDesktop.Views.Components;
 public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget
 {
     private static readonly Regex MultiWhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
-    private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationDataService();
-
-    private const double BaseCellSize = 48d;
-    private const int BaseWidthCells = 4;
+    private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationDataService();    private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 2;
     private static readonly IReadOnlyList<int> SupportedAutoRefreshIntervalsMinutes = RefreshIntervalCatalog.SupportedIntervalsMinutes;
 
@@ -39,7 +36,7 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
     private IRecommendationInfoService _recommendationService = DefaultRecommendationService;
     private CancellationTokenSource? _refreshCts;
     private string _languageCode = LocalizationService.DefaultLanguageCode;
-    private double _currentCellSize = BaseCellSize;
+    private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private bool _isAttached;
     private bool _isRefreshing;
     private bool _autoRefreshEnabled = true;
@@ -483,7 +480,7 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
 
     private double ResolveScale()
     {
-        var cellScale = Math.Clamp(_currentCellSize / BaseCellSize, 0.56, 2.0);
+        var cellScale = Math.Clamp(_currentCellSize / ComponentDesignMetrics.BaseCellSize, 0.56, 2.0);
         
         var widthCells = BaseWidthCells;
         var heightCells = BaseHeightCells;

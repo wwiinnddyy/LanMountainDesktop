@@ -1,6 +1,5 @@
 using Avalonia;
 using LanMountainDesktop.AirAppSdk;
-using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Shared.Contracts;
 using Xunit;
 

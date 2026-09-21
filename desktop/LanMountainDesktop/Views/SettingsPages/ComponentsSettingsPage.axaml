@@ -48,8 +48,8 @@
                         <TextBlock Text="{Binding ShortSideCellsLabel}"
                                    VerticalAlignment="Center" />
                         <Slider Grid.Column="1"
-                                Minimum="6"
-                                Maximum="96"
+                                Minimum="{Binding ShortSideCellsMinimum}"
+                                Maximum="{Binding ShortSideCellsMaximum}"
                                 IsSnapToTickEnabled="True"
                                 TickFrequency="1"
                                 Value="{Binding ShortSideCells}" />
@@ -65,8 +65,8 @@
                         <TextBlock Text="{Binding EdgeInsetPercentLabel}"
                                    VerticalAlignment="Center" />
                         <Slider Grid.Column="1"
-                                Minimum="0"
-                                Maximum="30"
+                                Minimum="{Binding EdgeInsetPercentMinimum}"
+                                Maximum="{Binding EdgeInsetPercentMaximum}"
                                 IsSnapToTickEnabled="True"
                                 TickFrequency="1"
                                 Value="{Binding EdgeInsetPercent}" />

@@ -46,10 +46,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
     };
 
     private const string BrowserUserAgent =
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36";
-
-    private const double BaseCellSize = 48d;
-    private const int BaseWidthCells = 4;
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36";    private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 2;
 
     private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationDataService();
@@ -67,7 +64,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
     private CancellationTokenSource? _refreshCts;
     private Bitmap? _currentArtworkBitmap;
     private string _languageCode = LocalizationService.DefaultLanguageCode;
-    private double _currentCellSize = BaseCellSize;
+    private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private bool _isAttached;
     private bool _isRefreshing;
     private string _componentId = BuiltInComponentIds.DesktopDailyArtwork;
@@ -737,7 +734,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
 
     private double ResolveScale()
     {
-        var cellScale = Math.Clamp(_currentCellSize / BaseCellSize, 0.62, 2.0);
+        var cellScale = Math.Clamp(_currentCellSize / ComponentDesignMetrics.BaseCellSize, 0.62, 2.0);
         var widthScale = Bounds.Width > 1
             ? Math.Clamp(Bounds.Width / Math.Max(1, _currentCellSize * BaseWidthCells), 0.56, 2.0)
             : 1;

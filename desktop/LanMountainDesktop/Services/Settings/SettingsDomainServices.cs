@@ -13,7 +13,6 @@ using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Plonds;
 using LanMountainDesktop.Services.Update;
-using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services.AirAppMarket;
 using LanMountainDesktop.Shared.Contracts.Update;
 

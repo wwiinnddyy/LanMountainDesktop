@@ -1324,6 +1324,165 @@ public sealed class SourceIntegrityTests
             $"{offenders.Count} 处硬编码的 settings.json 文件名：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
     }
 
+    /// <summary>
+    /// 组件自缩放的设计基准格子边长只有 <c>desktop/.../Views/Components/ComponentDesignMetrics.cs</c> 一处声明。
+    /// 收口前 12 个组件各自写了 <c>private const double BaseCellSize = 48d;</c>：改一处基准，
+    /// 其余 11 个组件在同一个网格里按旧基准缩放，症状是"某个卡片比别的胖一圈"，
+    /// 而且没人会想到去数 12 份。
+    /// </summary>
+    [Fact]
+    public void ComponentBaseCellSize_LivesInExactlyOnePlace()
+    {
+        var declRe = new Regex(@"(?:private|internal|public|protected)\s+(?:static\s+)?const\s+double\s+BaseCellSize\b");
+        var allowedFile = @"desktop\LanMountainDesktop\Views\Components\ComponentDesignMetrics.cs";
+
+        var offenders = new List<string>();
+        foreach (var file in SourceFiles())
+        {
+            if (string.Equals(RelativeToRepo(file), allowedFile, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            foreach (var (line, number) in CodeLines(file))
+            {
+                if (declRe.IsMatch(line))
+                {
+                    offenders.Add($"{RelativeToRepo(file)}:{number} 自己声明了 BaseCellSize，请用 ComponentDesignMetrics.BaseCellSize");
+                }
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 处重复声明的组件设计基准：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
+    /// <summary>
+    /// 网格密度/边缘留白的量程与默认值只在 <c>desktop/.../DesktopEditing/DesktopGridLimits.cs</c> 声明一份，
+    /// 并且设置页的滑杆必须绑 <c>ComponentsSettingsPageViewModel</c> 暴露的量程，不能在 .axaml 里另写数字。
+    /// 收口前这 6 个数在 <c>MainWindow</c>（含 partial 分片）、<c>FusedDesktopEditGridAdapter</c>、
+    /// <c>AppSettingsSnapshot</c> 默认值里各一份，滑杆又在 markup 里抄了第四份 6/96 与 0/30。
+    /// 漂了的症状不是崩，而是"滑杆拖到尽头网格不动"或"存进去的值被运行期悄悄钳掉"。
+    /// </summary>
+    [Fact]
+    public void DesktopGridLimits_LiveInExactlyOnePlace()
+    {
+        var declRe = new Regex(
+            @"(?:private|internal|public|protected)\s+(?:static\s+)?const\s+int\s+(MinShortSideCells|MaxShortSideCells|DefaultShortSideCells|MinEdgeInsetPercent|MaxEdgeInsetPercent|DefaultEdgeInsetPercent)\b");
+        var allowedFile = @"desktop\LanMountainDesktop\DesktopEditing\DesktopGridLimits.cs";
+
+        var offenders = new List<string>();
+        foreach (var file in SourceFiles())
+        {
+            if (string.Equals(RelativeToRepo(file), allowedFile, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            foreach (var (line, number) in CodeLines(file))
+            {
+                var match = declRe.Match(line);
+                if (match.Success)
+                {
+                    offenders.Add($"{RelativeToRepo(file)}:{number} 自己声明了 {match.Groups[1].Value}，请用 DesktopGridLimits");
+                }
+            }
+        }
+
+        var sliderMarkup = Path.Combine(
+            RepoRoot,
+            @"desktop\LanMountainDesktop\Views\SettingsPages\ComponentsSettingsPage.axaml".Replace('\\', Path.DirectorySeparatorChar));
+        Assert.True(File.Exists(sliderMarkup), $"找不到网格密度设置页 {RelativeToRepo(sliderMarkup)}");
+
+        foreach (var (line, number) in CodeLines(sliderMarkup))
+        {
+            if (Regex.IsMatch(line, @"(?:Minimum|Maximum)\s*=\s*""\d+"""))
+            {
+                offenders.Add($"{RelativeToRepo(sliderMarkup)}:{number} 滑杆量程写死了数字，请绑 ShortSideCellsMinimum/Maximum 或 EdgeInsetPercentMinimum/Maximum");
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 处重复的网格量程真源：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
+    /// <summary>
+    /// 同一个文件的前导 using 块里不许把同一条指令写两遍（编译器 CS0105）。
+    /// 看着无害，但它是 2026-09-21 那次 plugin→airapp 批量改名留下的疤：脚本按目录补 using，
+    /// 补了 26 处重复，把"这个文件到底依赖谁"读成了三行一样的话。
+    /// 只查前导块，因为 namespace 块内部的 using 只对自身生效，删掉兄弟块里的同名指令会真的改变解析结果。
+    /// </summary>
+    [Fact]
+    public void UsingDirectives_AreNotDeclaredTwiceInAFile()
+    {
+        var offenders = new List<string>();
+        foreach (var file in RepositoryCSharpFiles())
+        {
+            var seen = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (var (line, number) in RawLines(file))
+            {
+                var trimmed = line.Trim();
+                if (trimmed.Length == 0 || trimmed.StartsWith("//", StringComparison.Ordinal)
+                    || trimmed.StartsWith("/*", StringComparison.Ordinal) || trimmed[0] == '*')
+                {
+                    continue;
+                }
+
+                if (!trimmed.StartsWith("using ", StringComparison.Ordinal) || !trimmed.EndsWith(';'))
+                {
+                    break;
+                }
+
+                var normalized = Regex.Replace(trimmed, @"\s+", " ");
+                if (seen.TryGetValue(normalized, out var first))
+                {
+                    offenders.Add($"{RelativeToRepo(file)}:{number} 与第 {first} 行重复：{normalized}");
+                }
+                else
+                {
+                    seen[normalized] = number;
+                }
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 处重复的 using 指令：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
+    private static IEnumerable<(string Line, int Number)> CodeLines(string file)
+    {
+        var all = File.ReadAllLines(file);
+        for (var index = 0; index < all.Length; index++)
+        {
+            var trimmed = all[index].AsSpan().TrimStart();
+            if (trimmed.StartsWith("//") || trimmed.StartsWith('*'))
+            {
+                continue;
+            }
+
+            yield return (all[index], index + 1);
+        }
+    }
+
+    private static IEnumerable<(string Line, int Number)> RawLines(string file)
+    {
+        var all = File.ReadAllLines(file);
+        for (var index = 0; index < all.Length; index++)
+        {
+            yield return (all[index], index + 1);
+        }
+    }
+
+    private static IEnumerable<string> RepositoryCSharpFiles() => new[] { "core", "desktop", "tests", "airapp", "install", "mobile", "platform" }
+        .Select(part => Path.Combine(RepoRoot, part))
+        .Where(Directory.Exists)
+        .SelectMany(dir => Directory.EnumerateFiles(dir, "*.cs", SearchOption.AllDirectories))
+        .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+        .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase));
+
     private static bool IsHostProjectFile(string file) => RelativeToRepo(file)
         .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
         .StartsWith($"desktop{Path.DirectorySeparatorChar}LanMountainDesktop{Path.DirectorySeparatorChar}", StringComparison.Ordinal);

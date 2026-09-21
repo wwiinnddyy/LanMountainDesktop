@@ -14,6 +14,7 @@ using Avalonia.Threading;
 using FluentAvalonia.UI.Controls;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.AirAppSdk;
+using LanMountainDesktop.DesktopEditing;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Update;
 using LanMountainDesktop.Theme;
@@ -528,10 +529,10 @@ public partial class MainWindow : Window
 
             _targetShortSideCells = Math.Clamp(
                 snapshot.GridShortSideCells > 0 ? snapshot.GridShortSideCells : CalculateDefaultShortSideCellCountFromDpi(),
-                MinShortSideCells,
-                MaxShortSideCells);
+                DesktopGridLimits.MinShortSideCells,
+                DesktopGridLimits.MaxShortSideCells);
             _gridSpacingPreset = _gridSettingsService.NormalizeSpacingPreset(snapshot.GridSpacingPreset);
-            _desktopEdgeInsetPercent = Math.Clamp(snapshot.DesktopEdgeInsetPercent, MinEdgeInsetPercent, MaxEdgeInsetPercent);
+            _desktopEdgeInsetPercent = Math.Clamp(snapshot.DesktopEdgeInsetPercent, DesktopGridLimits.MinEdgeInsetPercent, DesktopGridLimits.MaxEdgeInsetPercent);
             _statusBarSpacingMode = NormalizeStatusBarSpacingMode(snapshot.StatusBarSpacingMode);
             _statusBarCustomSpacingPercent = Math.Clamp(snapshot.StatusBarCustomSpacingPercent, 0, 30);
             ApplyTaskbarSettings(snapshot);

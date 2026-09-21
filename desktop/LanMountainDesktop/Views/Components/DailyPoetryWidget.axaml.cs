@@ -39,10 +39,7 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
         '\u00B7'
     ];
     private static readonly HashSet<char> NaturalBreakCharSet = new(NaturalBreakChars);
-    private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationDataService();
-
-    private const double BaseCellSize = 48d;
-    private const int BaseWidthCells = 4;
+    private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationDataService();    private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 2;
     private const double MinPoetryFontSize = 8;
     private const double MinAuthorFontSize = 7;
@@ -407,7 +404,7 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
 
     private double ResolveScale()
     {
-        var cellScale = Math.Clamp(_currentCellSize / BaseCellSize, 0.52, 2.2);
+        var cellScale = Math.Clamp(_currentCellSize / ComponentDesignMetrics.BaseCellSize, 0.52, 2.2);
         var widthScale = Bounds.Width > 1
             ? Math.Clamp(Bounds.Width / Math.Max(1, _currentCellSize * BaseWidthCells), 0.52, 2.2)
             : 1;

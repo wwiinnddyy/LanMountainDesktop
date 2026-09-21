@@ -1,5 +1,4 @@
 using LanMountainDesktop.AirAppSdk;
-using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 

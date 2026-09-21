@@ -5,11 +5,8 @@ using System.Reflection;
 using Avalonia.Controls;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.ComponentSystem;
-using LanMountainDesktop.AirAppSdk;
-using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
-using LanMountainDesktop.AirAppSdk;
 
 namespace LanMountainDesktop.Views.Components;
 

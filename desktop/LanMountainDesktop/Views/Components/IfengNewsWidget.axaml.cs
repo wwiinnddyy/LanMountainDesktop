@@ -31,10 +31,7 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
     };
 
     private const string BrowserUserAgent =
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36";
-
-    private const double BaseCellSize = 48d;
-    private const int BaseWidthCells = 4;
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36";    private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 4;
     private const int MaxDisplayItemCount = 12;
     private static readonly IReadOnlyList<int> SupportedAutoRefreshIntervalsMinutes = RefreshIntervalCatalog.SupportedIntervalsMinutes;
@@ -55,7 +52,7 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
     private CancellationTokenSource? _refreshCts;
     private string _languageCode = LocalizationService.DefaultLanguageCode;
     private string _channelType = IfengNewsChannelTypes.Comprehensive;
-    private double _currentCellSize = BaseCellSize;
+    private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private bool _isAttached;
     private bool _isRefreshing;
     private bool _autoRefreshEnabled = true;
@@ -346,7 +343,7 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
         var imageHeight = Math.Clamp(imageWidth * 0.56, 46, 98);
         
         var baseTitleFont = 14;
-        var areaFactor = (totalWidth * totalHeight) / (BaseWidthCells * BaseCellSize * BaseHeightCells * BaseCellSize);
+        var areaFactor = (totalWidth * totalHeight) / (BaseWidthCells * ComponentDesignMetrics.BaseCellSize * BaseHeightCells * ComponentDesignMetrics.BaseCellSize);
         var adaptiveTitleFont = baseTitleFont * Math.Sqrt(Math.Clamp(areaFactor, 0.6, 2.5));
         var titleFont = Math.Clamp(adaptiveTitleFont, 11, 26);
 

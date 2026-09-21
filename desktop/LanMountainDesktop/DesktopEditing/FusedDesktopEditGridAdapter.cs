@@ -14,12 +14,6 @@ internal readonly record struct FusedDesktopEditGridContext(
 
 internal sealed class FusedDesktopEditGridAdapter
 {
-    private const int MinShortSideCells = 6;
-    private const int MaxShortSideCells = 96;
-    private const int DefaultShortSideCells = 12;
-    private const int MinEdgeInsetPercent = 0;
-    private const int MaxEdgeInsetPercent = 30;
-
     private readonly ISettingsFacadeService _settingsFacade;
 
     public FusedDesktopEditGridAdapter(ISettingsFacadeService settingsFacade)
@@ -37,12 +31,12 @@ internal sealed class FusedDesktopEditGridAdapter
 
         var state = _settingsFacade.Grid.Get();
         var shortSideCells = Math.Clamp(
-            state.ShortSideCells > 0 ? state.ShortSideCells : DefaultShortSideCells,
-            MinShortSideCells,
-            MaxShortSideCells);
+            state.ShortSideCells > 0 ? state.ShortSideCells : DesktopGridLimits.DefaultShortSideCells,
+            DesktopGridLimits.MinShortSideCells,
+            DesktopGridLimits.MaxShortSideCells);
         var spacingPreset = _settingsFacade.Grid.NormalizeSpacingPreset(state.SpacingPreset);
         var gapRatio = _settingsFacade.Grid.ResolveGapRatio(spacingPreset);
-        var edgeInsetPercent = Math.Clamp(state.EdgeInsetPercent, MinEdgeInsetPercent, MaxEdgeInsetPercent);
+        var edgeInsetPercent = Math.Clamp(state.EdgeInsetPercent, DesktopGridLimits.MinEdgeInsetPercent, DesktopGridLimits.MaxEdgeInsetPercent);
         var edgeInset = _settingsFacade.Grid.CalculateEdgeInset(
             viewportSize.Width,
             viewportSize.Height,

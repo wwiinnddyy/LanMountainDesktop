@@ -10,7 +10,6 @@ using Avalonia.Media;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.ComponentSystem.Extensions;
 using LanMountainDesktop.AirAppSdk;
-using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Views.Components;
 

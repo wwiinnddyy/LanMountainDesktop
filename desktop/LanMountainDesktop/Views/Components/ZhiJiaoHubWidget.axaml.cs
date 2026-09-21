@@ -24,9 +24,7 @@ public partial class ZhiJiaoHubWidget : UserControl,
     IDesktopComponentWidget,
     IRecommendationInfoAwareComponentWidget,
     IComponentSettingsContextAware
-{
-    private const double BaseCellSize = 48d;
-    private const double SwipeThreshold = 50;
+{    private const double SwipeThreshold = 50;
 
     private readonly DispatcherTimer _refreshTimer = new();
 
@@ -38,7 +36,7 @@ public partial class ZhiJiaoHubWidget : UserControl,
 
     private string _source = ZhiJiaoHubSources.ClassIsland;
     private string _mirrorSource = ZhiJiaoHubMirrorSources.Direct;
-    private double _currentCellSize = BaseCellSize;
+    private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private bool _isAttached;
     private bool _isInitializing;
     private bool _autoRefreshEnabled = true;
@@ -120,7 +118,7 @@ public partial class ZhiJiaoHubWidget : UserControl,
     public void ApplyCellSize(double cellSize)
     {
         _currentCellSize = Math.Max(1, cellSize);
-        var scale = _currentCellSize / BaseCellSize;
+        var scale = _currentCellSize / ComponentDesignMetrics.BaseCellSize;
 
         RootBorder.CornerRadius = new CornerRadius(Math.Clamp(12 * scale, 4, 24));
 

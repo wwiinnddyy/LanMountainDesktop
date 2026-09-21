@@ -8,7 +8,6 @@ using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Platform.Windows;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
-using LanMountainDesktop.AirAppSdk;
 
 namespace LanMountainDesktop.Views;
 

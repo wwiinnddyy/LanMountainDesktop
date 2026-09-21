@@ -3,7 +3,6 @@ using LanMountainDesktop.Models;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
-using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.ViewModels;
 using Xunit;
 

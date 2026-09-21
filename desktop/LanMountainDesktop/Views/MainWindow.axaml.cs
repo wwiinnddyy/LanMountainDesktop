@@ -22,6 +22,7 @@ using Avalonia.VisualTree;
 using FluentIcons.Avalonia;
 using FluentAvalonia.Styling;
 using LanMountainDesktop.ComponentSystem;
+using LanMountainDesktop.DesktopEditing;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
@@ -52,11 +53,6 @@ public partial class MainWindow : Window
     }
 
     private const int StatusBarRowIndex = 0;
-    private const int MinShortSideCells = 6;
-    private const int MaxShortSideCells = 96;
-    private const int MinEdgeInsetPercent = 0;
-    private const int MaxEdgeInsetPercent = 30;
-    private const int DefaultEdgeInsetPercent = 18;
     private const double LightBackgroundLuminanceThreshold = 0.57;
     private const string TaskbarLayoutBottomFullRowMacStyle = "BottomFullRowMacStyle";
     private const string BackToWindowsButtonDisplayModeIconAndText = "IconAndText";
@@ -148,7 +144,7 @@ public partial class MainWindow : Window
     private bool _statusBarShadowEnabled;
     private string _statusBarShadowColor = "#000000";
     private double _statusBarShadowOpacity = 0.3;
-    private int _desktopEdgeInsetPercent = DefaultEdgeInsetPercent;
+    private int _desktopEdgeInsetPercent = DesktopGridLimits.DefaultEdgeInsetPercent;
     private string _taskbarLayoutMode = TaskbarLayoutBottomFullRowMacStyle;
     private string _backToWindowsButtonDisplayMode = BackToWindowsButtonDisplayModeIconAndText;
     private string _backToWindowsIconSource = BackToWindowsIconSourceFluentIcon;
@@ -398,14 +394,14 @@ public partial class MainWindow : Window
 
         _targetShortSideCells = Math.Clamp(
             snapshot.GridShortSideCells > 0 ? snapshot.GridShortSideCells : CalculateDefaultShortSideCellCountFromDpi(),
-            MinShortSideCells,
-            MaxShortSideCells);
+            DesktopGridLimits.MinShortSideCells,
+            DesktopGridLimits.MaxShortSideCells);
 
         ShowInTaskbar = snapshot.ShowInTaskbar;
 
         _gridSpacingPreset = _gridSettingsService.NormalizeSpacingPreset(snapshot.GridSpacingPreset);
 
-        _desktopEdgeInsetPercent = Math.Clamp(snapshot.DesktopEdgeInsetPercent, MinEdgeInsetPercent, MaxEdgeInsetPercent);
+        _desktopEdgeInsetPercent = Math.Clamp(snapshot.DesktopEdgeInsetPercent, DesktopGridLimits.MinEdgeInsetPercent, DesktopGridLimits.MaxEdgeInsetPercent);
 
         _statusBarSpacingMode = NormalizeStatusBarSpacingMode(snapshot.StatusBarSpacingMode);
         _statusBarCustomSpacingPercent = Math.Clamp(snapshot.StatusBarCustomSpacingPercent, 0, 30);
@@ -527,7 +523,7 @@ public partial class MainWindow : Window
     {
         var dpi = 96d * RenderScaling;
         var count = (int)Math.Round(dpi / 8d);
-        return Math.Clamp(count, MinShortSideCells, MaxShortSideCells);
+        return Math.Clamp(count, DesktopGridLimits.MinShortSideCells, DesktopGridLimits.MaxShortSideCells);
     }
 
     private void OnDesktopHostSizeChanged(object? sender, SizeChangedEventArgs e)

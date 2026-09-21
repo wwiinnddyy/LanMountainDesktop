@@ -346,6 +346,18 @@ helper 住在 Core 是因为写同一批磁盘文件的是三个进程（宿主�
 唯一挂名的欠账是 `Assets/endfiled`：24 张表情图 / 1.27MB 全仓零引用，也没有代码按目录枚举它们——
 删掉整套是产品决定，先用配额冻住（24 张 / 1303 KiB），不许再扩大。
 
+**一个数只有一个家**：组件自缩放基准 `ComponentDesignMetrics.BaseCellSize`（此前 12 个组件各写一份
+`private const double BaseCellSize = 48d`），网格密度/边缘留白的量程与默认值 `DesktopEditing/DesktopGridLimits`
+（此前在 `MainWindow` 及其 partial 分片、`FusedDesktopEditGridAdapter`、`AppSettingsSnapshot` 默认值里各一份）。
+守卫 `ComponentBaseCellSize_LivesInExactlyOnePlace`、`DesktopGridLimits_LiveInExactlyOnePlace`。
+**滑杆的 `Minimum`/`Maximum` 不许写死数字**，要绑视图模型上从 `DesktopGridLimits` 读的那四个量程属性——
+设置页量程是这套数的第四份副本，漂了的症状不是崩，而是"拖到尽头网格不动"或"存进去被运行期悄悄钳掉"。
+
+**同一个 using 块里不许把同一条指令写两遍**（编译器 CS0105）。守卫
+`UsingDirectives_AreNotDeclaredTwiceInAFile`，只查文件开头那段 using（namespace 块内部的 using 只对自身生效，
+删兄弟块的同名指令会真的改变解析结果）。2026-09-21 那次 `plugin → airapp` 批量改名按目录补 using，
+一次留下 26 处重复 / 20 个文件——批量脚本补完必须让 CS0105 归零，而不是只确认能编译。
+
 ## 6. 权威来源
 
 - 产品定位：`docs/00-快速开始/01-项目介绍.md`（归档见 `docs/archive/PRODUCT.md`）

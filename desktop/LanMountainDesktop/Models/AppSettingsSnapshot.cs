@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using LanMountainDesktop.DesktopEditing;
 using System.Text.Json.Serialization;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Shared.Contracts.Launcher;
@@ -8,11 +9,11 @@ namespace LanMountainDesktop.Models;
 
 public sealed class AppSettingsSnapshot
 {
-    public int GridShortSideCells { get; set; } = 12;
+    public int GridShortSideCells { get; set; } = DesktopGridLimits.DefaultShortSideCells;
 
     public string GridSpacingPreset { get; set; } = "Relaxed";
 
-    public int DesktopEdgeInsetPercent { get; set; } = 18;
+    public int DesktopEdgeInsetPercent { get; set; } = DesktopGridLimits.DefaultEdgeInsetPercent;
 
     public bool? IsNightMode { get; set; }
 

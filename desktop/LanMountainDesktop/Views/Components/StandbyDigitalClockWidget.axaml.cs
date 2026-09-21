@@ -23,9 +23,7 @@ public partial class StandbyDigitalClockWidget : UserControl,
     ITimeZoneAwareComponentWidget,
     IComponentPlacementContextAware,
     IComponentRuntimeContextAware
-{
-    private const double BaseCellSize = 48d;
-    private const int BaseWidthCells = 4;
+{    private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 2;
     private const double DigitHeight = 130d;
 
@@ -428,9 +426,9 @@ public partial class StandbyDigitalClockWidget : UserControl,
 
     private double ResolveScale()
     {
-        var cellScale = Math.Clamp(_currentCellSize / BaseCellSize, 0.60, 1.90);
-        var heightScale = Bounds.Height > 1 ? Math.Clamp(Bounds.Height / (BaseCellSize * BaseHeightCells), 0.58, 2.0) : 1;
-        var widthScale = Bounds.Width > 1 ? Math.Clamp(Bounds.Width / (BaseCellSize * BaseWidthCells), 0.58, 2.0) : 1;
+        var cellScale = Math.Clamp(_currentCellSize / ComponentDesignMetrics.BaseCellSize, 0.60, 1.90);
+        var heightScale = Bounds.Height > 1 ? Math.Clamp(Bounds.Height / (ComponentDesignMetrics.BaseCellSize * BaseHeightCells), 0.58, 2.0) : 1;
+        var widthScale = Bounds.Width > 1 ? Math.Clamp(Bounds.Width / (ComponentDesignMetrics.BaseCellSize * BaseWidthCells), 0.58, 2.0) : 1;
         return Math.Clamp(Math.Min(cellScale, Math.Min(heightScale, widthScale) * 1.05), 0.58, 1.95);
     }
 

@@ -11,7 +11,6 @@ using LanMountainDesktop.DesktopEditing;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Platform.Abstractions;
-using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Views;
 using LanMountainDesktop.Views.Components;

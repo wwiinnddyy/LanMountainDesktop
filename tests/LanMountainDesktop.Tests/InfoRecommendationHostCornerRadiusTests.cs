@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.ComponentSystem;
-using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Views.Components;
 using Xunit;
 

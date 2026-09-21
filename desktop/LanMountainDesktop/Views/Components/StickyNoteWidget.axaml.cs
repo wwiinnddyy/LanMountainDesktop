@@ -11,7 +11,6 @@ using FluentIcons.Common;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services.Settings;
 
 namespace LanMountainDesktop.Views.Components;

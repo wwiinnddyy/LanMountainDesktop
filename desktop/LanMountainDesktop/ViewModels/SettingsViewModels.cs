@@ -13,12 +13,11 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FluentIcons.Common;
 using LanMountainDesktop.ComponentSystem;
+using LanMountainDesktop.DesktopEditing;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
-using LanMountainDesktop.AirAppSdk;
-using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 
 namespace LanMountainDesktop.ViewModels;
@@ -1193,6 +1192,15 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
     }
 
     public IReadOnlyList<SelectionOption> SpacingPresets { get; }
+
+    // 量程从网格真源读：滑杆能拖到的范围与运行时钳制的范围一旦错开，用户看到的就是"拖到头没反应"。
+    public double ShortSideCellsMinimum => DesktopGridLimits.MinShortSideCells;
+
+    public double ShortSideCellsMaximum => DesktopGridLimits.MaxShortSideCells;
+
+    public double EdgeInsetPercentMinimum => DesktopGridLimits.MinEdgeInsetPercent;
+
+    public double EdgeInsetPercentMaximum => DesktopGridLimits.MaxEdgeInsetPercent;
 
     [ObservableProperty]
     private int _shortSideCells;

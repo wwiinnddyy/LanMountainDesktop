@@ -22,9 +22,7 @@ public partial class WorldClockWidget : UserControl,
     IComponentRuntimeContextAware
 {
     private const int BaseWidthCells = 4;
-    private const int BaseHeightCells = 2;
-    private const double BaseCellSize = 48;
-    private const double DialDesignSize = 100;
+    private const int BaseHeightCells = 2;    private const double DialDesignSize = 100;
     private const double DialCenter = DialDesignSize / 2d;
 
     private static readonly IReadOnlyDictionary<string, string> ZhCityNames =
@@ -103,7 +101,7 @@ public partial class WorldClockWidget : UserControl,
 
     private TimeZoneService? _timeZoneService;
     private string _languageCode = LocalizationService.DefaultLanguageCode;
-    private double _currentCellSize = BaseCellSize;
+    private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private DateTime _nextLanguageProbeUtc = DateTime.MinValue;
     private string _secondHandMode = ClockSecondHandMode.Tick;
     private bool _isNightVisual = true;
@@ -698,7 +696,7 @@ public partial class WorldClockWidget : UserControl,
 
     private double ResolveScale()
     {
-        var cellScale = Math.Clamp(_currentCellSize / BaseCellSize, 0.56, 2.5);
+        var cellScale = Math.Clamp(_currentCellSize / ComponentDesignMetrics.BaseCellSize, 0.56, 2.5);
         var widthScale = Bounds.Width > 1
             ? Math.Clamp(Bounds.Width / Math.Max(1, _currentCellSize * BaseWidthCells), 0.52, 2.4)
             : 1;

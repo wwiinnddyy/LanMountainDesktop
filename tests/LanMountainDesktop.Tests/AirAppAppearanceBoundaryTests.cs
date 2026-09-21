@@ -10,7 +10,6 @@ using LanMountainDesktop.Models;
 using LanMountainDesktop.AirApps;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
-using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Shared.Contracts;
 using Xunit;
 using AirAppIsolationAppearanceChangedNotification = LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceChangedNotification;

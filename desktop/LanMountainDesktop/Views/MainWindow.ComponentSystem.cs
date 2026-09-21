@@ -20,7 +20,6 @@ using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Platform.Abstractions;
 using LanMountainDesktop.Services;
-using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Theme;
 using LanMountainDesktop.Views.Components;
 using PathShape = Avalonia.Controls.Shapes.Path;
