@@ -584,7 +584,11 @@ public partial class OobeWindow : Window
             EnableFadeTransition: fade,
             EnableSlideTransition: slide,
             FusedPopupExperience: fused,
-            AutoStartWithWindows: autoStart);
+            AutoStartWithWindows: autoStart,
+            // 向导里选的黑白档必须落到宿主的 ThemeMode，否则用户选完首启还是默认浅色。
+            ThemeMode: _selectedThemeMode == ThemeMode.Dark
+                ? HostAppSettingsOobeMerger.ThemeModeDarkValue
+                : HostAppSettingsOobeMerger.ThemeModeLightValue);
     }
 
     private void OnOobeStartupSlideTransitionChanged(object? sender, RoutedEventArgs e)

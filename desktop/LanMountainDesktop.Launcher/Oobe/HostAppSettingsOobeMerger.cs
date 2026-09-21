@@ -17,6 +17,16 @@ public static class HostAppSettingsOobeMerger
     public const string EnableThreeFingerSwipeKey = "EnableThreeFingerSwipe";
     public const string AutoStartWithWindowsKey = "AutoStartWithWindows";
     public const string MultiInstanceLaunchBehaviorKey = "MultiInstanceLaunchBehavior";
+    public const string ThemeModeKey = "ThemeMode";
+
+    /// <summary>
+    /// 主题档的取值是宿主的口径（<c>AppSettingsSnapshot.ThemeMode</c>）。
+    /// 这里能取到宿主常量类的话就该换成常量；取不到是因为 Launcher 与宿主是两个二进制，
+    /// 由 HostThemeModeContractTests 钉住这两个字面量与宿主常量一致。
+    /// </summary>
+    public const string ThemeModeLightValue = "light";
+
+    public const string ThemeModeDarkValue = "dark";
 
     public static string GetSettingsFilePath(string dataRoot) =>
         Path.Combine(Path.GetFullPath(dataRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)), "settings.json");
@@ -115,6 +125,9 @@ public static class HostAppSettingsOobeMerger
         root[EnableFusedDesktopKey] = choices.FusedPopupExperience;
         root[EnableThreeFingerSwipeKey] = choices.FusedPopupExperience;
         root[AutoStartWithWindowsKey] = choices.AutoStartWithWindows;
+        root[ThemeModeKey] = string.IsNullOrWhiteSpace(choices.ThemeMode)
+            ? ThemeModeLightValue
+            : choices.ThemeMode;
 
         var options = new JsonSerializerOptions { WriteIndented = true };
         File.WriteAllText(settingsPath, root.ToJsonString(options));
@@ -181,4 +194,5 @@ public readonly record struct HostAppSettingsStartupChoices(
     bool EnableFadeTransition,
     bool EnableSlideTransition,
     bool FusedPopupExperience,
-    bool AutoStartWithWindows);
+    bool AutoStartWithWindows,
+    string ThemeMode = HostAppSettingsOobeMerger.ThemeModeLightValue);

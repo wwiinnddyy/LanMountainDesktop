@@ -1,3 +1,4 @@
+using LanMountainDesktop.Services;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 using Xunit;
 
@@ -47,6 +48,67 @@ public sealed class HostAppSettingsOobeMergerTests
         {
             Directory.Delete(dir, recursive: true);
         }
+    }
+
+    [Fact]
+    public void MergeStartupPresentation_WritesTheThemeChosenInOobe()
+    {
+        // 动因：向导里选了"深色"只作用在启动器自己的窗口上，宿主的 settings.json 从来没被写过
+        // ThemeMode，所以首启结束后宿主仍是默认浅色 —— 用户的选择不落地。
+        var (path, dir) = NewSettingsFile();
+        try
+        {
+            HostAppSettingsOobeMerger.MergeStartupPresentation(
+                path,
+                new HostAppSettingsStartupChoices(
+                    ShowInTaskbar: true,
+                    EnableFadeTransition: true,
+                    EnableSlideTransition: false,
+                    FusedPopupExperience: false,
+                    AutoStartWithWindows: false,
+                    ThemeMode: HostAppSettingsOobeMerger.ThemeModeDarkValue));
+
+            using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
+
+            // 顺带钉住跨二进制契约：Launcher 写的字面量必须就是宿主认的那一档。
+            Assert.Equal(ThemeAppearanceValues.ThemeModeDark, doc.RootElement.GetProperty(HostAppSettingsOobeMerger.ThemeModeKey).GetString());
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void MergeStartupPresentation_DefaultsToLightTheme()
+    {
+        var (path, dir) = NewSettingsFile();
+        try
+        {
+            HostAppSettingsOobeMerger.MergeStartupPresentation(
+                path,
+                new HostAppSettingsStartupChoices(
+                    ShowInTaskbar: true,
+                    EnableFadeTransition: true,
+                    EnableSlideTransition: false,
+                    FusedPopupExperience: false,
+                    AutoStartWithWindows: false));
+
+            using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
+
+            Assert.Equal(ThemeAppearanceValues.ThemeModeLight, doc.RootElement.GetProperty(HostAppSettingsOobeMerger.ThemeModeKey).GetString());
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    private static (string SettingsPath, string Root) NewSettingsFile()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "LMD.OobeMerge", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        return (Path.Combine(root, "settings.json"), root);
     }
 
     [Fact]
