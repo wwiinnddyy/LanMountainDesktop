@@ -129,8 +129,19 @@ AirAppDevServer 1，都是"UI 收了输入但不落地"或"CLI 承诺了没实�
 库里每个条目必须有在 zh/en/ja/ko 都能取到文案的 `DisplayNameLocalizationKey`、
 每个条目都要能在 LibraryPreview 下被创建并布局出非零尺寸（`DesktopBrowser` 因 WebView2 会改线程套间而免检，
 免检清单本身也有守卫防烂掉）。`LocalizationParityRatchetTests` 以 zh-CN 为源语言记着
-en/ja/ko 还缺 35/333/289 条，只许降不许升；补翻译就把数字改小。
+en/ja/ko 还缺 25/313/275 条，只许降不许升；补翻译就把数字改小。
 组件的 `DisplayName` 必须是语言中立的兜底文案（历史上 5 个写死中文，已改；守卫会拦新增）。
+
+**词表一键一条、键不许重复**：`desktop/LanMountainDesktop/Localization/*.json` 是扁平点号键表，
+运行期用 `JsonSerializer.Deserialize<Dictionary<string, string>>` 读——重复键不报错，后一份覆盖前一份，
+所以写在前面那条永远读不到（改它的人以为改了）。2026-09-21 实测四份词表共 182 条这种被覆盖的键
+（en-US 独占 103 条，整页 `settings.update.*` 被粘了两遍），其中 zh/ja/ko 的
+`settings.update.preferences_description` 两份内容不同，界面上一直显示的是后一份；同批还删掉 359 条
+"产品里拼不出来"的死键（`AcceptedUnreferencedKeyCount` 已收到 0）。守卫
+`LocalizationParityRatchetTests.LocaleFile_DeclaresEachKeyOnceOnItsOwnLine` 两条都管：重复声明、
+以及一行塞两个键（按行取键的清理脚本与 grep 会静默漏掉后一个）。
+判"死没死"必须把内插串洞里的调用算进去——`$"{L("rss.refresh_failed", "…")}"` 只在洞里出现，
+漏看时实测误删了 3 条活键（第二方向 `EveryKeyRequestedFromCode_ExistsInZhCn` 当场变红把它抓回）。
 
 **"有实现没入口"守卫**：`tests/LanMountainDesktop.Tests/CapabilityEntryPointTests.cs` 两条，都读磁盘上的源码文本，
 不需要重新构建就能跑。一是每个 `[RelayCommand]` 生成的命令名必须在仓库里被绑到（`.axaml` 的 `Command=` 或代码引用），

@@ -13,10 +13,12 @@ namespace LanMountainDesktop.Tests;
 ///   <item>内插：<c>L($"settings.appearance.corner_radius.style_{style.ToShort()}")</c></item>
 ///   <item>拼接：<c>L("settings.nav." + pageId)</c>（字面量以 <c>.</c> 或 <c>_</c> 结尾）</item>
 ///   <item>变量：<c>L(section.TitleLocalizationKey)</c>，值在别处用字面量赋</item>
+///   <item>藏在洞里的调用：<c>$"{L("rss.refresh_failed", "…")}: {ex.Message}"</c></item>
 /// </list>
 /// 只按"整串字面量在源码里出现过没有"判会高估死键（同一棵树实测 404 / 415 / 559 三个数，
-/// 全取决于漏看了哪一类写法），所以这里三类写法都算可达，并把语料固定为
+/// 全取决于漏看了哪一类写法；漏看最后一条时实测误删了 3 条活键），所以这几类都算可达，并把语料固定为
 /// "会被编进产物的目录 + 仓内所有 json"，不含测试代码（测试里的键名不算产品用到）。
+/// 两个方向共用同一套字面量扫描：一头判死、另一头判活，就会删完才红。
 ///
 /// 反方向（代码要的键 json 里没有）只认 <c>L</c> / <c>Lf</c> / <c>GetString</c> 的实参位置，
 /// 否则 "index.json"、"github.com" 这类带点字面量会全被判成缺键（实测 302 条里大部分是这种噪声）。
@@ -24,11 +26,12 @@ namespace LanMountainDesktop.Tests;
 public sealed class LocalizationDeadKeyRatchetTests
 {
     /// <summary>
-    /// 2026-09-21 按上面三种写法量出的残值。抽样人工复核过：这些键在产品代码与仓内 json 里
-    /// 都拼不出来（<c>settings.update.*</c> 一组占大头，是更新页改版后留下的旧文案）。
-    /// 只能往下改：删一批键就把数字改小，别往上抬。
+    /// 2026-09-21 把 <see cref="AcceptedKeysMissingFromZhCn"/> 一族的漂移修完后，按上面三种写法
+    /// 量出 357 条拼不出来的键并全部删除（<c>settings.update.*</c> 一组占大头，是更新页改版留下的旧文案）。
+    /// 保持 0：新增键就得有地方用到它，否则先删；真要留就把数字抬上去并写清理由。
+    /// 用 LMD_EMIT_DEAD_KEYS=1 重跑可以拿到当前清单。
     /// </summary>
-    private const int AcceptedUnreferencedKeyCount = 380;
+    private const int AcceptedUnreferencedKeyCount = 0;
 
     /// <summary>
     /// 代码引用、zh-CN.json 里没有的键数（只降不升）。2026-09-21 量出 25 个并已全部清零：
@@ -41,6 +44,8 @@ public sealed class LocalizationDeadKeyRatchetTests
 
     private static readonly string[] SourceRoots = ["desktop", "airapp", "install", "platform", "core"];
 
+    private static readonly string[] Locales = ["zh-CN", "en-US", "ja-JP", "ko-KR"];
+
     private static readonly string[] SkipDirectoryNames =
         ["bin", "obj", ".git", ".vs", ".idea", "node_modules", "artifacts"];
 
@@ -48,8 +53,7 @@ public sealed class LocalizationDeadKeyRatchetTests
     public void UnreferencedLocalizationKeys_DoNotGrow()
     {
         var repoRoot = RepoRoot();
-        var keys = ReadKeys(Path.Combine(
-            repoRoot, "desktop", "LanMountainDesktop", "Localization", "zh-CN.json"));
+        var keys = AllLocaleKeys(repoRoot);
 
         var literals = ProductLiterals(repoRoot);
         var templates = InterpolatedTemplates(repoRoot);
@@ -60,8 +64,19 @@ public sealed class LocalizationDeadKeyRatchetTests
             .Where(key => !exact.Contains(key)
                 && !prefixes.Any(prefix => key.StartsWith(prefix, StringComparison.Ordinal))
                 && !templates.Any(pattern => pattern.IsMatch(key)))
+            .Distinct(StringComparer.Ordinal)
             .OrderBy(key => key, StringComparer.Ordinal)
             .ToArray();
+
+        // 删键用的清单由这条测试自己产（判据只有一份），照 SDK 基线的老规矩用环境变量触发。
+        // 放在断言之前：超基线时也要能拿到清单，否则红着删不动。
+        if (Environment.GetEnvironmentVariable("LMD_EMIT_DEAD_KEYS") is "1" or "true")
+        {
+            var target = Path.Combine(
+                repoRoot, "tests", "LanMountainDesktop.Tests", "ApprovalFiles", "Localization.DeadKeys.txt");
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            File.WriteAllLines(target, dead);
+        }
 
         Assert.True(
             dead.Length <= AcceptedUnreferencedKeyCount,
@@ -72,7 +87,8 @@ public sealed class LocalizationDeadKeyRatchetTests
         Assert.True(
             dead.Length >= AcceptedUnreferencedKeyCount,
             $"只剩 {dead.Length} 个未引用键，比基线 {AcceptedUnreferencedKeyCount} 少："
-            + $"把 AcceptedUnreferencedKeyCount 改成 {dead.Length}，并确认这些键是真该删而不是检测漏了写法。");
+            + $"把 AcceptedUnreferencedKeyCount 改成 {dead.Length}（删完一批键后，"
+            + "用 LMD_EMIT_DEAD_KEYS=1 重跑这条测试可以拿到当前清单）。");
     }
 
     /// <summary>
@@ -128,6 +144,18 @@ public sealed class LocalizationDeadKeyRatchetTests
             + $"运行时落到硬编码兜底文案，中文界面于是混进英文："
             + $"{Environment.NewLine}{string.Join(Environment.NewLine, missing.Take(40))}");
     }
+
+    /// <summary>
+    /// 死键判据覆盖四份词表的键并集，不只 zh-CN：只在 ja/ko 里多出来的键（实测 2 个
+    /// <c>settings.wallpaper.system.*</c>）用 zh 当分母时永远看不见，同样是拼不出来的死文案。
+    /// </summary>
+    private static List<string> AllLocaleKeys(string repoRoot) =>
+        Locales
+            .Select(locale => Path.Combine(
+                repoRoot, "desktop", "LanMountainDesktop", "Localization", $"{locale}.json"))
+            .Where(File.Exists)
+            .SelectMany(ReadKeys)
+            .ToList();
 
     private static IEnumerable<string> ProductLiterals(string repoRoot) =>
         ProductSourceFiles(repoRoot)
@@ -355,7 +383,11 @@ public sealed class LocalizationDeadKeyRatchetTests
         public string Text => string.Concat(Parts);
     }
 
-    /// <summary>扫 regular / interpolated / verbatim 三种字符串；跳过 raw string（键不会写成那个）。</summary>
+    /// <summary>
+    /// 扫 regular / interpolated / verbatim 三种字符串；跳过 raw string（键不会写成那个）。
+    /// 内插洞里嵌的代码同样要扫：<c>$"{L("rss.refresh_failed", "…")}: {ex.Message}"</c> 里那条键
+    /// 只在洞里出现，不递归就量不到——实测因此把 3 条活键判成死的并删了。
+    /// </summary>
     private static IEnumerable<StringLiteral> StringLiterals(string source)
     {
         for (var index = 0; index < source.Length; index++)
@@ -388,6 +420,7 @@ public sealed class LocalizationDeadKeyRatchetTests
             }
 
             var parts = new List<string>();
+            var nested = new List<StringLiteral>();
             var current = new System.Text.StringBuilder();
             var holes = 0;
             var closed = false;
@@ -434,7 +467,9 @@ public sealed class LocalizationDeadKeyRatchetTests
                     parts.Add(current.ToString());
                     current.Clear();
                     holes++;
-                    cursor = SkipInterpolation(source, cursor);
+                    var holeEnd = SkipInterpolation(source, cursor);
+                    nested.AddRange(StringLiterals(source[(cursor + 1)..holeEnd]));
+                    cursor = holeEnd;
                     continue;
                 }
 
@@ -457,6 +492,10 @@ public sealed class LocalizationDeadKeyRatchetTests
             if (closed && parts.Count == holes + 1)
             {
                 yield return new StringLiteral(parts);
+                foreach (var inner in nested)
+                {
+                    yield return inner;
+                }
             }
         }
     }
