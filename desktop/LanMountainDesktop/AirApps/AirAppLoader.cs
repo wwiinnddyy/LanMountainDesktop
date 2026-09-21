@@ -192,6 +192,7 @@ public sealed class AirAppLoader
                 .ToArray();
             var exportedServices = ResolveExports(manifest, airAppServices);
             var publicIpcServices = ResolvePublicIpcServices(manifest, airAppServices);
+            ValidateManifestComponentContract(manifest, desktopComponents);
             AppLogger.Info(
                 "AirAppLoader",
                 $"AirApp contributions resolved. AirAppId='{manifest.Id}'; SettingsSections={settingsSections.Length}; Widgets={desktopComponents.Length}; Editors={desktopComponentEditors.Length}; Exports={exportedServices.Count}; PublicIpcServices={publicIpcServices.Count}."); 
@@ -224,7 +225,72 @@ public sealed class AirAppLoader
             DisposeInstance(AirApp);
             DisposeInstance(runtimeContext);
             loadContext?.Unload();
-            return AirAppLoadResult.Failure(sourcePath, manifest, ex);
+            return AirAppLoadResult.Failure(sourcePath, manifest, ExplainBindingFailure(ex, manifest));
+        }
+    }
+
+    /// <summary>
+    /// 类型绑定失败几乎总是"这个包是用另一版 SDK 编译的"，但运行时只会吐一个 IL 级方法名
+    /// （例如 Method not found: 'Void ...AirAppComponentOptions.set_ComponentId(String)'），
+    /// 无论用户还是 AirApp 作者都读不出下一步该做什么。这里换成人话并保留原异常。
+    /// </summary>
+    private static Exception ExplainBindingFailure(Exception error, AirAppManifest manifest)
+    {
+        if (error is not (MissingMethodException or MissingMemberException or TypeLoadException or TypeAccessException))
+        {
+            return error;
+        }
+
+        var sameApiVersion = string.Equals(manifest.ApiVersion, AirAppSdkInfo.ApiVersion, StringComparison.OrdinalIgnoreCase);
+        return new InvalidOperationException(
+            $"AirApp '{manifest.Id}' ({manifest.Version}) 与本宿主的 AirAppSdk 二进制不兼容，已拒绝加载。"
+            + $"宿主 SDK {AirAppSdkInfo.SdkVersion}（apiVersion {AirAppSdkInfo.ApiVersion}），包声明 apiVersion {manifest.ApiVersion}。"
+            + (sameApiVersion
+                ? "两侧 apiVersion 相同却绑定失败，说明 SDK 在同一版本号下改过公开签名。"
+                : "apiVersion 不一致。")
+            + "请先用当前 SDK 重新构建该 AirApp 再安装；若仍失败，需要递增 SDK 版本号后重发。原始错误见内部异常。",
+            error);
+    }
+
+    /// <summary>
+    /// 清单 <c>components[].id</c> 与代码里 <c>AddAirAppComponent</c> 注册出来的 ComponentId 必须是同一批。
+    /// 添加面板按清单列条目，创建控件按注册 id 找实现，两侧一旦漂移，用户拿到的就是
+    /// "面板里有、点下去没反应"的坏格子，而且全程没有任何报错——所以这一条要拒载并指名。
+    /// 反向（注册了却没声明）只警告：它不产生用户可见的坏状态，只是作者白写了一个组件。
+    /// </summary>
+    internal static void ValidateManifestComponentContract(
+        AirAppManifest manifest,
+        AirAppComponentRegistration[] components)
+    {
+        var registeredIds = components
+            .Select(component => component.ComponentId)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        // 走 AirAppManifest.Load 进来时 Components 一定非空，但 LoadFromAssembly 收的是调用方自建的对象。
+        var declared = manifest.Components ?? [];
+        var declaredButNotRegistered = declared
+            .Select(item => item.Id)
+            .Where(id => !string.IsNullOrWhiteSpace(id) && !registeredIds.Contains(id))
+            .ToArray();
+
+        if (declaredButNotRegistered.Length > 0)
+        {
+            throw new InvalidOperationException(
+                $"AirApp '{manifest.Id}' 清单声明的组件在代码里找不到同名注册：{string.Join(", ", declaredButNotRegistered)}。"
+                + $"代码实际注册的是{(registeredIds.Count == 0 ? "（无）" : ": " + string.Join(", ", registeredIds))}。"
+                + "清单是唯一真源，两边 id 必须逐字一致，否则添加面板里会出现点了没反应的组件。");
+        }
+
+        var registeredButNotDeclared = registeredIds
+            .Where(id => !declared.Any(item =>
+                string.Equals(item.Id, id, StringComparison.OrdinalIgnoreCase)))
+            .ToArray();
+
+        if (registeredButNotDeclared.Length > 0)
+        {
+            AppLogger.Warn(
+                "AirAppLoader",
+                $"AirApp '{manifest.Id}' 注册了清单里没有的组件，用户在添加面板里拿不到：{string.Join(", ", registeredButNotDeclared)}。");
         }
     }
 
