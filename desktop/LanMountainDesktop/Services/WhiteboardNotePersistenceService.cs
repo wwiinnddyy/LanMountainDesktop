@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using LanMountainDesktop.Models;
 using Microsoft.Data.Sqlite;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanMountainDesktop.Services;
 

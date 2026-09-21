@@ -18,6 +18,7 @@ using LanMountainDesktop.Shared.IPC;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using dotnetCampus.Ipc.CompilerServices.Attributes;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanMountainDesktop.AirApps;
 

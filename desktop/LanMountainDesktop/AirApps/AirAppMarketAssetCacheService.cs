@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using LanMountainDesktop.AirAppSdk;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanMountainDesktop.Services.AirAppMarket;
 

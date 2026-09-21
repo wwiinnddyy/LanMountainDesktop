@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Downloader;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanMountainDesktop.Services;
 

@@ -31,6 +31,7 @@ using LanMountainDesktop.Shared.IPC.Abstractions.Services;
 using LanMountainDesktop.Theme;
 using LanMountainDesktop.ViewModels;
 using LanMountainDesktop.Views;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanMountainDesktop;
 
@@ -131,6 +132,10 @@ public partial class App : Application
 
     public App()
     {
+        // Core 里的原子写盘与重试不带日志器（宿主/启动器/安装器共用一个类，却没有共享的日志），
+        // 各二进制在自己的入口接上。不接只丢"重试过"这条上下文，异常照旧抛出。
+        FileOperationRetryHelper.FailureNotice = AppLogger.Warn;
+
         if (Design.IsDesignMode)
         {
             return;

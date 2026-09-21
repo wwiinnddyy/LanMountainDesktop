@@ -16,6 +16,7 @@ using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Shared.IPC;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanMountainDesktop.Services;
 

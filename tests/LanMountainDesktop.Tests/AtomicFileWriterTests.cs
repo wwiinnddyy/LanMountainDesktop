@@ -4,6 +4,7 @@ using System.Text;
 using LanMountainDesktop.Services;
 
 using Xunit;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanMountainDesktop.Tests;
 

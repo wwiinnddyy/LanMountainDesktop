@@ -1,19 +1,25 @@
 using System;
 using System.IO;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace LanMountainDesktop.Services;
+namespace LanMountainDesktop.Shared.IO;
 
 /// <summary>
-/// "整体替换一个文本文件"的唯一入口：同目录写一个带 Guid 的临时文件，再用带重试的 Move 覆盖目标。
+/// "整体替换一个文件"的唯一入口：同目录写一个带 Guid 的临时文件，再用带重试的 Move 覆盖目标。
 ///
-/// 收口前宿主里有 12 处各写一份这套动作，其中两类是会真实咬人的差异：
+/// 收口前宿主里有 12 处各写一份这套动作，Launcher 与安装器另有各自的版本，其中两类是会真实咬人的差异：
 /// 1) 目标文件被资源管理器/杀毒/另一进程瞬时锁住时，直接抛出去只留一条 Warn —— 用户看到的就是"设置没存上"。
 ///    <see cref="FileOperationRetryHelper"/> 本来就是为这种情况写的，却没被这套写盘用上。
 /// 2) 临时文件名有的用固定 ".tmp"（两个写者会互相覆盖、Delete+Move 之间断电就把文件丢了），
 ///    而且 Move 失败后没人清理，用户的 AppData 里会攒下一堆 .tmp。
 /// </summary>
-internal static class AtomicFileWriter
+/// <remarks>
+/// 住在 Core 而不是宿主，是因为写同一批磁盘文件的是两个进程：宿主写 settings.json，
+/// 首启向导（Launcher）也写它。放在任一侧都得被另一侧抄一遍。
+/// </remarks>
+public static class AtomicFileWriter
 {
     /// <summary>不带显式编码：与 <see cref="File.WriteAllText(string,string)"/> 一致，UTF-8 无 BOM。</summary>
     public static void WriteText(string filePath, string content, string category)
@@ -28,6 +34,42 @@ internal static class AtomicFileWriter
     public static void WriteText(string filePath, string content, Encoding encoding, string category)
     {
         Write(filePath, content, encoding, category);
+    }
+
+    /// <summary>
+    /// 流版：<c>File.Delete(target)</c> 后 <c>File.Move(temp, target)</c> 那种写法在两步之间会留下
+    /// "目标文件不存在"的窗口，而且固定 <c>.tmp</c> 名会让两个写者互相踩。这里同样用唯一临时名 + 覆盖式 Move。
+    /// </summary>
+    public static async Task WriteStreamAsync(
+        string filePath,
+        Stream content,
+        string category,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(category);
+        ArgumentNullException.ThrowIfNull(content);
+
+        var directory = Path.GetDirectoryName(filePath);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        var tempPath = $"{filePath}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            await using (var target = File.Create(tempPath))
+            {
+                await content.CopyToAsync(target, cancellationToken).ConfigureAwait(false);
+            }
+
+            FileOperationRetryHelper.MoveWithOverwriteRetry(tempPath, filePath, category);
+        }
+        finally
+        {
+            TryDelete(tempPath);
+        }
     }
 
     private static void Write(string filePath, string content, Encoding? encoding, string category)
@@ -63,42 +105,6 @@ internal static class AtomicFileWriter
         }
     }
 
-    /// <summary>
-    /// 流版：<c>File.Delete(target)</c> 后 <c>File.Move(temp, target)</c> 那种写法在两步之间会留下
-    /// "目标文件不存在"的窗口，而且固定 <c>.tmp</c> 名会让两个下载任务互相踩。这里同样用唯一临时名 + 覆盖式 Move。
-    /// </summary>
-    public static async Task WriteStreamAsync(
-        string filePath,
-        Stream content,
-        string category,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
-        ArgumentException.ThrowIfNullOrWhiteSpace(category);
-        ArgumentNullException.ThrowIfNull(content);
-
-        var directory = Path.GetDirectoryName(filePath);
-        if (!string.IsNullOrWhiteSpace(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-
-        var tempPath = $"{filePath}.{Guid.NewGuid():N}.tmp";
-        try
-        {
-            await using (var target = File.Create(tempPath))
-            {
-                await content.CopyToAsync(target, cancellationToken).ConfigureAwait(false);
-            }
-
-            FileOperationRetryHelper.MoveWithOverwriteRetry(tempPath, filePath, category);
-        }
-        finally
-        {
-            TryDelete(tempPath);
-        }
-    }
-
     private static void TryDelete(string path)
     {
         try
@@ -110,7 +116,7 @@ internal static class AtomicFileWriter
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            AppLogger.Warn("AtomicFileWriter", $"Failed to remove temp file '{path}'.", ex);
+            FileOperationRetryHelper.NotifyFailure("AtomicFileWriter", $"Failed to remove temp file '{path}'.", ex);
         }
     }
 }

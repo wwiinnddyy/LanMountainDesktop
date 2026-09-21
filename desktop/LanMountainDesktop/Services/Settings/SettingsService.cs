@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.AirAppSdk;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanMountainDesktop.Services.Settings;
 

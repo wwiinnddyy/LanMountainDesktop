@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using LanMountainDesktop.Models;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanMountainDesktop.Services;
 
