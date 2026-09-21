@@ -895,6 +895,54 @@ public sealed class SourceIntegrityTests
             $"{offenders.Count} 处硬编码启动器数据目录名：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
     }
 
+    /// <summary>
+    /// "从 .zip 包里挑出 airapp.json 再解析"只认两处：宿主的 <c>AirAppPackageReader</c>（返回带完整契约的
+    /// SDK 清单）与 Core 的 <c>AirAppPackageManifestReader</c>（打包/安装期只要 Id/Name/Version）。
+    /// 2026-09-21 收口前这个动作有 6 份：宿主 4 份（加载器、市场安装、运行时服务、待升级队列）、
+    /// 启动器 1 份、Core 1 份，启动器那份还自带一个只有 5 个属性的 <c>AirAppManifest</c>——
+    /// 于是同一个包，安装期"缺 id 也能装"，宿主加载期却按完整契约拒，用户看到的是"装成功了但没东西出来"。
+    /// 现在启动器走 Core 的读取器（缺 id/name 当场安装失败，错误说清是哪个包）。
+    /// </summary>
+    [Fact]
+    public void AirAppPackageManifestReading_LivesInExactlyOnePlacePerBinary()
+    {
+        string[] allowedReaders =
+        [
+            @"desktop\LanMountainDesktop\AirApps\AirAppPackageReader.cs",
+            @"core\LanMountainDesktop.Core\AirAppPackageManifestReader.cs",
+        ];
+
+        var manifestTypeDeclaration = new Regex(
+            @"\b(class|record)\s+AirAppManifest\b",
+            RegexOptions.Compiled);
+        var sdkModelFile = @"airapp\LanMountainDesktop.AirAppSdk\AirAppManifest.cs";
+
+        var offenders = new List<string>();
+
+        foreach (var file in SourceFiles())
+        {
+            var relative = RelativeToRepo(file);
+            var source = File.ReadAllText(file);
+
+            if (source.Contains("ZipFile.Open", StringComparison.Ordinal) &&
+                Regex.IsMatch(source, @"\bManifestFileName\b|""airapp\.json""") &&
+                !allowedReaders.Contains(relative, StringComparer.OrdinalIgnoreCase))
+            {
+                offenders.Add($"{relative} 自己开包挑清单");
+            }
+
+            if (manifestTypeDeclaration.IsMatch(source) &&
+                !string.Equals(relative, sdkModelFile, StringComparison.OrdinalIgnoreCase))
+            {
+                offenders.Add($"{relative} 又声明了一个 AirAppManifest 模型");
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 处绕开统一读取器：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
     private static bool IsHostProjectFile(string file) => RelativeToRepo(file)
         .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
         .StartsWith($"desktop{Path.DirectorySeparatorChar}LanMountainDesktop{Path.DirectorySeparatorChar}", StringComparison.Ordinal);

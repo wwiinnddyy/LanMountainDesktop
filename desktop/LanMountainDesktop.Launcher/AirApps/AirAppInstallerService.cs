@@ -10,8 +10,6 @@ namespace LanMountainDesktop.Launcher.AirApps;
 /// </summary>
 internal sealed class AirAppInstallerService
 {
-    private const string ManifestFileName = AirAppPackagingConstants.ManifestFileName;
-    private const string LegacyManifestFileName = AirAppPackagingConstants.LegacyManifestFileName;
     private const string PackageFileExtension = AirAppPackagingConstants.PackageFileExtension;
     private const string LegacyPackageFileExtension = AirAppPackagingConstants.LegacyPackageFileExtension;
 
@@ -42,7 +40,7 @@ internal sealed class AirAppInstallerService
             return elevationRequiredResult;
         }
 
-        var manifest = ReadManifestFromPackage(fullSourcePath);
+        var manifest = AirAppPackageManifestReader.Read(fullSourcePath, includeLegacyManifest: true);
         Directory.CreateDirectory(fullAirAppsDirectory);
         var destinationPath = Path.Combine(fullAirAppsDirectory, BuildInstalledPackageFileName(manifest.Id));
         var stagingPath = destinationPath + ".incoming";
@@ -120,45 +118,6 @@ internal sealed class AirAppInstallerService
         };
     }
 
-    public AirAppManifest ReadManifestFromPackage(string packagePath)
-    {
-        using var archive = ZipFile.OpenRead(packagePath);
-        var entries = FindManifestEntries(archive, ManifestFileName);
-        if (entries.Length == 0)
-        {
-            entries = FindManifestEntries(archive, LegacyManifestFileName);
-        }
-
-        if (entries.Length == 0)
-        {
-            throw new InvalidOperationException(
-                $"AirApp package '{packagePath}' does not contain '{ManifestFileName}' or '{LegacyManifestFileName}'.");
-        }
-
-        if (entries.Length > 1)
-        {
-            throw new InvalidOperationException(
-                $"AirApp package '{packagePath}' contains multiple '{ManifestFileName}' files.");
-        }
-
-        using var stream = entries[0].Open();
-        using var reader = new StreamReader(stream);
-        var json = reader.ReadToEnd();
-        var manifest = JsonSerializer.Deserialize(json, AppJsonContext.Default.AirAppManifest);
-        if (manifest == null)
-        {
-            throw new InvalidOperationException($"Failed to deserialize manifest from '{packagePath}'.");
-        }
-        return manifest;
-    }
-
-    private static ZipArchiveEntry[] FindManifestEntries(ZipArchive archive, string manifestFileName)
-    {
-        return archive.Entries
-            .Where(entry => string.Equals(entry.Name, manifestFileName, StringComparison.OrdinalIgnoreCase))
-            .ToArray();
-    }
-
     private void RemoveExistingAirAppPackages(string airAppsDirectory, string airAppId, string destinationPath, string stagingPath)
     {
         var runtimeRootDirectory = EnsureTrailingSeparator(Path.Combine(Path.GetFullPath(airAppsDirectory), RuntimeDirectoryName));
@@ -181,7 +140,7 @@ internal sealed class AirAppInstallerService
                     continue;
                 }
 
-                var existingManifest = ReadManifestFromPackage(existingPackagePath);
+                var existingManifest = AirAppPackageManifestReader.Read(existingPackagePath, includeLegacyManifest: true);
                 if (!string.Equals(existingManifest.Id, airAppId, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
@@ -292,16 +251,4 @@ internal sealed class AirAppInstallerService
             ? path
             : path + Path.DirectorySeparatorChar;
     }
-}
-
-/// <summary>
-/// 简化的插件清单模型
-/// </summary>
-internal class AirAppManifest
-{
-    public string Id { get; set; } = "";
-    public string Name { get; set; } = "";
-    public string Version { get; set; } = "";
-    public string? Description { get; set; }
-    public string? Author { get; set; }
 }

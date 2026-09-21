@@ -1,6 +1,8 @@
 using System.IO.Compression;
 using LanMountainDesktop.AirAppPackaging;
+using LanMountainDesktop.AirApps;
 using LanMountainDesktop.AirAppSdk;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanMountainDesktop.Services;
 
@@ -72,7 +74,7 @@ public sealed class PendingAirAppUpgradeService
                     throw new InvalidOperationException($"Unsupported pending AirApp operation '{operation.Operation}'.");
                 }
 
-                var manifest = ReadManifestFromPackage(operation.SourcePackagePath);
+                var manifest = AirAppPackageReader.ReadManifest(operation.SourcePackagePath);
                 prepareManifest?.Invoke(manifest);
                 _installer.Install(operation.SourcePackagePath, _airAppsDirectory);
                 succeeded.Add(operation);
@@ -101,24 +103,4 @@ public sealed class PendingAirAppUpgradeService
         return new PendingAirAppOperationApplySummary(succeeded.Count, failures.Count, failures);
     }
 
-    private static AirAppManifest ReadManifestFromPackage(string packagePath)
-    {
-        using var archive = ZipFile.OpenRead(packagePath);
-        var entries = archive.Entries
-            .Where(entry => string.Equals(entry.Name, AirAppSdkInfo.ManifestFileName, StringComparison.OrdinalIgnoreCase))
-            .ToArray();
-
-        if (entries.Length == 0)
-        {
-            throw new InvalidOperationException($"AirApp package '{packagePath}' does not contain '{AirAppSdkInfo.ManifestFileName}'.");
-        }
-
-        if (entries.Length > 1)
-        {
-            throw new InvalidOperationException($"AirApp package '{packagePath}' contains multiple '{AirAppSdkInfo.ManifestFileName}' files.");
-        }
-
-        using var stream = entries[0].Open();
-        return AirAppManifest.Load(stream, $"{packagePath}!/{entries[0].FullName}");
-    }
 }

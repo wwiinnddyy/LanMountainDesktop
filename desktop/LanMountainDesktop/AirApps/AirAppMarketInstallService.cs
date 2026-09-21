@@ -7,8 +7,10 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Security.Cryptography;
+using LanMountainDesktop.AirApps;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanMountainDesktop.Services.AirAppMarket;
 
@@ -99,7 +101,7 @@ internal sealed class AirAppMarketInstallService : IDisposable
 
             try
             {
-                var manifest = ReadManifestFromPackage(downloadResult.PackagePath);
+                var manifest = AirAppPackageReader.ReadManifest(downloadResult.PackagePath);
                 if (!canWriteAirAppsDirectory)
                 {
                     var elevatedResult = await _elevatedInstallService.InstallAsync(
@@ -310,27 +312,6 @@ internal sealed class AirAppMarketInstallService : IDisposable
             TryDeleteFile(packagePath);
             return new DownloadPackageResult(false, null, ex.Message);
         }
-    }
-
-    private static AirAppManifest ReadManifestFromPackage(string packagePath)
-    {
-        using var archive = System.IO.Compression.ZipFile.OpenRead(packagePath);
-        var entries = archive.Entries
-            .Where(entry => string.Equals(entry.Name, AirAppSdkInfo.ManifestFileName, StringComparison.OrdinalIgnoreCase))
-            .ToArray();
-
-        if (entries.Length == 0)
-        {
-            throw new InvalidOperationException($"AirApp package '{packagePath}' does not contain '{AirAppSdkInfo.ManifestFileName}'.");
-        }
-
-        if (entries.Length > 1)
-        {
-            throw new InvalidOperationException($"AirApp package '{packagePath}' contains multiple '{AirAppSdkInfo.ManifestFileName}' files.");
-        }
-
-        using var stream = entries[0].Open();
-        return AirAppManifest.Load(stream, $"{packagePath}!/{entries[0].FullName}");
     }
 
     public void Dispose()

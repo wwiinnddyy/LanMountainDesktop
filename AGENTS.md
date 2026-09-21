@@ -81,6 +81,13 @@ AirApp 本地包生成：
 - 统一用 AirApp 措辞：新增的类型、目录、设置键、日志文案不要再引入 `plugin` / `Plugin`
 - 改名前先查 `docs/ai/NAMING_AND_FROZEN_IDENTIFIERS.md`：其中第 3 节是跨进程/跨仓协议冻结项，第 2 节是需要一次性迁移器的本地数据标识符，两者都不能当作"漏改"直接重命名
 - **清单 id 是唯一真源**：`airapp.json` 的 `components[].id` 必须与 `AddAirAppComponent` 注册的 `ComponentId` 逐字一致，宿主加载时据此校验并**拒载**（`AirAppLoader.ValidateManifestComponentContract`）。添加面板按清单列、创建控件按注册 id 找，两边漂移的症状是"面板里有、点下去没反应"且原本不报错（LanWord 实测踩过）。注册了却没声明只警告，不拒载
+- **"从包里挑 airapp.json"只认两处**：宿主侧一律走 `AirApps/AirAppPackageReader.ReadManifest`（返回完整的 SDK 清单），
+  打包/安装期只要 id/name/version 时走 Core 的 `AirAppPackageManifestReader`。2026-09-21 收口前这个动作有 6 份实现
+  （宿主 4 份 + 启动器 1 份 + Core 1 份），启动器那份还自带一个只有 5 个属性的 `AirAppManifest` 模型，
+  于是同一个包"装得进去、宿主不认"，用户看到的是装完没东西出来；现在启动器复用 Core 的读取器，缺 id/name 当场安装失败。
+  守卫 `SourceIntegrityTests.AirAppPackageManifestReading_LivesInExactlyOnePlacePerBinary`
+  （也拦第二份 `AirAppManifest` 模型声明）。要读松散目录里的清单（开发态）请继续直接 `AirAppManifest.Load(path)`，
+  那条不在"开包"这一族里。
 
 ### 设置与主题
 

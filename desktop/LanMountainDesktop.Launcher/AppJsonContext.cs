@@ -22,7 +22,6 @@ namespace LanMountainDesktop.Launcher;
 [JsonSerializable(typeof(PublicTaskbarStatus))]
 [JsonSerializable(typeof(PublicShellActivationResult))]
 [JsonSerializable(typeof(LauncherResult))]
-[JsonSerializable(typeof(AirAppManifest))]
 [JsonSerializable(typeof(List<PendingUpgrade>))]
 [JsonSerializable(typeof(OobeStateFile))]
 [JsonSerializable(typeof(DataLocationConfig))]

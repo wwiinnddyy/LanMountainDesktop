@@ -106,7 +106,7 @@ public sealed class AirAppLoader
 
         try
         {
-            manifest = ReadManifestFromPackage(packagePath);
+            manifest = AirAppPackageReader.ReadManifest(packagePath, _options.ManifestFileName);
             return LoadFromPackage(packagePath, airAppsRootDirectory, manifest, services, properties);
         }
         catch (Exception ex)
@@ -634,7 +634,7 @@ public sealed class AirAppLoader
         {
             try
             {
-                var manifest = ReadManifestFromPackage(packagePath);
+                var manifest = AirAppPackageReader.ReadManifest(packagePath, _options.ManifestFileName);
                 candidates.Add(new AirAppCandidate(Path.GetFullPath(packagePath), manifest, AirAppSourceKind.Package));
             }
             catch (Exception ex)
@@ -671,39 +671,6 @@ public sealed class AirAppLoader
             .Select(Path.GetFullPath)
             .Where(path => !path.StartsWith(runtimeRootDirectory, StringComparison.OrdinalIgnoreCase))
             .OrderBy(path => path, StringComparer.OrdinalIgnoreCase);
-    }
-
-    private AirAppManifest ReadManifestFromPackage(string packagePath)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(packagePath);
-
-        var fullPackagePath = Path.GetFullPath(packagePath);
-        if (!File.Exists(fullPackagePath))
-        {
-            throw new FileNotFoundException($"AirApp package '{fullPackagePath}' was not found.", fullPackagePath);
-        }
-
-        using var archive = ZipFile.OpenRead(fullPackagePath);
-        var manifestEntries = archive.Entries
-            .Where(entry =>
-                !string.IsNullOrWhiteSpace(entry.Name) &&
-                string.Equals(entry.Name, _options.ManifestFileName, StringComparison.OrdinalIgnoreCase))
-            .ToArray();
-
-        if (manifestEntries.Length == 0)
-        {
-            throw new InvalidOperationException(
-                $"AirApp package '{fullPackagePath}' does not contain '{_options.ManifestFileName}'.");
-        }
-
-        if (manifestEntries.Length > 1)
-        {
-            throw new InvalidOperationException(
-                $"AirApp package '{fullPackagePath}' contains multiple '{_options.ManifestFileName}' files.");
-        }
-
-        using var stream = manifestEntries[0].Open();
-        return AirAppManifest.Load(stream, $"{fullPackagePath}!/{manifestEntries[0].FullName}");
     }
 
     private string ExtractPackage(string packagePath, string airAppsRootDirectory)

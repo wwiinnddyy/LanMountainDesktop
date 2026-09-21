@@ -390,7 +390,7 @@ public sealed class AirAppRuntimeService : IDisposable
 
         Directory.CreateDirectory(AirAppsDirectory);
 
-        var manifest = ReadManifestFromPackage(fullPackagePath);
+        var manifest = AirAppPackageReader.ReadManifest(fullPackagePath);
         _sharedContractManager.EnsureInstalled(manifest);
         AppLogger.Info(
             "AirAppRuntime",
@@ -463,7 +463,7 @@ public sealed class AirAppRuntimeService : IDisposable
             throw new FileNotFoundException($"AirApp package '{fullPackagePath}' was not found.", fullPackagePath);
         }
 
-        var manifest = ReadManifestFromPackage(fullPackagePath);
+        var manifest = AirAppPackageReader.ReadManifest(fullPackagePath);
         _sharedContractManager.EnsureInstalled(manifest);
         AppLogger.Info(
             "AirAppRuntime",
@@ -544,7 +544,7 @@ public sealed class AirAppRuntimeService : IDisposable
         {
             try
             {
-                var manifest = ReadManifestFromPackage(packagePath);
+                var manifest = AirAppPackageReader.ReadManifest(packagePath);
                 candidates.Add(new AirAppCandidate(packagePath, manifest, AirAppCatalogSourceKind.Package));
             }
             catch (Exception ex)
@@ -594,7 +594,7 @@ public sealed class AirAppRuntimeService : IDisposable
             {
                 try
                 {
-                    var manifest = ReadManifestFromPackage(devPath);
+                    var manifest = AirAppPackageReader.ReadManifest(devPath);
                     candidates.Add(new AirAppCandidate(devPath, manifest, AirAppCatalogSourceKind.DevAirApp));
                     AppLogger.Info("DevAirApp", $"Found developer AirApp package. AirAppId='{manifest.Id}'; Path='{devPath}'.");
                 }
@@ -649,27 +649,6 @@ public sealed class AirAppRuntimeService : IDisposable
             .OrderBy(path => path, StringComparer.OrdinalIgnoreCase);
     }
 
-    private static AirAppManifest ReadManifestFromPackage(string packagePath)
-    {
-        using var archive = ZipFile.OpenRead(packagePath);
-        var entries = archive.Entries
-            .Where(entry => string.Equals(entry.Name, AirAppSdkInfo.ManifestFileName, StringComparison.OrdinalIgnoreCase))
-            .ToArray();
-
-        if (entries.Length == 0)
-        {
-            throw new InvalidOperationException($"AirApp package '{packagePath}' does not contain '{AirAppSdkInfo.ManifestFileName}'.");
-        }
-
-        if (entries.Length > 1)
-        {
-            throw new InvalidOperationException($"AirApp package '{packagePath}' contains multiple '{AirAppSdkInfo.ManifestFileName}' files.");
-        }
-
-        using var stream = entries[0].Open();
-        return AirAppManifest.Load(stream, $"{packagePath}!/{entries[0].FullName}");
-    }
-
     private bool RemoveExistingAirAppPackages(string airAppId, string packagePathToKeep)
     {
         var replacedExisting = false;
@@ -685,7 +664,7 @@ public sealed class AirAppRuntimeService : IDisposable
 
             try
             {
-                var existingManifest = ReadManifestFromPackage(existingPackagePath);
+                var existingManifest = AirAppPackageReader.ReadManifest(existingPackagePath);
                 if (!string.Equals(existingManifest.Id, airAppId, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
