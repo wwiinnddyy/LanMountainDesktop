@@ -294,6 +294,13 @@ helper 住在 Core 是因为写同一批磁盘文件的是三个进程（宿主�
 唯一保留的字面量是 `OobeStateService` 里改名前的 `.launcher/state`（只读旧数据，与 `Launcher/state` 不是同一个目录）。
 守卫 `SourceIntegrityTests.LauncherStateDirectoryName_LivesInExactlyOnePlace`。
 
+**崩溃转储的磁盘契约只认一处**：宿主崩溃时写 `LocalApplicationData/LanMountainDesktop/crashes/`，
+启动器与错误窗口再读它——两个二进制之间没有共享类型，全靠 `crashes` / `crash-*.txt` / `latest.txt`
+三个名字逐字对齐。收口前这三个名字在 4 个文件里各抄一份，抄错一个字母的症状是崩溃对话框什么都不显示
+（正是最需要诊断信息的时候）。一律走 `core/LanMountainDesktop.Core/Diagnostics/CrashDumpLayout.cs`，
+写文件名用 `BuildDumpFileName(DateTime.Now)`（它保证名字落在 `DumpFilePattern` 里）。
+守卫 `SourceIntegrityTests.CrashDumpContract_LivesInExactlyOnePlace`。
+
 ## 6. 权威来源
 
 - 产品定位：`docs/00-快速开始/01-项目介绍.md`（归档见 `docs/archive/PRODUCT.md`）

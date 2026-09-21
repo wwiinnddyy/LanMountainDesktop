@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using LanMountainDesktop.Shared.Diagnostics;
 using System.IO;
 using System.Text;
 using Avalonia.Controls;
@@ -239,10 +240,8 @@ public partial class ErrorWindow : Window
         try
         {
             // 优先打开主程序崩溃转储目录（最有诊断价值）
-            var crashDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "LanMountainDesktop", "crashes");
-            if (Directory.Exists(crashDir) && Directory.GetFiles(crashDir, "crash-*.txt").Length > 0)
+            var crashDir = CrashDumpLayout.ResolveDirectory();
+            if (Directory.Exists(crashDir) && Directory.GetFiles(crashDir, CrashDumpLayout.DumpFilePattern).Length > 0)
             {
                 OpenPath(crashDir);
                 return;

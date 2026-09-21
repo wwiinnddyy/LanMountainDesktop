@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using LanMountainDesktop.Shared.Diagnostics;
 using System.IO;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
@@ -531,9 +532,7 @@ internal static class LauncherGuiCoordinator
     {
         try
         {
-            var crashDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "LanMountainDesktop", "crashes");
+            var crashDir = CrashDumpLayout.ResolveDirectory();
 
             if (!Directory.Exists(crashDir))
             {
@@ -541,7 +540,7 @@ internal static class LauncherGuiCoordinator
             }
 
             // 优先读取 latest.txt 标记文件指向的崩溃转储
-            var latestMarker = Path.Combine(crashDir, "latest.txt");
+            var latestMarker = Path.Combine(crashDir, CrashDumpLayout.LatestMarkerFileName);
             string? targetCrashFile = null;
 
             if (File.Exists(latestMarker))
@@ -560,7 +559,7 @@ internal static class LauncherGuiCoordinator
             // 回退：查找最近 5 分钟内的崩溃转储文件
             if (targetCrashFile is null)
             {
-                var recentCrash = Directory.GetFiles(crashDir, "crash-*.txt")
+                var recentCrash = Directory.GetFiles(crashDir, CrashDumpLayout.DumpFilePattern)
                     .Select(f => new FileInfo(f))
                     .Where(f => f.CreationTime > DateTime.Now.AddMinutes(-5))
                     .OrderByDescending(f => f.CreationTime)

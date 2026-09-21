@@ -943,6 +943,48 @@ public sealed class SourceIntegrityTests
             $"{offenders.Count} 处绕开统一读取器：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
     }
 
+    /// <summary>
+    /// 崩溃转储的磁盘契约（目录名 <c>crashes</c>、通配 <c>crash-*.txt</c>、标记 <c>latest.txt</c>）
+    /// 只认 <c>core/.../Diagnostics/CrashDumpLayout.cs</c>。宿主写、启动器读，两个二进制之间没有共享类型，
+    /// 2026-09-21 收口前这三个名字在 4 个文件里各抄一份；抄错一个字母的症状是崩溃对话框什么也不显示，
+    /// 也就是最需要诊断信息的那一刻静默失效。
+    /// </summary>
+    [Fact]
+    public void CrashDumpContract_LivesInExactlyOnePlace()
+    {
+        string[] forbidden = ["\"crashes\"", "\"crash-*.txt\"", "\"latest.txt\""];
+        var allowedFile = @"core\LanMountainDesktop.Core\Diagnostics\CrashDumpLayout.cs";
+        var offenders = new List<string>();
+
+        foreach (var file in SourceFiles())
+        {
+            if (string.Equals(RelativeToRepo(file), allowedFile, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var lines = File.ReadAllLines(file);
+            for (var index = 0; index < lines.Length; index++)
+            {
+                var trimmed = lines[index].AsSpan().TrimStart();
+                if (trimmed.StartsWith("//") || trimmed.StartsWith('*'))
+                {
+                    continue;
+                }
+
+                var hit = forbidden.FirstOrDefault(marker => lines[index].Contains(marker, StringComparison.Ordinal));
+                if (hit is not null)
+                {
+                    offenders.Add($"{RelativeToRepo(file)}:{index + 1} 自己写了崩溃转储契约（{hit}），请用 CrashDumpLayout");
+                }
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 处绕开 CrashDumpLayout 的崩溃转储字面量：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
     private static bool IsHostProjectFile(string file) => RelativeToRepo(file)
         .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
         .StartsWith($"desktop{Path.DirectorySeparatorChar}LanMountainDesktop{Path.DirectorySeparatorChar}", StringComparison.Ordinal);

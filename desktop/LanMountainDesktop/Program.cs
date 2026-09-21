@@ -1,4 +1,5 @@
 using System;
+using LanMountainDesktop.Shared.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -249,12 +250,10 @@ public sealed class Program
     {
         try
         {
-            var crashDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "LanMountainDesktop", "crashes");
+            var crashDir = CrashDumpLayout.ResolveDirectory();
             Directory.CreateDirectory(crashDir);
 
-            var crashFile = Path.Combine(crashDir, $"crash-{DateTime.Now:yyyyMMdd_HHmmss}.txt");
+            var crashFile = Path.Combine(crashDir, CrashDumpLayout.BuildDumpFileName(DateTime.Now));
 
             var sb = new StringBuilder();
             sb.AppendLine($"Time: {DateTime.Now:O}");
@@ -289,7 +288,7 @@ public sealed class Program
             AppLogger.Info("Startup", $"Crash dump written to {crashFile}");
 
             // 同时写入一个 latest 标记文件，方便启动器快速定位
-            var latestMarker = Path.Combine(crashDir, "latest.txt");
+            var latestMarker = Path.Combine(crashDir, CrashDumpLayout.LatestMarkerFileName);
             File.WriteAllText(latestMarker, crashFile, System.Text.Encoding.UTF8);
         }
         catch (Exception dumpEx)
@@ -309,7 +308,7 @@ public sealed class Program
     {
         try
         {
-            var files = Directory.GetFiles(crashDir, "crash-*.txt")
+            var files = Directory.GetFiles(crashDir, CrashDumpLayout.DumpFilePattern)
                 .Select(f => new FileInfo(f))
                 .OrderByDescending(f => f.CreationTime)
                 .Skip(10)
