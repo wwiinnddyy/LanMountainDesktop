@@ -1,4 +1,5 @@
 using System.Text.Json;
+using LanMountainDesktop.Shared.Contracts.Data;
 using LanMountainDesktop.Launcher.Models;
 using LanMountainDesktop.Shared.Contracts.Deployment;
 using LanMountainDesktop.Shared.IO;
@@ -26,8 +27,8 @@ namespace LanMountainDesktop.Launcher.Infrastructure;
 /// </remarks>
 internal sealed class DataLocationResolver
 {
-    private const string ConfigFileName = "data-location.config.json";
-    private const string DesktopFolderName = "Desktop";
+    private const string ConfigFileName = DataLocationContract.ConfigFileName;
+    private const string DesktopFolderName = DataLocationContract.DesktopFolderName;
 
     private readonly string _appRoot;
     private readonly string _defaultSystemDataPath;
@@ -119,7 +120,7 @@ internal sealed class DataLocationResolver
             return DataLocationMode.System;
         }
 
-        return string.Equals(config.DataLocationMode, "Portable", StringComparison.OrdinalIgnoreCase)
+        return string.Equals(config.DataLocationMode, DataLocationContract.PortableModeValue, StringComparison.OrdinalIgnoreCase)
             ? DataLocationMode.Portable
             : DataLocationMode.System;
     }
@@ -161,7 +162,7 @@ internal sealed class DataLocationResolver
             return _defaultSystemDataPath;
         }
 
-        if (string.Equals(config.DataLocationMode, "Portable", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(config.DataLocationMode, DataLocationContract.PortableModeValue, StringComparison.OrdinalIgnoreCase))
         {
             var portablePath = !string.IsNullOrWhiteSpace(config.PortableDataPath)
                 ? config.PortableDataPath

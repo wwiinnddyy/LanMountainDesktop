@@ -1,12 +1,11 @@
 using System.Text.Json;
+using LanMountainDesktop.Shared.Contracts.Data;
 using LanMountainDesktop.Shared.Contracts.Deployment;
 
 namespace LanMountainDesktop.Shared.IPC;
 
 public static class AirAppRuntimeDataRootResolver
 {
-    private const string ConfigFileName = "data-location.config.json";
-    private const string DesktopFolderName = "Desktop";
 
     public static string ResolveDataRoot(string? appRoot)
     {
@@ -23,7 +22,7 @@ public static class AirAppRuntimeDataRootResolver
         var configPath = Path.Combine(
             normalizedAppRoot,
             DeploymentLayout.LauncherStateDirectoryName,
-            ConfigFileName);
+            DataLocationContract.ConfigFileName);
         if (!File.Exists(configPath))
         {
             return defaultSystemDataPath;
@@ -33,16 +32,16 @@ public static class AirAppRuntimeDataRootResolver
         {
             using var document = JsonDocument.Parse(File.ReadAllText(configPath));
             var root = document.RootElement;
-            var mode = GetString(root, "dataLocationMode");
+            var mode = GetString(root, DataLocationContract.ModePropertyName);
 
-            if (string.Equals(mode, "Portable", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(mode, DataLocationContract.PortableModeValue, StringComparison.OrdinalIgnoreCase))
             {
                 return Path.GetFullPath(
-                    GetString(root, "portableDataPath")
-                    ?? Path.Combine(normalizedAppRoot, DesktopFolderName));
+                    GetString(root, DataLocationContract.PortablePathPropertyName)
+                    ?? Path.Combine(normalizedAppRoot, DataLocationContract.DesktopFolderName));
             }
 
-            return Path.GetFullPath(GetString(root, "systemDataPath") ?? defaultSystemDataPath);
+            return Path.GetFullPath(GetString(root, DataLocationContract.SystemPathPropertyName) ?? defaultSystemDataPath);
         }
         catch
         {

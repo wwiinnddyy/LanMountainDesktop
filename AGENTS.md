@@ -301,6 +301,13 @@ helper 住在 Core 是因为写同一批磁盘文件的是三个进程（宿主�
 写文件名用 `BuildDumpFileName(DateTime.Now)`（它保证名字落在 `DumpFilePattern` 里）。
 守卫 `SourceIntegrityTests.CrashDumpContract_LivesInExactlyOnePlace`。
 
+**数据位置配置的磁盘契约只认一处**：`{安装根}/.Launcher/data-location.config.json` 由启动器写、
+启动器与宿主两侧读，字段是 `dataLocationMode` / `systemDataPath` / `portableDataPath`，模式值只有
+`System` / `Portable`——一律走 `core/LanMountainDesktop.Core/Data/DataLocationContract.cs`
+（启动器的 `DataLocationConfig` 属性用 `[JsonPropertyName(...)]` 指向它，宿主的字典按键名也指向它）。
+抄错的症状是"数据位置设置静默失效"：便携安装被当成系统安装，用户以为数据丢了。
+守卫 `SourceIntegrityTests.DataLocationConfigContract_LivesInExactlyOnePlace`。
+
 ## 6. 权威来源
 
 - 产品定位：`docs/00-快速开始/01-项目介绍.md`（归档见 `docs/archive/PRODUCT.md`）

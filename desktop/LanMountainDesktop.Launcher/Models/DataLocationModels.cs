@@ -1,5 +1,8 @@
 namespace LanMountainDesktop.Launcher.Models;
 
+using LanMountainDesktop.Shared.Contracts.Data;
+using System.Text.Json.Serialization;
+
 internal enum DataLocationMode
 {
     System,
@@ -8,10 +11,13 @@ internal enum DataLocationMode
 
 internal sealed class DataLocationConfig
 {
-    public string DataLocationMode { get; set; } = "System";
+    [JsonPropertyName(DataLocationContract.ModePropertyName)]
+    public string DataLocationMode { get; set; } = DataLocationContract.SystemModeValue;
 
+    [JsonPropertyName(DataLocationContract.SystemPathPropertyName)]
     public string? SystemDataPath { get; set; }
 
+    [JsonPropertyName(DataLocationContract.PortablePathPropertyName)]
     public string? PortableDataPath { get; set; }
 }
 

@@ -985,6 +985,56 @@ public sealed class SourceIntegrityTests
             $"{offenders.Count} 处绕开 CrashDumpLayout 的崩溃转储字面量：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
     }
 
+    /// <summary>
+    /// 数据位置配置（<c>data-location.config.json</c> 与它的三个字段名）只认
+    /// <c>core/.../Data/DataLocationContract.cs</c>：写它的是启动器，读它的是启动器与宿主两侧。
+    /// 抄错的症状不是报错，而是"数据位置设置静默失效"——便携安装会被当成系统安装，
+    /// 用户看到的是"我的数据不见了"。<c>"Desktop"</c> 这个词太通用，不在这条判据里（真源仍是指向常量的别名）。
+    /// </summary>
+    [Fact]
+    public void DataLocationConfigContract_LivesInExactlyOnePlace()
+    {
+        string[] forbidden =
+        [
+            "\"data-location.config.json\"",
+            "\"dataLocationMode\"",
+            "\"systemDataPath\"",
+            "\"portableDataPath\"",
+        ];
+
+        var allowedFile = @"core\LanMountainDesktop.Core\Data\DataLocationContract.cs";
+        var offenders = new List<string>();
+
+        foreach (var file in SourceFiles())
+        {
+            if (string.Equals(RelativeToRepo(file), allowedFile, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var lines = File.ReadAllLines(file);
+            for (var index = 0; index < lines.Length; index++)
+            {
+                var trimmed = lines[index].AsSpan().TrimStart();
+                if (trimmed.StartsWith("//") || trimmed.StartsWith('*'))
+                {
+                    continue;
+                }
+
+                var hit = forbidden.FirstOrDefault(marker => lines[index].Contains(marker, StringComparison.Ordinal));
+                if (hit is not null)
+                {
+                    offenders.Add($"{RelativeToRepo(file)}:{index + 1} 自己写了数据位置契约（{hit}），请用 DataLocationContract");
+                }
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 处绕开 DataLocationContract 的落盘契约字面量："
+            + $"{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
     private static bool IsHostProjectFile(string file) => RelativeToRepo(file)
         .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
         .StartsWith($"desktop{Path.DirectorySeparatorChar}LanMountainDesktop{Path.DirectorySeparatorChar}", StringComparison.Ordinal);
