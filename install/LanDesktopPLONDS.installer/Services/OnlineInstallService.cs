@@ -1,4 +1,5 @@
 using LanDesktopPLONDS.Installer.Models;
+using LanMountainDesktop.Shared.Data;
 using LanMountainDesktop.Shared.Contracts.Deployment;
 using LanMountainDesktop.Shared.Contracts.Privacy;
 
@@ -23,7 +24,7 @@ internal sealed class OnlineInstallService(
         };
         var stagingRoot = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "LanMountainDesktop",
+            UserDataRoot.FolderName,
             "Installer",
             "PLONDS");
         return new OnlineInstallService(

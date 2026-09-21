@@ -1,4 +1,5 @@
 using System;
+using LanMountainDesktop.Shared.Data;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -255,7 +256,7 @@ public sealed class UpdateOrchestrator : IDisposable
                     var fileName = $"{manifest.DistributionId}-{manifest.ToVersion}-installer.exe";
                     var destinationPath = Path.Combine(
                         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                        "LanMountainDesktop",
+                        UserDataRoot.FolderName,
                         "Updates",
                         fileName);
                     result = await _downloadEngine.DownloadFullInstallerAsync(

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using LanMountainDesktop.Shared.Data;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -657,7 +658,7 @@ public sealed class PortAudioRecorderService : IAudioRecorderService
             root = AppContext.BaseDirectory;
         }
 
-        var folder = Path.Combine(root, "LanMountainDesktop", "Recordings");
+        var folder = Path.Combine(root, UserDataRoot.FolderName, "Recordings");
         Directory.CreateDirectory(folder);
 
         var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");

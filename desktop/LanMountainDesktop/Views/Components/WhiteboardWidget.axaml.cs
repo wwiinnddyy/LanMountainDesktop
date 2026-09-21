@@ -1,4 +1,5 @@
 using System;
+using LanMountainDesktop.Shared.Data;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -886,7 +887,7 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
 
         var exportFolder = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "LanMountainDesktop",
+            UserDataRoot.FolderName,
             "Exports");
         Directory.CreateDirectory(exportFolder);
         var savePath = Path.Combine(exportFolder, fileName);

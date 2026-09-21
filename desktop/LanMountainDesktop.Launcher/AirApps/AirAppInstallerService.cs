@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using LanMountainDesktop.Shared.Data;
 using System.Text.Json;
 using LanMountainDesktop.AirAppPackaging;
 using LanMountainDesktop.Launcher.Models;
@@ -89,7 +90,7 @@ internal sealed class AirAppInstallerService
                 return null;
             }
 
-            allowedRoot = EnsureTrailingSeparator(Path.Combine(Path.GetFullPath(localAppData), "LanMountainDesktop"));
+            allowedRoot = EnsureTrailingSeparator(Path.Combine(Path.GetFullPath(localAppData), UserDataRoot.FolderName));
         }
 
         var normalizedAirAppsDirectory = EnsureTrailingSeparator(Path.GetFullPath(airAppsDirectory));

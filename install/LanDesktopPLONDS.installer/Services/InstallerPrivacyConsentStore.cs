@@ -1,4 +1,5 @@
 using System.Text.Json;
+using LanMountainDesktop.Shared.Data;
 using System.Text.Json.Serialization;
 using LanMountainDesktop.Shared.IO;
 
@@ -65,7 +66,7 @@ public sealed partial class InstallerPrivacyConsentStore
             root = AppContext.BaseDirectory;
         }
 
-        return Path.Combine(root, "LanMountainDesktop", "Installer", ConsentFileName);
+        return Path.Combine(root, UserDataRoot.FolderName, "Installer", ConsentFileName);
     }
 
     private InstallerPrivacyConsentDocument? TryLoad()

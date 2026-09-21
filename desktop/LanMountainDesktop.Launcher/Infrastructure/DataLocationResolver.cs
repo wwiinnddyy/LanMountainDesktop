@@ -1,4 +1,5 @@
 using System.Text.Json;
+using LanMountainDesktop.Shared.Data;
 using LanMountainDesktop.Shared.Contracts.Data;
 using LanMountainDesktop.Launcher.Models;
 using LanMountainDesktop.Shared.Contracts.Deployment;
@@ -38,7 +39,7 @@ internal sealed class DataLocationResolver
         _appRoot = Path.GetFullPath(appRoot);
         _defaultSystemDataPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "LanMountainDesktop");
+            UserDataRoot.FolderName);
     }
 
     public string AppRoot => _appRoot;

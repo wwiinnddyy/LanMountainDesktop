@@ -1,3 +1,5 @@
+using LanMountainDesktop.Shared.Data;
+
 namespace LanMountainDesktop.Services;
 
 public static class AppDataPathProvider
@@ -89,7 +91,7 @@ public static class AppDataPathProvider
 
         return Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "LanMountainDesktop");
+            UserDataRoot.FolderName);
     }
 
     public static string GetSettingsDirectory()

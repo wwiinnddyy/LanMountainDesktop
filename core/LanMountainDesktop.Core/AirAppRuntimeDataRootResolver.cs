@@ -1,4 +1,5 @@
 using System.Text.Json;
+using LanMountainDesktop.Shared.Data;
 using LanMountainDesktop.Shared.Contracts.Data;
 using LanMountainDesktop.Shared.Contracts.Deployment;
 
@@ -11,7 +12,7 @@ public static class AirAppRuntimeDataRootResolver
     {
         var defaultSystemDataPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "LanMountainDesktop");
+            UserDataRoot.FolderName);
 
         if (string.IsNullOrWhiteSpace(appRoot))
         {

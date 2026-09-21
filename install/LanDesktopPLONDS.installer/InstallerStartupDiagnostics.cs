@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using LanMountainDesktop.Shared.Data;
 using System.Text;
 
 namespace LanDesktopPLONDS.Installer;
@@ -84,7 +85,7 @@ internal static class InstallerStartupDiagnostics
             root = AppContext.BaseDirectory;
         }
 
-        return Path.Combine(root, "LanMountainDesktop", "Installer", "logs");
+        return Path.Combine(root, UserDataRoot.FolderName, "Installer", "logs");
     }
 
     [DllImport("user32.dll", EntryPoint = "MessageBoxW", CharSet = CharSet.Unicode)]

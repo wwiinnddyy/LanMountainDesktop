@@ -1,4 +1,5 @@
 using System.Text;
+using LanMountainDesktop.Shared.Data;
 using System.Text.Json;
 using LanMountainDesktop.Launcher.Models;
 using LanMountainDesktop.Shared.Contracts.Deployment;
@@ -149,9 +150,7 @@ internal static class Commands
         }
         
         var parent = Path.GetFullPath(Path.Combine(baseDir, ".."));
-        var parentHost = OperatingSystem.IsWindows()
-            ? Path.Combine(parent, "LanMountainDesktop.exe")
-            : Path.Combine(parent, "LanMountainDesktop");
+        var parentHost = Path.Combine(parent, DeploymentLayout.GetHostExecutableName());
         if (File.Exists(parentHost))
         {
             return parent;

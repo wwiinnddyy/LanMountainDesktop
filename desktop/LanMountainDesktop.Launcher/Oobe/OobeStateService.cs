@@ -1,4 +1,5 @@
 using System.Text.Json;
+using LanMountainDesktop.Shared.Data;
 using LanMountainDesktop.Launcher.Models;
 using LanMountainDesktop.Shared.IO;
 
@@ -298,7 +299,7 @@ internal sealed class OobeStateService
                 throw new InvalidOperationException("LocalApplicationData is unavailable.");
             }
 
-            return Path.Combine(appData, "LanMountainDesktop");
+            return Path.Combine(appData, UserDataRoot.FolderName);
         }
     }
 
@@ -310,6 +311,6 @@ internal sealed class OobeStateService
             return string.Empty;
         }
 
-        return Path.Combine(appData, "LanMountainDesktop");
+        return Path.Combine(appData, UserDataRoot.FolderName);
     }
 }

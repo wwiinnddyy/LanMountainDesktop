@@ -1,4 +1,5 @@
 using System;
+using LanMountainDesktop.Shared.Data;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -266,7 +267,7 @@ internal sealed class AirAppMarketInstallService : IDisposable
         var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         var fallbackRoot = string.IsNullOrWhiteSpace(localAppData)
             ? Path.GetTempPath()
-            : Path.Combine(localAppData, "LanMountainDesktop");
+            : Path.Combine(localAppData, UserDataRoot.FolderName);
         return Path.Combine(fallbackRoot, "AirAppMarket", "downloads");
     }
 

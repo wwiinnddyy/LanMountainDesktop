@@ -1035,6 +1035,62 @@ public sealed class SourceIntegrityTests
             + $"{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
     }
 
+    /// <summary>
+    /// 用户资料目录下的那个品牌文件夹名（<c>%LocalAppData%\LanMountainDesktop</c>、
+    /// <c>%Documents%\LanMountainDesktop</c>）只认 <c>core/.../Data/UserDataRoot.cs</c>。
+    /// 宿主、首启向导、Core 的路径解析器、安装器四个二进制都往这里落东西（设置、日志、崩溃转储、
+    /// 隐私同意书、录音、缓存），2026-09-21 收口前有 27 处各自写了字面量。抄错的后果不是报错，
+    /// 而是某个二进制去一个空目录里找用户的数据——"设置没了"。
+    ///
+    /// 判据只看"根是用户资料目录 + 拼了这个名字"的组合：<c>DeploymentLocator</c> 与 <c>ErrorWindow</c>
+    /// 里那些 <c>Path.Combine(solutionRoot, \"LanMountainDesktop\", \"bin\", …)</c> 找的是仓内编译产物，
+    /// 不是用户数据，不在这一族；<c>PublicAppInfoService</c> 里那个是应用显示名，同理。
+    /// </summary>
+    [Fact]
+    public void UserDataRootFolderName_LivesInExactlyOnePlace()
+    {
+        var allowedFile = @"core\LanMountainDesktop.Core\Data\UserDataRoot.cs";
+        var userProfileRoot = new Regex(
+            @"LocalApplicationData|localAppData|appData|MyDocuments|SpecialFolder\.Documents",
+            RegexOptions.Compiled);
+        var offenders = new List<string>();
+
+        foreach (var file in SourceFiles())
+        {
+            if (string.Equals(RelativeToRepo(file), allowedFile, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var lines = File.ReadAllLines(file);
+            for (var index = 0; index < lines.Length; index++)
+            {
+                if (!lines[index].Contains("\"LanMountainDesktop\"", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                var trimmed = lines[index].AsSpan().TrimStart();
+                if (trimmed.StartsWith("//") || trimmed.StartsWith('*'))
+                {
+                    continue;
+                }
+
+                var statement = string.Join(
+                    ' ',
+                    lines[Math.Max(0, index - 4)..(index + 1)]);
+                if (statement.Contains("Path.Combine(", StringComparison.Ordinal) && userProfileRoot.IsMatch(statement))
+                {
+                    offenders.Add($"{RelativeToRepo(file)}:{index + 1} 自己拼了用户数据目录，请用 UserDataRoot");
+                }
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 处硬编码的用户数据目录名：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
     private static bool IsHostProjectFile(string file) => RelativeToRepo(file)
         .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
         .StartsWith($"desktop{Path.DirectorySeparatorChar}LanMountainDesktop{Path.DirectorySeparatorChar}", StringComparison.Ordinal);

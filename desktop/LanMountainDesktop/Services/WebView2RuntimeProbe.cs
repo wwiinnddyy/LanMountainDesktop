@@ -1,4 +1,5 @@
 using System;
+using LanMountainDesktop.Shared.Data;
 using System.IO;
 using System.Reflection;
 using System.Runtime.Versioning;
@@ -73,7 +74,7 @@ public static class WebView2RuntimeProbe
             localAppData = AppContext.BaseDirectory;
         }
 
-        var userDataFolder = Path.Combine(localAppData, "LanMountainDesktop", "WebView2");
+        var userDataFolder = Path.Combine(localAppData, UserDataRoot.FolderName, "WebView2");
         Directory.CreateDirectory(userDataFolder);
         return userDataFolder;
     }

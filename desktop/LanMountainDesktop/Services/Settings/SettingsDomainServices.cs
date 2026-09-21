@@ -1,4 +1,5 @@
 using System;
+using LanMountainDesktop.Shared.Data;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -1571,7 +1572,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
 
         return Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "LanMountainDesktop",
+            UserDataRoot.FolderName,
             "Updates",
             safeFileName);
     }

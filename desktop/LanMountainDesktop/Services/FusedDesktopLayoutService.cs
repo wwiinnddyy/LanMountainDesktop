@@ -1,4 +1,5 @@
 using System;
+using LanMountainDesktop.Shared.Data;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
@@ -50,7 +51,7 @@ internal sealed class FusedDesktopLayoutService : IFusedDesktopLayoutService
 {
     private static readonly string ConfigFilePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "LanMountainDesktop",
+        UserDataRoot.FolderName,
         "fused_desktop_layout.json");
     
     private readonly object _lock = new();

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using LanMountainDesktop.Shared.Data;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -33,7 +34,7 @@ internal sealed class StartupAttemptRegistry
         {
             return Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "LanMountainDesktop",
+                UserDataRoot.FolderName,
                 "Launcher",
                 "state",
                 "startup-attempt.json");

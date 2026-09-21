@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using LanMountainDesktop.Shared.Data;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using LanMountainDesktop.Shared.IO;
@@ -46,7 +47,7 @@ public sealed partial class PrivacyDeviceIdentityProvider : IPrivacyDeviceIdenti
             root = AppContext.BaseDirectory;
         }
 
-        return Path.Combine(root, "LanMountainDesktop", DefaultIdentityFileName);
+        return Path.Combine(root, UserDataRoot.FolderName, DefaultIdentityFileName);
     }
 
     private PrivacyDeviceIdentityDocument? TryLoad()

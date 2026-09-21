@@ -308,6 +308,16 @@ helper 住在 Core 是因为写同一批磁盘文件的是三个进程（宿主�
 抄错的症状是"数据位置设置静默失效"：便携安装被当成系统安装，用户以为数据丢了。
 守卫 `SourceIntegrityTests.DataLocationConfigContract_LivesInExactlyOnePlace`。
 
+**用户资料目录下的品牌文件夹名只认一处**：`%LocalAppData%\LanMountainDesktop`（以及录音用的
+`%Documents%\LanMountainDesktop`）那一段一律用 `core/LanMountainDesktop.Core/Data/UserDataRoot.cs`
+的 `FolderName` / `Resolve()` / `ResolveSettingsPath()`。2026-09-21 收口前四个二进制里有 28 处各写一遍
+字面量（宿主 13、启动器 9、Core 3、安装器 3）。抄错的后果不是报错，而是那个二进制去一个空目录里找用户的数据
+——"设置没了"就是这么来的。注意仓内还有三类**不是**这一族、别顺手改：`DeploymentLocator` 与
+`ErrorWindow` 里 `Path.Combine(solutionRoot, "LanMountainDesktop", "bin", …)` 找的是编译产物目录、
+`PublicAppInfoService` 里那个是应用显示名、`"LanMountainDesktop.exe"` 是 exe 名（用
+`DeploymentLayout.GetHostExecutableName()`）。守卫
+`SourceIntegrityTests.UserDataRootFolderName_LivesInExactlyOnePlace` 只拦"根是用户资料目录 + 拼了这个名字"的组合。
+
 ## 6. 权威来源
 
 - 产品定位：`docs/00-快速开始/01-项目介绍.md`（归档见 `docs/archive/PRODUCT.md`）

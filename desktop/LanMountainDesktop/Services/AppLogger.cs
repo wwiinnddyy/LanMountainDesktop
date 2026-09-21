@@ -1,4 +1,5 @@
 using System;
+using LanMountainDesktop.Shared.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -42,7 +43,7 @@ public static class AppLogger
             var preferredDirectory = Path.Combine(AppContext.BaseDirectory, "log");
             var fallbackDirectory = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "LanMountainDesktop",
+                UserDataRoot.FolderName,
                 "log");
 
             var preferredReady = TryPrepareDirectory(preferredDirectory, out var preferredError);

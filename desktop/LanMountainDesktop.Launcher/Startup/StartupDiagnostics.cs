@@ -1,4 +1,5 @@
 using System.Text.Json;
+using LanMountainDesktop.Shared.Data;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 using LanMountainDesktop.Shared.IPC.Abstractions.Services;
 
@@ -35,7 +36,7 @@ internal static class StartupDiagnostics
             // 兜底用的 LocalAppData/LanMountainDesktop/Launcher/{logs,state} 同级。
             var directory = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "LanMountainDesktop",
+                UserDataRoot.FolderName,
                 "Launcher",
                 "diag");
             Directory.CreateDirectory(directory);

@@ -1,4 +1,5 @@
 using System.Text;
+using LanMountainDesktop.Shared.Data;
 
 namespace LanMountainDesktop.Launcher.Infrastructure;
 
@@ -68,7 +69,7 @@ internal static class Logger
             var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             if (!string.IsNullOrEmpty(appData))
             {
-                return Path.Combine(appData, "LanMountainDesktop", "Launcher", "logs");
+                return Path.Combine(appData, UserDataRoot.FolderName, "Launcher", "logs");
             }
         }
         catch

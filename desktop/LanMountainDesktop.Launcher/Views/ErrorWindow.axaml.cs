@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using LanMountainDesktop.Shared.Data;
 using LanMountainDesktop.Shared.Diagnostics;
 using System.IO;
 using System.Text;
@@ -11,6 +12,7 @@ using Avalonia.Threading;
 using FluentAvalonia.UI.Controls;
 using LanMountainDesktop.Launcher.Resources;
 using LanMountainDesktop.Launcher.Infrastructure;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanMountainDesktop.Launcher.Views;
 
@@ -248,9 +250,7 @@ public partial class ErrorWindow : Window
             }
 
             // 其次打开主程序日志目录
-            var hostLogDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "LanMountainDesktop", "log");
+            var hostLogDir = Path.Combine(UserDataRoot.Resolve(), "log");
             if (Directory.Exists(hostLogDir) && Directory.GetFiles(hostLogDir).Length > 0)
             {
                 OpenPath(hostLogDir);

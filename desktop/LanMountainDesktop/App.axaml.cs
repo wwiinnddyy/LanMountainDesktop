@@ -1,4 +1,5 @@
 using System;
+using LanMountainDesktop.Shared.Data;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -2001,7 +2002,7 @@ public partial class App : Application
         {
             var markerDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "LanMountainDesktop", "diagnostics");
+                UserDataRoot.FolderName, "diagnostics");
             Directory.CreateDirectory(markerDir);
             var markerPath = Path.Combine(markerDir, ".ipc-init-failed");
             var content = $"{DateTime.Now:O}\nPID={Environment.ProcessId}\nException={ex.GetType().FullName}\nMessage={ex.Message}\nStackTrace={ex.StackTrace}";
@@ -2027,7 +2028,7 @@ public partial class App : Application
         {
             var markerPath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "LanMountainDesktop", "diagnostics", ".ipc-init-failed");
+                UserDataRoot.FolderName, "diagnostics", ".ipc-init-failed");
             if (File.Exists(markerPath))
             {
                 File.Delete(markerPath);

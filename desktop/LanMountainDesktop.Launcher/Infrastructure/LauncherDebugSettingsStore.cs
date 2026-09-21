@@ -1,4 +1,5 @@
 using LanMountainDesktop.Shared.IO;
+using LanMountainDesktop.Shared.Data;
 
 namespace LanMountainDesktop.Launcher.Infrastructure;
 
@@ -120,7 +121,7 @@ internal static class LauncherDebugSettingsStore
             var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             if (!string.IsNullOrWhiteSpace(appData))
             {
-                return Path.Combine(appData, "LanMountainDesktop", "Launcher");
+                return Path.Combine(appData, UserDataRoot.FolderName, "Launcher");
             }
         }
         catch

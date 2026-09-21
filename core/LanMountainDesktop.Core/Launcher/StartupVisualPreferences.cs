@@ -1,4 +1,5 @@
 using System.Text.Json;
+using LanMountainDesktop.Shared.Data;
 
 namespace LanMountainDesktop.Shared.Contracts.Launcher;
 
@@ -70,7 +71,7 @@ public static class StartupVisualPreferencesResolver
     public static string GetDefaultSettingsPath()
     {
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        return Path.Combine(appData, "LanMountainDesktop", "settings.json");
+        return Path.Combine(appData, UserDataRoot.FolderName, "settings.json");
     }
 
     private static bool? TryGetBoolean(JsonElement root, string propertyName)

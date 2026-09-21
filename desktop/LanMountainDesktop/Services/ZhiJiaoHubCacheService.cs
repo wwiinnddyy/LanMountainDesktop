@@ -1,4 +1,5 @@
 using System;
+using LanMountainDesktop.Shared.Data;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -64,7 +65,7 @@ public sealed class ZhiJiaoHubCacheService : IDisposable
     public ZhiJiaoHubCacheService()
     {
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        var dataDirectory = Path.Combine(appData, "LanMountainDesktop", "cache", "zhijiaohub");
+        var dataDirectory = Path.Combine(appData, UserDataRoot.FolderName, "cache", "zhijiaohub");
         _cacheDirectory = dataDirectory;
         _manifestPath = Path.Combine(dataDirectory, "manifest.json");
     }
