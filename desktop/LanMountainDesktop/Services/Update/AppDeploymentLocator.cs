@@ -103,7 +103,7 @@ internal sealed class AppDeploymentLocator(string launcherRoot)
                     try
                     {
                         var json = File.ReadAllText(snapshotFile);
-                        var snapshot = JsonSerializer.Deserialize(json, UpdateApplyJsonContext.Default.ApplySnapshotMetadata);
+                        var snapshot = JsonSerializer.Deserialize(json, UpdateApplyJsonContext.Default.SnapshotMetadata);
                         if (snapshot is not null && !string.IsNullOrWhiteSpace(snapshot.SourceDirectory) && Directory.Exists(snapshot.SourceDirectory))
                         {
                             versionsToKeep.Add(snapshot.SourceDirectory);

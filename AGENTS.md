@@ -318,6 +318,13 @@ helper 住在 Core 是因为写同一批磁盘文件的是三个进程（宿主�
 `DeploymentLayout.GetHostExecutableName()`）。守卫
 `SourceIntegrityTests.UserDataRootFolderName_LivesInExactlyOnePlace` 只拦"根是用户资料目录 + 拼了这个名字"的组合。
 
+**更新快照元数据只有一个模型**：`{数据根}/update/snapshots/*.json` 由宿主写、宿主与启动器各自读，
+一律用 `core/LanMountainDesktop.Core/Update/SnapshotMetadata.cs`（键名用显式 `[JsonPropertyName]` 钉住，
+不依赖两个程序集恰好一致的序列化开关）。收口前它是两份逐字相同的声明
+（`ApplySnapshotMetadata` 与 `SnapshotMetadata`）——改一边不会编译报错，只会让另一边把 `sourceDirectory`
+读成空串，症状是"旧版本被清理掉、想回滚时没得回滚"。状态值用 `SnapshotMetadata.PendingStatus`。
+守卫 `SourceIntegrityTests.SnapshotMetadataModel_LivesInExactlyOnePlace`。
+
 ## 6. 权威来源
 
 - 产品定位：`docs/00-快速开始/01-项目介绍.md`（归档见 `docs/archive/PRODUCT.md`）

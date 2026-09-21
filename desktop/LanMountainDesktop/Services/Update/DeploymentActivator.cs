@@ -1,3 +1,5 @@
+using LanMountainDesktop.Shared.Contracts.Update;
+
 namespace LanMountainDesktop.Services.Update;
 
 internal sealed class DeploymentActivator(AppDeploymentLocator deploymentLocator)
@@ -18,7 +20,7 @@ internal sealed class DeploymentActivator(AppDeploymentLocator deploymentLocator
         if (File.Exists(toPartial)) File.Delete(toPartial);
     }
 
-    public RollbackAttemptResult TryRollbackOnFailure(ApplySnapshotMetadata snapshot)
+    public RollbackAttemptResult TryRollbackOnFailure(SnapshotMetadata snapshot)
     {
         try
         {

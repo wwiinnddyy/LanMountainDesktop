@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using LanMountainDesktop.Shared.Contracts.Update;
 using LanMountainDesktop.Services.Plonds;
 
 namespace LanMountainDesktop.Services.Update;
@@ -28,17 +29,6 @@ internal sealed class ApplyUpdateResult
 
     [JsonPropertyName("errorMessage")]
     public string? ErrorMessage { get; init; }
-}
-
-internal sealed class ApplySnapshotMetadata
-{
-    public string SnapshotId { get; set; } = string.Empty;
-    public string SourceVersion { get; set; } = string.Empty;
-    public string? TargetVersion { get; set; }
-    public DateTimeOffset CreatedAt { get; set; }
-    public string SourceDirectory { get; set; } = string.Empty;
-    public string? TargetDirectory { get; set; }
-    public string Status { get; set; } = "pending";
 }
 
 internal sealed class ApplyInstallCheckpoint

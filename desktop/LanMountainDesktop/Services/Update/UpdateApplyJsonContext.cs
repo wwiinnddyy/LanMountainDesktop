@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using LanMountainDesktop.Shared.Contracts.Update;
 
 namespace LanMountainDesktop.Services.Update;
 
@@ -8,6 +9,6 @@ namespace LanMountainDesktop.Services.Update;
     PropertyNameCaseInsensitive = true)]
 [JsonSerializable(typeof(ApplyPlondsFileMap))]
 [JsonSerializable(typeof(ApplyPlondsUpdateMetadata))]
-[JsonSerializable(typeof(ApplySnapshotMetadata))]
+[JsonSerializable(typeof(SnapshotMetadata))]
 [JsonSerializable(typeof(ApplyInstallCheckpoint))]
 internal sealed partial class UpdateApplyJsonContext : JsonSerializerContext;

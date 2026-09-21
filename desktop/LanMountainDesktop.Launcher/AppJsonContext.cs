@@ -1,4 +1,5 @@
 using System.Text.Json;
+using LanMountainDesktop.Shared.Contracts.Update;
 using System.Text.Json.Serialization;
 using LanMountainDesktop.Launcher.Models;
 using LanMountainDesktop.Launcher.AirApps;

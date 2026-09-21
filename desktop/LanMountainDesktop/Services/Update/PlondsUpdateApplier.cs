@@ -235,7 +235,7 @@ internal sealed class PlondsUpdateApplier(
         }
     }
 
-    private ApplyUpdateResult HandleFailure(Exception ex, bool isInitialDeployment, string targetDeployment, ApplySnapshotMetadata snapshot, string snapshotPath, string sourceVersion, string targetVersion)
+    private ApplyUpdateResult HandleFailure(Exception ex, bool isInitialDeployment, string targetDeployment, SnapshotMetadata snapshot, string snapshotPath, string sourceVersion, string targetVersion)
     {
         if (isInitialDeployment)
         {
@@ -275,7 +275,7 @@ internal sealed class PlondsUpdateApplier(
         };
     }
 
-    private static ApplySnapshotMetadata BuildSnapshot(bool canResume, ApplyInstallCheckpoint? existingCheckpoint, string sourceVersion, string targetVersion, string? currentDeployment, string targetDeployment) =>
+    private static SnapshotMetadata BuildSnapshot(bool canResume, ApplyInstallCheckpoint? existingCheckpoint, string sourceVersion, string targetVersion, string? currentDeployment, string targetDeployment) =>
         new()
         {
             SnapshotId = canResume ? existingCheckpoint!.SnapshotId : Guid.NewGuid().ToString("N"),
@@ -283,11 +283,10 @@ internal sealed class PlondsUpdateApplier(
             TargetVersion = targetVersion,
             CreatedAt = DateTimeOffset.UtcNow,
             SourceDirectory = currentDeployment ?? string.Empty,
-            TargetDirectory = targetDeployment,
-            Status = "pending"
+            TargetDirectory = targetDeployment
         };
 
-    private static ApplyInstallCheckpoint BuildCheckpoint(ApplySnapshotMetadata snapshot, string sourceVersion, string targetVersion, string? currentDeployment, string targetDeployment, bool isInitialDeployment) =>
+    private static ApplyInstallCheckpoint BuildCheckpoint(SnapshotMetadata snapshot, string sourceVersion, string targetVersion, string? currentDeployment, string targetDeployment, bool isInitialDeployment) =>
         new()
         {
             SnapshotId = snapshot.SnapshotId,

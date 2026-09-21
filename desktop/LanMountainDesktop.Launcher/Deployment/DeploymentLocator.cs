@@ -1,4 +1,5 @@
 using System.Globalization;
+using LanMountainDesktop.Shared.Contracts.Update;
 using System.Text.Json;
 using LanMountainDesktop.Launcher.Models;
 using LanMountainDesktop.Shared.Contracts.Deployment;

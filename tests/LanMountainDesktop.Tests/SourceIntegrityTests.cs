@@ -1091,6 +1091,53 @@ public sealed class SourceIntegrityTests
             $"{offenders.Count} 处硬编码的用户数据目录名：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
     }
 
+    /// <summary>
+    /// 快照元数据（<c>{数据根}/update/snapshots/*.json</c>）只有一个模型：
+    /// <c>core/.../Update/SnapshotMetadata.cs</c>。宿主写、宿主与启动器两侧读，收口前是两份逐字相同的声明
+    /// （<c>ApplySnapshotMetadata</c> 与 <c>SnapshotMetadata</c>，7 个属性一个不差），
+    /// 改一边不会有任何编译错误，只会让另一边把 <c>sourceDirectory</c> 读成空串——
+    /// 症状是"旧版本被清理掉、想回滚时没得回滚"。同理，<c>"pending"</c> 这个落盘状态值也只许出现在真源里。
+    /// </summary>
+    [Fact]
+    public void SnapshotMetadataModel_LivesInExactlyOnePlace()
+    {
+        var allowedFile = @"core\LanMountainDesktop.Core\Update\SnapshotMetadata.cs";
+        var declaration = new Regex(@"\b(class|record)\s+SnapshotMetadata\b", RegexOptions.Compiled);
+        var offenders = new List<string>();
+
+        foreach (var file in SourceFiles())
+        {
+            if (string.Equals(RelativeToRepo(file), allowedFile, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var lines = File.ReadAllLines(file);
+            for (var index = 0; index < lines.Length; index++)
+            {
+                var trimmed = lines[index].AsSpan().TrimStart();
+                if (trimmed.StartsWith("//") || trimmed.StartsWith('*'))
+                {
+                    continue;
+                }
+
+                if (declaration.IsMatch(lines[index]))
+                {
+                    offenders.Add($"{RelativeToRepo(file)}:{index + 1} 又声明了一个 SnapshotMetadata");
+                }
+
+                if (lines[index].Contains("\"pending\"", StringComparison.Ordinal))
+                {
+                    offenders.Add($"{RelativeToRepo(file)}:{index + 1} 自己写了快照状态值，请用 SnapshotMetadata.PendingStatus");
+                }
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 处绕开共享快照模型：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
     private static bool IsHostProjectFile(string file) => RelativeToRepo(file)
         .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
         .StartsWith($"desktop{Path.DirectorySeparatorChar}LanMountainDesktop{Path.DirectorySeparatorChar}", StringComparison.Ordinal);
