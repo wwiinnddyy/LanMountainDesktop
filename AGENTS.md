@@ -334,6 +334,14 @@ helper 住在 Core 是因为写同一批磁盘文件的是三个进程（宿主�
 判"用过"取宽松口径：任何 .cs 里的同名字符串字面量都算（`Classes.Add(常量)` 这种绕法），
 所以只会偏乐观、不会误红。
 
+**没人引用的图片/字体不要往仓库里放**：`Assets/**` 里的资源不会被编译器检查，放进去了就会被
+打进安装包长期占地方。守卫 `tests/LanMountainDesktop.Tests/UnreferencedAssetRatchetTests.cs`
+把"文件名/字体家族名/资源目录路径"三种引用方式都算引用，全都不命中就是孤儿，新增即红。
+2026-09-21 首扫按这条清掉 `avalonia-logo.ico`（Avalonia 模板默认图标）与 `wechat.svg`
+（微信按钮早就改成内联 `<Path Data=…>` 矢量，这张 svg 只是它当初的来源）。
+唯一挂名的欠账是 `Assets/endfiled`：24 张表情图 / 1.27MB 全仓零引用，也没有代码按目录枚举它们——
+删掉整套是产品决定，先用配额冻住（24 张 / 1303 KiB），不许再扩大。
+
 ## 6. 权威来源
 
 - 产品定位：`docs/00-快速开始/01-项目介绍.md`（归档见 `docs/archive/PRODUCT.md`）
