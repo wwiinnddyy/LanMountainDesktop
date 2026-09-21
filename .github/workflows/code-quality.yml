@@ -39,6 +39,33 @@ jobs:
       - name: Build
         run: dotnet build ${{ env.Solution_Name }} -c Release --no-restore -v minimal
 
+      # 661 条测试此前在 CI 里一条都没跑：全仓唯一的 dotnet test 在 airapp-sdk-publish.yml，
+      # 而且 --filter 只挑 AirAppSdkVersionConsistencyTests。本地实测 Release 全绿（2m0s）。
+      # EcosystemProbe 跑的是同级仓库里的外部 AirApp 产物，CI 上没有那些产物，单独用
+      # 生态体检作业承担，不进 PR 闸门。
+      #
+      # 重跑一次是因为 Avalonia headless 的每测试会话在清理阶段有线程归属竞态
+      # （本地实测约 1/4 概率挂 1 条，测试体本身是过的；详见
+      # tests/LanMountainDesktop.Tests/AssemblyInfo.Xunit.cs 里已排除的两条修法）。
+      # 连续两次失败才拦，真缺陷仍然会被挡住。
+      - name: Test
+        run: |
+          FILTER='Category!=EcosystemProbe'
+          if ! dotnet test ${{ env.Solution_Name }} -c Release --no-build -v minimal --filter "$FILTER"; then
+            echo "::warning title=Flaky headless test run::first dotnet test run failed, retrying once"
+            dotnet test ${{ env.Solution_Name }} -c Release --no-build -v minimal --filter "$FILTER"
+          fi
+
+      # 未使用私有成员必须为 0。Platform/Windows/Patches 是 Harmony 补丁，方法由 PatchAll
+      # 反射调用，分析器看不见，所以排除；除此之外新增死成员要在这里被拦下。
+      # IDE0052（只写不读）此前有 43 处：字段被赋值却从未读取，看着像接了线其实没接，
+      # 全部清零后一并纳入闸门。
+      - name: Check unused members
+        run: >
+          dotnet format style desktop/LanMountainDesktop/LanMountainDesktop.csproj
+          --diagnostics IDE0051 IDE0052 --severity hidden --verify-no-changes
+          --exclude desktop/LanMountainDesktop/Platform/Windows/Patches
+
       - name: Check formatting
         run: dotnet format --verify-no-changes --verbosity diagnostic || true
         continue-on-error: true
