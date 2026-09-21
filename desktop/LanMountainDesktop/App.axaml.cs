@@ -33,6 +33,7 @@ using LanMountainDesktop.Theme;
 using LanMountainDesktop.ViewModels;
 using LanMountainDesktop.Views;
 using LanMountainDesktop.Shared.IO;
+using LanMountainDesktop.Shared.Contracts.Localization;
 
 namespace LanMountainDesktop;
 
@@ -878,7 +879,7 @@ public partial class App : Application
         }
         catch (CultureNotFoundException)
         {
-            culture = CultureInfo.GetCultureInfo("zh-CN");
+            culture = CultureInfo.GetCultureInfo(LanguageCodes.Default);
         }
 
         CultureInfo.DefaultThreadCurrentCulture = culture;

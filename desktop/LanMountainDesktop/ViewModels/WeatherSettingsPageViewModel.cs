@@ -10,6 +10,7 @@ using CommunityToolkit.Mvvm.Input;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.Shared.Contracts.Localization;
 
 namespace LanMountainDesktop.ViewModels;
 
@@ -925,7 +926,7 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
 
     private static string NormalizeWeatherLocale(string? languageCode)
     {
-        return string.Equals(languageCode, "en-US", StringComparison.OrdinalIgnoreCase)
+        return LanguageCodes.IsEnglishCode(languageCode)
             ? "en_us"
             : "zh_cn";
     }

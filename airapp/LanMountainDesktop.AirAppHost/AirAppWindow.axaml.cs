@@ -8,6 +8,7 @@ using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Shared.IPC;
 using LanMountainDesktop.Shared.IPC.Abstractions.Services;
 using LanMountainDesktop.Views.Components;
+using LanMountainDesktop.Shared.Contracts.Localization;
 
 namespace LanMountainDesktop.AirAppHost;
 
@@ -48,7 +49,7 @@ public sealed partial class AirAppWindow : FAAppWindow
         }
         catch
         {
-            languageCode = "zh-CN";
+            languageCode = LanguageCodes.Default;
         }
 
         var title = localization.GetString(languageCode, "component.rss_reader", "RSS Reader");

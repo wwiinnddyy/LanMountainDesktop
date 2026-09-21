@@ -6,6 +6,7 @@ using LanMountainDesktop.Controls;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.ViewModels;
+using LanMountainDesktop.Shared.Contracts.Localization;
 
 namespace LanMountainDesktop.Views.SettingsPages;
 
@@ -225,7 +226,7 @@ public partial class GeneratedAirAppSettingsPage : AirAppSettingsPageBase
             HostSettingsFacadeProvider.GetOrCreate().Settings,
             string.Empty,
             new AirAppSettingsSectionRegistration("_preview", "preview", []),
-            new AirAppLocalizer(AppContext.BaseDirectory, "en-US"));
+            new AirAppLocalizer(AppContext.BaseDirectory, LanguageCodes.English));
     }
 
     private static AirAppGeneratedSettingsPageViewModel CreateDesignTimeViewModel()
@@ -311,7 +312,7 @@ public partial class GeneratedAirAppSettingsPage : AirAppSettingsPageBase
             settingsService,
             airAppId,
             section,
-            new AirAppLocalizer(AppContext.BaseDirectory, "en-US"));
+            new AirAppLocalizer(AppContext.BaseDirectory, LanguageCodes.English));
     }
 
     private sealed class DesignTimeSettingsService : ISettingsService

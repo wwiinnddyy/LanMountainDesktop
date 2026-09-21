@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using LanMountainDesktop.Shared.Contracts.Localization;
 
 namespace LanMountainDesktop.Services.ClockAirApp;
 
@@ -9,7 +10,7 @@ public static class ClockAirAppTimeFormatter
     private static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> CityNames =
         new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
         {
-            ["zh-CN"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            [LanguageCodes.Chinese] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 ["China Standard Time"] = "北京",
                 ["Asia/Shanghai"] = "北京",
@@ -24,7 +25,7 @@ public static class ClockAirAppTimeFormatter
                 ["UTC"] = "UTC",
                 ["Etc/UTC"] = "UTC"
             },
-            ["en-US"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            [LanguageCodes.English] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 ["China Standard Time"] = "Beijing",
                 ["Asia/Shanghai"] = "Beijing",
@@ -39,7 +40,7 @@ public static class ClockAirAppTimeFormatter
                 ["UTC"] = "UTC",
                 ["Etc/UTC"] = "UTC"
             },
-            ["ja-JP"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            [LanguageCodes.Japanese] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 ["China Standard Time"] = "北京",
                 ["Asia/Shanghai"] = "北京",
@@ -54,7 +55,7 @@ public static class ClockAirAppTimeFormatter
                 ["UTC"] = "UTC",
                 ["Etc/UTC"] = "UTC"
             },
-            ["ko-KR"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            [LanguageCodes.Korean] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 ["China Standard Time"] = "베이징",
                 ["Asia/Shanghai"] = "베이징",
@@ -105,7 +106,7 @@ public static class ClockAirAppTimeFormatter
 
     public static string ResolveCityName(TimeZoneInfo timeZone, string languageCode)
     {
-        var normalizedLanguage = NormalizeLanguage(languageCode);
+        var normalizedLanguage = LanguageCodes.Normalize(languageCode);
         if (CityNames.TryGetValue(normalizedLanguage, out var cityNames) &&
             cityNames.TryGetValue(timeZone.Id, out var cityName))
         {
@@ -136,17 +137,6 @@ public static class ClockAirAppTimeFormatter
             ClockAirAppTimeFormatMode.TwentyFourHour => true,
             ClockAirAppTimeFormatMode.TwelveHour => false,
             _ => !culture.DateTimeFormat.ShortTimePattern.Contains('h')
-        };
-    }
-
-    private static string NormalizeLanguage(string? languageCode)
-    {
-        return languageCode?.Trim().ToLowerInvariant() switch
-        {
-            "en" or "en-us" => "en-US",
-            "ja" or "ja-jp" => "ja-JP",
-            "ko" or "ko-kr" => "ko-KR",
-            _ => "zh-CN"
         };
     }
 }

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json.Nodes;
+using LanMountainDesktop.Shared.Contracts.Localization;
 
 namespace LanMountainDesktop.Launcher.Infrastructure;
 
@@ -13,7 +14,7 @@ internal static class LanguagePreferenceService
             var settingsPath = HostAppSettingsOobeMerger.GetSettingsFilePath(dataLocationResolver.ResolveDataRoot());
             if (!File.Exists(settingsPath))
             {
-                return "zh-CN";
+                return LanguageCodes.Default;
             }
 
             var root = JsonNode.Parse(File.ReadAllText(settingsPath))?.AsObject();
@@ -23,34 +24,23 @@ internal static class LanguagePreferenceService
                 value.TryGetValue<string>(out var code) &&
                 !string.IsNullOrWhiteSpace(code))
             {
-                return NormalizeLanguageCode(code);
+                return LanguageCodes.Normalize(code);
             }
         }
         catch
         {
         }
 
-        return "zh-CN";
+        return LanguageCodes.Default;
     }
 
     public static void ApplyLanguage(string languageCode)
     {
-        var normalized = NormalizeLanguageCode(languageCode);
+        var normalized = LanguageCodes.Normalize(languageCode);
         var culture = CultureInfo.GetCultureInfo(normalized);
         CultureInfo.DefaultThreadCurrentCulture = culture;
         CultureInfo.DefaultThreadCurrentUICulture = culture;
         Thread.CurrentThread.CurrentCulture = culture;
         Thread.CurrentThread.CurrentUICulture = culture;
-    }
-
-    private static string NormalizeLanguageCode(string code)
-    {
-        return code.ToLowerInvariant() switch
-        {
-            "en-us" or "en" => "en-US",
-            "ja-jp" or "ja" => "ja-JP",
-            "ko-kr" or "ko" => "ko-KR",
-            _ => "zh-CN"
-        };
     }
 }

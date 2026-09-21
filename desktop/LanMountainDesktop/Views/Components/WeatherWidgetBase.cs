@@ -12,6 +12,7 @@ using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.Shared.Contracts.Localization;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -418,7 +419,7 @@ public abstract class WeatherWidgetBase : UserControl,
 
     private static string NormalizeWeatherLocale(string? languageCode)
     {
-        return string.Equals(languageCode, "en-US", StringComparison.OrdinalIgnoreCase)
+        return LanguageCodes.IsEnglishCode(languageCode)
             ? "en_us"
             : "zh_cn";
     }

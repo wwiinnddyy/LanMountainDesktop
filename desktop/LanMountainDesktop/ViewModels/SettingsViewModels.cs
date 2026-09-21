@@ -19,6 +19,7 @@ using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Shared.Contracts.Launcher;
+using LanMountainDesktop.Shared.Contracts.Localization;
 
 namespace LanMountainDesktop.ViewModels;
 
@@ -732,9 +733,9 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
         return
         [
             new SelectionOption(LocalizationService.DefaultLanguageCode, L("settings.region.language_zh", "中文")),
-            new SelectionOption("en-US", L("settings.region.language_en", "English")),
-            new SelectionOption("ja-JP", L("settings.region.language_ja", "日本語")),
-            new SelectionOption("ko-KR", L("settings.region.language_ko", "한국어"))
+            new SelectionOption(LanguageCodes.English, L("settings.region.language_en", "English")),
+            new SelectionOption(LanguageCodes.Japanese, L("settings.region.language_ja", "日本語")),
+            new SelectionOption(LanguageCodes.Korean, L("settings.region.language_ko", "한국어"))
         ];
     }
 
@@ -966,7 +967,7 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
         }
         catch (CultureNotFoundException)
         {
-            return CultureInfo.GetCultureInfo("zh-CN");
+            return CultureInfo.GetCultureInfo(LanguageCodes.Default);
         }
     }
 

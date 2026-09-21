@@ -8,6 +8,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.ClockAirApp;
+using LanMountainDesktop.Shared.Contracts.Localization;
 
 namespace LanMountainDesktop.AirAppHost;
 
@@ -39,7 +40,7 @@ public sealed partial class ClockAirAppView : UserControl
 
     private ClockAirAppSettingsSnapshot _settings = ClockAirAppSettingsSnapshot.Normalize(null);
     private CultureInfo _culture = CultureInfo.CurrentCulture;
-    private string _languageCode = "zh-CN";
+    private string _languageCode = LanguageCodes.Default;
     private string _selectedTab = ClockAirAppTabIds.WorldClock;
     private bool _suppressSettingsEvents;
 
@@ -85,8 +86,8 @@ public sealed partial class ClockAirAppView : UserControl
         }
         catch
         {
-            _languageCode = "zh-CN";
-            _culture = CultureInfo.GetCultureInfo("zh-CN");
+            _languageCode = LanguageCodes.Default;
+            _culture = CultureInfo.GetCultureInfo(LanguageCodes.Default);
         }
     }
 

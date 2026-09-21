@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.Shared.Contracts.Localization;
 
 namespace LanMountainDesktop.Services;
 
@@ -149,7 +150,7 @@ public sealed class WeatherLocationRefreshService
 
     private static string NormalizeWeatherLocale(string? languageCode)
     {
-        return string.Equals(languageCode, "en-US", StringComparison.OrdinalIgnoreCase)
+        return LanguageCodes.IsEnglishCode(languageCode)
             ? "en_us"
             : "zh_cn";
     }

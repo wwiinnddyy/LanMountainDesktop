@@ -1604,6 +1604,78 @@ public sealed class SourceIntegrityTests
             + $"{Environment.NewLine}{string.Join(Environment.NewLine, diverged)}");
     }
 
+    /// <summary>
+    /// 界面语言码只认 <c>core/LanMountainDesktop.Core/Localization/LanguageCodes.cs</c> 一处。
+    /// 收口前同一张归一化表有三份实现，其中两份在两份二进制里（宿主 <c>LocalizationService</c>
+    /// 与启动器 <c>LanguagePreferenceService</c>，读的是 <c>settings.json</c> 里同一个 <c>LanguageCode</c> 字段），
+    /// 第三份在宿主的 <c>ClockAirAppTimeFormatter</c>；默认值另有 3 处绕开宿主那份直接写字面量。
+    /// 漂了不报错，症状是"启动动画是中文、进桌面变韩文"。
+    ///
+    /// 免检的两处不是漏网，是另一种语义：它们要的是"简体中文这个语言本身"（拼音排序、中文数字格式化），
+    /// 不是"界面的默认语言"——把默认语言从中文改成别的，这两处不该跟着变。
+    /// </summary>
+    [Fact]
+    public void LanguageCodes_LiveInExactlyOnePlace()
+    {
+        var homeFile = @"core\LanMountainDesktop.Core\Localization\LanguageCodes.cs";
+        var semanticExceptions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            [@"desktop\LanMountainDesktop\Services\WindowsStartMenuService.cs"] =
+                "开始菜单按拼音排序用的是简体中文的 CompareInfo，与默认语言无关",
+            [@"desktop\LanMountainDesktop\Views\Components\StandbyDigitalClockWidget.axaml.cs"] =
+                "待机时钟按简体中文格式化数字/日期，与默认语言无关",
+        };
+        var codes = new[] { "\"zh-CN\"", "\"en-US\"", "\"ja-JP\"", "\"ko-KR\"" };
+        var offenders = new List<string>();
+
+        foreach (var file in SourceFiles())
+        {
+            var relative = RelativeToRepo(file);
+            if (string.Equals(relative, homeFile, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            foreach (var (line, number) in CodeLines(file))
+            {
+                foreach (var code in codes)
+                {
+                    if (!line.Contains(code, StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    var normalized = relative.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+                    if (semanticExceptions.TryGetValue(normalized, out _))
+                    {
+                        continue;
+                    }
+
+                    offenders.Add($"{relative}:{number} 自带了语言码 {code}，请用 LanguageCodes（要逐字比较用 IsEnglishCode）");
+                }
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 处硬编码的界面语言码：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+
+        // 免检条目也会过期：那两处要是哪天不再写字面量了，条目就该删掉，不然它会替下一次抄写挡枪。
+        var stale = new List<string>();
+        foreach (var (relative, reason) in semanticExceptions)
+        {
+            var fullPath = Path.Combine(RepoRoot, relative);
+            if (!File.Exists(fullPath) || !codes.Any(code => File.ReadAllText(fullPath).Contains(code, StringComparison.Ordinal)))
+            {
+                stale.Add($"{relative}（登记理由：{reason}）");
+            }
+        }
+
+        Assert.True(
+            stale.Count == 0,
+            $"{stale.Count} 条语言码免检条目已失效，请删掉：{Environment.NewLine}{string.Join(Environment.NewLine, stale)}");
+    }
+
     private static IEnumerable<(string Line, int Number)> CodeLines(string file)
     {
         var all = File.ReadAllLines(file);

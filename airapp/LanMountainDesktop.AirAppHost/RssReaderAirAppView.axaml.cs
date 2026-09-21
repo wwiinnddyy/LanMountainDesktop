@@ -8,6 +8,7 @@ using Avalonia.Threading;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.RssReader;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.Shared.Contracts.Localization;
 
 namespace LanMountainDesktop.AirAppHost;
 
@@ -36,7 +37,7 @@ public sealed partial class RssReaderAirAppView : UserControl, IDisposable
         }
         catch
         {
-            _languageCode = "zh-CN";
+            _languageCode = LanguageCodes.Default;
         }
         InitializeComponent();
         ApplyLocalization();

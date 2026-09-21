@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using LanMountainDesktop.Shared.Contracts.Localization;
 
 namespace LanMountainDesktop.AirAppSdk;
 
@@ -48,9 +49,9 @@ public sealed class AirAppLocalizer
             return value;
         }
 
-        if (!string.Equals(LanguageCode, "en-US", StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(LanguageCode, LanguageCodes.English, StringComparison.OrdinalIgnoreCase))
         {
-            var fallbackTable = LoadLanguageTable("en-US");
+            var fallbackTable = LoadLanguageTable(LanguageCodes.English);
             if (fallbackTable.TryGetValue(key, out value) && !string.IsNullOrWhiteSpace(value))
             {
                 return value;
@@ -67,9 +68,9 @@ public sealed class AirAppLocalizer
 
     public static string NormalizeLanguageCode(string? languageCode)
     {
-        return string.Equals(languageCode, "en-US", StringComparison.OrdinalIgnoreCase)
-            ? "en-US"
-            : "zh-CN";
+        return string.Equals(languageCode, LanguageCodes.English, StringComparison.OrdinalIgnoreCase)
+            ? LanguageCodes.English
+            : LanguageCodes.Default;
     }
 
     public static string ResolveLanguageCode(IReadOnlyDictionary<string, object?> properties)

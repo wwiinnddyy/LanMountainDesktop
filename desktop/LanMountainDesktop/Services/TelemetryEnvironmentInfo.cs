@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.Runtime.InteropServices;
+using LanMountainDesktop.Shared.Contracts.Localization;
 
 namespace LanMountainDesktop.Services;
 
@@ -95,11 +96,11 @@ internal static class TelemetryEnvironmentInfo
     {
         try
         {
-            return CultureInfo.CurrentUICulture.Name ?? "en-US";
+            return CultureInfo.CurrentUICulture.Name ?? LanguageCodes.English;
         }
         catch
         {
-            return "en-US";
+            return LanguageCodes.English;
         }
     }
 

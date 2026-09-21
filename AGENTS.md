@@ -311,6 +311,22 @@ helper 住在 Core 是因为写同一批磁盘文件的是三个进程（宿主�
 所以这里没有引入工程引用（那是构建结构决定，等拍板），改成"两边拼写一旦不同就红并点名两边"。
 这条也是哨兵：发布侧那个文件搬走或改名，守卫会直接要求把检查一起挪过去，不让它静默失效。
 
+**界面语言码只认 `core/LanMountainDesktop.Core/Localization/LanguageCodes.cs`**（`Chinese` / `English` /
+`Japanese` / `Korean` / `Default` / `Supported` / `Normalize` / `IsChinese`）。守卫
+`LanguageCodes_LiveInExactlyOnePlace`，免检两处且带"免检条目失效即红"的反向检查。
+收口前这张归一化表有 **4 份实现**：宿主 `LocalizationService`、启动器 `LanguagePreferenceService`
+（**两份二进制**读同一个 `settings.json` 的 `LanguageCode` 字段）、宿主 `ClockAirAppTimeFormatter`、
+以及 `AirAppSdk.AirAppLocalizer` 的 `en-US`/`zh-CN` 兜底；字面量共 30 处，其中 10 处在 `airapp/` 下
+——只 grep `core desktop` 量不到它们，这就是守卫比 grep 强的地方。漂了不报错，
+症状是"启动动画是中文、进桌面变韩文"。
+两处**故意不统一**：① `WindowsStartMenuService` 的拼音 `CompareInfo` 与 `StandbyDigitalClockWidget`
+的中文数字格式化要的是"简体中文这个语言本身"，不是"默认语言"，改默认语言时它们不该跟着动；
+② 天气那三处判据一直是 `string.Equals(code, "en-US", OrdinalIgnoreCase)` 的**逐字**比较，
+所以家另外给了不归一化的 `IsEnglishCode`，而不是让 `IsChinese` 那种归一化口径吞掉它——
+`"en"` 从"按中文处理"变成"按英文处理"是对第三方接口出参的口径变更，不在这类收口的范围里。
+唯一的实际行为变化是 `Normalize` 现在会 Trim：`settings.json` 里写成 `" en-US "` 时以前落回中文、
+现在落回英文；这个值只有手改才会出现，取更正确的那个解释（`LanguageCodeContractTests` 里钉着）。
+
 **崩溃转储的磁盘契约只认一处**：宿主崩溃时写 `LocalApplicationData/LanMountainDesktop/crashes/`，
 启动器与错误窗口再读它——两个二进制之间没有共享类型，全靠 `crashes` / `crash-*.txt` / `latest.txt`
 三个名字逐字对齐。收口前这三个名字在 4 个文件里各抄一份，抄错一个字母的症状是崩溃对话框什么都不显示
