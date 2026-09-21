@@ -190,16 +190,7 @@ public sealed class LauncherSettingsService
 
     private DateTime PersistSnapshotToDisk(LauncherSettingsSnapshot snapshot)
     {
-        var directory = Path.GetDirectoryName(_settingsPath);
-        if (!string.IsNullOrWhiteSpace(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-
-        var json = JsonSerializer.Serialize(snapshot, SerializerOptions);
-        var tempPath = $"{_settingsPath}.{Guid.NewGuid():N}.tmp";
-        File.WriteAllText(tempPath, json);
-        File.Move(tempPath, _settingsPath, overwrite: true);
+        AtomicFileWriter.WriteText(_settingsPath, JsonSerializer.Serialize(snapshot, SerializerOptions), "LauncherSettings");
 
         return File.Exists(_settingsPath)
             ? File.GetLastWriteTimeUtc(_settingsPath)

@@ -51,15 +51,10 @@ public sealed class ClockAirAppSettingsStore
         var normalized = ClockAirAppSettingsSnapshot.Normalize(snapshot);
         try
         {
-            var directory = Path.GetDirectoryName(_settingsPath);
-            if (!string.IsNullOrWhiteSpace(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
-            var tempPath = $"{_settingsPath}.{Guid.NewGuid():N}.tmp";
-            File.WriteAllText(tempPath, JsonSerializer.Serialize(normalized, SerializerOptions));
-            File.Move(tempPath, _settingsPath, overwrite: true);
+            AtomicFileWriter.WriteText(
+                _settingsPath,
+                JsonSerializer.Serialize(normalized, SerializerOptions),
+                "ClockAirApp");
         }
         catch (Exception ex)
         {

@@ -369,15 +369,10 @@ internal sealed class SettingsService : ISettingsService
     {
         try
         {
-            var directory = Path.GetDirectoryName(_airAppSettingsPath);
-            if (!string.IsNullOrWhiteSpace(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
-            var tempPath = $"{_airAppSettingsPath}.{Guid.NewGuid():N}.tmp";
-            File.WriteAllText(tempPath, JsonSerializer.Serialize(document, SerializerOptions));
-            File.Move(tempPath, _airAppSettingsPath, overwrite: true);
+            AtomicFileWriter.WriteText(
+                _airAppSettingsPath,
+                JsonSerializer.Serialize(document, SerializerOptions),
+                "SettingsService");
         }
         catch (Exception ex)
         {

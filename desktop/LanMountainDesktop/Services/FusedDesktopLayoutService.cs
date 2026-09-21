@@ -93,16 +93,11 @@ internal sealed class FusedDesktopLayoutService : IFusedDesktopLayoutService
             try
             {
                 _cachedSnapshot = snapshot.Clone();
-                
-                var directory = Path.GetDirectoryName(ConfigFilePath);
-                if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
-                {
-                    Directory.CreateDirectory(directory);
-                }
-                
-                var tempPath = $"{ConfigFilePath}.{Guid.NewGuid():N}.tmp";
-                File.WriteAllText(tempPath, JsonSerializer.Serialize(snapshot, JsonOptions));
-                File.Move(tempPath, ConfigFilePath, overwrite: true);
+
+                AtomicFileWriter.WriteText(
+                    ConfigFilePath,
+                    JsonSerializer.Serialize(snapshot, JsonOptions),
+                    "FusedDesktopLayout");
             }
             catch (Exception ex)
             {

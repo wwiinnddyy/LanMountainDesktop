@@ -107,7 +107,6 @@ public sealed class WhiteboardNotePersistenceService : IWhiteboardNotePersistenc
         }
 
         var notePath = GetNoteFilePath(normalizedComponentId, normalizedPlacementId);
-        var tempPath = $"{notePath}.{Guid.NewGuid():N}.tmp";
 
         try
         {
@@ -117,20 +116,16 @@ public sealed class WhiteboardNotePersistenceService : IWhiteboardNotePersistenc
             persistedSnapshot.SavedUtc = nowUtc;
             persistedSnapshot.ExpiresUtc = nowUtc.AddDays(WhiteboardNoteRetentionPolicy.NormalizeDays(retentionDays));
 
-            var directory = Path.GetDirectoryName(notePath);
-            if (!string.IsNullOrWhiteSpace(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
-            var json = JsonSerializer.Serialize(persistedSnapshot, JsonOptions);
-            File.WriteAllText(tempPath, json, Encoding.UTF8);
-            File.Move(tempPath, notePath, overwrite: true);
+            // Encoding.UTF8 不是随手写的：这些笔记磁盘上带 BOM，换掉会让老笔记读不回来。
+            AtomicFileWriter.WriteText(
+                notePath,
+                JsonSerializer.Serialize(persistedSnapshot, JsonOptions),
+                Encoding.UTF8,
+                Category);
             return true;
         }
         catch (Exception ex)
         {
-            TryDeleteFile(tempPath);
             AppLogger.Warn(
                 Category,
                 $"Failed to save whiteboard note. ComponentId='{normalizedComponentId}'; PlacementId='{normalizedPlacementId}'; StrokeCount={snapshot?.Strokes.Count ?? 0}.",

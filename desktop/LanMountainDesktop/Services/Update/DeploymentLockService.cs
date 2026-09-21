@@ -15,10 +15,7 @@ internal static class DeploymentLockService
     public static void WriteLock(string launcherRoot, DeploymentLock deploymentLock)
     {
         var lockPath = UpdatePaths.GetDeploymentLockPath(launcherRoot);
-        Directory.CreateDirectory(Path.GetDirectoryName(lockPath)!);
-        var tempPath = lockPath + ".tmp";
-        File.WriteAllText(tempPath, JsonSerializer.Serialize(deploymentLock, JsonOptions));
-        File.Move(tempPath, lockPath, true);
+        AtomicFileWriter.WriteText(lockPath, JsonSerializer.Serialize(deploymentLock, JsonOptions), "UpdateLock");
     }
 
     public static DeploymentLock? ReadLock(string launcherRoot)

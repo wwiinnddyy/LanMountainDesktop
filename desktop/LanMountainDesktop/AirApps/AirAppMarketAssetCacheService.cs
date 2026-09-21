@@ -58,7 +58,8 @@ public sealed class AirAppMarketAssetCacheService : IDisposable
     {
         Directory.CreateDirectory(_readmeDirectory);
         var path = Path.Combine(_readmeDirectory, SanitizeFileName(airAppId) + ".md");
-        await WriteAtomicallyAsync(path, content, cancellationToken).ConfigureAwait(false);
+        await AtomicFileWriter.WriteStreamAsync(path, content, "AirAppMarketCache", cancellationToken)
+            .ConfigureAwait(false);
         RecordEntry(airAppId, sourceUrl, airAppVersion, AssetKind.Readme);
     }
 
@@ -82,7 +83,8 @@ public sealed class AirAppMarketAssetCacheService : IDisposable
         Directory.CreateDirectory(_iconsDirectory);
         var extension = InferIconExtension(sourceUrl);
         var path = Path.Combine(_iconsDirectory, SanitizeFileName(airAppId) + extension);
-        await WriteAtomicallyAsync(path, content, cancellationToken).ConfigureAwait(false);
+        await AtomicFileWriter.WriteStreamAsync(path, content, "AirAppMarketCache", cancellationToken)
+            .ConfigureAwait(false);
         RecordEntry(airAppId, sourceUrl, airAppVersion, AssetKind.Icon);
     }
 
@@ -205,33 +207,12 @@ public sealed class AirAppMarketAssetCacheService : IDisposable
             }
 
             var json = JsonSerializer.Serialize(snapshot, ManifestSerializerOptions);
-            var tempPath = _manifestPath + ".tmp";
-            File.WriteAllText(tempPath, json);
-            if (File.Exists(_manifestPath))
-            {
-                File.Delete(_manifestPath);
-            }
-            File.Move(tempPath, _manifestPath);
+            AtomicFileWriter.WriteText(_manifestPath, json, "AirAppMarketCache");
         }
         catch
         {
             // Cache persistence is best-effort; never fail the asset load because of it.
         }
-    }
-
-    private static async Task WriteAtomicallyAsync(string path, Stream content, CancellationToken cancellationToken)
-    {
-        var tempPath = path + ".tmp";
-        await using (var target = File.Create(tempPath))
-        {
-            await content.CopyToAsync(target, cancellationToken).ConfigureAwait(false);
-        }
-
-        if (File.Exists(path))
-        {
-            File.Delete(path);
-        }
-        File.Move(tempPath, path);
     }
 
     private static string InferIconExtension(string sourceUrl)
