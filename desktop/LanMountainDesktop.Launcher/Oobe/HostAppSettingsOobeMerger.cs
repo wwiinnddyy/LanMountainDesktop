@@ -23,7 +23,7 @@ public static class HostAppSettingsOobeMerger
     /// <summary>
     /// 主题档的取值是宿主的口径（<c>AppSettingsSnapshot.ThemeMode</c>）。
     /// 这里能取到宿主常量类的话就该换成常量；取不到是因为 Launcher 与宿主是两个二进制，
-    /// 由 HostThemeModeContractTests 钉住这两个字面量与宿主常量一致。
+    /// 由 <c>OobeHostSettingsContractTests</c> 钉住这两个字面量与宿主常量一致。
     /// </summary>
     public const string ThemeModeLightValue = "light";
 
