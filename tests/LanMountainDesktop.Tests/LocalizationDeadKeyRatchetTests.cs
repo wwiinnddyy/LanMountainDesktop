@@ -28,16 +28,16 @@ public sealed class LocalizationDeadKeyRatchetTests
     /// 都拼不出来（<c>settings.update.*</c> 一组占大头，是更新页改版后留下的旧文案）。
     /// 只能往下改：删一批键就把数字改小，别往上抬。
     /// </summary>
-    private const int AcceptedUnreferencedKeyCount = 415;
+    private const int AcceptedUnreferencedKeyCount = 380;
 
     /// <summary>
-    /// 代码引用、zh-CN.json 里没有的键数（只降不升）。2026-09-21 量出 25 个，全部是
-    /// 组件编辑器/设置页面板的键漂移：代码写 <c>baidu.settings.desc</c>，词表里是
-    /// <c>baiduhot.settings.desc</c>；<c>component.editor.desc/toggle/interval</c> 三条则是词表里根本没有。
-    /// 症状是这些面板在中文界面显示硬编码英文兜底文案。修法是把代码键对齐到词表（或补键），
-    /// 别把数字往上抬。
+    /// 代码引用、zh-CN.json 里没有的键数（只降不升）。2026-09-21 量出 25 个并已全部清零：
+    /// 全是组件编辑器/设置页面板的键漂移（代码写 <c>baidu.settings.desc</c>，词表里是
+    /// <c>baiduhot.settings.desc</c>；<c>component.editor.{desc,toggle,interval}</c> 三条是词表根本没有，
+    /// 已按代码兜底文案补进四份词表）。症状原本是这些面板在中文界面显示硬编码英文。
+    /// 保持 0：再出现就是新漂移，改代码键名而不是抬这个数字。
     /// </summary>
-    private const int AcceptedKeysMissingFromZhCn = 25;
+    private const int AcceptedKeysMissingFromZhCn = 0;
 
     private static readonly string[] SourceRoots = ["desktop", "airapp", "install", "platform", "core"];
 
