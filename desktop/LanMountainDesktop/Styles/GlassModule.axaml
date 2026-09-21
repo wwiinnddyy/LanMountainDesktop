@@ -100,15 +100,6 @@
         <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
     </Style>
 
-    <Style Selector=".settings-scope Border.settings-expander-shell">
-        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusSm}" />
-        <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveGlassPanelBorderBrush}" />
-        <Setter Property="Background" Value="{DynamicResource AdaptiveButtonBackgroundBrush}" />
-        <Setter Property="Padding" Value="10,8" />
-        <Setter Property="Margin" Value="0,0,0,10" />
-    </Style>
-
     <Style Selector=".settings-scope Button">
         <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusSm}" />
         <Setter Property="MinHeight" Value="34" />
@@ -171,18 +162,6 @@
         <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
     </Style>
 
-    <Style Selector="Button.swatch-button">
-        <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusXs}" />
-        <Setter Property="Opacity" Value="0.88" />
-    </Style>
-
-    <Style Selector="Button.swatch-button.swatch-selected">
-        <Setter Property="Background" Value="{DynamicResource AdaptiveNavItemSelectedBackgroundBrush}" />
-        <Setter Property="Opacity" Value="1" />
-        <Setter Property="RenderTransform" Value="scale(1.05)" />
-    </Style>
-
     <!--
         鍗婇€忔槑琛ㄩ潰鏍峰紡绫?
         娉ㄦ剰锛氳繖浜涙牱寮忎娇鐢ㄧ函鑹插崐閫忔槑鐢诲埛妯℃嫙鐜荤拑鏁堟灉锛屽苟闈炵湡姝ｇ殑 Mica/Acrylic 妯＄硦鏉愯川銆?
@@ -229,13 +208,6 @@
         <Setter Property="BoxShadow" Value="0 8 22 #2A000000" />
     </Style>
 
-    <Style Selector="Border.surface-translucent-overlay">
-        <Setter Property="Background" Value="{DynamicResource AdaptiveGlassOverlayBackgroundBrush}" />
-        <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="0" />
-        <Setter Property="Opacity" Value="{DynamicResource AdaptiveGlassOverlayOpacity}" />
-    </Style>
-
     <!-- 鍚戝悗鍏煎鐨勬棫鏍峰紡绫伙紙宸插純鐢級 -->
     <Style Selector="Border.glass-panel">
         <Setter Property="Background" Value="{DynamicResource AdaptiveGlassPanelBackgroundBrush}" />
@@ -244,32 +216,6 @@
         <Setter Property="Opacity" Value="{DynamicResource AdaptiveGlassPanelOpacity}" />
         <Setter Property="BoxShadow" Value="0 4 12 #1A000000" />
     </Style>
-    <Style Selector="Border.glass-strong">
-        <Setter Property="Background" Value="{DynamicResource AdaptiveGlassStrongBackgroundBrush}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveGlassStrongBorderBrush}" />
-        <Setter Property="BorderThickness" Value="1.5" />
-        <Setter Property="Opacity" Value="{DynamicResource AdaptiveGlassStrongOpacity}" />
-        <Setter Property="BoxShadow" Value="0 8 24 #26000000" />
-    </Style>
-    <Style Selector="Border.glass-island">
-        <Setter Property="Background" Value="{DynamicResource AdaptiveDockGlassBackgroundBrush}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveDockGlassBorderBrush}" />
-        <Setter Property="BorderThickness" Value="1.5" />
-        <Setter Property="Opacity" Value="{DynamicResource AdaptiveGlassStrongOpacity}" />
-        <Setter Property="BoxShadow" Value="0 12 32 #33000000" />
-    </Style>
-    <Style Selector="Border.mica-strong">
-        <Setter Property="Background" Value="{DynamicResource AdaptiveGlassStrongBackgroundBrush}" />
-        <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="Opacity" Value="{DynamicResource AdaptiveGlassStrongOpacity}" />
-        <Setter Property="BoxShadow" Value="0 8 22 #2A000000" />
-    </Style>
-    <Style Selector="Border.glass-overlay">
-        <Setter Property="Background" Value="{DynamicResource AdaptiveGlassOverlayBackgroundBrush}" />
-        <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="Opacity" Value="{DynamicResource AdaptiveGlassOverlayOpacity}" />
-    </Style>
-
     <!-- 强制所有程序化弹出的对话框遵循 Fluent Design System 圆角规范 -->
     <Style Selector="ui|FAContentDialog">
         <Style.Resources>

@@ -10,111 +10,6 @@
         <GridLength x:Key="PaneToggleButtonHeightGridLength">40</GridLength>
     </Styles.Resources>
 
-    <Style Selector="Button.pane-toggle-button">
-        <Setter Property="Width" Value="{DynamicResource PaneToggleButtonWidth}" />
-        <Setter Property="Height" Value="{DynamicResource PaneToggleButtonHeight}" />
-        <Setter Property="Padding" Value="0" />
-        <Setter Property="Background" Value="Transparent" />
-        <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="{DynamicResource ControlCornerRadius}" />
-        <Setter Property="VerticalAlignment" Value="Center" />
-        <Setter Property="HorizontalAlignment" Value="Center" />
-        <Setter Property="Template">
-            <ControlTemplate>
-                <Border x:Name="LayoutRoot"
-                        Background="{TemplateBinding Background}"
-                        CornerRadius="{TemplateBinding CornerRadius}">
-                    <Border.Transitions>
-                        <Transitions>
-                            <BrushTransition Property="Background" Duration="0:0:0.083" Easing="0.05,0.75,0.10,1.00" />
-                        </Transitions>
-                    </Border.Transitions>
-                    <Grid x:Name="ContentRoot"
-                          ColumnDefinitions="Auto,*">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="{DynamicResource PaneToggleButtonHeightGridLength}" />
-                        </Grid.RowDefinitions>
-
-                        <Border Width="{TemplateBinding Width}">
-                            <ContentPresenter x:Name="IconPresenter"
-                                              HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"
-                                              Content="{TemplateBinding Content}" />
-                        </Border>
-
-                        <ContentPresenter x:Name="ContentPresenter"
-                                          VerticalContentAlignment="Center"
-                                          Content="{TemplateBinding Tag}"
-                                          FontSize="{TemplateBinding FontSize}"
-                                          Padding="4,0,0,0"
-                                          Grid.Column="1" />
-                    </Grid>
-                </Border>
-            </ControlTemplate>
-        </Setter>
-    </Style>
-
-    <Style Selector="Button.pane-toggle-button:pointerover /template/ Border#LayoutRoot">
-        <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
-    </Style>
-
-    <Style Selector="Button.pane-toggle-button:pressed /template/ Border#LayoutRoot">
-        <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}" />
-    </Style>
-
-    <Style Selector="Button.nav-back">
-        <Setter Property="Width" Value="{DynamicResource PaneToggleButtonWidth}" />
-        <Setter Property="Height" Value="{DynamicResource PaneToggleButtonHeight}" />
-        <Setter Property="Padding" Value="0" />
-        <Setter Property="Background" Value="Transparent" />
-        <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="{DynamicResource ControlCornerRadius}" />
-        <Setter Property="VerticalAlignment" Value="Center" />
-        <Setter Property="HorizontalAlignment" Value="Center" />
-        <Setter Property="Template">
-            <ControlTemplate>
-                <Border x:Name="LayoutRoot"
-                        Background="{TemplateBinding Background}"
-                        CornerRadius="{TemplateBinding CornerRadius}">
-                    <Border.Transitions>
-                        <Transitions>
-                            <BrushTransition Property="Background" Duration="0:0:0.083" Easing="0.05,0.75,0.10,1.00" />
-                        </Transitions>
-                    </Border.Transitions>
-                    <Grid x:Name="ContentRoot"
-                          ColumnDefinitions="Auto,*">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="{DynamicResource PaneToggleButtonHeightGridLength}" />
-                        </Grid.RowDefinitions>
-
-                        <Border Width="{TemplateBinding Width}">
-                            <fi:FluentIcon Icon="ChevronLeft"
-                                           IconVariant="Regular"
-                                           FontSize="16"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center" />
-                        </Border>
-
-                        <ContentPresenter x:Name="ContentPresenter"
-                                          VerticalContentAlignment="Center"
-                                          Content="{TemplateBinding Content}"
-                                          FontSize="{TemplateBinding FontSize}"
-                                          Padding="4,0,0,0"
-                                          Grid.Column="1" />
-                    </Grid>
-                </Border>
-            </ControlTemplate>
-        </Setter>
-    </Style>
-
-    <Style Selector="Button.nav-back:pointerover /template/ Border#LayoutRoot">
-        <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
-    </Style>
-
-    <Style Selector="Button.nav-back:pressed /template/ Border#LayoutRoot">
-        <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}" />
-    </Style>
-
     <Style Selector="ui|FANavigationView.settings-navigation-view">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Transitions">
@@ -147,24 +42,6 @@
                 <BrushTransition Property="Background" Duration="0:0:0.167" Easing="0.05,0.75,0.10,1.00" />
             </Transitions>
         </Setter>
-    </Style>
-
-    <Style Selector="ui|FANavigationViewItem.settings-nav-item">
-        <Setter Property="RenderTransform" Value="scale(1)" />
-        <Setter Property="Transitions">
-            <Transitions>
-                <BrushTransition Property="Background" Duration="0:0:0.083" Easing="0.05,0.75,0.10,1.00" />
-                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.083" Easing="0.05,0.75,0.10,1.00" />
-            </Transitions>
-        </Setter>
-    </Style>
-
-    <Style Selector="ui|FANavigationViewItem.settings-nav-item:pointerover">
-        <Setter Property="RenderTransform" Value="scale(1.01)" />
-    </Style>
-
-    <Style Selector="ui|FANavigationViewItem.settings-nav-item:pressed">
-        <Setter Property="RenderTransform" Value="scale(0.99)" />
     </Style>
 
 </Styles>

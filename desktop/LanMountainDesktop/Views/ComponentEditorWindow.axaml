@@ -50,14 +50,6 @@
     <Window.Styles>
         <themes:CustomMaterialTheme BaseTheme="Light" PrimaryColor="#6750A4" SecondaryColor="#625B71" />
         <StyleInclude Source="avares://LanMountainDesktop/Styles/ComponentEditorThemeResources.axaml" />
-        
-        <!-- MD3 Button Styles -->
-        <Style Selector="Button.component-editor-footer-button">
-            <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusComponent}" />
-            <Setter Property="Background" Value="{DynamicResource EditorPrimaryBrush}" />
-            <Setter Property="Foreground" Value="{DynamicResource EditorOnPrimaryBrush}" />
-            <Setter Property="Height" Value="40" />
-        </Style>
     </Window.Styles>
 
     <Grid Background="{DynamicResource EditorWindowBackgroundBrush}"

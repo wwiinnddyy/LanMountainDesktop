@@ -184,11 +184,6 @@
         <Setter Property="Background" Value="{DynamicResource EditorTitleBarButtonHoverBrush}" />
     </Style>
 
-    <Style Selector="Button.component-editor-footer-button">
-        <Setter Property="MinWidth" Value="96" />
-        <Setter Property="Padding" Value="16,10" />
-    </Style>
-
     <Style Selector="ScrollViewer.component-editor-scroll-host">
         <Setter Property="Background" Value="Transparent" />
     </Style>

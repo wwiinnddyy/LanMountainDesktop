@@ -1214,9 +1214,85 @@ public sealed class SourceIntegrityTests
             + $"{Environment.NewLine}{string.Join(Environment.NewLine, orphans)}");
     }
 
+    /// <summary>
+    /// 上一条守卫的反方向：样式定义了却没人用，也是孤儿。2026-09-21 首扫量到 18 个真正没人用的
+    /// 样式类（GlassModule 8 个、NavigationStyles 3 个、SettingsAnimations 2 个、icon-l 尺寸档、
+    /// 组件编辑器的 footer 按钮样式两份重复声明等），合计 26 个 Style 块 / 255 行——其中
+    /// <c>component-editor-footer-button</c> 连"页脚"这个容器都已经不在那个窗口里了。
+    ///
+    /// 判"用过"很宽松：任何 .axaml 的 <c>Classes="…"</c>、或任何 .cs 里出现的同名字符串字面量
+    /// （<c>Classes.Add(ComponentChromePanel.GlassPanelClass)</c> 这种经常量绕过去的也算）。
+    /// 宽松只会让守卫偏乐观，不会误红。附带的属性选择器（<c>[(x|Y.Prop)=True]</c>）不算类名。
+    /// </summary>
+    [Fact]
+    public void StyleClasses_DefinedInSelectors_AreAlsoUsed()
+    {
+        var selectorPattern = new Regex("Selector\\s*=\\s*\"([^\"]+)\"", RegexOptions.Compiled);
+        var attachedPropertyBracket = new Regex(@"\[[^\]]*\]", RegexOptions.Compiled);
+        var classNamePattern = new Regex(@"\.([A-Za-z][\w\-]*)", RegexOptions.Compiled);
+
+        var defined = new Dictionary<string, string>(StringComparer.Ordinal);
+        var used = new HashSet<string>(StringComparer.Ordinal);
+
+        var styleSources = SourceFiles().Concat(MarkupFiles());
+
+        foreach (var file in styleSources)
+        {
+            var text = File.ReadAllText(file);
+
+            foreach (Match selector in selectorPattern.Matches(text).Cast<Match>())
+            {
+                var withoutAttachedProps = attachedPropertyBracket.Replace(selector.Groups[1].Value, " ");
+                foreach (Match className in classNamePattern.Matches(withoutAttachedProps).Cast<Match>())
+                {
+                    defined.TryAdd(className.Groups[1].Value, RelativeToRepo(file));
+                }
+            }
+        }
+
+        foreach (var file in SourceFiles())
+        {
+            var text = File.ReadAllText(file);
+
+            // 代码里任何同名字符串字面量都算"可能用它贴过类"，包括经常量绕的写法。
+            foreach (Match literal in Regex.Matches(text, "\"([A-Za-z][\\w\\-]*)\"").Cast<Match>())
+            {
+                used.Add(literal.Groups[1].Value);
+            }
+        }
+
+        foreach (var file in MarkupFiles())
+        {
+            foreach (Match classes in Regex.Matches(File.ReadAllText(file), "Classes=\"([^\"]+)\"").Cast<Match>())
+            {
+                foreach (var className in classes.Groups[1].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+                {
+                    used.Add(className);
+                }
+            }
+        }
+
+        var orphans = defined
+            .Where(entry => !used.Contains(entry.Key))
+            .Select(entry => $"{entry.Key}  ({entry.Value})")
+            .OrderBy(entry => entry, StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.True(
+            orphans.Length == 0,
+            $"{orphans.Length} 个样式类只有定义、没有任何控件贴它，是删了也没人知道的孤儿样式："
+            + $"{Environment.NewLine}{string.Join(Environment.NewLine, orphans)}");
+    }
+
     private static bool IsHostProjectFile(string file) => RelativeToRepo(file)
         .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
         .StartsWith($"desktop{Path.DirectorySeparatorChar}LanMountainDesktop{Path.DirectorySeparatorChar}", StringComparison.Ordinal);
+
+    private static IEnumerable<string> MarkupFiles() => ProductionDirectories
+        .Select(part => Path.Combine(RepoRoot, part))
+        .Where(Directory.Exists)
+        .SelectMany(dir => Directory.EnumerateFiles(dir, "*.axaml", SearchOption.AllDirectories))
+        .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase));
 
     private static IEnumerable<string> SourceFiles() => ProductionDirectories
         .Select(part => Path.Combine(RepoRoot, part))

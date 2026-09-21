@@ -326,6 +326,14 @@ helper 住在 Core 是因为写同一批磁盘文件的是三个进程（宿主�
 读成空串，症状是"旧版本被清理掉、想回滚时没得回滚"。状态值用 `SnapshotMetadata.PendingStatus`。
 守卫 `SourceIntegrityTests.SnapshotMetadataModel_LivesInExactlyOnePlace`。
 
+**样式类两个方向都要对上**：`.axaml` 里 `Classes="foo"` 而全仓没有 `Selector="...foo"` → 控件静默走默认样式
+（守卫 `StyleClasses_UsedInMarkup_AreAlsoDefined`）；反过来样式定义了却没人贴 → 孤儿样式，删了也没人知道
+（守卫 `StyleClasses_DefinedInSelectors_AreAlsoUsed`，两边都要求 0）。2026-09-21 按后一条清了 18 个死类 /
+26 个 Style 块 / 255 行，其中 `component-editor-footer-button` 在两个文件里各声明了一份，而那个窗口
+早就没有页脚容器了；`icon-l` 是 s/m 两档还在用、最大那档没人用的尺寸残档。
+判"用过"取宽松口径：任何 .cs 里的同名字符串字面量都算（`Classes.Add(常量)` 这种绕法），
+所以只会偏乐观、不会误红。
+
 ## 6. 权威来源
 
 - 产品定位：`docs/00-快速开始/01-项目介绍.md`（归档见 `docs/archive/PRODUCT.md`）

@@ -51,9 +51,6 @@
             <Setter Property="FontSize" Value="16" />
         </Style>
 
-        <Style Selector="fi|SymbolIcon.icon-l, fi|FluentIcon.icon-l">
-            <Setter Property="FontSize" Value="20" />
-        </Style>
     </Application.Styles>
 
     <Application.Resources>

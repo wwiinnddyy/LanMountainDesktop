@@ -10,68 +10,6 @@
         <Setter Property="behaviors:PopupIntroAnimationBehavior.IsEnabled" Value="True" />
     </Style>
 
-    <Style Selector=":is(Panel).settings-animated-intro">
-        <Setter Property="behaviors:PanelIntroAnimationBehavior.IsEnabled" Value="True" />
-        <Style Selector="^ > :is(Control)[(behaviors|PanelIntroAnimationBehavior.CanPlayAnimation)=True]">
-            <Setter Property="Opacity" Value="0" />
-            <Setter Property="RenderTransform">
-                <Setter.Value>
-                    <TranslateTransform Y="24" />
-                </Setter.Value>
-            </Setter>
-            <Style Selector="^[(behaviors|PanelIntroAnimationBehavior.IsAnimationPlayed)=True]">
-                <Style.Animations>
-                    <Animation Duration="0:0:0.65"
-                               FillMode="Both"
-                               Easing="0.05, 0.75, 0.10, 1.00">
-                        <KeyFrame Cue="0%">
-                            <Setter Property="Opacity" Value="0" />
-                            <Setter Property="TranslateTransform.Y" Value="24" />
-                        </KeyFrame>
-                        <KeyFrame Cue="100%">
-                            <Setter Property="Opacity" Value="1" />
-                            <Setter Property="TranslateTransform.Y" Value="0" />
-                        </KeyFrame>
-                    </Animation>
-                </Style.Animations>
-            </Style>
-        </Style>
-    </Style>
-
-    <Style Selector="ListBox.settings-chip-list">
-        <Setter Property="Background" Value="Transparent" />
-        <Setter Property="BorderThickness" Value="0" />
-    </Style>
-
-    <Style Selector="ListBox.settings-chip-list ListBoxItem">
-        <Setter Property="Background" Value="{DynamicResource AdaptiveButtonBackgroundBrush}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveButtonBorderBrush}" />
-        <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusXs}" />
-        <Setter Property="Padding" Value="12,6" />
-        <Setter Property="Margin" Value="0,0,8,8" />
-        <Setter Property="MinHeight" Value="34" />
-        <Setter Property="RenderTransform" Value="scale(1)" />
-        <Setter Property="Transitions">
-            <Transitions>
-                <BrushTransition Property="Background" Duration="{StaticResource FluttermotionToken.Duration.Standard}" Easing="0.05,0.75,0.10,1.00" />
-                <BrushTransition Property="BorderBrush" Duration="{StaticResource FluttermotionToken.Duration.Standard}" Easing="0.05,0.75,0.10,1.00" />
-                <TransformOperationsTransition Property="RenderTransform" Duration="{StaticResource FluttermotionToken.Duration.Standard}" Easing="0.05,0.75,0.10,1.00" />
-            </Transitions>
-        </Setter>
-    </Style>
-
-    <Style Selector="ListBox.settings-chip-list ListBoxItem:pointerover">
-        <Setter Property="RenderTransform" Value="scale(1.015)" />
-        <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveAccentBrush}" />
-    </Style>
-
-    <Style Selector="ListBox.settings-chip-list ListBoxItem:selected">
-        <Setter Property="RenderTransform" Value="scale(1.02)" />
-        <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveAccentBrush}" />
-        <Setter Property="Background" Value="{DynamicResource AdaptiveNavItemSelectedBackgroundBrush}" />
-    </Style>
-
     <Style Selector=".settings-scope ComboBox">
         <Setter Property="RenderTransform" Value="scale(1)" />
         <Setter Property="Transitions">

@@ -215,10 +215,6 @@
         <Setter Property="ColumnSpacing" Value="14" />
     </Style>
 
-    <Style Selector="Grid.settings-list-actions">
-        <Setter Property="ColumnSpacing" Value="12" />
-    </Style>
-
     <Style Selector="ui|FASettingsExpander">
         <Setter Property="HorizontalAlignment" Value="Stretch" />
         <Setter Property="MinWidth" Value="0" />

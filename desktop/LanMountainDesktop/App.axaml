@@ -77,10 +77,6 @@
             <Setter Property="FontSize" Value="16" />
         </Style>
 
-        <Style Selector="fi|SymbolIcon.icon-l, fi|FluentIcon.icon-l">
-            <Setter Property="FontSize" Value="20" />
-        </Style>
-
         <!-- Default FAFontIcon in settings surfaces to list-icon size unless overridden -->
         <Style Selector="ui|FAFontIcon">
             <Setter Property="FontSize" Value="16" />
