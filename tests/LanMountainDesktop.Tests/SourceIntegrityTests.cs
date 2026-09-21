@@ -693,6 +693,73 @@ public sealed class SourceIntegrityTests
             $"{offenders.Count} 处手搓的原子写盘：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
     }
 
+    /// <summary>
+    /// 主题资源的"要"和"给"必须对得上。读的一方是 C# 的 <c>ThemeResourceKeys.X</c> 与
+    /// .axaml 的 <c>{StaticResource AdaptiveX}</c>；给的一方只有 <c>resources[ThemeResourceKeys.X] = ...</c>
+    /// 这一种写法。少一个注册不会报错，只会让那块 UI 静默失色，是最难发现的一类视觉缺陷。
+    ///
+    /// 反向（注册了没人读）只当信息：AirApp 也能读宿主主题资源，注册得多不等于浪费。
+    /// </summary>
+    [Fact]
+    public void EveryAdaptiveResourceRequested_IsAlsoRegistered()
+    {
+        var keys = new Dictionary<string, string>(StringComparer.Ordinal);
+        var keyFile = Path.Combine(RepoRoot, "desktop", "LanMountainDesktop", "Theme", "ThemeResourceKeys.cs");
+        foreach (Match match in Regex.Matches(
+                     File.ReadAllText(keyFile),
+                     @"const string (?<name>\w+)\s*=\s*""(?<key>[^""]+)"""))
+        {
+            keys[match.Groups["name"].Value] = match.Groups["key"].Value;
+        }
+
+        Assert.True(keys.Count > 0, "ThemeResourceKeys.cs 一个键都没解析出来，先修这条探针");
+
+        var csFiles = SourceFiles().Where(IsHostProjectFile)
+            .Where(file => !file.EndsWith("ThemeResourceKeys.cs", StringComparison.OrdinalIgnoreCase))
+            .ToDictionary(file => RelativeToRepo(file), File.ReadAllText, StringComparer.Ordinal);
+        var axamlFiles = new[] { "desktop" }.SelectMany(part => Directory.EnumerateFiles(
+                Path.Combine(RepoRoot, part), "*.axaml", SearchOption.AllDirectories))
+            .Where(file => file.EndsWith(".axaml", StringComparison.OrdinalIgnoreCase))
+            .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+            .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+            .ToDictionary(file => RelativeToRepo(file), File.ReadAllText, StringComparer.Ordinal);
+
+        var registered = Regex.Matches(
+                string.Concat(csFiles.Values),
+                @"\[\s*ThemeResourceKeys\.(?<name>\w+)\s*\]\s*=")
+            .Select(match => match.Groups["name"].Value)
+            .ToHashSet(StringComparer.Ordinal);
+
+        var offenders = new List<string>();
+        foreach (var (name, key) in keys)
+        {
+            if (registered.Contains(name))
+            {
+                continue;
+            }
+
+            var firstRequest = csFiles.FirstOrDefault(pair =>
+                    pair.Value.Contains($"ThemeResourceKeys.{name}", StringComparison.Ordinal))
+                .Key;
+            var axamlRequest = axamlFiles.FirstOrDefault(pair =>
+                    pair.Value.Contains($"StaticResource {key}", StringComparison.Ordinal) ||
+                    pair.Value.Contains($"DynamicResource {key}", StringComparison.Ordinal))
+                .Key;
+
+            if (firstRequest is not null || axamlRequest is not null)
+            {
+                offenders.Add(
+                    $"{key}（常量 {name}）有人要没人给：读取点 " +
+                    $"{firstRequest ?? axamlRequest}；注册方一个都没有");
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 个主题资源被引用却从没注册（那块 UI 会静默失色）：{Environment.NewLine}" +
+            string.Join(Environment.NewLine, offenders));
+    }
+
     private static bool IsHostProjectFile(string file) => RelativeToRepo(file)
         .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
         .StartsWith($"desktop{Path.DirectorySeparatorChar}LanMountainDesktop{Path.DirectorySeparatorChar}", StringComparison.Ordinal);

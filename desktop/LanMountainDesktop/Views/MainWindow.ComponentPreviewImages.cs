@@ -65,7 +65,7 @@ public partial class MainWindow : Window
         {
             Width = previewWidth,
             Height = previewHeight,
-            Background = GetThemeBrush(ThemeResourceKeys.CardBackgroundBrush),
+            Background = GetThemeBrush(ThemeResourceKeys.SurfaceRaisedBrush),
             BorderBrush = GetThemeBrush(ThemeResourceKeys.ButtonBorderBrush),
             BorderThickness = new Avalonia.Thickness(1),
             CornerRadius = new Avalonia.CornerRadius(Math.Clamp(Math.Min(previewWidth, previewHeight) * 0.18, 12, 28)),

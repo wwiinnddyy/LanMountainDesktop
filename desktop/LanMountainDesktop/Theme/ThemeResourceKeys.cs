@@ -12,7 +12,6 @@ public static class ThemeResourceKeys
     public const string ButtonBorderBrush = "AdaptiveButtonBorderBrush";
     public const string ButtonHoverBackgroundBrush = "AdaptiveButtonHoverBackgroundBrush";
     public const string ButtonPressedBackgroundBrush = "AdaptiveButtonPressedBackgroundBrush";
-    public const string CardBackgroundBrush = "AdaptiveCardBackgroundBrush";
     public const string DesktopComponentHostBackgroundBrush = "AdaptiveDesktopComponentHostBackgroundBrush";
     public const string DesktopComponentHostBorderBrush = "AdaptiveDesktopComponentHostBorderBrush";
     public const string DesktopComponentHostOpacity = "AdaptiveDesktopComponentHostOpacity";
