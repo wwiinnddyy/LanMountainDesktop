@@ -13,8 +13,6 @@ namespace LanMountainDesktop.Services;
 public sealed class SentryCrashTelemetryService : IDisposable
 {
     private const string SentryDsn = "https://f2aad3a1c63b5f2213ad82683ce93c06@o4511049423257600.ingest.us.sentry.io/4511049425813504";
-    private const string AutoIpAddress = "{{auto}}";
-
     private readonly ISettingsFacadeService _settingsFacade;
     private readonly ISettingsService _settingsService;
     private readonly object _syncRoot = new();

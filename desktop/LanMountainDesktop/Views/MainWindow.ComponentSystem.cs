@@ -485,30 +485,6 @@ public partial class MainWindow : Window
         _ = e;
     }
 
-    private void OnStatusBarClockChecked(object? sender, RoutedEventArgs e)
-    {
-        if (_suppressStatusBarToggleEvents)
-        {
-            return;
-        }
-
-        _topStatusComponentIds.Add(BuiltInComponentIds.Clock);
-        ApplyTopStatusComponentVisibility();
-        PersistSettings();
-    }
-
-    private void OnStatusBarClockUnchecked(object? sender, RoutedEventArgs e)
-    {
-        if (_suppressStatusBarToggleEvents)
-        {
-            return;
-        }
-
-        _topStatusComponentIds.Remove(BuiltInComponentIds.Clock);
-        ApplyTopStatusComponentVisibility();
-        PersistSettings();
-    }
-
     private void ApplyTaskbarSettings(AppSettingsSnapshot snapshot)
     {
         _topStatusComponentIds.Clear();
@@ -760,23 +736,20 @@ public partial class MainWindow : Window
         if (totalWidth <= 0)
             return false;
 
-        // 闁荤姳绶ょ槐鏇㈡偩缂佹鈻旀い鎾卞灪閿涚喖鏌涢弽褎鎯堥柣鎾寸懇閹啴宕熼銈嗘緰闂傚倸瀚幊宥囩礊閸涱垳纾?        // 閻庡綊娼荤粻鎴﹀垂椤忓牆鍙?*, 婵炴垶鎼╅崢濂稿垂椤忓牆鍙?Auto, 闂佸憡鐟ラ崯鍧楀垂椤忓牆鍙?*
-        // 婵炴垶鎼╅崣鍐ㄎ涢崸妤€绀岄柛婵嗗閸樼敻鎮橀悙鍙夊櫢闁煎灚鍨垮浼村礈瑜嬫禒?
+        // 中间段整体居中，按实际宽度算出左右边界
         var centerLeft = (totalWidth - centerWidth) / 2;
         var centerRight = centerLeft + centerWidth;
 
-        // 闁诲海鎳撻ˇ顖炲矗韫囨稒鈷掔痪鎯ь儑閻涒晠鏌ㄥ☉妯煎闁稿孩姘ㄥΣ鎰版偑閸涱垳顦?
+        // 预留安全边距，避免三段视觉贴边
         const double safetyMargin = 20;
 
-        // 濠碘槅鍋€閸嬫挻绻涢弶鎴剰濞戞柨绻戠粭鐔活槾缂侇喖绉电粋鎺楁嚋閸倣锕傛煕濮樺墽绱扮紒杈╁缁嬪鎯斿┑濠傚箑闂傚倸鍊瑰娆戜焊椤栫偛鏄ラ柣鏂捐濞奸箖鏌?        // 閻庡綊娼荤紓姘跺疾閸撲胶纾奸柛鏇ㄤ簼椤愪粙鏌涘▎蹇曟瀮缂佹梻鍠栭幃?= leftWidth
-        // 婵炴垶鎼╅崣鍐ㄎ涢崸妤€绀岄柛婵嗗閸樼數鈧綊娼荤粻鎺旂博閻斿吋鍋?= centerLeft
+        // 左侧段是否侵入了中间段的起点
         if (leftWidth + safetyMargin > centerLeft)
         {
             return true;
         }
 
-        // 濠碘槅鍋€閸嬫挻绻涢弶鎴剰鐟滄澘鎲＄粭鐔活槾缂侇喖绉电粋鎺楁嚋閸倣锕傛煕濮樺墽绱扮紒杈╁缁嬪鎯斿┑濠傚箑闂傚倸鍊瑰娆戜焊椤栫偛鏄ラ柣鏂捐濞奸箖鏌?        // 闂佸憡鐟ラ崢鏍疾閸撲胶纾奸柛鏇ㄤ簼椤愮晫鈧綊娼荤粻鎺旂博閻斿吋鍋?= totalWidth - rightWidth
-        // 婵炴垶鎼╅崣鍐ㄎ涢崸妤€绀岄柛婵嗗閸樼敻鏌涘▎蹇曟瀮缂佹梻鍠栭幃?= centerRight
+        // 右侧段是否侵入了中间段的终点
         if (totalWidth - rightWidth - safetyMargin < centerRight)
         {
             return true;
@@ -792,7 +765,8 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// 闂佸吋鍎抽崲鑼躲亹閸パ屽晠闁挎梹瀵у▍鐘绘⒒閸稑鐏繝銏★耿瀹曪繝鎮╅崹顐ｆ闂佹眹鍔岀€氼剟顢欓弮鈧幆鏃堟晜閼测晝顦╅梺鍛婄墪閹冲繒鈧凹鍙冨鑽ゅ鐎ｎ剛宕洪梺?    /// </summary>
+    /// 返回左侧状态栏区域占用的宽度
+    /// </summary>
     private double GetLeftPanelOccupiedWidth()
     {
         if (TopStatusLeftPanel is null)
@@ -811,7 +785,8 @@ public partial class MainWindow : Window
             }
         }
 
-        // 濠电儑缍€椤曆勬叏閻愮儤鈷掔痪鎯ь儑閻?        if (visibleCount > 1)
+        // 多个可见组件才补间隔
+        if (visibleCount > 1)
         {
             width += spacing * (visibleCount - 1);
         }
@@ -839,7 +814,8 @@ public partial class MainWindow : Window
             }
         }
 
-        // 濠电儑缍€椤曆勬叏閻愮儤鈷掔痪鎯ь儑閻?        if (visibleCount > 1)
+        // 多个可见组件才补间隔
+        if (visibleCount > 1)
         {
             width += spacing * (visibleCount - 1);
         }
@@ -867,7 +843,8 @@ public partial class MainWindow : Window
             }
         }
 
-        // 濠电儑缍€椤曆勬叏閻愮儤鈷掔痪鎯ь儑閻?        if (visibleCount > 1)
+        // 多个可见组件才补间隔
+        if (visibleCount > 1)
         {
             width += spacing * (visibleCount - 1);
         }
@@ -1019,7 +996,8 @@ public partial class MainWindow : Window
             }
         }
 
-        // 闂佸搫绉烽～澶婄暤娴ｈ濯寸€广儱娲ㄩ弸鍌炴偣娴ｇ鈷旈柣銈呮瀵即宕滆娴犳盯鎮楅悽鍨殌缂併劍鐓￠幆鍐礋椤掍胶鈧噣鎮楀☉娆樻畽闁稿繐鐭傚畷鑸电節閸愩劋绮繛瀵稿Ь椤旀劗妲愬▎鎴炴殰闁挎梻铏庡楣冩煙閸撗冧沪妞ゃ儱鎳庨湁閻庯絽澧庣粈?        if (_showTextCapsule)
+        // 文字胶囊仅在开启时显示
+        if (_showTextCapsule)
         {
             var targetPosition = _textCapsulePosition;
             var canAdd = CanAddComponentAtPosition(targetPosition);
@@ -1122,7 +1100,8 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// 閻熸粎澧楅幐鍓у垝瀹ュ棛顩烽悹鍝勬惈缁叉椽鏌ｉ姀銏犳灁妞ゎ偒鍋婇獮姗€鎮欑€涙﹩妲梺鎸庣☉閻線宕靛鍫濈闁靛鍔庡▓鍫曟煛娴ｈ櫣绡€缂傚秴鎳愮槐?    /// </summary>
+    /// 检测桌面组件是否互相重叠，必要时调整位置
+    /// </summary>
     private void AdjustComponentsIfColliding()
     {
         if (!WouldComponentsCollide())
@@ -1266,10 +1245,11 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// 闂佸搫琚崕鍙夌珶濮椻偓瀹曪綁顢涘鍕闂佹眹鍔岀€氼厼霉濞戞瑧顩烽柨婵嗗缁夊绱?    /// </summary>
+    /// 为组件寻找 Left/Center/Right 中未被占用的位置
+    /// </summary>
     private string? FindAlternativePosition(string originalPosition)
     {
-        // 闁诲繐绻戠换鍡涙儊椤栫偛绠ラ柍褜鍓熷鍨緞婵犲倽顔夐梺鐓庣－閺咁偄鈻撻幋鐐村鐎广儱娲ㄩ弸?
+        // 按 Left、Center、Right 顺序找空位
         var positions = new[] { "Left", "Center", "Right" };
         foreach (var position in positions)
         {
@@ -1668,7 +1648,7 @@ public partial class MainWindow : Window
         var pageCountBlock = new TextBlock
         {
             Text = pageCountText,
-            Foreground = GetThemeBrush("AdaptiveTextSecondaryBrush"),
+            Foreground = GetThemeBrush(ThemeResourceKeys.TextSecondaryBrush),
             FontSize = fontSize,
             FontWeight = FontWeight.SemiBold,
             VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
@@ -1677,7 +1657,7 @@ public partial class MainWindow : Window
 
         var pageCountContainer = new Border
         {
-            Background = GetThemeBrush("AdaptiveButtonBackgroundBrush"),
+            Background = GetThemeBrush(ThemeResourceKeys.ButtonBackgroundBrush),
             CornerRadius = new CornerRadius(cornerRadius),
             Padding = new Thickness(padding),
             Child = pageCountBlock,
@@ -2216,7 +2196,7 @@ public partial class MainWindow : Window
         {
             Data = arcData,
             Stretch = Stretch.Fill,
-            Stroke = GetThemeBrush("AdaptiveTextAccentBrush"),
+            Stroke = GetThemeBrush(ThemeResourceKeys.TextAccentBrush),
             StrokeThickness = arcThickness + 3,
             StrokeLineCap = PenLineCap.Round
         });
@@ -2224,7 +2204,7 @@ public partial class MainWindow : Window
         {
             Data = arcData,
             Stretch = Stretch.Fill,
-            Stroke = GetThemeBrush("AdaptiveAccentBrush"),
+            Stroke = GetThemeBrush(ThemeResourceKeys.AccentBrush),
             StrokeThickness = arcThickness,
             StrokeLineCap = PenLineCap.Round
         });
@@ -2295,16 +2275,6 @@ public partial class MainWindow : Window
         return NormalizeAspectRatioForComponent(
             componentId,
             (Math.Max(1, span.WidthCells), Math.Max(1, span.HeightCells)));
-    }
-
-    private DesktopComponentResizeMode GetComponentResizeMode(string componentId)
-    {
-        if (_componentRuntimeRegistry.TryGetDescriptor(componentId, out var runtimeDescriptor))
-        {
-            return runtimeDescriptor.Definition.ResizeMode;
-        }
-
-        return DesktopComponentResizeMode.Proportional;
     }
 
     private static (int WidthCells, int HeightCells) NormalizeAspectRatioForComponent(
@@ -2714,21 +2684,6 @@ public partial class MainWindow : Window
     }
 
     private Control? CreateDesktopComponentControl(
-        string componentId,
-        double cellSize,
-        string? placementId,
-        int? pageIndex,
-        string action)
-    {
-        if (!_componentRuntimeRegistry.TryGetDescriptor(componentId, out var runtimeDescriptor))
-        {
-            return null;
-        }
-
-        return CreateDesktopComponentControl(runtimeDescriptor, cellSize, placementId, pageIndex, action);
-    }
-
-    private Control? CreateDesktopComponentControl(
         DesktopComponentRuntimeDescriptor runtimeDescriptor,
         double cellSize,
         string? placementId,
@@ -2796,26 +2751,6 @@ public partial class MainWindow : Window
     internal void CloseDetachedComponentLibraryWindowFromService()
     {
         CloseDetachedComponentLibraryWindow();
-    }
-
-    private void CollapseComponentLibraryPanel()
-    {
-        // Animate component library panel collapsing downward
-        if (ComponentLibraryWindow is not null)
-        {
-            ComponentLibraryWindow.Height = 0;
-            ComponentLibraryWindow.IsVisible = false;
-        }
-
-        _isComponentLibraryOpen = false;
-        CancelDesktopComponentDrag();
-        CancelDesktopComponentResize(restoreOriginalSpan: true);
-        CloseDetachedComponentLibraryWindow();
-        ClearDesktopComponentSelection();
-        ClearSelectedLauncherTile(refreshTaskbar: false);
-        UpdateDesktopComponentHostEditState();
-        ClearComponentLibraryPreviewControls();
-        UpdateComponentLibraryLayout(_currentDesktopCellSize);
     }
 
     private void UpdateDesktopComponentHostEditState()
@@ -2952,7 +2887,7 @@ public partial class MainWindow : Window
         host.BorderThickness = showSelection
             ? new Thickness(Math.Clamp(_currentDesktopCellSize * 0.04, 1, 3))
             : new Thickness(0);
-        host.BorderBrush = showSelection ? GetThemeBrush("AdaptiveAccentBrush") : null;
+        host.BorderBrush = showSelection ? GetThemeBrush(ThemeResourceKeys.AccentBrush) : null;
 
         if (TryGetResizeHandle(host) is Border resizeHandle)
         {
@@ -3411,7 +3346,7 @@ public partial class MainWindow : Window
                 Text = category.Title,
                 FontSize = 15,
                 FontWeight = isSelected ? FontWeight.Bold : FontWeight.SemiBold,
-                Foreground = GetThemeBrush("AdaptiveTextPrimaryBrush"),
+                Foreground = GetThemeBrush(ThemeResourceKeys.TextPrimaryBrush),
                 VerticalAlignment = VerticalAlignment.Center,
                 TextTrimming = TextTrimming.CharacterEllipsis
             };
@@ -3434,9 +3369,9 @@ public partial class MainWindow : Window
                 HorizontalContentAlignment = HorizontalAlignment.Stretch,
                 VerticalContentAlignment = VerticalAlignment.Center,
                 Background = isSelected
-                    ? GetThemeBrush("AdaptiveNavItemSelectedBackgroundBrush")
-                    : GetThemeBrush("AdaptiveNavItemBackgroundBrush"),
-                BorderBrush = GetThemeBrush("AdaptiveButtonBorderBrush"),
+                    ? GetThemeBrush(ThemeResourceKeys.NavItemSelectedBackgroundBrush)
+                    : GetThemeBrush(ThemeResourceKeys.NavItemBackgroundBrush),
+                BorderBrush = GetThemeBrush(ThemeResourceKeys.ButtonBorderBrush),
                 BorderThickness = new Thickness(isSelected ? 1.5 : 1),
                 Content = contentGrid
             };
@@ -3799,7 +3734,7 @@ public partial class MainWindow : Window
             Text = GetLocalizedComponentDisplayName(component),
             FontSize = 14,
             FontWeight = FontWeight.SemiBold,
-            Foreground = GetThemeBrush("AdaptiveTextPrimaryBrush"),
+            Foreground = GetThemeBrush(ThemeResourceKeys.TextPrimaryBrush),
             HorizontalAlignment = HorizontalAlignment.Center
         };
 
@@ -3807,7 +3742,7 @@ public partial class MainWindow : Window
         {
             Text = L("component_library.drag_hint", "Drag to place"),
             FontSize = 12,
-            Foreground = GetThemeBrush("AdaptiveTextSecondaryBrush"),
+            Foreground = GetThemeBrush(ThemeResourceKeys.TextSecondaryBrush),
             HorizontalAlignment = HorizontalAlignment.Center
         };
 

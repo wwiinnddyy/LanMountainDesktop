@@ -767,6 +767,7 @@
     "component.editor.placement_label": "인스턴스 ID",
     "component.editor.scope_label": "범위",
     "component.editor.scope_instance": "인스턴스 수준 편집기",
+    "component.editor.instance_only_hint": "'{0}' 컴포넌트는 현재 인스턴스 단위 메타데이터만 제공하며 설정 항목이 없습니다.",
     "component_category.clock":  "시계",
     "component_category.date":  "달력",
     "component_category.weather":  "날씨",
@@ -1195,5 +1196,14 @@
     "settings.general.back_to_windows_fluent_icon_search_placeholder":  "아이콘 검색",
     "settings.dev.airapp_path_header":  "개발용 플러그인 경로",
     "settings.dev.airapp_path_description":  "패키징 없이 반복 디버깅할 수 있도록 로컬 플러그인 출력 디렉터리를 불러옵니다.",
-    "settings.dev.airapp_path_placeholder":  "예: C:\\path\\to\\plugin\\bin\\Debug\\net10.0"
+    "settings.dev.airapp_path_placeholder":  "예: C:\\path\\to\\plugin\\bin\\Debug\\net10.0",
+    "component.rss_reader": "RSS 리더",
+    "component.rss_reader.description": "위젯과 AirApp 간에 동기화되는 RSS 및 Atom 수신함.",
+    "component.sticky_note": "메모",
+    "component.standby_digital_clock": "대기 시계",
+    "component.shortcut": "바로 가기",
+    "component.file_manager": "파일 관리자",
+    "component.zhijiao_hub": "智教Hub",
+    "component.juya_news": "橘鸦早报",
+    "component.notification_box": "알림 상자"
 }

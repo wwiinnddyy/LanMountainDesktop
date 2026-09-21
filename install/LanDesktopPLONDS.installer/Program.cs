@@ -95,7 +95,7 @@ public static class Program
                 }
             }
 
-            var service = new UninstallService(installPath, silent);
+            var service = new UninstallService(installPath);
             var success = service.Execute();
             Environment.Exit(success ? 0 : 1);
         }

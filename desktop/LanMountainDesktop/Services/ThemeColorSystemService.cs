@@ -17,26 +17,26 @@ public static class ThemeColorSystemService
     {
         var palette = BuildPalette(context);
 
-        resources["AdaptivePrimaryBrush"] = new SolidColorBrush(palette.Primary);
-        resources["AdaptiveSecondaryBrush"] = new SolidColorBrush(palette.Secondary);
-        resources["AdaptiveAccentBrush"] = new SolidColorBrush(palette.Accent);
-        resources["AdaptiveOnAccentBrush"] = new SolidColorBrush(palette.OnAccent);
-        resources["AdaptiveSurfaceBaseBrush"] = new SolidColorBrush(palette.SurfaceBase);
-        resources["AdaptiveSurfaceRaisedBrush"] = new SolidColorBrush(palette.SurfaceRaised);
-        resources["AdaptiveSurfaceOverlayBrush"] = new SolidColorBrush(palette.SurfaceOverlay);
-        resources["AdaptiveTextPrimaryBrush"] = new SolidColorBrush(palette.TextPrimary);
-        resources["AdaptiveTextSecondaryBrush"] = new SolidColorBrush(palette.TextSecondary);
-        resources["AdaptiveTextMutedBrush"] = new SolidColorBrush(palette.TextMuted);
-        resources["AdaptiveTextAccentBrush"] = new SolidColorBrush(palette.TextAccent);
-        resources["AdaptiveNavTextBrush"] = new SolidColorBrush(palette.NavText);
-        resources["AdaptiveNavSelectedTextBrush"] = new SolidColorBrush(palette.NavSelectedText);
-        resources["AdaptiveNavSelectionIndicatorBrush"] = new SolidColorBrush(palette.NavSelectionIndicator);
-        resources["AdaptiveNavItemBackgroundBrush"] = new SolidColorBrush(palette.NavItemBackground);
-        resources["AdaptiveNavItemHoverBackgroundBrush"] = new SolidColorBrush(palette.NavItemHoverBackground);
-        resources["AdaptiveNavItemSelectedBackgroundBrush"] = new SolidColorBrush(palette.NavItemSelectedBackground);
-        resources["AdaptiveToggleOnBrush"] = new SolidColorBrush(palette.ToggleOn);
-        resources["AdaptiveToggleOffBrush"] = new SolidColorBrush(palette.ToggleOff);
-        resources["AdaptiveToggleBorderBrush"] = new SolidColorBrush(palette.ToggleBorder);
+        resources[ThemeResourceKeys.PrimaryBrush] = new SolidColorBrush(palette.Primary);
+        resources[ThemeResourceKeys.SecondaryBrush] = new SolidColorBrush(palette.Secondary);
+        resources[ThemeResourceKeys.AccentBrush] = new SolidColorBrush(palette.Accent);
+        resources[ThemeResourceKeys.OnAccentBrush] = new SolidColorBrush(palette.OnAccent);
+        resources[ThemeResourceKeys.SurfaceBaseBrush] = new SolidColorBrush(palette.SurfaceBase);
+        resources[ThemeResourceKeys.SurfaceRaisedBrush] = new SolidColorBrush(palette.SurfaceRaised);
+        resources[ThemeResourceKeys.SurfaceOverlayBrush] = new SolidColorBrush(palette.SurfaceOverlay);
+        resources[ThemeResourceKeys.TextPrimaryBrush] = new SolidColorBrush(palette.TextPrimary);
+        resources[ThemeResourceKeys.TextSecondaryBrush] = new SolidColorBrush(palette.TextSecondary);
+        resources[ThemeResourceKeys.TextMutedBrush] = new SolidColorBrush(palette.TextMuted);
+        resources[ThemeResourceKeys.TextAccentBrush] = new SolidColorBrush(palette.TextAccent);
+        resources[ThemeResourceKeys.NavTextBrush] = new SolidColorBrush(palette.NavText);
+        resources[ThemeResourceKeys.NavSelectedTextBrush] = new SolidColorBrush(palette.NavSelectedText);
+        resources[ThemeResourceKeys.NavSelectionIndicatorBrush] = new SolidColorBrush(palette.NavSelectionIndicator);
+        resources[ThemeResourceKeys.NavItemBackgroundBrush] = new SolidColorBrush(palette.NavItemBackground);
+        resources[ThemeResourceKeys.NavItemHoverBackgroundBrush] = new SolidColorBrush(palette.NavItemHoverBackground);
+        resources[ThemeResourceKeys.NavItemSelectedBackgroundBrush] = new SolidColorBrush(palette.NavItemSelectedBackground);
+        resources[ThemeResourceKeys.ToggleOnBrush] = new SolidColorBrush(palette.ToggleOn);
+        resources[ThemeResourceKeys.ToggleOffBrush] = new SolidColorBrush(palette.ToggleOff);
+        resources[ThemeResourceKeys.ToggleBorderBrush] = new SolidColorBrush(palette.ToggleBorder);
 
         resources["SystemAccentColor"] = palette.Accent;
         resources["SystemAccentColorLight1"] = palette.AccentLight1;

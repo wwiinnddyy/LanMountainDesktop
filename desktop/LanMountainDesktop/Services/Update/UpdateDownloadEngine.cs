@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using LanMountainDesktop.Shared.Contracts.Update;
+using LanMountainDesktop.Services.Plonds;
 
 namespace LanMountainDesktop.Services.Update;
 
@@ -14,17 +15,13 @@ public sealed record DownloadResult(bool Success, string? FilePath, string? Erro
 
 internal sealed class UpdateDownloadEngine
 {
-    private readonly IUpdateManifestProvider _manifestProvider;
     private readonly ResumableDownloadService _downloadService;
 
     private const int MaxRetryAttempts = 3;
     private const int RetryDelayMs = 1000;
 
-    public UpdateDownloadEngine(
-        IUpdateManifestProvider manifestProvider,
-        ResumableDownloadService downloadService)
+    public UpdateDownloadEngine(ResumableDownloadService downloadService)
     {
-        _manifestProvider = manifestProvider ?? throw new ArgumentNullException(nameof(manifestProvider));
         _downloadService = downloadService ?? throw new ArgumentNullException(nameof(downloadService));
     }
 
@@ -73,7 +70,7 @@ internal sealed class UpdateDownloadEngine
         }
 
         var downloadableFiles = manifest.Files
-            .Where(f => f.Action is not ("reuse" or "delete") && !string.IsNullOrWhiteSpace(f.ObjectUrl))
+            .Where(f => f.Action is not (PlondsWireFormat.ActionReuse or PlondsWireFormat.ActionDelete) && !string.IsNullOrWhiteSpace(f.ObjectUrl))
             .ToList();
 
         var totalFiles = downloadableFiles.Count + 2;

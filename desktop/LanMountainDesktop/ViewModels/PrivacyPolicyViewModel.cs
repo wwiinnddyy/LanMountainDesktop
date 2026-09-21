@@ -39,7 +39,7 @@ public sealed partial class PrivacyPolicyViewModel : ViewModelBase
 
     public PrivacyPolicyViewModel()
     {
-        _languageCode = "zh-CN";
+        _languageCode = LocalizationService.DefaultLanguageCode;
         RefreshLocalizedText();
         LoadPrivacyPolicy();
     }

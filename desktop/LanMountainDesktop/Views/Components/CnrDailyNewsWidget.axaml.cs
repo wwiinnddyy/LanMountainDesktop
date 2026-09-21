@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -18,6 +17,7 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Helpers;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -33,9 +33,6 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
     private const string BrowserUserAgent =
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36";
 
-    private const double BaseCellSize = 48d;
-    private const int BaseWidthCells = 4;
-    private const int BaseHeightCells = 2;
     private static readonly IReadOnlyList<int> SupportedAutoRotateIntervalsMinutes = RefreshIntervalCatalog.SupportedIntervalsMinutes;
 
     private readonly DispatcherTimer _refreshTimer = new()
@@ -53,8 +50,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
 
     private IRecommendationInfoService _recommendationService = DefaultRecommendationService;
     private CancellationTokenSource? _refreshCts;
-    private string _languageCode = "zh-CN";
-    private double _currentCellSize = BaseCellSize;
+    private string _languageCode = LocalizationService.DefaultLanguageCode;
     private bool _isAttached;
     private bool _isRefreshing;
     private bool _autoRotateEnabled = true;
@@ -84,7 +80,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
 
     public void ApplyCellSize(double cellSize)
     {
-        _currentCellSize = Math.Max(1, cellSize);
+        _ = cellSize;
     }
 
     public void SetRecommendationInfoService(IRecommendationInfoService recommendationInfoService)
@@ -255,7 +251,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         _newsUrls.Clear();
         foreach (var item in items)
         {
-            _newsUrls.Add(NormalizeHttpUrl(item.Url));
+            _newsUrls.Add(ExternalLinkLauncher.NormalizeHttpUrl(item.Url));
         }
 
         UpdateNewsInteractionState();
@@ -390,7 +386,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
 
     private static async Task<Bitmap?> TryDownloadBitmapAsync(string? imageUrl, CancellationToken cancellationToken)
     {
-        var normalizedUrl = NormalizeHttpUrl(imageUrl);
+        var normalizedUrl = ExternalLinkLauncher.NormalizeHttpUrl(imageUrl);
         if (string.IsNullOrWhiteSpace(normalizedUrl))
         {
             return null;
@@ -433,47 +429,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
             return;
         }
 
-        var normalizedUrl = NormalizeHttpUrl(_newsUrls[index]);
-        if (string.IsNullOrWhiteSpace(normalizedUrl))
-        {
-            return;
-        }
-
-        try
-        {
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = normalizedUrl,
-                UseShellExecute = true
-            };
-            Process.Start(startInfo);
-        }
-        catch
-        {
-            // Ignore malformed URLs or shell launch failures.
-        }
-    }
-
-    private static string? NormalizeHttpUrl(string? rawUrl)
-    {
-        if (string.IsNullOrWhiteSpace(rawUrl))
-        {
-            return null;
-        }
-
-        var candidate = rawUrl.Trim();
-        if (!Uri.TryCreate(candidate, UriKind.Absolute, out var uri))
-        {
-            return null;
-        }
-
-        if (!string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
-        return uri.ToString();
+        ExternalLinkLauncher.TryOpen(_newsUrls[index]);
     }
 
     private void SetNewsBitmap(int index, Bitmap? bitmap)
@@ -521,18 +477,8 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         }
     }
 
-    private void UpdateLanguageCode()
-    {
-        try
-        {
-            var snapshot = _appSettingsService.Load();
-            _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
-        }
-        catch
-        {
-            _languageCode = "zh-CN";
-        }
-    }
+    private void UpdateLanguageCode() =>
+        _languageCode = _localizationService.ResolveLanguageCode(() => _appSettingsService.Load().LanguageCode);
 
     private void ApplyAutoRotateSettings()
     {

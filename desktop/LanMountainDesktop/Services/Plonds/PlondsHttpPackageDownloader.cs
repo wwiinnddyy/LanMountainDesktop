@@ -78,11 +78,11 @@ internal sealed class PlondsHttpPackageDownloader(
             yield return url;
             // Case variants commonly used by different publishers.
             if (mode is PlondsPackageMode.Full &&
-                url.AbsoluteUri.EndsWith("Files.zip", StringComparison.OrdinalIgnoreCase))
+                url.AbsoluteUri.EndsWith(PlondsWireFormat.FullPackageFileName, StringComparison.OrdinalIgnoreCase))
             {
-                var alt = url.AbsoluteUri.EndsWith("Files.zip", StringComparison.Ordinal)
-                    ? url.AbsoluteUri[..^"Files.zip".Length] + "files.zip"
-                    : url.AbsoluteUri[..^"files.zip".Length] + "Files.zip";
+                var alt = url.AbsoluteUri.EndsWith(PlondsWireFormat.FullPackageFileName, StringComparison.Ordinal)
+                    ? url.AbsoluteUri[..^PlondsWireFormat.FullPackageFileName.Length] + PlondsWireFormat.FullPackageFileNameLowerCase
+                    : url.AbsoluteUri[..^PlondsWireFormat.FullPackageFileNameLowerCase.Length] + PlondsWireFormat.FullPackageFileName;
                 if (Uri.TryCreate(alt, UriKind.Absolute, out var altUri) &&
                     !string.Equals(altUri.AbsoluteUri, url.AbsoluteUri, StringComparison.OrdinalIgnoreCase))
                 {
@@ -133,8 +133,8 @@ internal sealed class PlondsHttpPackageDownloader(
     {
         var urlFileName = Path.GetFileName(url.LocalPath);
         var keys = mode is PlondsPackageMode.Delta
-            ? new[] { "changed.zip", urlFileName }
-            : new[] { "Files.zip", "files.zip", "files-windows-x64.zip", urlFileName };
+            ? new[] { PlondsWireFormat.DeltaPackageFileName, urlFileName }
+            : new[] { PlondsWireFormat.FullPackageFileName, PlondsWireFormat.FullPackageFileNameLowerCase, PlondsWireFormat.LegacyWindowsX64PackageFileName, urlFileName };
 
         return keys
             .Where(key => !string.IsNullOrWhiteSpace(key))

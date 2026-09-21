@@ -39,7 +39,7 @@ public partial class ExchangeRateCalculatorWidget : UserControl, IDesktopCompone
     private IRecommendationInfoService _recommendationService = DefaultRecommendationService;
     private ICalculatorDataService _calculatorDataService = DefaultCalculatorService;
 
-    private string _languageCode = "zh-CN";
+    private string _languageCode = LocalizationService.DefaultLanguageCode;
     private string _fromCurrency = "USD";
     private string _toCurrency = "CNY";
     private string _inputText = "100";
@@ -262,18 +262,8 @@ public partial class ExchangeRateCalculatorWidget : UserControl, IDesktopCompone
         UpdateAmounts();
     }
 
-    private void UpdateLanguageCode()
-    {
-        try
-        {
-            var snapshot = _settingsService.Load();
-            _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
-        }
-        catch
-        {
-            _languageCode = "zh-CN";
-        }
-    }
+    private void UpdateLanguageCode() =>
+        _languageCode = _localizationService.ResolveLanguageCode(() => _settingsService.Load().LanguageCode);
 
     private string GetNextCurrencyCode(string current, string avoid)
     {
@@ -306,7 +296,7 @@ public partial class ExchangeRateCalculatorWidget : UserControl, IDesktopCompone
 
     private bool IsZh()
     {
-        return string.Equals(_languageCode, "zh-CN", StringComparison.OrdinalIgnoreCase);
+        return _localizationService.IsChineseLanguage(_languageCode);
     }
 
     private string L(string key, string fallback)

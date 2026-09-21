@@ -1,5 +1,6 @@
 using System.Text.Json;
 using LanMountainDesktop.Shared.Contracts.Update;
+using LanMountainDesktop.Services.Plonds;
 
 namespace LanMountainDesktop.Services.Update;
 
@@ -178,15 +179,15 @@ internal sealed class PlondsUpdateApplier(
     private void ApplyFileEntry(ApplyPlondsFileEntry file, string? currentDeployment, string targetDeployment)
     {
         var normalizedPath = UpdatePathGuard.NormalizeRelativePath(file.Path);
-        var action = string.IsNullOrWhiteSpace(file.Action) ? "replace" : file.Action!;
-        if (string.Equals(action, "delete", StringComparison.OrdinalIgnoreCase)) return;
+        var action = string.IsNullOrWhiteSpace(file.Action) ? PlondsWireFormat.ActionReplace : file.Action!;
+        if (string.Equals(action, PlondsWireFormat.ActionDelete, StringComparison.OrdinalIgnoreCase)) return;
 
         var targetPath = Path.Combine(targetDeployment, normalizedPath);
         UpdatePathGuard.EnsurePathWithinRoot(targetPath, targetDeployment);
         var targetDir = Path.GetDirectoryName(targetPath);
         if (!string.IsNullOrWhiteSpace(targetDir)) Directory.CreateDirectory(targetDir);
 
-        if (string.Equals(action, "reuse", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(action, PlondsWireFormat.ActionReuse, StringComparison.OrdinalIgnoreCase))
         {
             CopyReusedFile(file, currentDeployment, normalizedPath, targetPath);
             return;
@@ -212,8 +213,8 @@ internal sealed class PlondsUpdateApplier(
 
     private static void VerifyFileEntry(ApplyPlondsFileEntry file, string targetDeployment)
     {
-        var action = string.IsNullOrWhiteSpace(file.Action) ? "replace" : file.Action!;
-        if (string.Equals(action, "delete", StringComparison.OrdinalIgnoreCase)) return;
+        var action = string.IsNullOrWhiteSpace(file.Action) ? PlondsWireFormat.ActionReplace : file.Action!;
+        if (string.Equals(action, PlondsWireFormat.ActionDelete, StringComparison.OrdinalIgnoreCase)) return;
 
         var targetPath = Path.Combine(targetDeployment, UpdatePathGuard.NormalizeRelativePath(file.Path));
         UpdatePathGuard.EnsurePathWithinRoot(targetPath, targetDeployment);

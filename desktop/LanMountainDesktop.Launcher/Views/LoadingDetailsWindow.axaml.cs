@@ -58,7 +58,8 @@ public partial class LoadingDetailsWindow : Window
     }
 
     /// <summary>
-    /// 更新加载状�?    /// </summary>
+    /// 更新加载状态
+    /// </summary>
     public void UpdateLoadingState(LoadingStateMessage state)
     {
         Dispatcher.UIThread.Post(() =>
@@ -121,7 +122,8 @@ public partial class LoadingDetailsWindow : Window
     }
 
     /// <summary>
-    /// 更新当前活动�?    /// </summary>
+    /// 更新当前活动项
+    /// </summary>
     private void UpdateCurrentItem(LoadingStateMessage state)
     {
         var currentItem = state.ActiveItems.FirstOrDefault();
@@ -182,7 +184,7 @@ public partial class LoadingDetailsWindow : Window
             }
         }
 
-        // 按状态排序：进行�?-> 等待�?-> 已完�?-> 失败
+        // 按状态排序： 进行中 -> 等待 -> 已完成 -> 失败
         var sortedItems = _items.OrderBy(i => GetStatePriority(i.State)).ToList();
         _items.Clear();
         foreach (var item in sortedItems)
@@ -248,7 +250,8 @@ public partial class LoadingDetailsWindow : Window
     };
 
     /// <summary>
-    /// 获取项描�?    /// </summary>
+    /// 获取项目描述
+    /// </summary>
     private static string GetItemDescription(LoadingItem item)
     {
         if (!string.IsNullOrEmpty(item.Description))
@@ -266,7 +269,8 @@ public partial class LoadingDetailsWindow : Window
     }
 
     /// <summary>
-    /// 获取项图�?    /// </summary>
+    /// 获取项目图标
+    /// </summary>
     private static string GetItemIcon(LoadingItemType type) => type switch
     {
         LoadingItemType.AirApp => "\uE768",
@@ -295,7 +299,8 @@ public partial class LoadingDetailsWindow : Window
 }
 
 /// <summary>
-/// 加载项视图模�?/// </summary>
+/// 加载项视图模型
+/// </summary>
 public class LoadingItemViewModel : INotifyPropertyChanged
 {
     public string Id { get; }

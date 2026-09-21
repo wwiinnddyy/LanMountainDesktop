@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Net.Http;
@@ -18,6 +17,7 @@ using LanMountainDesktop.Models;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.Helpers;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -66,7 +66,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
     private IRecommendationInfoService _recommendationService = DefaultRecommendationService;
     private CancellationTokenSource? _refreshCts;
     private Bitmap? _currentArtworkBitmap;
-    private string _languageCode = "zh-CN";
+    private string _languageCode = LocalizationService.DefaultLanguageCode;
     private double _currentCellSize = BaseCellSize;
     private bool _isAttached;
     private bool _isRefreshing;
@@ -637,64 +637,16 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
 
     private void TryOpenArtworkSourceUrl()
     {
-        var candidate = _currentArtworkSourceUrl;
-        if (!TryNormalizeHttpUrl(candidate, out var normalizedUrl) &&
-            !TryNormalizeHttpUrl(_currentArtworkImageUrl, out normalizedUrl))
+        if (ExternalLinkLauncher.TryOpen(_currentArtworkSourceUrl))
         {
             return;
         }
 
-        try
-        {
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = normalizedUrl,
-                UseShellExecute = true
-            };
-            Process.Start(startInfo);
-        }
-        catch
-        {
-            // Ignore malformed URLs or shell launch failures.
-        }
+        ExternalLinkLauncher.TryOpen(_currentArtworkImageUrl);
     }
 
-    private static bool TryNormalizeHttpUrl(string? rawUrl, out string normalizedUrl)
-    {
-        normalizedUrl = string.Empty;
-        if (string.IsNullOrWhiteSpace(rawUrl))
-        {
-            return false;
-        }
-
-        var candidate = rawUrl.Trim();
-        if (!Uri.TryCreate(candidate, UriKind.Absolute, out var uri))
-        {
-            return false;
-        }
-
-        if (!string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        normalizedUrl = uri.ToString();
-        return true;
-    }
-
-    private void UpdateLanguageCode()
-    {
-        try
-        {
-            var snapshot = _settingsService.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
-            _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
-        }
-        catch
-        {
-            _languageCode = "zh-CN";
-        }
-    }
+    private void UpdateLanguageCode() =>
+        _languageCode = _localizationService.ResolveLanguageCode(() => _settingsService.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App).LanguageCode);
 
     private string ResolveMirrorSource()
     {
@@ -717,7 +669,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         var now = DateTime.Now;
         DateTextBlock.Text = now.ToString("MM/dd", CultureInfo.InvariantCulture);
 
-        if (string.Equals(_languageCode, "zh-CN", StringComparison.OrdinalIgnoreCase) &&
+        if (_localizationService.IsChineseLanguage(_languageCode) &&
             ZhWeekdays.TryGetValue(now.DayOfWeek, out var weekdayZh))
         {
             WeekdayTextBlock.Text = weekdayZh;
@@ -831,7 +783,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         {
             var candidate = (low + high) / 2d;
             var lineHeight = candidate * lineHeightFactor;
-            var size = MeasureTextSize(content, candidate, weight, Math.Max(1, maxWidth), lineHeight);
+            var size = ComponentTypography.MeasureTextSize(content, candidate, weight, Math.Max(1, maxWidth), lineHeight);
             var lineCount = Math.Max(1, (int)Math.Ceiling(size.Height / Math.Max(1, lineHeight)));
             var fits = size.Height <= maxHeight + 0.6 && lineCount <= Math.Max(1, maxLines);
 
@@ -884,7 +836,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
                     weight,
                     lineHeightFactor);
                 var lineHeight = fontSize * lineHeightFactor;
-                var measuredSize = MeasureTextSize(content, fontSize, weight, Math.Max(1, maxWidth), lineHeight);
+                var measuredSize = ComponentTypography.MeasureTextSize(content, fontSize, weight, Math.Max(1, maxWidth), lineHeight);
                 var measuredLineCount = ResolveLineCount(measuredSize.Height, lineHeight);
                 var overflowLines = Math.Max(0, measuredLineCount - lineLimit);
                 var overflowHeight = Math.Max(0, measuredSize.Height - maxHeight);
@@ -1011,20 +963,5 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         public double OverflowScore { get; }
 
         public bool FitsCompletely { get; }
-    }
-
-    private static Size MeasureTextSize(string text, double fontSize, FontWeight weight, double maxWidth, double lineHeight)
-    {
-        var probe = new TextBlock
-        {
-            Text = text,
-            FontSize = fontSize,
-            FontWeight = weight,
-            TextWrapping = TextWrapping.Wrap,
-            LineHeight = lineHeight
-        };
-
-        probe.Measure(new Size(Math.Max(1, maxWidth), double.PositiveInfinity));
-        return probe.DesiredSize;
     }
 }

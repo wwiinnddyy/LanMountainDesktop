@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using LanMountainDesktop.Models;
+using static LanMountainDesktop.Services.Json.JsonNodeReader;
 
 namespace LanMountainDesktop.Services;
 
@@ -838,22 +839,6 @@ public sealed class XiaomiWeatherService : IWeatherDataService, IDisposable
                node.TryGetProperty(propertyName, out value);
     }
 
-    private static JsonElement? TryGetNode(JsonElement node, params string[] path)
-    {
-        var current = node;
-        foreach (var segment in path)
-        {
-            if (current.ValueKind != JsonValueKind.Object || !current.TryGetProperty(segment, out var next))
-            {
-                return null;
-            }
-
-            current = next;
-        }
-
-        return current;
-    }
-
     private static JsonElement? ReadArray(JsonElement node, params string[] path)
     {
         var target = TryGetNode(node, path);
@@ -892,56 +877,6 @@ public sealed class XiaomiWeatherService : IWeatherDataService, IDisposable
         return array.Value[index];
     }
 
-    private static string? ReadString(JsonElement? node, params string[] path)
-    {
-        if (!node.HasValue)
-        {
-            return null;
-        }
-
-        var target = path.Length == 0 ? node : TryGetNode(node.Value, path);
-        if (!target.HasValue)
-        {
-            return null;
-        }
-
-        return target.Value.ValueKind switch
-        {
-            JsonValueKind.String => target.Value.GetString(),
-            JsonValueKind.Number => target.Value.GetRawText(),
-            JsonValueKind.True => "true",
-            JsonValueKind.False => "false",
-            _ => null
-        };
-    }
-
-    private static int? ReadInt(JsonElement? node, params string[] path)
-    {
-        if (!node.HasValue)
-        {
-            return null;
-        }
-
-        var target = path.Length == 0 ? node : TryGetNode(node.Value, path);
-        if (!target.HasValue)
-        {
-            return null;
-        }
-
-        if (target.Value.ValueKind == JsonValueKind.Number && target.Value.TryGetInt32(out var number))
-        {
-            return number;
-        }
-
-        if (target.Value.ValueKind == JsonValueKind.String &&
-            int.TryParse(target.Value.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
-        {
-            return parsed;
-        }
-
-        return null;
-    }
-
     private static int? ReadWeatherCode(JsonElement? node)
     {
         return ReadInt(node, "weather", "value") ??
@@ -950,73 +885,6 @@ public sealed class XiaomiWeatherService : IWeatherDataService, IDisposable
                ReadInt(node, "weather") ??
                ReadInt(node, "value") ??
                ReadInt(node);
-    }
-
-    private static double? ReadDouble(JsonElement? node, params string[] path)
-    {
-        if (!node.HasValue)
-        {
-            return null;
-        }
-
-        var target = path.Length == 0 ? node : TryGetNode(node.Value, path);
-        if (!target.HasValue)
-        {
-            return null;
-        }
-
-        if (target.Value.ValueKind == JsonValueKind.Number && target.Value.TryGetDouble(out var number))
-        {
-            return number;
-        }
-
-        if (target.Value.ValueKind == JsonValueKind.String &&
-            double.TryParse(target.Value.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed))
-        {
-            return parsed;
-        }
-
-        return null;
-    }
-
-    private static bool? ReadBool(JsonElement? node, params string[] path)
-    {
-        if (!node.HasValue)
-        {
-            return null;
-        }
-
-        var target = path.Length == 0 ? node : TryGetNode(node.Value, path);
-        if (!target.HasValue)
-        {
-            return null;
-        }
-
-        if (target.Value.ValueKind is JsonValueKind.True or JsonValueKind.False)
-        {
-            return target.Value.GetBoolean();
-        }
-
-        if (target.Value.ValueKind == JsonValueKind.Number && target.Value.TryGetInt32(out var number))
-        {
-            return number != 0;
-        }
-
-        if (target.Value.ValueKind == JsonValueKind.String)
-        {
-            var text = target.Value.GetString();
-            if (bool.TryParse(text, out var parsed))
-            {
-                return parsed;
-            }
-
-            if (int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out number))
-            {
-                return number != 0;
-            }
-        }
-
-        return null;
     }
 
     private static DateTimeOffset? ParseTime(string? raw)

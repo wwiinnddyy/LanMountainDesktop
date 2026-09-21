@@ -18,23 +18,20 @@ using LanMountainDesktop.Platform.MacOS;
 using LanMountainDesktop.Platform.Windows;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
 public partial class FileManagerWidget : UserControl,
     IDesktopComponentWidget,
     IDesktopPageVisibilityAwareComponentWidget,
-    IComponentPlacementContextAware,
     IDisposable
 {
     private readonly List<string> _navigationHistory = new();
     private int _currentHistoryIndex = -1;
     private string _currentPath = string.Empty;
-    private string _componentId = BuiltInComponentIds.DesktopFileManager;
-    private string _placementId = string.Empty;
     private double _currentCellSize = 48;
     private bool _isOnActivePage;
-    private bool _isEditMode;
     private bool _isAttached;
     private bool _isDisposed;
 
@@ -77,21 +74,13 @@ public partial class FileManagerWidget : UserControl,
 
     public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)
     {
+        _ = isEditMode;
         _isOnActivePage = isOnActivePage;
-        _isEditMode = isEditMode;
 
         if (_isOnActivePage && _isAttached && !string.IsNullOrEmpty(_currentPath))
         {
             RefreshCurrentDirectory();
         }
-    }
-
-    public void SetComponentPlacementContext(string componentId, string? placementId)
-    {
-        _componentId = string.IsNullOrWhiteSpace(componentId)
-            ? BuiltInComponentIds.DesktopFileManager
-            : componentId.Trim();
-        _placementId = placementId?.Trim() ?? string.Empty;
     }
 
     public void Dispose()
@@ -516,7 +505,7 @@ public partial class FileManagerWidget : UserControl,
         var iconSize = Math.Clamp(32 * scale, 24, 40);
         var fontSize = Math.Clamp(11 * scale, 10, 14);
 
-        var textBrush = this.FindResource("AdaptiveTextPrimaryBrush") as IBrush ?? new SolidColorBrush(Colors.White);
+        var textBrush = this.FindResource(ThemeResourceKeys.TextPrimaryBrush) as IBrush ?? new SolidColorBrush(Colors.White);
 
         var border = new Border
         {
@@ -686,8 +675,8 @@ public partial class FileManagerWidget : UserControl,
         };
 
         var iconBrush = item.ItemType == FileSystemItemType.File
-            ? this.FindResource("AdaptiveTextSecondaryBrush") as IBrush ?? new SolidColorBrush(Colors.Gray)
-            : this.FindResource("AdaptiveAccentBrush") as IBrush ?? new SolidColorBrush(Colors.DodgerBlue);
+            ? this.FindResource(ThemeResourceKeys.TextSecondaryBrush) as IBrush ?? new SolidColorBrush(Colors.Gray)
+            : this.FindResource(ThemeResourceKeys.AccentBrush) as IBrush ?? new SolidColorBrush(Colors.DodgerBlue);
 
         return new SymbolIcon
         {

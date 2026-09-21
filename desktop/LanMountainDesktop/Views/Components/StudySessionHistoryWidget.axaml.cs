@@ -42,16 +42,13 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
         Color.Parse("#FF0F1D2D")
     };
 
-    private static readonly Color DarkSubstrate = Color.Parse("#FF0B1220");
-    private static readonly Color LightSubstrate = Color.Parse("#FFF1F5FA");
-
     private readonly IStudyAnalyticsService _studyAnalyticsService = StudyAnalyticsServiceFactory.CreateDefault();
     private LanMountainDesktop.AirAppSdk.ISettingsService _settingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
     private readonly LocalizationService _localizationService = new();
     private readonly StudySnapshotRenderGate _renderGate;
 
     private double _currentCellSize = 48;
-    private string _languageCode = "zh-CN";
+    private string _languageCode = LocalizationService.DefaultLanguageCode;
     private bool _isAttached;
     private bool _isOnActivePage = true;
     private bool _isSubscribed;
@@ -108,11 +105,7 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
         _isAttached = true;
         ReloadLanguageCode();
 
-        if (!_isSubscribed)
-        {
-            _studyAnalyticsService.SnapshotUpdated += OnStudySnapshotUpdated;
-            _isSubscribed = true;
-        }
+        StudySnapshotSubscription.Subscribe(ref _isSubscribed, _studyAnalyticsService, OnStudySnapshotUpdated);
 
         RefreshFromService();
     }
@@ -120,11 +113,7 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = false;
-        if (_isSubscribed)
-        {
-            _studyAnalyticsService.SnapshotUpdated -= OnStudySnapshotUpdated;
-            _isSubscribed = false;
-        }
+        StudySnapshotSubscription.Unsubscribe(ref _isSubscribed, _studyAnalyticsService, OnStudySnapshotUpdated);
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -180,10 +169,10 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
 
     private void RenderSnapshot(StudyAnalyticsSnapshot snapshot)
     {
-        var panelColor = ResolvePanelBackgroundColor();
-        var panelSamples = BuildPanelBackgroundSamples(panelColor);
+        var panelColor = StudyPanelPalette.Resolve(this, RootBorder.Background);
+        var panelSamples = StudyPanelPalette.BuildSoftSamples(panelColor);
         TitleTextBlock.Text = L("study.session_history.title", "Session History");
-        TitleTextBlock.Foreground = CreateAdaptiveBrush(panelSamples, PrimaryColorCandidates, MinTextContrast);
+        TitleTextBlock.Foreground = AdaptiveBrushFactory.Create(panelSamples, PrimaryColorCandidates, MinTextContrast);
 
         if (!_studyEnabled)
         {
@@ -194,7 +183,7 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
 
             SessionListPanel.Children.Clear();
             StatusTextBlock.Text = L("study.widget.disabled_hint", "请在设置中开启");
-            StatusTextBlock.Foreground = CreateAdaptiveBrush(panelSamples, SecondaryColorCandidates, MinTextContrast);
+            StatusTextBlock.Foreground = AdaptiveBrushFactory.Create(panelSamples, SecondaryColorCandidates, MinTextContrast);
             return;
         }
 
@@ -213,7 +202,7 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
             }
 
             StatusTextBlock.Text = _transientStatus ?? L("study.session_history.empty", "No session history");
-            StatusTextBlock.Foreground = CreateAdaptiveBrush(panelSamples, SecondaryColorCandidates, MinTextContrast);
+            StatusTextBlock.Foreground = AdaptiveBrushFactory.Create(panelSamples, SecondaryColorCandidates, MinTextContrast);
             UpdateDialogVisual(snapshot, panelColor);
             return;
         }
@@ -237,7 +226,7 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
         }
 
         StatusTextBlock.Text = _transientStatus ?? string.Empty;
-        StatusTextBlock.Foreground = CreateAdaptiveBrush(panelSamples, SecondaryColorCandidates, MinTextContrast);
+        StatusTextBlock.Foreground = AdaptiveBrushFactory.Create(panelSamples, SecondaryColorCandidates, MinTextContrast);
         UpdateDialogVisual(snapshot, panelColor);
     }
 
@@ -263,10 +252,10 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
             Padding = new Thickness(Math.Clamp(8, 6, 12), Math.Clamp(6, 4, 10))
         };
 
-        var panelComposite = ToOpaqueAgainst(panelColor, DarkSubstrate);
-        var rowComposite = ToOpaqueAgainst(rowBackground, panelComposite);
-        var rowPrimaryBrush = CreateAdaptiveBrush(new[] { rowComposite }, PrimaryColorCandidates, MinTextContrast);
-        var rowSecondaryBrush = CreateAdaptiveBrush(new[] { rowComposite }, SecondaryColorCandidates, MinTextContrast);
+        var panelComposite = ColorMath.ToOpaqueAgainst(panelColor, StudyPanelPalette.Dark);
+        var rowComposite = ColorMath.ToOpaqueAgainst(rowBackground, panelComposite);
+        var rowPrimaryBrush = AdaptiveBrushFactory.Create(new[] { rowComposite }, PrimaryColorCandidates, MinTextContrast);
+        var rowSecondaryBrush = AdaptiveBrushFactory.Create(new[] { rowComposite }, SecondaryColorCandidates, MinTextContrast);
 
         var rowGrid = new Grid
         {
@@ -353,8 +342,8 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
         Action onClick,
         IconVariant iconVariant = IconVariant.Regular)
     {
-        var buttonComposite = ToOpaqueAgainst(buttonBackground, rowComposite);
-        var iconBrush = CreateAdaptiveBrush(new[] { buttonComposite }, PrimaryColorCandidates, MinTextContrast);
+        var buttonComposite = ColorMath.ToOpaqueAgainst(buttonBackground, rowComposite);
+        var iconBrush = AdaptiveBrushFactory.Create(new[] { buttonComposite }, PrimaryColorCandidates, MinTextContrast);
 
         var iconSize = Math.Clamp(13 * (_isCompactMode ? 0.92 : 1.0), 11, 17);
         var icon = new SymbolIcon
@@ -543,12 +532,12 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
         }
 
         var dialogBackground = Color.Parse("#D92A3E5D");
-        var dialogComposite = ToOpaqueAgainst(dialogBackground, ToOpaqueAgainst(panelColor, DarkSubstrate));
+        var dialogComposite = ColorMath.ToOpaqueAgainst(dialogBackground, ColorMath.ToOpaqueAgainst(panelColor, StudyPanelPalette.Dark));
         DialogCardBorder.Background = new SolidColorBrush(dialogBackground);
         DialogCardBorder.BorderBrush = new SolidColorBrush(Color.Parse("#66FFFFFF"));
-        DialogTitleTextBlock.Foreground = CreateAdaptiveBrush(new[] { dialogComposite }, PrimaryColorCandidates, MinTextContrast);
-        DialogMessageTextBlock.Foreground = CreateAdaptiveBrush(new[] { dialogComposite }, SecondaryColorCandidates, MinTextContrast);
-        DialogRenameTextBox.Foreground = CreateAdaptiveBrush(new[] { dialogComposite }, PrimaryColorCandidates, MinTextContrast);
+        DialogTitleTextBlock.Foreground = AdaptiveBrushFactory.Create(new[] { dialogComposite }, PrimaryColorCandidates, MinTextContrast);
+        DialogMessageTextBlock.Foreground = AdaptiveBrushFactory.Create(new[] { dialogComposite }, SecondaryColorCandidates, MinTextContrast);
+        DialogRenameTextBox.Foreground = AdaptiveBrushFactory.Create(new[] { dialogComposite }, PrimaryColorCandidates, MinTextContrast);
         DialogRenameTextBox.Background = new SolidColorBrush(Color.Parse("#24FFFFFF"));
         DialogRenameTextBox.BorderBrush = new SolidColorBrush(Color.Parse("#52FFFFFF"));
 
@@ -560,16 +549,16 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
         DialogCancelButton.Background = new SolidColorBrush(cancelBackground);
         DialogCancelButton.BorderBrush = Brushes.Transparent;
         DialogCancelButton.BorderThickness = new Thickness(0);
-        DialogCancelButton.Foreground = CreateAdaptiveBrush(
-            new[] { ToOpaqueAgainst(cancelBackground, dialogComposite) },
+        DialogCancelButton.Foreground = AdaptiveBrushFactory.Create(
+            new[] { ColorMath.ToOpaqueAgainst(cancelBackground, dialogComposite) },
             PrimaryColorCandidates,
             MinTextContrast);
 
         DialogConfirmButton.Background = new SolidColorBrush(confirmBackground);
         DialogConfirmButton.BorderBrush = Brushes.Transparent;
         DialogConfirmButton.BorderThickness = new Thickness(0);
-        DialogConfirmButton.Foreground = CreateAdaptiveBrush(
-            new[] { ToOpaqueAgainst(confirmBackground, dialogComposite) },
+        DialogConfirmButton.Foreground = AdaptiveBrushFactory.Create(
+            new[] { ColorMath.ToOpaqueAgainst(confirmBackground, dialogComposite) },
             PrimaryColorCandidates,
             MinTextContrast);
 
@@ -700,91 +689,6 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
         return _localizationService.GetString(_languageCode, key, fallback);
     }
 
-    private Color ResolvePanelBackgroundColor()
-    {
-        if (RootBorder.Background is ISolidColorBrush solidBackground)
-        {
-            return solidBackground.Color;
-        }
-
-        if (this.TryFindResource("AdaptiveGlassStrongBackgroundBrush", out var resource) &&
-            resource is ISolidColorBrush solidBrush)
-        {
-            return solidBrush.Color;
-        }
-
-        return Color.Parse("#FF1E293B");
-    }
-
-    private static IReadOnlyList<Color> BuildPanelBackgroundSamples(Color panelColor)
-    {
-        var opaqueOnDark = ToOpaqueAgainst(panelColor, DarkSubstrate);
-        var opaqueOnLight = ToOpaqueAgainst(panelColor, LightSubstrate);
-
-        return
-        [
-            opaqueOnDark,
-            opaqueOnLight,
-            ColorMath.Blend(opaqueOnDark, DarkSubstrate, 0.22),
-            ColorMath.Blend(opaqueOnDark, Color.Parse("#FFFFFFFF"), 0.14),
-            ColorMath.Blend(opaqueOnLight, Color.Parse("#FFFFFFFF"), 0.08)
-        ];
-    }
-
-    private static Color ToOpaqueAgainst(Color foreground, Color background)
-    {
-        if (foreground.A >= 0xFF)
-        {
-            return Color.FromArgb(0xFF, foreground.R, foreground.G, foreground.B);
-        }
-
-        var alpha = foreground.A / 255d;
-        var red = (byte)Math.Round((foreground.R * alpha) + (background.R * (1 - alpha)));
-        var green = (byte)Math.Round((foreground.G * alpha) + (background.G * (1 - alpha)));
-        var blue = (byte)Math.Round((foreground.B * alpha) + (background.B * (1 - alpha)));
-        return Color.FromArgb(0xFF, red, green, blue);
-    }
-
-    private static IBrush CreateAdaptiveBrush(IReadOnlyList<Color> backgroundSamples, IReadOnlyList<Color> candidates, double minContrast)
-    {
-        var selected = candidates[0];
-        var bestRatio = double.MinValue;
-
-        foreach (var candidate in candidates)
-        {
-            var ratio = MinContrastRatio(candidate, backgroundSamples);
-            if (ratio >= minContrast)
-            {
-                selected = candidate;
-                bestRatio = ratio;
-                break;
-            }
-
-            if (ratio > bestRatio)
-            {
-                bestRatio = ratio;
-                selected = candidate;
-            }
-        }
-
-        return new SolidColorBrush(Color.FromArgb(0xFF, selected.R, selected.G, selected.B));
-    }
-
-    private static double MinContrastRatio(Color foreground, IReadOnlyList<Color> backgrounds)
-    {
-        var min = double.MaxValue;
-        for (var i = 0; i < backgrounds.Count; i++)
-        {
-            var ratio = ColorMath.ContrastRatio(foreground, backgrounds[i]);
-            if (ratio < min)
-            {
-                min = ratio;
-            }
-        }
-
-        return min;
-    }
-
     public void Dispose()
     {
         if (_isDisposed)
@@ -803,10 +707,6 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
         DialogConfirmButton.Click -= (_, _) => ConfirmDialog();
         DialogRenameTextBox.KeyDown -= OnDialogRenameTextBoxKeyDown;
 
-        if (_isSubscribed)
-        {
-            _studyAnalyticsService.SnapshotUpdated -= OnStudySnapshotUpdated;
-            _isSubscribed = false;
-        }
+        StudySnapshotSubscription.Unsubscribe(ref _isSubscribed, _studyAnalyticsService, OnStudySnapshotUpdated);
     }
 }

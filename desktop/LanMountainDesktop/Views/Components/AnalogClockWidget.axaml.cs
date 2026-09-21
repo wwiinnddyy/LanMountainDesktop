@@ -13,6 +13,7 @@ using LanMountainDesktop.Models;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -71,7 +72,7 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
     private bool _handsInitialized;
     private bool? _isNightModeApplied;
     private TimeZoneInfo _clockTimeZone = WorldClockTimeZoneCatalog.ResolveTimeZoneOrLocal("China Standard Time");
-    private string _languageCode = "zh-CN";
+    private string _languageCode = LocalizationService.DefaultLanguageCode;
     private string _secondHandMode = ClockSecondHandMode.Tick;
     private readonly Line _hourHandLine = CreateHandLine("#1A2A46", 12);
     private readonly Line _minuteHandLine = CreateHandLine("#29406B", 8);
@@ -214,8 +215,8 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
     private void BuildTicks(bool isNightMode)
     {
         TickCanvas.Children.Clear();
-        var majorBrush = CreateBrush(isNightMode ? "#1A1A1A" : "#1E2430");
-        var minorBrush = CreateBrush(isNightMode ? "#D0D0D0" : "#D7DCE5");
+        var majorBrush = ComponentPaint.CreateBrush(isNightMode ? "#1A1A1A" : "#1E2430");
+        var minorBrush = ComponentPaint.CreateBrush(isNightMode ? "#D0D0D0" : "#D7DCE5");
         var majorThickness = isNightMode ? 3.0 : 2.8;
         var minorThickness = isNightMode ? 1.4 : 1.2;
 
@@ -247,7 +248,7 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
     private void BuildNumbers(bool isNightMode)
     {
         NumberCanvas.Children.Clear();
-        var foreground = CreateBrush(isNightMode ? "#101010" : "#0F131A");
+        var foreground = ComponentPaint.CreateBrush(isNightMode ? "#101010" : "#0F131A");
         var fontWeight = isNightMode ? FontWeight.Bold : FontWeight.SemiBold;
 
         for (var number = 1; number <= 12; number++)
@@ -302,7 +303,7 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
 
     private void ApplyModeVisualIfNeeded()
     {
-        var isNightMode = ResolveIsNightMode();
+        var isNightMode = ComponentThemeMode.ResolveIsNight(this, fallbackToNightWhenSurfaceUnknown: false);
         if (_isNightModeApplied.HasValue && _isNightModeApplied.Value == isNightMode)
         {
             return;
@@ -315,19 +316,19 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
     private void ApplyModeVisual(bool isNightMode)
     {
         RootBorder.Background = isNightMode
-            ? CreateLinearGradientBrush("#1F2C4B", "#131B33")
-            : CreateLinearGradientBrush("#EEF2FA", "#E7ECF6");
+            ? ComponentPaint.CreateLinearGradientBrush("#1F2C4B", "#131B33")
+            : ComponentPaint.CreateLinearGradientBrush("#EEF2FA", "#E7ECF6");
 
-        DialBorder.Background = CreateBrush(isNightMode ? "#F4F4F4" : "#FEFEFF");
-        DialBorder.BorderBrush = CreateBrush(isNightMode ? "#E5E5E5" : "#DCE2EB");
+        DialBorder.Background = ComponentPaint.CreateBrush(isNightMode ? "#F4F4F4" : "#FEFEFF");
+        DialBorder.BorderBrush = ComponentPaint.CreateBrush(isNightMode ? "#E5E5E5" : "#DCE2EB");
 
-        CityTextBlock.Foreground = CreateBrush(isNightMode ? "#757575" : "#7E8593");
-        CenterDotOuter.Fill = CreateBrush(isNightMode ? "#1E3C6A" : "#30486E");
-        CenterDotInner.Fill = CreateBrush("#1A74F2");
+        CityTextBlock.Foreground = ComponentPaint.CreateBrush(isNightMode ? "#757575" : "#7E8593");
+        CenterDotOuter.Fill = ComponentPaint.CreateBrush(isNightMode ? "#1E3C6A" : "#30486E");
+        CenterDotInner.Fill = ComponentPaint.CreateBrush("#1A74F2");
 
-        _hourHandLine.Stroke = CreateBrush(isNightMode ? "#1A2A46" : "#2E3F5F");
-        _minuteHandLine.Stroke = CreateBrush(isNightMode ? "#29406B" : "#3E557E");
-        _secondHandLine.Stroke = CreateBrush("#1A74F2");
+        _hourHandLine.Stroke = ComponentPaint.CreateBrush(isNightMode ? "#1A2A46" : "#2E3F5F");
+        _minuteHandLine.Stroke = ComponentPaint.CreateBrush(isNightMode ? "#29406B" : "#3E557E");
+        _secondHandLine.Stroke = ComponentPaint.CreateBrush("#1A74F2");
 
         BuildTicks(isNightMode);
         BuildNumbers(isNightMode);
@@ -369,32 +370,13 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
         return Math.Clamp(Math.Min(cellScale, Math.Min(heightScale, widthScale) * 1.05), 0.58, 1.95);
     }
 
-    private static IBrush CreateBrush(string colorHex)
-    {
-        return new SolidColorBrush(Color.Parse(colorHex));
-    }
-
-    private static IBrush CreateLinearGradientBrush(string fromColorHex, string toColorHex)
-    {
-        return new LinearGradientBrush
-        {
-            StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
-            EndPoint = new RelativePoint(1, 1, RelativeUnit.Relative),
-            GradientStops = new GradientStops
-            {
-                new GradientStop(Color.Parse(fromColorHex), 0),
-                new GradientStop(Color.Parse(toColorHex), 1)
-            }
-        };
-    }
-
     private static Line CreateHandLine(string strokeHex, double thickness)
     {
         return new Line
         {
             StartPoint = new Point(Center, Center),
             EndPoint = new Point(Center, Center - 40),
-            Stroke = CreateBrush(strokeHex),
+            Stroke = ComponentPaint.CreateBrush(strokeHex),
             StrokeThickness = thickness,
             StrokeLineCap = PenLineCap.Round
         };
@@ -426,7 +408,7 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
 
     private string ResolveCityName(TimeZoneInfo timeZone)
     {
-        var cityNames = string.Equals(_languageCode, "zh-CN", StringComparison.OrdinalIgnoreCase)
+        var cityNames = _localizationService.IsChineseLanguage(_languageCode)
             ? ZhCityNames
             : EnCityNames;
         if (cityNames.TryGetValue(timeZone.Id, out var cityName))
@@ -451,39 +433,4 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
         return string.IsNullOrWhiteSpace(normalized) ? timeZone.Id : normalized;
     }
 
-    private bool ResolveIsNightMode()
-    {
-        if (ActualThemeVariant == ThemeVariant.Dark)
-        {
-            return true;
-        }
-
-        if (ActualThemeVariant == ThemeVariant.Light)
-        {
-            return false;
-        }
-
-        if (this.TryFindResource("AdaptiveSurfaceBaseBrush", out var value) &&
-            value is ISolidColorBrush solidBrush)
-        {
-            return CalculateRelativeLuminance(solidBrush.Color) < 0.45;
-        }
-
-        return false;
-    }
-
-    private static double CalculateRelativeLuminance(Color color)
-    {
-        static double ToLinear(double channel)
-        {
-            return channel <= 0.03928
-                ? channel / 12.92
-                : Math.Pow((channel + 0.055) / 1.055, 2.4);
-        }
-
-        var r = ToLinear(color.R / 255d);
-        var g = ToLinear(color.G / 255d);
-        var b = ToLinear(color.B / 255d);
-        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    }
 }

@@ -63,15 +63,6 @@ internal static class AirAppAppearanceSnapshotMapper
             snapshot.WallpaperSeedCandidates.Select(ToText).ToArray());
     }
 
-    /// <summary>
-    /// Backward-compatible alias for older call sites. Prefer <see cref="FromCompatibilityAppearanceSnapshot"/>.
-    /// </summary>
-    [Obsolete("Use FromCompatibilityAppearanceSnapshot instead.")]
-    public static AirAppAppearanceSnapshot FromAppearanceSnapshot(AppearanceThemeSnapshot snapshot)
-    {
-        return FromCompatibilityAppearanceSnapshot(snapshot);
-    }
-
     private static IReadOnlyDictionary<string, string> BuildColorRoles(MaterialColorSnapshot snapshot)
     {
         return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)

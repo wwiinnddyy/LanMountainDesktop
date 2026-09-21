@@ -17,6 +17,26 @@ public sealed class LocalizationService
     private readonly Dictionary<string, Dictionary<string, string>> _cache =
         new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>宿主默认语言，也是读不到设置快照时的退路。</summary>
+    public const string DefaultLanguageCode = "zh-CN";
+
+    /// <summary>
+    /// 组件/视图取当前语言码的唯一入口：映射交给 <see cref="NormalizeLanguageCode"/>，
+    /// 读设置快照失败时退回默认语言，而不是让组件在刷新时抛出来。
+    /// 此前 12 个组件各抄了一份同样的 try/catch + "zh-CN" 兜底。
+    /// </summary>
+    public string ResolveLanguageCode(Func<string?> readRawLanguageCode)
+    {
+        try
+        {
+            return NormalizeLanguageCode(readRawLanguageCode());
+        }
+        catch
+        {
+            return DefaultLanguageCode;
+        }
+    }
+
     /// <summary>
     /// 清除指定语言代码的缓存，强制下次重新加载。
     /// 在语言切换时调用此方法以确保加载最新的语言文件。
@@ -35,10 +55,9 @@ public sealed class LocalizationService
     }
 
     public string NormalizeLanguageCode(string? languageCode)
-    {
-        if (string.IsNullOrWhiteSpace(languageCode))
+    {        if (string.IsNullOrWhiteSpace(languageCode))
         {
-            return "zh-CN";
+            return DefaultLanguageCode;
         }
 
         return languageCode.ToLowerInvariant() switch
@@ -46,8 +65,20 @@ public sealed class LocalizationService
             "en-us" or "en" => "en-US",
             "ja-jp" or "ja" => "ja-JP",
             "ko-kr" or "ko" => "ko-KR",
-            _ => "zh-CN"
+            _ => DefaultLanguageCode
         };
+    }
+
+    /// <summary>
+    /// 当前界面是不是中文。组件里 8 处各自写了 <c>string.Equals(_languageCode, "zh-CN", ...)</c>，
+    /// 判定口径（是否先归一化）散在各处，收这一处。
+    /// </summary>
+    public bool IsChineseLanguage(string? languageCode)
+    {
+        return string.Equals(
+            NormalizeLanguageCode(languageCode),
+            DefaultLanguageCode,
+            StringComparison.OrdinalIgnoreCase);
     }
 
     public string GetString(string languageCode, string key, string fallback)

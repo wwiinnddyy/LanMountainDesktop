@@ -35,9 +35,6 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
         Color.Parse("#FF1A2C40")
     };
 
-    private static readonly Color DarkSubstrate = Color.Parse("#FF0B1220");
-    private static readonly Color LightSubstrate = Color.Parse("#FFF1F5FA");
-
     private readonly IStudyAnalyticsService _studyAnalyticsService = StudyAnalyticsServiceFactory.CreateDefault();
     private readonly StudyAnalyticsMonitoringLeaseCoordinator _monitoringLeaseCoordinator = StudyAnalyticsMonitoringLeaseCoordinatorFactory.CreateDefault();
     private LanMountainDesktop.AirAppSdk.ISettingsService _settingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
@@ -54,7 +51,7 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
     private bool _isUltraCompactMode;
     private bool _isExpandedMode;
     private bool _studyEnabled = true;
-    private string _languageCode = "zh-CN";
+    private string _languageCode = LocalizationService.DefaultLanguageCode;
     private IDisposable? _monitoringLease;
 
     public StudyScoreOverviewWidget()
@@ -93,11 +90,7 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
     {
         _isAttached = true;
         ReloadLanguageCode();
-        if (!_isSubscribed)
-        {
-            _studyAnalyticsService.SnapshotUpdated += OnStudySnapshotUpdated;
-            _isSubscribed = true;
-        }
+        StudySnapshotSubscription.Subscribe(ref _isSubscribed, _studyAnalyticsService, OnStudySnapshotUpdated);
 
         UpdateMonitoringLeaseState();
         RefreshVisual();
@@ -106,21 +99,16 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = false;
-        _monitoringLease?.Dispose();
-        _monitoringLease = null;
+        StudyMonitoringLease.Release(ref _monitoringLease);
         _renderGate.Clear();
 
-        if (_isSubscribed)
-        {
-            _studyAnalyticsService.SnapshotUpdated -= OnStudySnapshotUpdated;
-            _isSubscribed = false;
-        }
+        StudySnapshotSubscription.Unsubscribe(ref _isSubscribed, _studyAnalyticsService, OnStudySnapshotUpdated);
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
     {
         UpdateAdaptiveLayout();
-        ApplyTypographyByBackground(ResolvePanelBackgroundColor());
+        ApplyTypographyByBackground(StudyPanelPalette.Resolve(this, RootBorder.Background));
     }
 
     private void OnActualThemeVariantChanged(object? sender, EventArgs e)
@@ -143,25 +131,8 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
         return _isAttached && _isOnActivePage;
     }
 
-    private void UpdateMonitoringLeaseState()
-    {
-        if (!_studyEnabled)
-        {
-            _monitoringLease?.Dispose();
-            _monitoringLease = null;
-            return;
-        }
-
-        var shouldMonitor = _isAttached && _isOnActivePage;
-        if (shouldMonitor)
-        {
-            _monitoringLease ??= _monitoringLeaseCoordinator.AcquireLease();
-            return;
-        }
-
-        _monitoringLease?.Dispose();
-        _monitoringLease = null;
-    }
+    private void UpdateMonitoringLeaseState() =>
+        StudyMonitoringLease.Sync(ref _monitoringLease, _monitoringLeaseCoordinator, _studyEnabled, _isAttached, _isOnActivePage);
 
     private void RefreshVisual()
     {
@@ -172,7 +143,7 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
     {
         ApplyLocalizedLabels();
 
-        var panelColor = ResolvePanelBackgroundColor();
+        var panelColor = StudyPanelPalette.Resolve(this, RootBorder.Background);
         ApplyTypographyByBackground(panelColor);
 
         if (!_studyEnabled)
@@ -215,7 +186,7 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
         var maxScore = snapshot.Session.Metrics.MaxScore;
 
         ModeTextBlock.Text = L("study.score_overview.mode.session", "Session");
-        ApplyModeBadgeColor(panelColor, Color.Parse("#FF0F6B49"));
+        ApplyModeBadgeColor(panelColor, StudyPanelPalette.SuccessBadge);
 
         CurrentScoreTextBlock.Text = FormatScoreOrUnavailable(currentScore);
         AverageValueTextBlock.Text = FormatScoreOrUnavailable(avgScore);
@@ -226,7 +197,7 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
     private void ApplyRealtimeMode(StudyAnalyticsSnapshot snapshot, double? realtimeScore, Color panelColor)
     {
         ModeTextBlock.Text = L("study.score_overview.mode.realtime", "Realtime");
-        ApplyModeBadgeColor(panelColor, Color.Parse("#FF2F5DA8"));
+        ApplyModeBadgeColor(panelColor, StudyPanelPalette.RealtimeBadge);
 
         var currentScore = realtimeScore ?? snapshot.LatestSlice?.Score;
         var historyStats = GetHistoryStats();
@@ -247,7 +218,7 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
         }
 
         ModeTextBlock.Text = L("study.score_overview.mode.session", "Session");
-        ApplyModeBadgeColor(panelColor, Color.Parse("#FF0F6B49"));
+        ApplyModeBadgeColor(panelColor, StudyPanelPalette.SuccessBadge);
 
         CurrentScoreTextBlock.Text = FormatScoreOrUnavailable(report.Metrics.CurrentScore);
         AverageValueTextBlock.Text = FormatScoreOrUnavailable(report.Metrics.AvgScore);
@@ -527,32 +498,16 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
         return score.Value.ToString("F1", CultureInfo.InvariantCulture);
     }
 
-    private Color ResolvePanelBackgroundColor()
-    {
-        if (RootBorder.Background is ISolidColorBrush solidBackground)
-        {
-            return solidBackground.Color;
-        }
-
-        if (this.TryFindResource("AdaptiveGlassStrongBackgroundBrush", out var resource) &&
-            resource is ISolidColorBrush solidBrush)
-        {
-            return solidBrush.Color;
-        }
-
-        return Color.Parse("#FF1E293B");
-    }
-
     private void ApplyTypographyByBackground(Color panelColor)
     {
-        var samples = BuildPanelBackgroundSamples(panelColor);
-        var primary = CreateAdaptiveBrush(samples, ValueColorCandidates, minContrast: 4.5);
-        var secondary = CreateAdaptiveBrush(samples, SecondaryColorCandidates, minContrast: 4.5);
-        var panelLuminance = RelativeLuminance(ToOpaqueAgainst(panelColor, DarkSubstrate));
-        var cardBackground = panelLuminance > 0.58
+        var samples = StudyPanelPalette.BuildSamples(panelColor);
+        var primary = AdaptiveBrushFactory.Create(samples, ValueColorCandidates, minContrast: 4.5);
+        var secondary = AdaptiveBrushFactory.Create(samples, SecondaryColorCandidates, minContrast: 4.5);
+        var isBrightPanel = StudyPanelPalette.IsBrightPanel(panelColor);
+        var cardBackground = isBrightPanel
             ? Color.FromArgb(0x42, 0x00, 0x00, 0x00)
             : Color.FromArgb(0x2A, 0xFF, 0xFF, 0xFF);
-        var cardBorder = panelLuminance > 0.58
+        var cardBorder = isBrightPanel
             ? Color.FromArgb(0x52, 0xFF, 0xFF, 0xFF)
             : Color.FromArgb(0x34, 0xFF, 0xFF, 0xFF);
 
@@ -577,125 +532,10 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
 
     private void ApplyModeBadgeColor(Color panelColor, Color baseColor)
     {
-        var panelLuminance = RelativeLuminance(ToOpaqueAgainst(panelColor, DarkSubstrate));
-        var badgeAlpha = panelLuminance > 0.58
-            ? (byte)0xE2
-            : panelLuminance > 0.46
-                ? (byte)0xD8
-                : (byte)0xC8;
-
-        var badgeColor = Color.FromArgb(badgeAlpha, baseColor.R, baseColor.G, baseColor.B);
-        var badgeComposite = ToOpaqueAgainst(badgeColor, ToOpaqueAgainst(panelColor, DarkSubstrate));
-
+        var badgeColor = StudyPanelPalette.ResolveBadgeColor(panelColor, baseColor);
         ModeBadgeBorder.Background = new SolidColorBrush(badgeColor);
-        ModeBadgeBorder.BorderBrush = new SolidColorBrush(Color.FromArgb(0x96, 0xFF, 0xFF, 0xFF));
-        ModeTextBlock.Foreground = CreateAdaptiveBrush(new[] { badgeComposite }, ValueColorCandidates, minContrast: 4.5);
-    }
-
-    private static IReadOnlyList<Color> BuildPanelBackgroundSamples(Color panelColor)
-    {
-        var opaqueOnDark = ToOpaqueAgainst(panelColor, DarkSubstrate);
-        var opaqueOnLight = ToOpaqueAgainst(panelColor, LightSubstrate);
-
-        return new[]
-        {
-            opaqueOnDark,
-            opaqueOnLight,
-            ColorMath.Blend(opaqueOnDark, DarkSubstrate, 0.28),
-            ColorMath.Blend(opaqueOnDark, Color.Parse("#FFFFFFFF"), 0.16),
-            ColorMath.Blend(opaqueOnLight, Color.Parse("#FFFFFFFF"), 0.08),
-            ColorMath.Blend(opaqueOnLight, DarkSubstrate, 0.18)
-        };
-    }
-
-    private static SolidColorBrush CreateAdaptiveBrush(
-        IReadOnlyList<Color> backgroundSamples,
-        IReadOnlyList<Color> colorCandidates,
-        double minContrast)
-    {
-        if (colorCandidates.Count == 0)
-        {
-            return new SolidColorBrush(Color.Parse("#FFFFFFFF"));
-        }
-
-        for (var i = 0; i < colorCandidates.Count; i++)
-        {
-            var candidate = colorCandidates[i];
-            if (MinContrastRatio(candidate, backgroundSamples) >= minContrast)
-            {
-                return new SolidColorBrush(candidate);
-            }
-        }
-
-        var best = colorCandidates[0];
-        var bestContrast = MinContrastRatio(best, backgroundSamples);
-        for (var i = 1; i < colorCandidates.Count; i++)
-        {
-            var candidate = colorCandidates[i];
-            var contrast = MinContrastRatio(candidate, backgroundSamples);
-            if (contrast > bestContrast)
-            {
-                best = candidate;
-                bestContrast = contrast;
-            }
-        }
-
-        return new SolidColorBrush(best);
-    }
-
-    private static double MinContrastRatio(Color foreground, IReadOnlyList<Color> backgrounds)
-    {
-        if (backgrounds.Count == 0)
-        {
-            return 21;
-        }
-
-        var minimum = double.MaxValue;
-        for (var i = 0; i < backgrounds.Count; i++)
-        {
-            var background = backgrounds[i];
-            var visibleForeground = foreground.A >= 0xFF
-                ? Color.FromArgb(0xFF, foreground.R, foreground.G, foreground.B)
-                : ToOpaqueAgainst(foreground, background);
-
-            var ratio = ColorMath.ContrastRatio(visibleForeground, background);
-            if (ratio < minimum)
-            {
-                minimum = ratio;
-            }
-        }
-
-        return minimum;
-    }
-
-    private static Color ToOpaqueAgainst(Color foreground, Color background)
-    {
-        if (foreground.A >= 0xFF)
-        {
-            return Color.FromArgb(0xFF, foreground.R, foreground.G, foreground.B);
-        }
-
-        var alpha = foreground.A / 255d;
-        var red = (byte)Math.Round((foreground.R * alpha) + (background.R * (1 - alpha)));
-        var green = (byte)Math.Round((foreground.G * alpha) + (background.G * (1 - alpha)));
-        var blue = (byte)Math.Round((foreground.B * alpha) + (background.B * (1 - alpha)));
-        return Color.FromArgb(0xFF, red, green, blue);
-    }
-
-    private static double RelativeLuminance(Color color)
-    {
-        static double ToLinear(byte channel)
-        {
-            var c = channel / 255d;
-            return c <= 0.03928
-                ? c / 12.92
-                : Math.Pow((c + 0.055) / 1.055, 2.4);
-        }
-
-        var r = ToLinear(color.R);
-        var g = ToLinear(color.G);
-        var b = ToLinear(color.B);
-        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        ModeBadgeBorder.BorderBrush = StudyPanelPalette.BadgeBorderBrush;
+        ModeTextBlock.Foreground = StudyPanelPalette.ResolveBadgeForeground(panelColor, badgeColor, ValueColorCandidates);
     }
 
     private void ReloadLanguageCode()
@@ -705,38 +545,23 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
         _studyEnabled = snapshot.StudyEnabled;
     }
 
-    private void ApplyVariableFontFamily()
-    {
-    }
-
     private void ApplyVariableWeights(double scale)
     {
         var weightProgress = Math.Clamp((scale - 0.52) / 1.6, 0, 1);
         var compactDelta = _isUltraCompactMode ? 40 : _isCompactMode ? 20 : 0;
         var expandedDelta = _isExpandedMode ? 18 : 0;
 
-        TitleTextBlock.FontWeight = ToVariableWeight(Lerp(560, 680, weightProgress));
-        ModeTextBlock.FontWeight = ToVariableWeight(Lerp(560, 700, weightProgress));
-        CurrentLabelTextBlock.FontWeight = ToVariableWeight(Lerp(520, 640, weightProgress));
-        CurrentScoreTextBlock.FontWeight = ToVariableWeight(Lerp(640 + compactDelta + expandedDelta, 830, weightProgress));
+        TitleTextBlock.FontWeight = ComponentTypography.ToVariableWeight(ComponentTypography.LerpClamped(560, 680, weightProgress));
+        ModeTextBlock.FontWeight = ComponentTypography.ToVariableWeight(ComponentTypography.LerpClamped(560, 700, weightProgress));
+        CurrentLabelTextBlock.FontWeight = ComponentTypography.ToVariableWeight(ComponentTypography.LerpClamped(520, 640, weightProgress));
+        CurrentScoreTextBlock.FontWeight = ComponentTypography.ToVariableWeight(ComponentTypography.LerpClamped(640 + compactDelta + expandedDelta, 830, weightProgress));
 
-        AverageLabelTextBlock.FontWeight = ToVariableWeight(Lerp(500, 620, weightProgress));
-        MinimumLabelTextBlock.FontWeight = ToVariableWeight(Lerp(500, 620, weightProgress));
-        MaximumLabelTextBlock.FontWeight = ToVariableWeight(Lerp(500, 620, weightProgress));
-        AverageValueTextBlock.FontWeight = ToVariableWeight(Lerp(620 + compactDelta + expandedDelta, 780, weightProgress));
-        MinimumValueTextBlock.FontWeight = ToVariableWeight(Lerp(620 + compactDelta + expandedDelta, 780, weightProgress));
-        MaximumValueTextBlock.FontWeight = ToVariableWeight(Lerp(620 + compactDelta + expandedDelta, 780, weightProgress));
-    }
-
-    private static double Lerp(double from, double to, double ratio)
-    {
-        ratio = Math.Clamp(ratio, 0, 1);
-        return from + ((to - from) * ratio);
-    }
-
-    private static FontWeight ToVariableWeight(double weight)
-    {
-        return (FontWeight)(int)Math.Clamp(Math.Round(weight), 1, 1000);
+        AverageLabelTextBlock.FontWeight = ComponentTypography.ToVariableWeight(ComponentTypography.LerpClamped(500, 620, weightProgress));
+        MinimumLabelTextBlock.FontWeight = ComponentTypography.ToVariableWeight(ComponentTypography.LerpClamped(500, 620, weightProgress));
+        MaximumLabelTextBlock.FontWeight = ComponentTypography.ToVariableWeight(ComponentTypography.LerpClamped(500, 620, weightProgress));
+        AverageValueTextBlock.FontWeight = ComponentTypography.ToVariableWeight(ComponentTypography.LerpClamped(620 + compactDelta + expandedDelta, 780, weightProgress));
+        MinimumValueTextBlock.FontWeight = ComponentTypography.ToVariableWeight(ComponentTypography.LerpClamped(620 + compactDelta + expandedDelta, 780, weightProgress));
+        MaximumValueTextBlock.FontWeight = ComponentTypography.ToVariableWeight(ComponentTypography.LerpClamped(620 + compactDelta + expandedDelta, 780, weightProgress));
     }
 
     private string L(string key, string fallback)

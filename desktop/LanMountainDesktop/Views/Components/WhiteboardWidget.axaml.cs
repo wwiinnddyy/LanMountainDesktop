@@ -21,6 +21,7 @@ using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using SkiaSharp;
+using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -48,7 +49,6 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
 
     private static readonly BindingFlags StrokeReflectionFlags =
         BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
-    private static readonly PropertyInfo? StrokeColorProperty = typeof(SkiaStroke).GetProperty(nameof(SkiaStroke.Color), StrokeReflectionFlags);
     private static readonly PropertyInfo? StrokePointListProperty = typeof(SkiaStroke).GetProperty("PointList", StrokeReflectionFlags);
     private readonly int _baseWidthCells;
     private readonly IComponentInstanceSettingsStore _componentSettingsStore = HostComponentSettingsStoreProvider.GetOrCreate();
@@ -226,7 +226,7 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
 
     private void ApplyThemeVisual(bool force)
     {
-        var isNightMode = ResolveIsNightMode();
+        var isNightMode = ComponentThemeMode.ResolveIsNight(this, fallbackToNightWhenSurfaceUnknown: false);
         if (!force && _isNightModeApplied.HasValue && _isNightModeApplied.Value == isNightMode)
         {
             return;
@@ -379,53 +379,6 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         ClearPanZoomPointers();
     }
 
-    private void RecolorAllStrokes(SKColor targetColor)
-    {
-        for (var i = 0; i < InkCanvas.Strokes.Count; i++)
-        {
-            TrySetStrokeColor(InkCanvas.Strokes[i], targetColor);
-        }
-
-        InkCanvas.InvalidateVisual();
-    }
-
-    private static void TrySetStrokeColor(SkiaStroke stroke, SKColor color)
-    {
-        if (StrokeColorProperty is null)
-        {
-            return;
-        }
-
-        try
-        {
-            StrokeColorProperty.SetValue(stroke, color);
-        }
-        catch
-        {
-            // Keep current stroke color when reflection is unavailable.
-        }
-    }
-
-    private bool ResolveIsNightMode()
-    {
-        if (ActualThemeVariant == ThemeVariant.Dark)
-        {
-            return true;
-        }
-
-        if (ActualThemeVariant == ThemeVariant.Light)
-        {
-            return false;
-        }
-
-        if (this.TryFindResource("AdaptiveSurfaceBaseBrush", out var value) &&
-            value is ISolidColorBrush brush)
-        {
-            return CalculateRelativeLuminance(brush.Color) < 0.45;
-        }
-
-        return false;
-    }
 
     private static int NormalizeRetentionDays(int days)
     {
@@ -435,20 +388,6 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
                 : days);
     }
 
-    private static double CalculateRelativeLuminance(Color color)
-    {
-        static double ToLinear(double channel)
-        {
-            return channel <= 0.03928
-                ? channel / 12.92
-                : Math.Pow((channel + 0.055) / 1.055, 2.4);
-        }
-
-        var r = ToLinear(color.R / 255d);
-        var g = ToLinear(color.G / 255d);
-        var b = ToLinear(color.B / 255d);
-        return (0.2126 * r) + (0.7152 * g) + (0.0722 * b);
-    }
 
     private void SetToolMode(WhiteboardToolMode mode)
     {
@@ -505,10 +444,10 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
 
     private void RefreshToolButtonVisuals()
     {
-        var isNightMode = _isNightModeApplied ?? ResolveIsNightMode();
-        var activeBackground = ResolveThemeBrush("AdaptiveAccentBrush", isNightMode ? Color.Parse("#FF93C5FD") : Color.Parse("#FF3B82F6"));
-        var activeForeground = ResolveThemeBrush("AdaptiveOnAccentBrush", Colors.White);
-        var idleForeground = ResolveThemeBrush("AdaptiveTextPrimaryBrush", isNightMode ? Color.Parse("#FFE5E7EB") : Color.Parse("#FF0F172A"));
+        var isNightMode = _isNightModeApplied ?? ComponentThemeMode.ResolveIsNight(this, fallbackToNightWhenSurfaceUnknown: false);
+        var activeBackground = ResolveThemeBrush(ThemeResourceKeys.AccentBrush, isNightMode ? Color.Parse("#FF93C5FD") : Color.Parse("#FF3B82F6"));
+        var activeForeground = ResolveThemeBrush(ThemeResourceKeys.OnAccentBrush, Colors.White);
+        var idleForeground = ResolveThemeBrush(ThemeResourceKeys.TextPrimaryBrush, isNightMode ? Color.Parse("#FFE5E7EB") : Color.Parse("#FF0F172A"));
         var idleBackground = new SolidColorBrush(isNightMode ? Color.Parse("#33FFFFFF") : Color.Parse("#14000000"));
 
         ApplyToolButtonVisual(PenButton, _toolMode == WhiteboardToolMode.Pen, activeBackground, activeForeground, idleBackground, idleForeground);

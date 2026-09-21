@@ -46,13 +46,13 @@ internal sealed class PlondsPackageStore
 
         EnsureCleanDirectory(stagingRoot);
 
-        var manifestPath = Path.Combine(stagingRoot, "PLONDS.json");
+        var manifestPath = Path.Combine(stagingRoot, PlondsWireFormat.CommitDeltaManifestFileName);
         await using (var manifestStream = File.Create(manifestPath))
         {
             await JsonSerializer.SerializeAsync(manifestStream, manifest, JsonOptions, cancellationToken).ConfigureAwait(false);
         }
 
-        var zipPath = Path.Combine(stagingRoot, mode is PlondsPackageMode.Delta ? "changed.zip" : "Files.zip");
+        var zipPath = Path.Combine(stagingRoot, mode is PlondsPackageMode.Delta ? PlondsWireFormat.DeltaPackageFileName : PlondsWireFormat.FullPackageFileName);
         var extractDirectory = Path.Combine(stagingRoot, mode is PlondsPackageMode.Delta ? "changed" : "Files");
         Directory.CreateDirectory(extractDirectory);
 

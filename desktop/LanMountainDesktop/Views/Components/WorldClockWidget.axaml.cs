@@ -11,6 +11,7 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -25,9 +26,6 @@ public partial class WorldClockWidget : UserControl,
     private const double BaseCellSize = 48;
     private const double DialDesignSize = 100;
     private const double DialCenter = DialDesignSize / 2d;
-
-    private static readonly FontFamily MiSansFontFamily =
-        new("MiSans VF, avares://LanMountainDesktop/Assets/Fonts#MiSans");
 
     private static readonly IReadOnlyDictionary<string, string> ZhCityNames =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -104,7 +102,7 @@ public partial class WorldClockWidget : UserControl,
     private readonly TimeZoneInfo[] _entryTimeZones = new TimeZoneInfo[WorldClockTimeZoneCatalog.ClockCount];
 
     private TimeZoneService? _timeZoneService;
-    private string _languageCode = "zh-CN";
+    private string _languageCode = LocalizationService.DefaultLanguageCode;
     private double _currentCellSize = BaseCellSize;
     private DateTime _nextLanguageProbeUtc = DateTime.MinValue;
     private string _secondHandMode = ClockSecondHandMode.Tick;
@@ -249,44 +247,8 @@ public partial class WorldClockWidget : UserControl,
     {
         _ = sender;
         _ = e;
-        _isNightVisual = ResolveNightMode();
+        _isNightVisual = ComponentThemeMode.ResolveIsNight(this, fallbackToNightWhenSurfaceUnknown: true);
         ApplyNightModeVisual();
-    }
-
-    private bool ResolveNightMode()
-    {
-        if (ActualThemeVariant == ThemeVariant.Dark)
-        {
-            return true;
-        }
-
-        if (ActualThemeVariant == ThemeVariant.Light)
-        {
-            return false;
-        }
-
-        if (this.TryFindResource("AdaptiveSurfaceBaseBrush", out var value) &&
-            value is ISolidColorBrush brush)
-        {
-            return CalculateRelativeLuminance(brush.Color) < 0.45;
-        }
-
-        return true;
-    }
-
-    private static double CalculateRelativeLuminance(Color color)
-    {
-        static double ToLinear(double channel)
-        {
-            return channel <= 0.03928
-                ? channel / 12.92
-                : Math.Pow((channel + 0.055) / 1.055, 2.4);
-        }
-
-        var r = ToLinear(color.R / 255d);
-        var g = ToLinear(color.G / 255d);
-        var b = ToLinear(color.B / 255d);
-        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
     }
 
     private void ApplyNightModeVisual()
@@ -313,9 +275,9 @@ public partial class WorldClockWidget : UserControl,
         var dayForeground = isSystemNight ? "#A8B1C2" : "#646C79";
         var offsetForeground = isSystemNight ? "#A8B1C2" : "#7A7F89";
 
-        entry.CityTextBlock.Foreground = CreateBrush(cityForeground);
-        entry.DayTextBlock.Foreground = CreateBrush(dayForeground);
-        entry.OffsetTextBlock.Foreground = CreateBrush(offsetForeground);
+        entry.CityTextBlock.Foreground = ComponentPaint.CreateBrush(cityForeground);
+        entry.DayTextBlock.Foreground = ComponentPaint.CreateBrush(dayForeground);
+        entry.OffsetTextBlock.Foreground = ComponentPaint.CreateBrush(offsetForeground);
     }
 
     private void OnTimeZoneChanged(object? sender, EventArgs e)
@@ -394,7 +356,7 @@ public partial class WorldClockWidget : UserControl,
         {
             Width = 11,
             Height = 11,
-            Fill = CreateBrush("#4F7BC0"),
+            Fill = ComponentPaint.CreateBrush("#4F7BC0"),
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center
         };
@@ -402,7 +364,7 @@ public partial class WorldClockWidget : UserControl,
         {
             Width = 4.5,
             Height = 4.5,
-            Fill = CreateBrush("#1A74F2"),
+            Fill = ComponentPaint.CreateBrush("#1A74F2"),
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center
         };
@@ -424,8 +386,8 @@ public partial class WorldClockWidget : UserControl,
             Height = 56,
             CornerRadius = new CornerRadius(28),
             BorderThickness = new Thickness(1),
-            Background = CreateBrush("#FAFBFD"),
-            BorderBrush = CreateBrush("#DADFE8"),
+            Background = ComponentPaint.CreateBrush("#FAFBFD"),
+            BorderBrush = ComponentPaint.CreateBrush("#DADFE8"),
             ClipToBounds = true,
             Child = new Viewbox
             {
@@ -439,7 +401,7 @@ public partial class WorldClockWidget : UserControl,
             Text = string.Empty,
             FontSize = 13,
             FontWeight = FontWeight.SemiBold,
-            Foreground = CreateBrush("#20232A"),
+            Foreground = ComponentPaint.CreateBrush("#20232A"),
             TextAlignment = TextAlignment.Center,
             TextTrimming = TextTrimming.CharacterEllipsis,
             TextWrapping = TextWrapping.NoWrap,
@@ -451,7 +413,7 @@ public partial class WorldClockWidget : UserControl,
             Text = string.Empty,
             FontSize = 10.5,
             FontWeight = FontWeight.Medium,
-            Foreground = CreateBrush("#646C79"),
+            Foreground = ComponentPaint.CreateBrush("#646C79"),
             TextAlignment = TextAlignment.Center,
             TextTrimming = TextTrimming.CharacterEllipsis,
             TextWrapping = TextWrapping.NoWrap,
@@ -463,7 +425,7 @@ public partial class WorldClockWidget : UserControl,
             Text = string.Empty,
             FontSize = 10.5,
             FontWeight = FontWeight.Medium,
-            Foreground = CreateBrush("#7A7F89"),
+            Foreground = ComponentPaint.CreateBrush("#7A7F89"),
             TextAlignment = TextAlignment.Center,
             TextTrimming = TextTrimming.CharacterEllipsis,
             TextWrapping = TextWrapping.NoWrap,
@@ -526,7 +488,7 @@ public partial class WorldClockWidget : UserControl,
             {
                 StartPoint = new Point(x1, y1),
                 EndPoint = new Point(x2, y2),
-                Stroke = CreateBrush(isMajor ? majorColor : minorColor),
+                Stroke = ComponentPaint.CreateBrush(isMajor ? majorColor : minorColor),
                 StrokeThickness = isMajor ? 1.9 : 0.8,
                 StrokeLineCap = PenLineCap.Round
             });
@@ -554,7 +516,7 @@ public partial class WorldClockWidget : UserControl,
                 Height = height,
                 FontSize = 9,
                 FontWeight = FontWeight.SemiBold,
-                Foreground = CreateBrush(numberColor),
+                Foreground = ComponentPaint.CreateBrush(numberColor),
                 TextAlignment = TextAlignment.Center
             };
 
@@ -634,12 +596,12 @@ public partial class WorldClockWidget : UserControl,
         }
 
         entry.IsNightApplied = isNight;
-        entry.DialBorder.Background = CreateBrush(isNight ? "#2D313A" : "#FAFBFD");
-        entry.DialBorder.BorderBrush = CreateBrush(isNight ? "#262A33" : "#DADFE8");
-        entry.HourHand.Stroke = CreateBrush(isNight ? "#F5F8FF" : "#2B3242");
-        entry.MinuteHand.Stroke = CreateBrush(isNight ? "#DDE4F0" : "#40495E");
-        entry.SecondHand.Stroke = CreateBrush("#1A74F2");
-        entry.CenterOuter.Fill = CreateBrush(isNight ? "#97B4EA" : "#4F7BC0");
+        entry.DialBorder.Background = ComponentPaint.CreateBrush(isNight ? "#2D313A" : "#FAFBFD");
+        entry.DialBorder.BorderBrush = ComponentPaint.CreateBrush(isNight ? "#262A33" : "#DADFE8");
+        entry.HourHand.Stroke = ComponentPaint.CreateBrush(isNight ? "#F5F8FF" : "#2B3242");
+        entry.MinuteHand.Stroke = ComponentPaint.CreateBrush(isNight ? "#DDE4F0" : "#40495E");
+        entry.SecondHand.Stroke = ComponentPaint.CreateBrush("#1A74F2");
+        entry.CenterOuter.Fill = ComponentPaint.CreateBrush(isNight ? "#97B4EA" : "#4F7BC0");
 
         BuildDialTicks(entry, isNight);
         BuildDialNumbers(entry, isNight);
@@ -653,20 +615,12 @@ public partial class WorldClockWidget : UserControl,
         }
 
         _nextLanguageProbeUtc = utcNow.AddSeconds(25);
-        try
-        {
-            var snapshot = _appSettingsService.Load();
-            _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
-        }
-        catch
-        {
-            _languageCode = "zh-CN";
-        }
+        _languageCode = _localizationService.ResolveLanguageCode(() => _appSettingsService.Load().LanguageCode);
     }
 
     private string ResolveCityName(TimeZoneInfo timeZone)
     {
-        var cityNames = string.Equals(_languageCode, "zh-CN", StringComparison.OrdinalIgnoreCase)
+        var cityNames = _localizationService.IsChineseLanguage(_languageCode)
             ? ZhCityNames
             : EnCityNames;
         if (cityNames.TryGetValue(timeZone.Id, out var cityName))
@@ -780,14 +734,9 @@ public partial class WorldClockWidget : UserControl,
         {
             StartPoint = new Point(DialCenter, DialCenter),
             EndPoint = new Point(DialCenter, DialCenter - 32),
-            Stroke = CreateBrush(colorHex),
+            Stroke = ComponentPaint.CreateBrush(colorHex),
             StrokeThickness = thickness,
             StrokeLineCap = PenLineCap.Round
         };
-    }
-
-    private static IBrush CreateBrush(string colorHex)
-    {
-        return new SolidColorBrush(Color.Parse(colorHex));
     }
 }

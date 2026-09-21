@@ -6,6 +6,7 @@ using Avalonia.Media;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views;
 
@@ -64,8 +65,8 @@ public partial class MainWindow : Window
         {
             Width = previewWidth,
             Height = previewHeight,
-            Background = GetThemeBrush("AdaptiveCardBackgroundBrush"),
-            BorderBrush = GetThemeBrush("AdaptiveButtonBorderBrush"),
+            Background = GetThemeBrush(ThemeResourceKeys.CardBackgroundBrush),
+            BorderBrush = GetThemeBrush(ThemeResourceKeys.ButtonBorderBrush),
             BorderThickness = new Avalonia.Thickness(1),
             CornerRadius = new Avalonia.CornerRadius(Math.Clamp(Math.Min(previewWidth, previewHeight) * 0.18, 12, 28)),
             IsHitTestVisible = false,
@@ -73,7 +74,7 @@ public partial class MainWindow : Window
             {
                 Text = L("component_library.preview_unavailable", "Preview unavailable"),
                 FontSize = 11,
-                Foreground = GetThemeBrush("AdaptiveTextSecondaryBrush"),
+                Foreground = GetThemeBrush(ThemeResourceKeys.TextSecondaryBrush),
                 HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
                 VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
             }

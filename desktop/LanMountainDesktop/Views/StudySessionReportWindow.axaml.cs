@@ -11,8 +11,6 @@ namespace LanMountainDesktop.Views;
 
 public partial class StudySessionReportWindow : Window
 {
-    private StudySessionReport? _report;
-
     public StudySessionReportWindow()
     {
         InitializeComponent();
@@ -26,8 +24,6 @@ public partial class StudySessionReportWindow : Window
 
     public void LoadReport(StudySessionReport report)
     {
-        _report = report;
-        
         // 设置标题
         TitleTextBlock.Text = string.IsNullOrWhiteSpace(report.Label) 
             ? "自习报告" 

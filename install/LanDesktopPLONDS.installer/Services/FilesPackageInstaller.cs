@@ -531,7 +531,7 @@ internal sealed class FilesPackageInstaller
             var programs = Path.Combine(startMenu, "Programs");
             Directory.CreateDirectory(programs);
             var shortcutPath = Path.Combine(programs, "LanMountainDesktop.url");
-            WriteUrlShortcut(shortcutPath, launcherPath);
+            WindowsShortcutWriter.WriteUrlShortcut(shortcutPath, launcherPath);
 
             if (options.CreateDesktopShortcut)
             {
@@ -539,7 +539,7 @@ internal sealed class FilesPackageInstaller
                 if (!string.IsNullOrWhiteSpace(desktop))
                 {
                     Directory.CreateDirectory(desktop);
-                    WriteUrlShortcut(Path.Combine(desktop, "LanMountainDesktop.url"), launcherPath);
+                    WindowsShortcutWriter.WriteUrlShortcut(Path.Combine(desktop, "LanMountainDesktop.url"), launcherPath);
                 }
             }
 
@@ -549,7 +549,7 @@ internal sealed class FilesPackageInstaller
                 if (!string.IsNullOrWhiteSpace(startup))
                 {
                     Directory.CreateDirectory(startup);
-                    WriteUrlShortcut(Path.Combine(startup, "LanMountainDesktop.url"), launcherPath);
+                    WindowsShortcutWriter.WriteUrlShortcut(Path.Combine(startup, "LanMountainDesktop.url"), launcherPath);
                 }
             }
         }
@@ -557,13 +557,6 @@ internal sealed class FilesPackageInstaller
         {
             // 快捷方式创建是尽力而为；部署本身必须在没有 shell 集成的情况下可用。
         }
-    }
-
-    private static void WriteUrlShortcut(string shortcutPath, string targetPath)
-    {
-        File.WriteAllText(
-            shortcutPath,
-            $"[InternetShortcut]{Environment.NewLine}URL=file:///{targetPath.Replace('\\', '/')}{Environment.NewLine}");
     }
 
     private static void TryDeleteDirectory(string path)

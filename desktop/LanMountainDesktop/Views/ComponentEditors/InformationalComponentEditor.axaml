@@ -8,7 +8,7 @@
         <Border Classes="component-editor-card"
                 Padding="20">
             <Grid ColumnDefinitions="Auto,*"
-                  RowDefinitions="Auto,Auto,Auto"
+                  RowDefinitions="Auto,Auto,Auto,Auto"
                   ColumnSpacing="12"
                   RowSpacing="8">
                 <TextBlock x:Name="ComponentLabelTextBlock"
@@ -29,6 +29,12 @@
                 <TextBlock x:Name="ScopeValueTextBlock"
                            Grid.Row="2"
                            Grid.Column="1"
+                           Classes="component-editor-secondary-text"
+                           TextWrapping="Wrap" />
+
+                <TextBlock Grid.Row="3"
+                           Grid.ColumnSpan="2"
+                           x:Name="DescriptionTextBlock"
                            Classes="component-editor-secondary-text"
                            TextWrapping="Wrap" />
             </Grid>

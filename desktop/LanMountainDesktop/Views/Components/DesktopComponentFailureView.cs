@@ -49,14 +49,14 @@ internal sealed class DesktopComponentFailureView : UserControl, IDesktopCompone
         _summaryBlock = new TextBlock
         {
             Text = "该组件已临时停用，并由信息占位保留原位置。你可以展开详情或复制错误报告。",
-            Foreground = CreateBrush("#FFD6DEE9"),
+            Foreground = ComponentPaint.CreateBrush("#FFD6DEE9"),
             TextWrapping = TextWrapping.Wrap
         };
 
         _statusBlock = new TextBlock
         {
             IsVisible = false,
-            Foreground = CreateBrush("#FF93C5FD"),
+            Foreground = ComponentPaint.CreateBrush("#FF93C5FD"),
             TextWrapping = TextWrapping.Wrap
         };
 
@@ -71,8 +71,8 @@ internal sealed class DesktopComponentFailureView : UserControl, IDesktopCompone
             TextWrapping = TextWrapping.Wrap,
             MinHeight = 96,
             MaxHeight = 220,
-            Background = CreateBrush("#CC0F172A"),
-            Foreground = CreateBrush("#FFE2E8F0"),
+            Background = ComponentPaint.CreateBrush("#CC0F172A"),
+            Foreground = ComponentPaint.CreateBrush("#FFE2E8F0"),
             BorderThickness = new Thickness(0),
             Padding = new Thickness(8)
         };
@@ -80,8 +80,8 @@ internal sealed class DesktopComponentFailureView : UserControl, IDesktopCompone
         _detailsBorder = new Border
         {
             IsVisible = false,
-            Background = CreateBrush("#660F172A"),
-            BorderBrush = CreateBrush("#33475569"),
+            Background = ComponentPaint.CreateBrush("#660F172A"),
+            BorderBrush = ComponentPaint.CreateBrush("#33475569"),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(12),
             Child = _reportTextBox
@@ -89,8 +89,8 @@ internal sealed class DesktopComponentFailureView : UserControl, IDesktopCompone
 
         _rootBorder = new Border
         {
-            Background = CreateBrush("#D91E293B"),
-            BorderBrush = CreateBrush("#336B7280"),
+            Background = ComponentPaint.CreateBrush("#D91E293B"),
+            BorderBrush = ComponentPaint.CreateBrush("#336B7280"),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(18),
             Padding = new Thickness(14),
@@ -146,9 +146,9 @@ internal sealed class DesktopComponentFailureView : UserControl, IDesktopCompone
         var button = new Button
         {
             Content = text,
-            Background = CreateBrush("#80334155"),
+            Background = ComponentPaint.CreateBrush("#80334155"),
             Foreground = Brushes.White,
-            BorderBrush = CreateBrush("#335B6575"),
+            BorderBrush = ComponentPaint.CreateBrush("#335B6575"),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(999),
             HorizontalAlignment = HorizontalAlignment.Left
@@ -218,10 +218,5 @@ internal sealed class DesktopComponentFailureView : UserControl, IDesktopCompone
         builder.AppendLine();
         builder.AppendLine(exception.ToString());
         return builder.ToString();
-    }
-
-    private static IBrush CreateBrush(string colorHex)
-    {
-        return new SolidColorBrush(Color.Parse(colorHex));
     }
 }

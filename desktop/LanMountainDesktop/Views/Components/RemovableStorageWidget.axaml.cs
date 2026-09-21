@@ -53,7 +53,7 @@ public partial class RemovableStorageWidget : UserControl, IDesktopComponentWidg
     private IReadOnlyList<RemovableStorageDrive> _connectedDrives = Array.Empty<RemovableStorageDrive>();
     private string _componentId = BuiltInComponentIds.DesktopRemovableStorage;
     private string _placementId = string.Empty;
-    private string _languageCode = "zh-CN";
+    private string _languageCode = LocalizationService.DefaultLanguageCode;
     private string? _componentColorScheme;
     private string _selectedDriveRootPath = string.Empty;
     private string? _statusOverrideText;
@@ -274,14 +274,14 @@ public partial class RemovableStorageWidget : UserControl, IDesktopComponentWidg
         var palette = ResolvePalette();
 
         RootBorder.Background = CreateGradientBrush(palette.BackgroundFrom, palette.BackgroundTo);
-        RootBorder.BorderBrush = CreateBrush(palette.Border);
-        AccentOrb.Background = CreateBrush(palette.AccentOrb);
-        AccentGlow.Background = CreateBrush(palette.AccentGlow);
-        IconBadge.Background = CreateBrush(palette.IconBadgeBackground);
-        DriveIcon.Foreground = CreateBrush(palette.IconForeground);
-        DriveNameTextBlock.Foreground = CreateBrush(palette.PrimaryText);
-        DriveDetailTextBlock.Foreground = CreateBrush(palette.SecondaryText);
-        StatusTextBlock.Foreground = CreateBrush(palette.StatusText);
+        RootBorder.BorderBrush = ComponentPaint.CreateBrush(palette.Border);
+        AccentOrb.Background = ComponentPaint.CreateBrush(palette.AccentOrb);
+        AccentGlow.Background = ComponentPaint.CreateBrush(palette.AccentGlow);
+        IconBadge.Background = ComponentPaint.CreateBrush(palette.IconBadgeBackground);
+        DriveIcon.Foreground = ComponentPaint.CreateBrush(palette.IconForeground);
+        DriveNameTextBlock.Foreground = ComponentPaint.CreateBrush(palette.PrimaryText);
+        DriveDetailTextBlock.Foreground = ComponentPaint.CreateBrush(palette.SecondaryText);
+        StatusTextBlock.Foreground = ComponentPaint.CreateBrush(palette.StatusText);
 
         if (hasDrive)
         {
@@ -456,13 +456,13 @@ public partial class RemovableStorageWidget : UserControl, IDesktopComponentWidg
                 Color.Parse("#8FA8BDD1"));
         }
 
-        var surfaceRaised = ResolveThemeColor("AdaptiveSurfaceRaisedBrush", "#FF1A2332");
-        var surfaceOverlay = ResolveThemeColor("AdaptiveSurfaceOverlayBrush", "#FF111827");
-        var accent = ResolveThemeColor("AdaptiveAccentBrush", "#FF61A8FF");
-        var onAccent = ResolveThemeColor("AdaptiveOnAccentBrush", "#FFFFFFFF");
-        var primaryText = ResolveThemeColor("AdaptiveTextPrimaryBrush", "#FFF8FAFC");
-        var secondaryText = ResolveThemeColor("AdaptiveTextSecondaryBrush", "#FFD0D7E3");
-        var mutedText = ResolveThemeColor("AdaptiveTextMutedBrush", "#FFAFB8C7");
+        var surfaceRaised = ResolveThemeColor(ThemeResourceKeys.SurfaceRaisedBrush, "#FF1A2332");
+        var surfaceOverlay = ResolveThemeColor(ThemeResourceKeys.SurfaceOverlayBrush, "#FF111827");
+        var accent = ResolveThemeColor(ThemeResourceKeys.AccentBrush, "#FF61A8FF");
+        var onAccent = ResolveThemeColor(ThemeResourceKeys.OnAccentBrush, "#FFFFFFFF");
+        var primaryText = ResolveThemeColor(ThemeResourceKeys.TextPrimaryBrush, "#FFF8FAFC");
+        var secondaryText = ResolveThemeColor(ThemeResourceKeys.TextSecondaryBrush, "#FFD0D7E3");
+        var mutedText = ResolveThemeColor(ThemeResourceKeys.TextMutedBrush, "#FFAFB8C7");
         var disabledButtonBackground = ColorMath.WithAlpha(ColorMath.Blend(surfaceRaised, surfaceOverlay, 0.35), 0xD8);
         var disabledButtonBorder = ColorMath.WithAlpha(ColorMath.Blend(surfaceRaised, accent, 0.18), 0x88);
         var disabledButtonForeground = ColorMath.WithAlpha(primaryText, 0x88);
@@ -535,12 +535,12 @@ public partial class RemovableStorageWidget : UserControl, IDesktopComponentWidg
         Color foreground,
         Color border)
     {
-        button.Background = CreateBrush(background);
-        button.BorderBrush = CreateBrush(border);
+        button.Background = ComponentPaint.CreateBrush(background);
+        button.BorderBrush = ComponentPaint.CreateBrush(border);
         button.BorderThickness = new Thickness(1);
-        button.Foreground = CreateBrush(foreground);
-        icon.Foreground = CreateBrush(foreground);
-        textBlock.Foreground = CreateBrush(foreground);
+        button.Foreground = ComponentPaint.CreateBrush(foreground);
+        icon.Foreground = ComponentPaint.CreateBrush(foreground);
+        textBlock.Foreground = ComponentPaint.CreateBrush(foreground);
     }
 
     private static IBrush CreateGradientBrush(Color from, Color to)
@@ -555,11 +555,6 @@ public partial class RemovableStorageWidget : UserControl, IDesktopComponentWidg
                 new GradientStop(to, 1)
             }
         };
-    }
-
-    private static SolidColorBrush CreateBrush(Color color)
-    {
-        return new(color);
     }
 
     private void UpdatePollingState()

@@ -1,0 +1,1293 @@
+abstract-class LanMountainDesktop.AirAppSdk.AirAppBase
+abstract-class LanMountainDesktop.AirAppSdk.AirAppSettingsPageBase
+abstract-class LanMountainDesktop.AirAppSdk.AirAppWindowBase
+accessor AirAppComponentContext.AirAppDirectory : string { get }
+accessor AirAppComponentContext.AirAppSettings : IAirAppSettingsService? { get }
+accessor AirAppComponentContext.Appearance : IAirAppAppearanceContext { get }
+accessor AirAppComponentContext.CellSize : double { get }
+accessor AirAppComponentContext.ComponentId : string { get }
+accessor AirAppComponentContext.DataDirectory : string { get }
+accessor AirAppComponentContext.Manifest : AirAppManifest { get }
+accessor AirAppComponentContext.PlacementId : string? { get }
+accessor AirAppComponentContext.Services : IServiceProvider { get }
+accessor AirAppComponentEditorContext.AirAppDirectory : string { get }
+accessor AirAppComponentEditorContext.AirAppSettings : IAirAppSettingsService? { get }
+accessor AirAppComponentEditorContext.ComponentId : string { get }
+accessor AirAppComponentEditorContext.DataDirectory : string { get }
+accessor AirAppComponentEditorContext.HostContext : IComponentEditorHostContext { get }
+accessor AirAppComponentEditorContext.Manifest : AirAppManifest { get }
+accessor AirAppComponentEditorContext.PlacementId : string? { get }
+accessor AirAppComponentEditorContext.Services : IServiceProvider { get }
+accessor AirAppComponentEditorRegistration.AspectRatio : double { get }
+accessor AirAppComponentEditorRegistration.ComponentId : string { get }
+accessor AirAppComponentEditorRegistration.MaxScale : double { get }
+accessor AirAppComponentEditorRegistration.MinScale : double { get }
+accessor AirAppComponentEditorRegistration.PreferredHeight : double { get }
+accessor AirAppComponentEditorRegistration.PreferredWidth : double { get }
+accessor AirAppComponentOptions.AllowDesktopPlacement : bool { get set }
+accessor AirAppComponentOptions.AllowStatusBarPlacement : bool { get set }
+accessor AirAppComponentOptions.Category : string { get set }
+accessor AirAppComponentOptions.ComponentId : string { get set }
+accessor AirAppComponentOptions.CornerRadiusPreset : AirAppCornerRadiusPreset { get set }
+accessor AirAppComponentOptions.Description : string? { get set }
+accessor AirAppComponentOptions.DescriptionLocalizationKey : string? { get set }
+accessor AirAppComponentOptions.DisplayName : string { get set }
+accessor AirAppComponentOptions.DisplayNameLocalizationKey : string? { get set }
+accessor AirAppComponentOptions.IconKey : string { get set }
+accessor AirAppComponentOptions.MinHeightCells : int { get set }
+accessor AirAppComponentOptions.MinWidthCells : int { get set }
+accessor AirAppComponentOptions.ResizeMode : AirAppComponentResizeMode { get set }
+accessor AirAppComponentRegistration.AllowDesktopPlacement : bool { get }
+accessor AirAppComponentRegistration.AllowStatusBarPlacement : bool { get }
+accessor AirAppComponentRegistration.Category : string { get }
+accessor AirAppComponentRegistration.ComponentId : string { get }
+accessor AirAppComponentRegistration.CornerRadiusPreset : AirAppCornerRadiusPreset { get }
+accessor AirAppComponentRegistration.Description : string? { get }
+accessor AirAppComponentRegistration.DescriptionLocalizationKey : string? { get }
+accessor AirAppComponentRegistration.DisplayName : string { get }
+accessor AirAppComponentRegistration.DisplayNameLocalizationKey : string? { get }
+accessor AirAppComponentRegistration.IconKey : string { get }
+accessor AirAppComponentRegistration.MinHeightCells : int { get }
+accessor AirAppComponentRegistration.MinWidthCells : int { get }
+accessor AirAppComponentRegistration.ResizeMode : AirAppComponentResizeMode { get }
+accessor AirAppIpcClient.NotificationDispatcher : AirAppIpcNotificationDispatcher? { get set }
+accessor AirAppIpcClient.Options : AirAppIpcClientOptions { get }
+accessor AirAppIpcClient.RequestDispatcher : AirAppIpcRequestDispatcher? { get set }
+accessor AirAppIpcClient.SerializerContext : JsonSerializerContext { get }
+accessor AirAppIpcClient.SerializerOptions : JsonSerializerOptions { get }
+accessor AirAppIpcClientOptions.ConnectTimeout : TimeSpan { get init }
+accessor AirAppIpcClientOptions.PipeName : string { get init }
+accessor AirAppIpcClientOptions.ProtocolVersion : string { get init }
+accessor AirAppIpcClientOptions.RequestTimeout : TimeSpan { get init }
+accessor AirAppIpcClientOptions.SerializerContext : JsonSerializerContext { get init }
+accessor AirAppIpcServer.Options : AirAppIpcServerOptions { get }
+accessor AirAppIpcServer.SerializerContext : JsonSerializerContext { get }
+accessor AirAppIpcServer.SerializerOptions : JsonSerializerOptions { get }
+accessor AirAppIpcServerOptions.HeartbeatInterval : TimeSpan { get init }
+accessor AirAppIpcServerOptions.HeartbeatTimeout : TimeSpan { get init }
+accessor AirAppIpcServerOptions.PipeName : string { get init }
+accessor AirAppIpcServerOptions.ProtocolVersion : string { get init }
+accessor AirAppIpcServerOptions.SerializerContext : JsonSerializerContext { get init }
+accessor AirAppLocalizer.AirAppDirectory : string { get }
+accessor AirAppLocalizer.LanguageCode : string { get }
+accessor AirAppServiceExportRegistration.ContractType : Type { get }
+accessor AirAppServiceExportRegistration.ImplementationType : Type { get }
+accessor AirAppSettingOptionChoice.TitleLocalizationKey : string { get }
+accessor AirAppSettingOptionChoice.Value : string { get }
+accessor AirAppSettingOptionDefinition.Choices : IReadOnlyList<AirAppSettingOptionChoice> { get }
+accessor AirAppSettingOptionDefinition.DefaultValue : object? { get }
+accessor AirAppSettingOptionDefinition.DescriptionLocalizationKey : string? { get }
+accessor AirAppSettingOptionDefinition.Key : string { get }
+accessor AirAppSettingOptionDefinition.Maximum : double? { get }
+accessor AirAppSettingOptionDefinition.Minimum : double? { get }
+accessor AirAppSettingOptionDefinition.OptionType : AirAppSettingOptionType { get }
+accessor AirAppSettingOptionDefinition.TitleLocalizationKey : string { get }
+accessor AirAppSettingOptionDefinition.ValidationPattern : string? { get }
+accessor AirAppSettingsPageBase.NavigationUri : Uri? { get set }
+accessor AirAppSettingsPageInfoAttribute.Category : AirAppSettingsPageCategory { get }
+accessor AirAppSettingsPageInfoAttribute.DescriptionLocalizationKey : string? { get init }
+accessor AirAppSettingsPageInfoAttribute.GroupId : string? { get init }
+accessor AirAppSettingsPageInfoAttribute.HideDefault : bool { get init }
+accessor AirAppSettingsPageInfoAttribute.HidePageTitle : bool { get init }
+accessor AirAppSettingsPageInfoAttribute.IconKey : string { get init }
+accessor AirAppSettingsPageInfoAttribute.Id : string { get }
+accessor AirAppSettingsPageInfoAttribute.Name : string { get }
+accessor AirAppSettingsPageInfoAttribute.Scope : AirAppSettingsScope { get init }
+accessor AirAppSettingsPageInfoAttribute.SelectedIconKey : string? { get init }
+accessor AirAppSettingsPageInfoAttribute.SortOrder : int { get init }
+accessor AirAppSettingsPageInfoAttribute.TitleLocalizationKey : string? { get init }
+accessor AirAppSettingsPageInfoAttribute.UseFullWidth : bool { get init }
+accessor AirAppSettingsSectionBuilder.DescriptionLocalizationKey : string? { get }
+accessor AirAppSettingsSectionBuilder.IconKey : string { get }
+accessor AirAppSettingsSectionBuilder.Id : string { get }
+accessor AirAppSettingsSectionBuilder.SortOrder : int { get }
+accessor AirAppSettingsSectionBuilder.TitleLocalizationKey : string { get }
+accessor AirAppSettingsSectionDefinition.Category : string { get }
+accessor AirAppSettingsSectionDefinition.DescriptionLocalizationKey : string? { get }
+accessor AirAppSettingsSectionDefinition.IconKey : string { get }
+accessor AirAppSettingsSectionDefinition.Id : string { get }
+accessor AirAppSettingsSectionDefinition.Options : IReadOnlyList<AirAppSettingOptionDefinition> { get }
+accessor AirAppSettingsSectionDefinition.Scope : AirAppSettingsScope { get }
+accessor AirAppSettingsSectionDefinition.SortOrder : int { get }
+accessor AirAppSettingsSectionDefinition.SubjectId : string? { get }
+accessor AirAppSettingsSectionDefinition.TitleLocalizationKey : string { get }
+accessor AirAppSettingsSectionRegistration.CustomViewType : Type? { get }
+accessor AirAppSettingsSectionRegistration.DescriptionLocalizationKey : string? { get }
+accessor AirAppSettingsSectionRegistration.IconKey : string { get }
+accessor AirAppSettingsSectionRegistration.Id : string { get }
+accessor AirAppSettingsSectionRegistration.Options : IReadOnlyList<AirAppSettingOptionDefinition> { get }
+accessor AirAppSettingsSectionRegistration.SortOrder : int { get }
+accessor AirAppSettingsSectionRegistration.TitleLocalizationKey : string { get }
+accessor AirAppWindowDescriptor.CanResize : bool { get set }
+accessor AirAppWindowDescriptor.ChromeMode : AirAppWindowChromeMode { get set }
+accessor AirAppWindowDescriptor.Height : double { get set }
+accessor AirAppWindowDescriptor.MinHeight : double { get set }
+accessor AirAppWindowDescriptor.MinWidth : double { get set }
+accessor AirAppWindowDescriptor.ShowAsDialog : bool { get set }
+accessor AirAppWindowDescriptor.ShowInTaskbar : bool { get set }
+accessor AirAppWindowDescriptor.Title : string { get set }
+accessor AirAppWindowDescriptor.Width : double { get set }
+accessor AppearanceChangedEvent.ChangedProperties : IReadOnlyCollection<AppearanceProperty> { get }
+accessor AppearanceChangedEvent.Snapshot : AirAppAppearanceSnapshot { get }
+accessor InProcAirAppIpcTransport.Server : AirAppIpcServer { get }
+accessor SettingsChangedEvent.ChangedKeys : IReadOnlyCollection<string> { get }
+accessor SettingsChangedEvent.PlacementId : string? { get }
+accessor SettingsChangedEvent.Scope : AirAppSettingsScope { get }
+accessor SettingsChangedEvent.SectionId : string? { get }
+accessor SettingsChangedEvent.SubjectId : string? { get }
+class LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+enum LanMountainDesktop.AirAppSdk.AirAppComponentResizeMode
+enum LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset
+enum LanMountainDesktop.AirAppSdk.AirAppRuntimeMode
+enum LanMountainDesktop.AirAppSdk.AirAppSettingOptionType
+enum LanMountainDesktop.AirAppSdk.AirAppSettingsPageCategory
+enum LanMountainDesktop.AirAppSdk.AirAppSettingsScope
+enum LanMountainDesktop.AirAppSdk.AirAppWindowChromeMode
+enum LanMountainDesktop.AirAppSdk.AppearanceProperty
+enum LanMountainDesktop.AirAppSdk.InnerElementLevel
+event Changed : EventHandler`1<LanMountainDesktop.AirAppSdk.AppearanceChangedEvent>  @LanMountainDesktop.AirAppSdk.AirAppAppearanceContext
+event Changed : EventHandler`1<LanMountainDesktop.AirAppSdk.AppearanceChangedEvent>  @LanMountainDesktop.AirAppSdk.IAirAppAppearanceContext
+event Changed : EventHandler`1<LanMountainDesktop.AirAppSdk.SettingsChangedEvent>  @LanMountainDesktop.AirAppSdk.ISettingsService
+field About : LanMountainDesktop.AirAppSdk.AirAppSettingsPageCategory  @LanMountainDesktop.AirAppSdk.AirAppSettingsPageCategory
+field About : System.String  @LanMountainDesktop.AirAppSdk.AirAppSettingsCategories
+field AccentColor : LanMountainDesktop.AirAppSdk.AppearanceProperty  @LanMountainDesktop.AirAppSdk.AppearanceProperty
+field Advanced : System.String  @LanMountainDesktop.AirAppSdk.AirAppSettingsCategories
+field AirApp : LanMountainDesktop.AirAppSdk.AirAppSettingsScope  @LanMountainDesktop.AirAppSdk.AirAppSettingsScope
+field AirAppCatalog : LanMountainDesktop.AirAppSdk.AirAppSettingsPageCategory  @LanMountainDesktop.AirAppSdk.AirAppSettingsPageCategory
+field AirAppCatalog : System.String  @LanMountainDesktop.AirAppSdk.AirAppSettingsCategories
+field AirAppMarket : LanMountainDesktop.AirAppSdk.AirAppSettingsPageCategory  @LanMountainDesktop.AirAppSdk.AirAppSettingsPageCategory
+field AirAppMarket : System.String  @LanMountainDesktop.AirAppSdk.AirAppSettingsCategories
+field AirAppSdkApiVersion : System.String  @LanMountainDesktop.AirAppSdk.AirAppHostPropertyKeys
+field AirApps : LanMountainDesktop.AirAppSdk.AirAppSettingsPageCategory  @LanMountainDesktop.AirAppSdk.AirAppSettingsPageCategory
+field AirApps : System.String  @LanMountainDesktop.AirAppSdk.AirAppSettingsCategories
+field All : LanMountainDesktop.AirAppSdk.AppearanceProperty  @LanMountainDesktop.AirAppSdk.AppearanceProperty
+field AllCornerRadiusStyles : IReadOnlyList`1<System.String>  @LanMountainDesktop.AirAppSdk.GlobalAppearanceSettings
+field ApiVersion : System.String  @LanMountainDesktop.AirAppSdk.AirAppSdkInfo
+field App : LanMountainDesktop.AirAppSdk.AirAppSettingsScope  @LanMountainDesktop.AirAppSdk.AirAppSettingsScope
+field Appearance : LanMountainDesktop.AirAppSdk.AirAppSettingsPageCategory  @LanMountainDesktop.AirAppSdk.AirAppSettingsPageCategory
+field Appearance : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppCapabilityNames
+field Appearance : System.String  @LanMountainDesktop.AirAppSdk.AirAppSettingsCategories
+field AppearanceChanged : System.String  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcRoutedNotifyIds
+field Attach : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcRoutes+Ui
+field BackgroundOnly : LanMountainDesktop.AirAppSdk.AirAppWindowChromeMode  @LanMountainDesktop.AirAppSdk.AirAppWindowChromeMode
+field Badge : LanMountainDesktop.AirAppSdk.InnerElementLevel  @LanMountainDesktop.AirAppSdk.InnerElementLevel
+field Borderless : LanMountainDesktop.AirAppSdk.AirAppWindowChromeMode  @LanMountainDesktop.AirAppSdk.AirAppWindowChromeMode
+field Capabilities : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcRoutes+Session
+field CapabilityDenied : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcErrorCodes
+field Card : LanMountainDesktop.AirAppSdk.InnerElementLevel  @LanMountainDesktop.AirAppSdk.InnerElementLevel
+field Changed : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcRoutes+Appearance
+field Changed : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcRoutes+Settings
+field ColorRoles : LanMountainDesktop.AirAppSdk.AppearanceProperty  @LanMountainDesktop.AirAppSdk.AppearanceProperty
+field ColorSource : LanMountainDesktop.AirAppSdk.AppearanceProperty  @LanMountainDesktop.AirAppSdk.AppearanceProperty
+field Command : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcRoutes+Ui
+field CommandLineAirAppId : System.String  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcConstants
+field CommandLineHostPipeName : System.String  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcConstants
+field CommandLineProtocolVersion : System.String  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcConstants
+field CommandLineRuntimeMode : System.String  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcConstants
+field CommandLineSessionId : System.String  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcConstants
+field Component : LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset  @LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset
+field ComponentEditor : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiSurfaceKinds
+field ComponentEditorUi : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppCapabilityNames
+field ComponentInstance : LanMountainDesktop.AirAppSdk.AirAppSettingsScope  @LanMountainDesktop.AirAppSdk.AirAppSettingsScope
+field Components : LanMountainDesktop.AirAppSdk.AirAppSettingsPageCategory  @LanMountainDesktop.AirAppSdk.AirAppSettingsPageCategory
+field Components : System.String  @LanMountainDesktop.AirAppSdk.AirAppSettingsCategories
+field Control : LanMountainDesktop.AirAppSdk.InnerElementLevel  @LanMountainDesktop.AirAppSdk.InnerElementLevel
+field CornerRadius : LanMountainDesktop.AirAppSdk.AppearanceProperty  @LanMountainDesktop.AirAppSdk.AppearanceProperty
+field CornerRadiusStyle : LanMountainDesktop.AirAppSdk.AppearanceProperty  @LanMountainDesktop.AirAppSdk.AppearanceProperty
+field CornerRadiusStyleBalanced : System.String  @LanMountainDesktop.AirAppSdk.GlobalAppearanceSettings
+field CornerRadiusStyleFluent : System.String  @LanMountainDesktop.AirAppSdk.GlobalAppearanceSettings
+field CornerRadiusStyleOpen : System.String  @LanMountainDesktop.AirAppSdk.GlobalAppearanceSettings
+field CornerRadiusStyleRounded : System.String  @LanMountainDesktop.AirAppSdk.GlobalAppearanceSettings
+field CornerRadiusStyleSharp : System.String  @LanMountainDesktop.AirAppSdk.GlobalAppearanceSettings
+field Critical : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLogLevels
+field Current : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationProtocolVersion
+field DataDirectoryName : System.String  @LanMountainDesktop.AirAppSdk.AirAppSdkInfo
+field Debug : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLogLevels
+field Default : LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset  @LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset
+field DefaultConnectTimeout : System.TimeSpan  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcConstants
+field DefaultCornerRadiusScale : System.Double  @LanMountainDesktop.AirAppSdk.GlobalAppearanceSettings
+field DefaultCornerRadiusStyle : System.String  @LanMountainDesktop.AirAppSdk.GlobalAppearanceSettings
+field DefaultHeartbeatInterval : System.TimeSpan  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcConstants
+field DefaultHeartbeatTimeout : System.TimeSpan  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcConstants
+field DefaultProtocolVersion : System.String  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcConstants
+field DefaultRequestTimeout : System.TimeSpan  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcConstants
+field Degraded : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLifecycleStates
+field DesktopComponent : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiSurfaceKinds
+field DesktopComponentUi : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppCapabilityNames
+field Detach : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcRoutes+Ui
+field Dev : LanMountainDesktop.AirAppSdk.AirAppSettingsPageCategory  @LanMountainDesktop.AirAppSdk.AirAppSettingsPageCategory
+field DialogHostIdentifier : System.String  @LanMountainDesktop.AirAppSdk.AirAppSettingsPageBase
+field EnvironmentAirAppId : System.String  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcConstants
+field EnvironmentHostPipeName : System.String  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcConstants
+field EnvironmentProtocolVersion : System.String  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcConstants
+field EnvironmentRuntimeMode : System.String  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcConstants
+field EnvironmentSessionId : System.String  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcConstants
+field Error : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLogLevels
+field External : System.String  @LanMountainDesktop.AirAppSdk.AirAppSettingsCategories
+field ExtractedPackagesDirectoryName : System.String  @LanMountainDesktop.AirAppSdk.AirAppSdkInfo
+field FaultReport : System.String  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcRoutedNotifyIds
+field FaultReporting : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppCapabilityNames
+field Faulted : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLifecycleStates
+field ForcedTermination : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppFaultKinds
+field Free : LanMountainDesktop.AirAppSdk.AirAppComponentResizeMode  @LanMountainDesktop.AirAppSdk.AirAppComponentResizeMode
+field FullScreen : LanMountainDesktop.AirAppSdk.AirAppWindowChromeMode  @LanMountainDesktop.AirAppSdk.AirAppWindowChromeMode
+field General : LanMountainDesktop.AirAppSdk.AirAppSettingsPageCategory  @LanMountainDesktop.AirAppSdk.AirAppSettingsPageCategory
+field General : System.String  @LanMountainDesktop.AirAppSdk.AirAppSettingsCategories
+field GetSnapshot : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcRoutes+Appearance
+field GetSnapshot : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcRoutes+Settings
+field Handshake : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcRoutes+Session
+field HeartbeatPing : System.String  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcRoutedNotifyIds
+field HeartbeatPong : System.String  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcRoutedNotifyIds
+field HeartbeatTimeout : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcErrorCodes
+field HostApplicationName : System.String  @LanMountainDesktop.AirAppSdk.AirAppHostPropertyKeys
+field HostLanguageCode : System.String  @LanMountainDesktop.AirAppSdk.AirAppHostPropertyKeys
+field HostVersion : System.String  @LanMountainDesktop.AirAppSdk.AirAppHostPropertyKeys
+field InProcess : LanMountainDesktop.AirAppSdk.AirAppRuntimeMode  @LanMountainDesktop.AirAppSdk.AirAppRuntimeMode
+field InProcess : System.String  @LanMountainDesktop.AirAppSdk.AirAppRuntimeModes
+field InProcessAlt : System.String  @LanMountainDesktop.AirAppSdk.AirAppRuntimeModes
+field Information : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLogLevels
+field Initialize : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcRoutes+Lifecycle
+field InvalidRequest : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcErrorCodes
+field Island : LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset  @LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset
+field IsolatedBackground : LanMountainDesktop.AirAppSdk.AirAppRuntimeMode  @LanMountainDesktop.AirAppSdk.AirAppRuntimeMode
+field IsolatedBackground : System.String  @LanMountainDesktop.AirAppSdk.AirAppRuntimeModes
+field IsolatedWindow : LanMountainDesktop.AirAppSdk.AirAppRuntimeMode  @LanMountainDesktop.AirAppSdk.AirAppRuntimeMode
+field IsolatedWindow : System.String  @LanMountainDesktop.AirAppSdk.AirAppRuntimeModes
+field Launcher : LanMountainDesktop.AirAppSdk.AirAppSettingsScope  @LanMountainDesktop.AirAppSdk.AirAppSettingsScope
+field Lg : LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset  @LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset
+field LifecycleStateChanged : System.String  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcRoutedNotifyIds
+field List : LanMountainDesktop.AirAppSdk.AirAppSettingOptionType  @LanMountainDesktop.AirAppSdk.AirAppSettingOptionType
+field LogWrite : System.String  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcRoutedNotifyIds
+field Logging : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppCapabilityNames
+field ManagedException : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppFaultKinds
+field ManifestFileName : System.String  @LanMountainDesktop.AirAppSdk.AirAppSdkInfo
+field MaterialSurfaces : LanMountainDesktop.AirAppSdk.AppearanceProperty  @LanMountainDesktop.AirAppSdk.AppearanceProperty
+field Md : LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset  @LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset
+field Micro : LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset  @LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset
+field MinimumCornerRadiusScale : System.Double  @LanMountainDesktop.AirAppSdk.GlobalAppearanceSettings
+field NativeCrash : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppFaultKinds
+field Number : LanMountainDesktop.AirAppSdk.AirAppSettingOptionType  @LanMountainDesktop.AirAppSdk.AirAppSettingOptionType
+field PackageFileExtension : System.String  @LanMountainDesktop.AirAppSdk.AirAppSdkInfo
+field PackagedDataDirectoryName : System.String  @LanMountainDesktop.AirAppSdk.AirAppSdkInfo
+field Path : LanMountainDesktop.AirAppSdk.AirAppSettingOptionType  @LanMountainDesktop.AirAppSdk.AirAppSettingOptionType
+field Ping : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcRoutes+Heartbeat
+field Pong : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcRoutes+Heartbeat
+field Proportional : LanMountainDesktop.AirAppSdk.AirAppComponentResizeMode  @LanMountainDesktop.AirAppSdk.AirAppComponentResizeMode
+field ProtocolMismatch : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcErrorCodes
+field Ready : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcRoutes+Session
+field Ready : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLifecycleStates
+field Report : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcRoutes+Fault
+field RestartRequest : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcRoutes+Lifecycle
+field RuntimeDirectoryName : System.String  @LanMountainDesktop.AirAppSdk.AirAppSdkInfo
+field SdkVersion : System.String  @LanMountainDesktop.AirAppSdk.AirAppSdkInfo
+field Select : LanMountainDesktop.AirAppSdk.AirAppSettingOptionType  @LanMountainDesktop.AirAppSdk.AirAppSettingOptionType
+field SessionReady : System.String  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcRoutedNotifyIds
+field SessionRejected : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcErrorCodes
+field Settings : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppCapabilityNames
+field SettingsChanged : System.String  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcRoutedNotifyIds
+field SettingsConflict : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcErrorCodes
+field SettingsPage : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiSurfaceKinds
+field SettingsPageUi : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppCapabilityNames
+field Sm : LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset  @LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset
+field Standard : LanMountainDesktop.AirAppSdk.AirAppWindowChromeMode  @LanMountainDesktop.AirAppSdk.AirAppWindowChromeMode
+field Starting : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLifecycleStates
+field StartupFailure : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppFaultKinds
+field StateChanged : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcRoutes+Lifecycle
+field StateChanged : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcRoutes+Ui
+field Stop : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcRoutes+Lifecycle
+field Stopped : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLifecycleStates
+field Stopping : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLifecycleStates
+field SystemMaterialMode : LanMountainDesktop.AirAppSdk.AppearanceProperty  @LanMountainDesktop.AirAppSdk.AppearanceProperty
+field Text : LanMountainDesktop.AirAppSdk.AirAppSettingOptionType  @LanMountainDesktop.AirAppSdk.AirAppSettingOptionType
+field ThemeVariant : LanMountainDesktop.AirAppSdk.AppearanceProperty  @LanMountainDesktop.AirAppSdk.AppearanceProperty
+field Toggle : LanMountainDesktop.AirAppSdk.AirAppSettingOptionType  @LanMountainDesktop.AirAppSdk.AirAppSettingOptionType
+field Tool : LanMountainDesktop.AirAppSdk.AirAppWindowChromeMode  @LanMountainDesktop.AirAppSdk.AirAppWindowChromeMode
+field Trace : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLogLevels
+field UiAttachRejected : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcErrorCodes
+field UiDetach : System.String  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcRoutedNotifyIds
+field UiStateChanged : System.String  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcRoutedNotifyIds
+field UnsupportedRoute : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcErrorCodes
+field Update : System.String  @LanMountainDesktop.AirAppSdk.AirAppSettingsCategories
+field Wallpaper : LanMountainDesktop.AirAppSdk.AppearanceProperty  @LanMountainDesktop.AirAppSdk.AppearanceProperty
+field WallpaperSeedCandidates : LanMountainDesktop.AirAppSdk.AppearanceProperty  @LanMountainDesktop.AirAppSdk.AppearanceProperty
+field Warning : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLogLevels
+field WatchdogTimeout : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppFaultKinds
+field Window : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiSurfaceKinds
+field WorkerExited : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcErrorCodes
+field WorkerFaulted : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcErrorCodes
+field Write : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcRoutes+Log
+field Write : System.String  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcRoutes+Settings
+field Xl : LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset  @LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset
+field Xs : LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset  @LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset
+field value__ : System.Int32  @LanMountainDesktop.AirAppSdk.AirAppComponentResizeMode
+field value__ : System.Int32  @LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset
+field value__ : System.Int32  @LanMountainDesktop.AirAppSdk.AirAppRuntimeMode
+field value__ : System.Int32  @LanMountainDesktop.AirAppSdk.AirAppSettingOptionType
+field value__ : System.Int32  @LanMountainDesktop.AirAppSdk.AirAppSettingsPageCategory
+field value__ : System.Int32  @LanMountainDesktop.AirAppSdk.AirAppSettingsScope
+field value__ : System.Int32  @LanMountainDesktop.AirAppSdk.AirAppWindowChromeMode
+field value__ : System.Int32  @LanMountainDesktop.AirAppSdk.AppearanceProperty
+field value__ : System.Int32  @LanMountainDesktop.AirAppSdk.InnerElementLevel
+interface LanMountainDesktop.AirAppSdk.IAirApp
+interface LanMountainDesktop.AirAppSdk.IAirAppAppearanceContext
+interface LanMountainDesktop.AirAppSdk.IAirAppExportRegistry
+interface LanMountainDesktop.AirAppSdk.IAirAppLogger
+interface LanMountainDesktop.AirAppSdk.IAirAppMessageBus
+interface LanMountainDesktop.AirAppSdk.IAirAppPackageManager
+interface LanMountainDesktop.AirAppSdk.IAirAppPublicIpcBuilder
+interface LanMountainDesktop.AirAppSdk.IAirAppPublicIpcContributor
+interface LanMountainDesktop.AirAppSdk.IAirAppRuntimeContext
+interface LanMountainDesktop.AirAppSdk.IAirAppSettingsService
+interface LanMountainDesktop.AirAppSdk.IAirAppWindow
+interface LanMountainDesktop.AirAppSdk.IComponentEditorHostContext
+interface LanMountainDesktop.AirAppSdk.IComponentSettingsAccessor
+interface LanMountainDesktop.AirAppSdk.IDesktopShellHost
+interface LanMountainDesktop.AirAppSdk.IHostApplicationLifecycle
+interface LanMountainDesktop.AirAppSdk.ISettingsCatalog
+interface LanMountainDesktop.AirAppSdk.ISettingsPageHostContext
+interface LanMountainDesktop.AirAppSdk.ISettingsService
+method Avalonia.CornerRadius ResolveCornerRadius(LanMountainDesktop.AirAppSdk.AirAppAppearanceSnapshot snapshot, LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset preset)  @LanMountainDesktop.AirAppSdk.AirAppAppearanceExtensions
+method Avalonia.CornerRadius ResolveCornerRadius(LanMountainDesktop.AirAppSdk.AirAppAppearanceSnapshot snapshot, LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset preset, Avalonia.CornerRadius fallback)  @LanMountainDesktop.AirAppSdk.AirAppAppearanceExtensions
+method Avalonia.CornerRadius ResolveCornerRadius(LanMountainDesktop.AirAppSdk.AirAppComponentContext context, LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset preset, System.Double minimum, System.Double maximum)  @LanMountainDesktop.AirAppSdk.AirAppAppearanceExtensions
+method Avalonia.CornerRadius ResolveCornerRadius(LanMountainDesktop.AirAppSdk.IAirAppAppearanceContext context, LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset preset)  @LanMountainDesktop.AirAppSdk.AirAppAppearanceExtensions
+method Avalonia.CornerRadius ResolveCornerRadius(LanMountainDesktop.AirAppSdk.IAirAppAppearanceContext context, LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset preset, System.Double minimum, System.Double maximum)  @LanMountainDesktop.AirAppSdk.AirAppAppearanceExtensions
+method Avalonia.CornerRadius ResolveScaledCornerRadius(LanMountainDesktop.AirAppSdk.IAirAppAppearanceContext context, System.Double baseRadius)  @LanMountainDesktop.AirAppSdk.AirAppAppearanceExtensions
+method Avalonia.CornerRadius ResolveScaledCornerRadius(LanMountainDesktop.AirAppSdk.IAirAppAppearanceContext context, System.Double baseRadius, System.Double minimum, System.Double maximum)  @LanMountainDesktop.AirAppSdk.AirAppAppearanceExtensions
+method Avalonia.CornerRadius ToCornerRadius(LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset preset)  @LanMountainDesktop.AirAppSdk.AirAppCornerRadiusTokens
+method Avalonia.CornerRadius ToCornerRadius(LanMountainDesktop.AirAppSdk.IAirAppAppearanceContext context, LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset preset)  @LanMountainDesktop.AirAppSdk.AirAppAppearanceHelper
+method IReadOnlyList`1<LanMountainDesktop.AirAppSdk.AirAppInstalledInfo> GetInstalledAirApps()  @LanMountainDesktop.AirAppSdk.IAirAppPackageManager
+method IReadOnlyList`1<LanMountainDesktop.AirAppSdk.AirAppServiceExportDescriptor> GetExports()  @LanMountainDesktop.AirAppSdk.IAirAppExportRegistry
+method IReadOnlyList`1<LanMountainDesktop.AirAppSdk.AirAppServiceExportDescriptor> GetExports(System.Type contractType)  @LanMountainDesktop.AirAppSdk.IAirAppExportRegistry
+method IReadOnlyList`1<LanMountainDesktop.AirAppSdk.AirAppSettingsSectionDefinition> GetSections()  @LanMountainDesktop.AirAppSdk.ISettingsCatalog
+method IReadOnlyList`1<LanMountainDesktop.AirAppSdk.AirAppSettingsSectionDefinition> GetSections(LanMountainDesktop.AirAppSdk.AirAppSettingsScope scope)  @LanMountainDesktop.AirAppSdk.ISettingsCatalog
+method LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceChangedNotification <Clone>$()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceChangedNotification
+method LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshot <Clone>$()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshot
+method LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshotRequest <Clone>$()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshotRequest
+method LanMountainDesktop.AirAppIsolation.Contracts.AirAppCapabilityDeclaration <Clone>$()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppCapabilityDeclaration
+method LanMountainDesktop.AirAppIsolation.Contracts.AirAppFaultReport <Clone>$()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppFaultReport
+method LanMountainDesktop.AirAppIsolation.Contracts.AirAppHeartbeatPing <Clone>$()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppHeartbeatPing
+method LanMountainDesktop.AirAppIsolation.Contracts.AirAppHeartbeatPong <Clone>$()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppHeartbeatPong
+method LanMountainDesktop.AirAppIsolation.Contracts.AirAppInitializeRequest <Clone>$()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppInitializeRequest
+method LanMountainDesktop.AirAppIsolation.Contracts.AirAppInitializeResponse <Clone>$()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppInitializeResponse
+method LanMountainDesktop.AirAppIsolation.Contracts.AirAppLifecycleStateChanged <Clone>$()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLifecycleStateChanged
+method LanMountainDesktop.AirAppIsolation.Contracts.AirAppLogEntry <Clone>$()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLogEntry
+method LanMountainDesktop.AirAppIsolation.Contracts.AirAppMaterialSurfaceSnapshot <Clone>$()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppMaterialSurfaceSnapshot
+method LanMountainDesktop.AirAppIsolation.Contracts.AirAppReadyNotification <Clone>$()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppReadyNotification
+method LanMountainDesktop.AirAppIsolation.Contracts.AirAppRestartRequest <Clone>$()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppRestartRequest
+method LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeRequest <Clone>$()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeRequest
+method LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeResponse <Clone>$()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeResponse
+method LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsChangedNotification <Clone>$()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsChangedNotification
+method LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsSnapshotRequest <Clone>$()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsSnapshotRequest
+method LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsSnapshotResponse <Clone>$()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsSnapshotResponse
+method LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsWriteRequest <Clone>$()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsWriteRequest
+method LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsWriteResponse <Clone>$()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsWriteResponse
+method LanMountainDesktop.AirAppIsolation.Contracts.AirAppStopRequest <Clone>$()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppStopRequest
+method LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiAttachRequest <Clone>$()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiAttachRequest
+method LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiAttachResponse <Clone>$()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiAttachResponse
+method LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiCommandRequest <Clone>$()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiCommandRequest
+method LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiCommandResponse <Clone>$()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiCommandResponse
+method LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiDetachNotification <Clone>$()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiDetachNotification
+method LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiStateChangedNotification <Clone>$()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiStateChangedNotification
+method LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiSurfaceDescriptor <Clone>$()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiSurfaceDescriptor
+method LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcClientOptions <Clone>$()  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcClientOptions
+method LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcServerOptions <Clone>$()  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcServerOptions
+method LanMountainDesktop.AirAppIsolation.Ipc.InProcAirAppIpcTransport Connect(LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcClient client, LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcServer server)  @LanMountainDesktop.AirAppIsolation.Ipc.InProcAirAppIpcTransport
+method LanMountainDesktop.AirAppSdk.AirAppAppearanceSnapshot <Clone>$()  @LanMountainDesktop.AirAppSdk.AirAppAppearanceSnapshot
+method LanMountainDesktop.AirAppSdk.AirAppAppearanceSnapshot GetAppearanceSnapshot(LanMountainDesktop.AirAppSdk.AirAppComponentContext context)  @LanMountainDesktop.AirAppSdk.AirAppAppearanceExtensions
+method LanMountainDesktop.AirAppSdk.AirAppComponentChromeContext <Clone>$()  @LanMountainDesktop.AirAppSdk.AirAppComponentChromeContext
+method LanMountainDesktop.AirAppSdk.AirAppComponentManifest <Clone>$()  @LanMountainDesktop.AirAppSdk.AirAppComponentManifest
+method LanMountainDesktop.AirAppSdk.AirAppCornerRadiusTokens <Clone>$()  @LanMountainDesktop.AirAppSdk.AirAppCornerRadiusTokens
+method LanMountainDesktop.AirAppSdk.AirAppCornerRadiusTokens FromShared(LanMountainDesktop.Shared.Contracts.AppearanceCornerRadiusTokens tokens)  @LanMountainDesktop.AirAppSdk.AirAppCornerRadiusTokens
+method LanMountainDesktop.AirAppSdk.AirAppInstalledInfo <Clone>$()  @LanMountainDesktop.AirAppSdk.AirAppInstalledInfo
+method LanMountainDesktop.AirAppSdk.AirAppLocalizer Create(LanMountainDesktop.AirAppSdk.AirAppComponentContext context)  @LanMountainDesktop.AirAppSdk.AirAppLocalizer
+method LanMountainDesktop.AirAppSdk.AirAppLocalizer Create(LanMountainDesktop.AirAppSdk.IAirAppRuntimeContext context)  @LanMountainDesktop.AirAppSdk.AirAppLocalizer
+method LanMountainDesktop.AirAppSdk.AirAppManifest <Clone>$()  @LanMountainDesktop.AirAppSdk.AirAppManifest
+method LanMountainDesktop.AirAppSdk.AirAppManifest Load(System.IO.Stream stream, System.String sourceName)  @LanMountainDesktop.AirAppSdk.AirAppManifest
+method LanMountainDesktop.AirAppSdk.AirAppManifest Load(System.String manifestPath)  @LanMountainDesktop.AirAppSdk.AirAppManifest
+method LanMountainDesktop.AirAppSdk.AirAppMaterialSurfaceSnapshot <Clone>$()  @LanMountainDesktop.AirAppSdk.AirAppMaterialSurfaceSnapshot
+method LanMountainDesktop.AirAppSdk.AirAppPackageInstallResult <Clone>$()  @LanMountainDesktop.AirAppSdk.AirAppPackageInstallResult
+method LanMountainDesktop.AirAppSdk.AirAppPackageInstallResult InstallPackage(System.String packagePath)  @LanMountainDesktop.AirAppSdk.IAirAppPackageManager
+method LanMountainDesktop.AirAppSdk.AirAppPublicIpcServiceDescriptor <Clone>$()  @LanMountainDesktop.AirAppSdk.AirAppPublicIpcServiceDescriptor
+method LanMountainDesktop.AirAppSdk.AirAppPublicIpcServiceRegistration <Clone>$()  @LanMountainDesktop.AirAppSdk.AirAppPublicIpcServiceRegistration
+method LanMountainDesktop.AirAppSdk.AirAppRuntimeConfiguration <Clone>$()  @LanMountainDesktop.AirAppSdk.AirAppRuntimeConfiguration
+method LanMountainDesktop.AirAppSdk.AirAppRuntimeMode Parse(System.String value, System.String sourceName, System.String propertyName)  @LanMountainDesktop.AirAppSdk.AirAppRuntimeModes
+method LanMountainDesktop.AirAppSdk.AirAppServiceExportDescriptor <Clone>$()  @LanMountainDesktop.AirAppSdk.AirAppServiceExportDescriptor
+method LanMountainDesktop.AirAppSdk.AirAppServiceExportDescriptor GetExport(System.Type contractType, System.String providerAirAppId)  @LanMountainDesktop.AirAppSdk.IAirAppExportRegistry
+method LanMountainDesktop.AirAppSdk.AirAppSettingsSectionBuilder AddList(System.String key, System.String titleLocalizationKey, System.String descriptionLocalizationKey, IReadOnlyList`1<System.String> defaultValue)  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionBuilder
+method LanMountainDesktop.AirAppSdk.AirAppSettingsSectionBuilder AddNumber(System.String key, System.String titleLocalizationKey, System.String descriptionLocalizationKey, System.Double defaultValue, Nullable`1<System.Double> minimum, Nullable`1<System.Double> maximum)  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionBuilder
+method LanMountainDesktop.AirAppSdk.AirAppSettingsSectionBuilder AddOption(LanMountainDesktop.AirAppSdk.AirAppSettingOptionDefinition option)  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionBuilder
+method LanMountainDesktop.AirAppSdk.AirAppSettingsSectionBuilder AddPath(System.String key, System.String titleLocalizationKey, System.String descriptionLocalizationKey, System.String defaultValue)  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionBuilder
+method LanMountainDesktop.AirAppSdk.AirAppSettingsSectionBuilder AddSelect(System.String key, System.String titleLocalizationKey, IEnumerable`1<LanMountainDesktop.AirAppSdk.AirAppSettingOptionChoice> choices, System.String descriptionLocalizationKey, System.String defaultValue)  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionBuilder
+method LanMountainDesktop.AirAppSdk.AirAppSettingsSectionBuilder AddText(System.String key, System.String titleLocalizationKey, System.String descriptionLocalizationKey, System.String defaultValue, System.String validationPattern)  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionBuilder
+method LanMountainDesktop.AirAppSdk.AirAppSettingsSectionBuilder AddToggle(System.String key, System.String titleLocalizationKey, System.String descriptionLocalizationKey, System.Boolean defaultValue)  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionBuilder
+method LanMountainDesktop.AirAppSdk.AirAppSettingsSectionBuilder SetCustomView()  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionBuilder
+method LanMountainDesktop.AirAppSdk.AirAppSettingsSectionBuilder SetCustomView(System.Type viewType)  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionBuilder
+method LanMountainDesktop.AirAppSdk.AirAppSharedContractReference <Clone>$()  @LanMountainDesktop.AirAppSdk.AirAppSharedContractReference
+method LanMountainDesktop.AirAppSdk.AirAppWindowManifest <Clone>$()  @LanMountainDesktop.AirAppSdk.AirAppWindowManifest
+method LanMountainDesktop.AirAppSdk.AirAppWindowRegistration <Clone>$()  @LanMountainDesktop.AirAppSdk.AirAppWindowRegistration
+method LanMountainDesktop.AirAppSdk.HostApplicationLifecycleRequest <Clone>$()  @LanMountainDesktop.AirAppSdk.HostApplicationLifecycleRequest
+method LanMountainDesktop.AirAppSdk.IAirAppPublicIpcBuilder AddService(System.String objectId, IEnumerable`1<System.String> notifyIds)  @LanMountainDesktop.AirAppSdk.IAirAppPublicIpcBuilder
+method LanMountainDesktop.AirAppSdk.IAirAppPublicIpcBuilder AddService(System.Type contractType, System.Object implementation, System.String objectId, IEnumerable`1<System.String> notifyIds)  @LanMountainDesktop.AirAppSdk.IAirAppPublicIpcBuilder
+method LanMountainDesktop.AirAppSdk.IComponentSettingsAccessor GetComponentAccessor(System.String componentId, System.String placementId)  @LanMountainDesktop.AirAppSdk.IAirAppSettingsService
+method LanMountainDesktop.AirAppSdk.IComponentSettingsAccessor GetComponentAccessor(System.String componentId, System.String placementId)  @LanMountainDesktop.AirAppSdk.ISettingsService
+method LanMountainDesktop.Shared.Contracts.AppearanceCornerRadiusTokens Create(System.String style)  @LanMountainDesktop.AirAppSdk.AppearanceCornerRadiusTokenFactory
+method Microsoft.Extensions.DependencyInjection.IServiceCollection AddAirAppComponent(Microsoft.Extensions.DependencyInjection.IServiceCollection services, LanMountainDesktop.AirAppSdk.AirAppComponentOptions options)  @LanMountainDesktop.AirAppSdk.AirAppServiceCollectionExtensions
+method Microsoft.Extensions.DependencyInjection.IServiceCollection AddAirAppComponent(Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.String componentId, System.String displayName, Action`1<LanMountainDesktop.AirAppSdk.AirAppComponentOptions> configure)  @LanMountainDesktop.AirAppSdk.AirAppServiceCollectionExtensions
+method Microsoft.Extensions.DependencyInjection.IServiceCollection AddAirAppComponentEditor(Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.String componentId, System.Double preferredWidth, System.Double preferredHeight, System.Double minScale, System.Double maxScale)  @LanMountainDesktop.AirAppSdk.AirAppServiceCollectionExtensions
+method Microsoft.Extensions.DependencyInjection.IServiceCollection AddAirAppExport(Microsoft.Extensions.DependencyInjection.IServiceCollection services)  @LanMountainDesktop.AirAppSdk.AirAppServiceCollectionExtensions
+method Microsoft.Extensions.DependencyInjection.IServiceCollection AddAirAppPublicIpc(Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.String objectId, System.String[] notifyIds)  @LanMountainDesktop.AirAppSdk.AirAppServiceCollectionExtensions
+method Microsoft.Extensions.DependencyInjection.IServiceCollection AddAirAppPublicIpcContributor(Microsoft.Extensions.DependencyInjection.IServiceCollection services)  @LanMountainDesktop.AirAppSdk.AirAppServiceCollectionExtensions
+method Microsoft.Extensions.DependencyInjection.IServiceCollection AddAirAppSettingsSection(Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.String id, System.String titleLocalizationKey, Action`1<LanMountainDesktop.AirAppSdk.AirAppSettingsSectionBuilder> configure, System.String descriptionLocalizationKey, System.String iconKey, System.Int32 sortOrder)  @LanMountainDesktop.AirAppSdk.AirAppServiceCollectionExtensions
+method Microsoft.Extensions.DependencyInjection.IServiceCollection AddAirAppSettingsSection(Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.String id, System.String titleLocalizationKey, System.String descriptionLocalizationKey, System.String iconKey, System.Int32 sortOrder)  @LanMountainDesktop.AirAppSdk.AirAppServiceCollectionExtensions
+method Microsoft.Extensions.DependencyInjection.IServiceCollection AddAirAppWindow(Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.String id, System.String name)  @LanMountainDesktop.AirAppSdk.AirAppServiceCollectionExtensions
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceChangedNotification other)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceChangedNotification
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshot other)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshot
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshotRequest other)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshotRequest
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Contracts.AirAppCapabilityDeclaration other)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppCapabilityDeclaration
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Contracts.AirAppFaultReport other)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppFaultReport
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Contracts.AirAppHeartbeatPing other)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppHeartbeatPing
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Contracts.AirAppHeartbeatPong other)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppHeartbeatPong
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Contracts.AirAppInitializeRequest other)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppInitializeRequest
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Contracts.AirAppInitializeResponse other)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppInitializeResponse
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Contracts.AirAppLifecycleStateChanged other)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLifecycleStateChanged
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Contracts.AirAppLogEntry other)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLogEntry
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Contracts.AirAppMaterialSurfaceSnapshot other)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppMaterialSurfaceSnapshot
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Contracts.AirAppReadyNotification other)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppReadyNotification
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Contracts.AirAppRestartRequest other)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppRestartRequest
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeRequest other)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeRequest
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeResponse other)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeResponse
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsChangedNotification other)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsChangedNotification
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsSnapshotRequest other)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsSnapshotRequest
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsSnapshotResponse other)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsSnapshotResponse
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsWriteRequest other)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsWriteRequest
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsWriteResponse other)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsWriteResponse
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Contracts.AirAppStopRequest other)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppStopRequest
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiAttachRequest other)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiAttachRequest
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiAttachResponse other)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiAttachResponse
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiCommandRequest other)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiCommandRequest
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiCommandResponse other)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiCommandResponse
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiDetachNotification other)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiDetachNotification
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiStateChangedNotification other)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiStateChangedNotification
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiSurfaceDescriptor other)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiSurfaceDescriptor
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcClientOptions other)  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcClientOptions
+method System.Boolean Equals(LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcServerOptions other)  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcServerOptions
+method System.Boolean Equals(LanMountainDesktop.AirAppSdk.AirAppAppearanceSnapshot other)  @LanMountainDesktop.AirAppSdk.AirAppAppearanceSnapshot
+method System.Boolean Equals(LanMountainDesktop.AirAppSdk.AirAppComponentChromeContext other)  @LanMountainDesktop.AirAppSdk.AirAppComponentChromeContext
+method System.Boolean Equals(LanMountainDesktop.AirAppSdk.AirAppComponentManifest other)  @LanMountainDesktop.AirAppSdk.AirAppComponentManifest
+method System.Boolean Equals(LanMountainDesktop.AirAppSdk.AirAppCornerRadiusTokens other)  @LanMountainDesktop.AirAppSdk.AirAppCornerRadiusTokens
+method System.Boolean Equals(LanMountainDesktop.AirAppSdk.AirAppInstalledInfo other)  @LanMountainDesktop.AirAppSdk.AirAppInstalledInfo
+method System.Boolean Equals(LanMountainDesktop.AirAppSdk.AirAppManifest other)  @LanMountainDesktop.AirAppSdk.AirAppManifest
+method System.Boolean Equals(LanMountainDesktop.AirAppSdk.AirAppMaterialSurfaceSnapshot other)  @LanMountainDesktop.AirAppSdk.AirAppMaterialSurfaceSnapshot
+method System.Boolean Equals(LanMountainDesktop.AirAppSdk.AirAppPackageInstallResult other)  @LanMountainDesktop.AirAppSdk.AirAppPackageInstallResult
+method System.Boolean Equals(LanMountainDesktop.AirAppSdk.AirAppPublicIpcServiceDescriptor other)  @LanMountainDesktop.AirAppSdk.AirAppPublicIpcServiceDescriptor
+method System.Boolean Equals(LanMountainDesktop.AirAppSdk.AirAppPublicIpcServiceRegistration other)  @LanMountainDesktop.AirAppSdk.AirAppPublicIpcServiceRegistration
+method System.Boolean Equals(LanMountainDesktop.AirAppSdk.AirAppRuntimeConfiguration other)  @LanMountainDesktop.AirAppSdk.AirAppRuntimeConfiguration
+method System.Boolean Equals(LanMountainDesktop.AirAppSdk.AirAppServiceExportDescriptor other)  @LanMountainDesktop.AirAppSdk.AirAppServiceExportDescriptor
+method System.Boolean Equals(LanMountainDesktop.AirAppSdk.AirAppSharedContractReference other)  @LanMountainDesktop.AirAppSdk.AirAppSharedContractReference
+method System.Boolean Equals(LanMountainDesktop.AirAppSdk.AirAppWindowManifest other)  @LanMountainDesktop.AirAppSdk.AirAppWindowManifest
+method System.Boolean Equals(LanMountainDesktop.AirAppSdk.AirAppWindowRegistration other)  @LanMountainDesktop.AirAppSdk.AirAppWindowRegistration
+method System.Boolean Equals(LanMountainDesktop.AirAppSdk.HostApplicationLifecycleRequest other)  @LanMountainDesktop.AirAppSdk.HostApplicationLifecycleRequest
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceChangedNotification
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshot
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshotRequest
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppCapabilityDeclaration
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppFaultReport
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppHeartbeatPing
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppHeartbeatPong
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppInitializeRequest
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppInitializeResponse
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLifecycleStateChanged
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLogEntry
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppMaterialSurfaceSnapshot
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppReadyNotification
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppRestartRequest
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeRequest
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeResponse
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsChangedNotification
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsSnapshotRequest
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsSnapshotResponse
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsWriteRequest
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsWriteResponse
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppStopRequest
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiAttachRequest
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiAttachResponse
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiCommandRequest
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiCommandResponse
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiDetachNotification
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiStateChangedNotification
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiSurfaceDescriptor
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcClientOptions
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcServerOptions
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppSdk.AirAppAppearanceSnapshot
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppSdk.AirAppComponentChromeContext
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppSdk.AirAppComponentManifest
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppSdk.AirAppCornerRadiusTokens
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppSdk.AirAppInstalledInfo
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppSdk.AirAppManifest
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppSdk.AirAppMaterialSurfaceSnapshot
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppSdk.AirAppPackageInstallResult
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppSdk.AirAppPublicIpcServiceDescriptor
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppSdk.AirAppPublicIpcServiceRegistration
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppSdk.AirAppRuntimeConfiguration
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppSdk.AirAppServiceExportDescriptor
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppSdk.AirAppSharedContractReference
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppSdk.AirAppWindowManifest
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppSdk.AirAppWindowRegistration
+method System.Boolean Equals(System.Object obj)  @LanMountainDesktop.AirAppSdk.HostApplicationLifecycleRequest
+method System.Boolean HasChanged(LanMountainDesktop.AirAppSdk.AppearanceProperty property)  @LanMountainDesktop.AirAppSdk.AppearanceChangedEvent
+method System.Boolean IsDarkTheme(LanMountainDesktop.AirAppSdk.IAirAppAppearanceContext context)  @LanMountainDesktop.AirAppSdk.AirAppAppearanceHelper
+method System.Boolean TryExit(LanMountainDesktop.AirAppSdk.HostApplicationLifecycleRequest request)  @LanMountainDesktop.AirAppSdk.IHostApplicationLifecycle
+method System.Boolean TryGetProperty(System.String key, T& value)  @LanMountainDesktop.AirAppSdk.AirAppComponentContext
+method System.Boolean TryGetProperty(System.String key, T& value)  @LanMountainDesktop.AirAppSdk.AirAppComponentEditorContext
+method System.Boolean TryGetProperty(System.String key, T& value)  @LanMountainDesktop.AirAppSdk.IAirAppRuntimeContext
+method System.Boolean TryParse(System.String value, LanMountainDesktop.AirAppSdk.AirAppRuntimeMode& mode)  @LanMountainDesktop.AirAppSdk.AirAppRuntimeModes
+method System.Boolean TryRestart(LanMountainDesktop.AirAppSdk.HostApplicationLifecycleRequest request)  @LanMountainDesktop.AirAppSdk.IHostApplicationLifecycle
+method System.Double Get(LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset preset)  @LanMountainDesktop.AirAppSdk.AirAppCornerRadiusTokens
+method System.Double GetBadgeCornerRadius(LanMountainDesktop.AirAppSdk.IAirAppAppearanceContext context)  @LanMountainDesktop.AirAppSdk.AirAppAppearanceHelper
+method System.Double GetCardCornerRadius(LanMountainDesktop.AirAppSdk.IAirAppAppearanceContext context)  @LanMountainDesktop.AirAppSdk.AirAppAppearanceHelper
+method System.Double GetControlCornerRadius(LanMountainDesktop.AirAppSdk.IAirAppAppearanceContext context)  @LanMountainDesktop.AirAppSdk.AirAppAppearanceHelper
+method System.Double GetLargePanelCornerRadius(LanMountainDesktop.AirAppSdk.IAirAppAppearanceContext context)  @LanMountainDesktop.AirAppSdk.AirAppAppearanceHelper
+method System.Double GetMediumPanelCornerRadius(LanMountainDesktop.AirAppSdk.IAirAppAppearanceContext context)  @LanMountainDesktop.AirAppSdk.AirAppAppearanceHelper
+method System.Double GetShellCornerRadius(LanMountainDesktop.AirAppSdk.IAirAppAppearanceContext context)  @LanMountainDesktop.AirAppSdk.AirAppAppearanceHelper
+method System.Double ResolveCornerRadius(LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset preset, Nullable`1<System.Double> minimum, Nullable`1<System.Double> maximum)  @LanMountainDesktop.AirAppSdk.AirAppAppearanceContext
+method System.Double ResolveCornerRadius(LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset preset, Nullable`1<System.Double> minimum, Nullable`1<System.Double> maximum)  @LanMountainDesktop.AirAppSdk.AirAppComponentContext
+method System.Double ResolveCornerRadius(LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset preset, Nullable`1<System.Double> minimum, Nullable`1<System.Double> maximum)  @LanMountainDesktop.AirAppSdk.IAirAppAppearanceContext
+method System.Double ResolveCornerRadius(LanMountainDesktop.AirAppSdk.IAirAppAppearanceContext appearance, System.Double cellSize)  @LanMountainDesktop.AirAppSdk.AirAppComponentRegistration
+method System.Double ResolveScaledCornerRadius(System.Double baseRadius, Nullable`1<System.Double> minimum, Nullable`1<System.Double> maximum)  @LanMountainDesktop.AirAppSdk.AirAppAppearanceContext
+method System.Double ResolveScaledCornerRadius(System.Double baseRadius, Nullable`1<System.Double> minimum, Nullable`1<System.Double> maximum)  @LanMountainDesktop.AirAppSdk.AirAppComponentContext
+method System.Double ResolveScaledCornerRadius(System.Double baseRadius, Nullable`1<System.Double> minimum, Nullable`1<System.Double> maximum)  @LanMountainDesktop.AirAppSdk.IAirAppAppearanceContext
+method System.IAsyncResult BeginInvoke(System.String route, Nullable`1<System.Text.Json.JsonElement> payload, System.Threading.CancellationToken cancellationToken, System.AsyncCallback callback, System.Object object)  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcNotificationDispatcher
+method System.IAsyncResult BeginInvoke(System.String route, Nullable`1<System.Text.Json.JsonElement> payload, System.Threading.CancellationToken cancellationToken, System.AsyncCallback callback, System.Object object)  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcRequestDispatcher
+method System.IDisposable Subscribe(Action`1<TMessage> handler)  @LanMountainDesktop.AirAppSdk.IAirAppMessageBus
+method System.IDisposable Subscribe(System.String topic, Action`1<System.Object> handler)  @LanMountainDesktop.AirAppSdk.IAirAppMessageBus
+method System.IDisposable Subscribe(System.String topic, Action`1<T> handler)  @LanMountainDesktop.AirAppSdk.IAirAppMessageBus
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceChangedNotification
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshot
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshotRequest
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppCapabilityDeclaration
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppFaultReport
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppHeartbeatPing
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppHeartbeatPong
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppInitializeRequest
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppInitializeResponse
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLifecycleStateChanged
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLogEntry
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppMaterialSurfaceSnapshot
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppReadyNotification
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppRestartRequest
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeRequest
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeResponse
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsChangedNotification
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsSnapshotRequest
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsSnapshotResponse
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsWriteRequest
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsWriteResponse
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppStopRequest
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiAttachRequest
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiAttachResponse
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiCommandRequest
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiCommandResponse
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiDetachNotification
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiStateChangedNotification
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiSurfaceDescriptor
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcClientOptions
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcServerOptions
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppSdk.AirAppAppearanceSnapshot
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppSdk.AirAppComponentChromeContext
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppSdk.AirAppComponentManifest
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppSdk.AirAppCornerRadiusTokens
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppSdk.AirAppInstalledInfo
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppSdk.AirAppManifest
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppSdk.AirAppMaterialSurfaceSnapshot
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppSdk.AirAppPackageInstallResult
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppSdk.AirAppPublicIpcServiceDescriptor
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppSdk.AirAppPublicIpcServiceRegistration
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppSdk.AirAppRuntimeConfiguration
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppSdk.AirAppServiceExportDescriptor
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppSdk.AirAppSharedContractReference
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppSdk.AirAppWindowManifest
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppSdk.AirAppWindowRegistration
+method System.Int32 GetHashCode()  @LanMountainDesktop.AirAppSdk.HostApplicationLifecycleRequest
+method System.String Format(System.String key, System.String fallback, System.Object[] args)  @LanMountainDesktop.AirAppSdk.AirAppLocalizer
+method System.String GetString(System.String key, System.String fallback)  @LanMountainDesktop.AirAppSdk.AirAppLocalizer
+method System.String GetThemeVariant(LanMountainDesktop.AirAppSdk.IAirAppAppearanceContext context)  @LanMountainDesktop.AirAppSdk.AirAppAppearanceHelper
+method System.String MigrateScaleToStyle(System.Double scale)  @LanMountainDesktop.AirAppSdk.GlobalAppearanceSettings
+method System.String NormalizeCornerRadiusStyle(System.String value)  @LanMountainDesktop.AirAppSdk.GlobalAppearanceSettings
+method System.String NormalizeLanguageCode(System.String languageCode)  @LanMountainDesktop.AirAppSdk.AirAppLocalizer
+method System.String NormalizeManifestValue(System.String value, System.String sourceName, System.String propertyName)  @LanMountainDesktop.AirAppSdk.AirAppRuntimeModes
+method System.String ResolveEntranceAssemblyPath(System.String manifestPath)  @LanMountainDesktop.AirAppSdk.AirAppManifest
+method System.String ResolveLanguageCode(IReadOnlyDictionary`2<System.String, System.Object> properties)  @LanMountainDesktop.AirAppSdk.AirAppLocalizer
+method System.String ToManifestValue(LanMountainDesktop.AirAppSdk.AirAppRuntimeMode mode)  @LanMountainDesktop.AirAppSdk.AirAppRuntimeModes
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceChangedNotification
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshot
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshotRequest
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppCapabilityDeclaration
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppFaultReport
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppHeartbeatPing
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppHeartbeatPong
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppInitializeRequest
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppInitializeResponse
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLifecycleStateChanged
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLogEntry
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppMaterialSurfaceSnapshot
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppReadyNotification
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppRestartRequest
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeRequest
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeResponse
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsChangedNotification
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsSnapshotRequest
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsSnapshotResponse
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsWriteRequest
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsWriteResponse
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppStopRequest
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiAttachRequest
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiAttachResponse
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiCommandRequest
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiCommandResponse
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiDetachNotification
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiStateChangedNotification
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiSurfaceDescriptor
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcClientOptions
+method System.String ToString()  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcServerOptions
+method System.String ToString()  @LanMountainDesktop.AirAppSdk.AirAppAppearanceSnapshot
+method System.String ToString()  @LanMountainDesktop.AirAppSdk.AirAppComponentChromeContext
+method System.String ToString()  @LanMountainDesktop.AirAppSdk.AirAppComponentManifest
+method System.String ToString()  @LanMountainDesktop.AirAppSdk.AirAppCornerRadiusTokens
+method System.String ToString()  @LanMountainDesktop.AirAppSdk.AirAppInstalledInfo
+method System.String ToString()  @LanMountainDesktop.AirAppSdk.AirAppManifest
+method System.String ToString()  @LanMountainDesktop.AirAppSdk.AirAppMaterialSurfaceSnapshot
+method System.String ToString()  @LanMountainDesktop.AirAppSdk.AirAppPackageInstallResult
+method System.String ToString()  @LanMountainDesktop.AirAppSdk.AirAppPublicIpcServiceDescriptor
+method System.String ToString()  @LanMountainDesktop.AirAppSdk.AirAppPublicIpcServiceRegistration
+method System.String ToString()  @LanMountainDesktop.AirAppSdk.AirAppRuntimeConfiguration
+method System.String ToString()  @LanMountainDesktop.AirAppSdk.AirAppServiceExportDescriptor
+method System.String ToString()  @LanMountainDesktop.AirAppSdk.AirAppSharedContractReference
+method System.String ToString()  @LanMountainDesktop.AirAppSdk.AirAppWindowManifest
+method System.String ToString()  @LanMountainDesktop.AirAppSdk.AirAppWindowRegistration
+method System.String ToString()  @LanMountainDesktop.AirAppSdk.HostApplicationLifecycleRequest
+method System.Text.Json.Serialization.Metadata.JsonTypeInfo GetTypeInfo(System.Type type)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+method System.Threading.Tasks.Task EndInvoke(System.IAsyncResult result)  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcNotificationDispatcher
+method System.Threading.Tasks.Task HandleNotificationAsync(System.String route, Nullable`1<System.Text.Json.JsonElement> payload, System.Threading.CancellationToken cancellationToken)  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcServer
+method System.Threading.Tasks.Task Invoke(System.String route, Nullable`1<System.Text.Json.JsonElement> payload, System.Threading.CancellationToken cancellationToken)  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcNotificationDispatcher
+method System.Threading.Tasks.Task NotifyAsync(System.String route, TPayload payload, System.Threading.CancellationToken cancellationToken)  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcClient
+method System.Threading.Tasks.Task OnStartedAsync(LanMountainDesktop.AirAppSdk.IAirAppRuntimeContext context)  @LanMountainDesktop.AirAppSdk.AirAppBase
+method System.Threading.Tasks.Task OnStartedAsync(LanMountainDesktop.AirAppSdk.IAirAppRuntimeContext context)  @LanMountainDesktop.AirAppSdk.IAirApp
+method System.Threading.Tasks.Task OnStoppingAsync()  @LanMountainDesktop.AirAppSdk.AirAppBase
+method System.Threading.Tasks.Task OnStoppingAsync()  @LanMountainDesktop.AirAppSdk.IAirApp
+method System.Threading.Tasks.Task OnWindowOpeningAsync()  @LanMountainDesktop.AirAppSdk.AirAppWindowBase
+method System.Threading.Tasks.Task OnWindowOpeningAsync()  @LanMountainDesktop.AirAppSdk.IAirAppWindow
+method System.Threading.Tasks.Task OpenWindowAsync(System.String windowId)  @LanMountainDesktop.AirAppSdk.AirAppComponentContext
+method System.Void CloseDrawer()  @LanMountainDesktop.AirAppSdk.ISettingsPageHostContext
+method System.Void CloseEditor()  @LanMountainDesktop.AirAppSdk.IComponentEditorHostContext
+method System.Void CloseWindow(System.String windowId)  @LanMountainDesktop.AirAppSdk.IAirAppRuntimeContext
+method System.Void ConfigurePublicIpc(LanMountainDesktop.AirAppSdk.IAirAppPublicIpcBuilder builder)  @LanMountainDesktop.AirAppSdk.IAirAppPublicIpcContributor
+method System.Void Debug(System.String message)  @LanMountainDesktop.AirAppSdk.IAirAppLogger
+method System.Void Deconstruct(LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshot& Snapshot)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceChangedNotification
+method System.Void Deconstruct(LanMountainDesktop.AirAppSdk.AirAppCornerRadiusTokens& CornerRadiusTokens, System.String& ThemeVariant, System.String& AccentColor, System.String& SeedColor, System.String& ColorSource, System.String& SystemMaterialMode, System.Collections.Generic.IReadOnlyDictionary`2[[System.String, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e],[System.String, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]& ColorRoles, System.Collections.Generic.IReadOnlyDictionary`2[[System.String, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e],[LanMountainDesktop.AirAppSdk.AirAppMaterialSurfaceSnapshot, LanMountainDesktop.AirAppSdk, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]& MaterialSurfaces, System.Collections.Generic.IReadOnlyList`1[[System.String, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]& WallpaperSeedCandidates)  @LanMountainDesktop.AirAppSdk.AirAppAppearanceSnapshot
+method System.Void Deconstruct(LanMountainDesktop.AirAppSdk.AirAppManifest& Manifest, System.Boolean& IsEnabled, System.Boolean& IsLoaded, System.Boolean& IsPackage, System.String& ErrorMessage)  @LanMountainDesktop.AirAppSdk.AirAppInstalledInfo
+method System.Void Deconstruct(LanMountainDesktop.AirAppSdk.AirAppManifest& Manifest, System.Boolean& ReplacedExisting, System.Boolean& RestartRequired)  @LanMountainDesktop.AirAppSdk.AirAppPackageInstallResult
+method System.Void Deconstruct(System.Boolean& Accepted, System.Nullable`1[[System.Text.Json.JsonElement, System.Text.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51]]& InitialState, System.String& ErrorCode, System.String& ErrorMessage)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiAttachResponse
+method System.Void Deconstruct(System.Boolean& Accepted, System.Nullable`1[[System.Text.Json.JsonElement, System.Text.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51]]& Payload, System.String& ErrorCode, System.String& ErrorMessage)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiCommandResponse
+method System.Void Deconstruct(System.Boolean& Accepted, System.String& ETag, System.String& ErrorCode, System.String& ErrorMessage)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsWriteResponse
+method System.Void Deconstruct(System.Boolean& Accepted, System.String& ProtocolVersion, System.Collections.Generic.IReadOnlyList`1[[LanMountainDesktop.AirAppIsolation.Contracts.AirAppCapabilityDeclaration, LanMountainDesktop.AirAppSdk, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]& GrantedCapabilities, System.String& ErrorCode, System.String& ErrorMessage)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeResponse
+method System.Void Deconstruct(System.Boolean& Succeeded, System.String& ErrorCode, System.String& ErrorMessage)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppInitializeResponse
+method System.Void Deconstruct(System.Double& Micro, System.Double& Xs, System.Double& Sm, System.Double& Md, System.Double& Lg, System.Double& Xl, System.Double& Island, System.Double& Component)  @LanMountainDesktop.AirAppSdk.AirAppCornerRadiusTokens
+method System.Void Deconstruct(System.String& AirAppId, System.String& SessionId, System.Collections.Generic.IReadOnlyList`1[[LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiSurfaceDescriptor, LanMountainDesktop.AirAppSdk, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]& UiSurfaces)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppReadyNotification
+method System.Void Deconstruct(System.String& AirAppId, System.String& SessionId, System.String& HostPipeName, System.String& DataDirectory, System.Collections.Generic.IReadOnlyDictionary`2[[System.String, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e],[System.String, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]& StartupProperties)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppInitializeRequest
+method System.Void Deconstruct(System.String& AirAppId, System.String& SessionId, System.String& RuntimeMode, System.String& ProtocolVersion, System.Collections.Generic.IReadOnlyList`1[[LanMountainDesktop.AirAppIsolation.Contracts.AirAppCapabilityDeclaration, LanMountainDesktop.AirAppSdk, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]& RequestedCapabilities, System.Collections.Generic.IReadOnlyDictionary`2[[System.String, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e],[System.String, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]& Metadata)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeRequest
+method System.Void Deconstruct(System.String& BackgroundColor, System.String& BorderColor, System.Double& BlurRadius, System.Double& Opacity)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppMaterialSurfaceSnapshot
+method System.Void Deconstruct(System.String& BackgroundColor, System.String& BorderColor, System.Double& BlurRadius, System.Double& Opacity)  @LanMountainDesktop.AirAppSdk.AirAppMaterialSurfaceSnapshot
+method System.Void Deconstruct(System.String& ComponentId, System.String& PlacementId, System.Double& CellSize, LanMountainDesktop.Shared.Contracts.AppearanceCornerRadiusTokens& CornerRadiusTokens, LanMountainDesktop.AirAppSdk.AirAppSettingsScope& Scope)  @LanMountainDesktop.AirAppSdk.AirAppComponentChromeContext
+method System.Void Deconstruct(System.String& Id, System.String& Name, System.Double& DefaultWidth, System.Double& DefaultHeight, System.String& Description)  @LanMountainDesktop.AirAppSdk.AirAppWindowManifest
+method System.Void Deconstruct(System.String& Id, System.String& Name, System.Int32& DefaultWidth, System.Int32& DefaultHeight, System.String& Description, System.String& Category, System.String& IconKey)  @LanMountainDesktop.AirAppSdk.AirAppComponentManifest
+method System.Void Deconstruct(System.String& Id, System.String& Name, System.String& EntranceAssembly, System.String& Description, System.String& Author, System.String& Version, System.String& ApiVersion, System.Collections.Generic.IReadOnlyList`1[[LanMountainDesktop.AirAppSdk.AirAppSharedContractReference, LanMountainDesktop.AirAppSdk, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]& SharedContracts, LanMountainDesktop.AirAppSdk.AirAppRuntimeConfiguration& Runtime, System.Collections.Generic.IReadOnlyList`1[[LanMountainDesktop.AirAppSdk.AirAppComponentManifest, LanMountainDesktop.AirAppSdk, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]& Components, System.Collections.Generic.IReadOnlyList`1[[LanMountainDesktop.AirAppSdk.AirAppWindowManifest, LanMountainDesktop.AirAppSdk, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]& Windows, System.Collections.Generic.IReadOnlyList`1[[System.String, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]& Permissions)  @LanMountainDesktop.AirAppSdk.AirAppManifest
+method System.Void Deconstruct(System.String& Id, System.String& Version, System.String& AssemblyName)  @LanMountainDesktop.AirAppSdk.AirAppSharedContractReference
+method System.Void Deconstruct(System.String& Level, System.String& Category, System.String& Message, System.DateTimeOffset& TimestampUtc, System.String& Exception)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLogEntry
+method System.Void Deconstruct(System.String& Mode)  @LanMountainDesktop.AirAppSdk.AirAppRuntimeConfiguration
+method System.Void Deconstruct(System.String& Name, System.String& Version, System.String& Description)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppCapabilityDeclaration
+method System.Void Deconstruct(System.String& ProviderAirAppId, System.Type& ContractType, System.Object& ServiceInstance)  @LanMountainDesktop.AirAppSdk.AirAppServiceExportDescriptor
+method System.Void Deconstruct(System.String& Reason)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppRestartRequest
+method System.Void Deconstruct(System.String& Reason, System.Boolean& RestartRequested)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppStopRequest
+method System.Void Deconstruct(System.String& Scope, System.String& SectionId, System.String& ComponentInstanceId)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsSnapshotRequest
+method System.Void Deconstruct(System.String& Scope, System.Text.Json.JsonElement& Snapshot, System.String& ETag)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsSnapshotResponse
+method System.Void Deconstruct(System.String& Scope, System.Text.Json.JsonElement& Value, System.String& SectionId, System.String& ComponentInstanceId, System.String& ETag)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsChangedNotification
+method System.Void Deconstruct(System.String& Scope, System.Text.Json.JsonElement& Value, System.String& SectionId, System.String& ComponentInstanceId, System.String& ETag)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsWriteRequest
+method System.Void Deconstruct(System.String& SessionId)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshotRequest
+method System.Void Deconstruct(System.String& SessionId, System.DateTimeOffset& ReceivedAtUtc)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppHeartbeatPong
+method System.Void Deconstruct(System.String& SessionId, System.DateTimeOffset& SentAtUtc)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppHeartbeatPing
+method System.Void Deconstruct(System.String& SessionId, System.String& FaultKind, System.Boolean& IsFatal, System.String& Message, System.String& StackTrace, System.Nullable`1[[System.Int32, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]& WorkerProcessId, System.Nullable`1[[System.Int32, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]& ExitCode, System.Nullable`1[[System.DateTimeOffset, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]& OccurredAtUtc)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppFaultReport
+method System.Void Deconstruct(System.String& Source, System.String& Reason)  @LanMountainDesktop.AirAppSdk.HostApplicationLifecycleRequest
+method System.Void Deconstruct(System.String& State, System.String& Detail)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLifecycleStateChanged
+method System.Void Deconstruct(System.String& SurfaceId, System.String& CommandName, System.String& InstanceId, System.Nullable`1[[System.Text.Json.JsonElement, System.Text.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51]]& Payload)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiCommandRequest
+method System.Void Deconstruct(System.String& SurfaceId, System.String& SurfaceKind, System.String& InstanceId)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiDetachNotification
+method System.Void Deconstruct(System.String& SurfaceId, System.String& SurfaceKind, System.String& InstanceId, System.Nullable`1[[System.Text.Json.JsonElement, System.Text.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51]]& InitialState)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiAttachRequest
+method System.Void Deconstruct(System.String& SurfaceId, System.String& SurfaceKind, System.String& InstanceId, System.Nullable`1[[System.Text.Json.JsonElement, System.Text.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51]]& State)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiStateChangedNotification
+method System.Void Deconstruct(System.String& SurfaceId, System.String& SurfaceKind, System.String& Title, System.String& ComponentId)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiSurfaceDescriptor
+method System.Void Deconstruct(System.String& ThemeVariant, System.String& AccentColor, System.Double& CornerRadiusScale, System.Collections.Generic.IReadOnlyDictionary`2[[System.String, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e],[System.Double, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]& CornerRadiusTokens, System.Collections.Generic.IReadOnlyDictionary`2[[System.String, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e],[System.String, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]& ResourceAliases, System.String& SeedColor, System.String& ColorSource, System.String& SystemMaterialMode, System.Collections.Generic.IReadOnlyDictionary`2[[System.String, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e],[System.String, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]& ColorRoles, System.Collections.Generic.IReadOnlyDictionary`2[[System.String, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e],[LanMountainDesktop.AirAppIsolation.Contracts.AirAppMaterialSurfaceSnapshot, LanMountainDesktop.AirAppSdk, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]& MaterialSurfaces, System.Collections.Generic.IReadOnlyList`1[[System.String, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]& WallpaperSeedCandidates)  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshot
+method System.Void Deconstruct(System.String& WindowId, System.String& DisplayName, System.Type& WindowType)  @LanMountainDesktop.AirAppSdk.AirAppWindowRegistration
+method System.Void Deconstruct(System.Type& ContractType, System.Object& Implementation, System.String& ObjectId, System.String[]& NotifyIds)  @LanMountainDesktop.AirAppSdk.AirAppPublicIpcServiceDescriptor
+method System.Void Deconstruct(System.Type& ContractType, System.String& ObjectId, System.String[]& NotifyIds)  @LanMountainDesktop.AirAppSdk.AirAppPublicIpcServiceRegistration
+method System.Void DeleteComponentSection(System.String componentId, System.String placementId, System.String sectionId)  @LanMountainDesktop.AirAppSdk.IAirAppSettingsService
+method System.Void DeleteSection(LanMountainDesktop.AirAppSdk.AirAppSettingsScope scope, System.String subjectId, System.String sectionId, System.String placementId)  @LanMountainDesktop.AirAppSdk.ISettingsService
+method System.Void DeleteSection(System.String sectionId)  @LanMountainDesktop.AirAppSdk.IComponentSettingsAccessor
+method System.Void Dispose()  @LanMountainDesktop.AirAppIsolation.Ipc.InProcAirAppIpcTransport
+method System.Void Error(System.String message)  @LanMountainDesktop.AirAppSdk.IAirAppLogger
+method System.Void Error(System.String message, System.Exception exception)  @LanMountainDesktop.AirAppSdk.IAirAppLogger
+method System.Void Info(System.String message)  @LanMountainDesktop.AirAppSdk.IAirAppLogger
+method System.Void Initialize()  @LanMountainDesktop.AirAppSdk.IDesktopShellHost
+method System.Void Initialize(Microsoft.Extensions.Hosting.HostBuilderContext context, Microsoft.Extensions.DependencyInjection.IServiceCollection services)  @LanMountainDesktop.AirAppSdk.AirAppBase
+method System.Void Initialize(Microsoft.Extensions.Hosting.HostBuilderContext context, Microsoft.Extensions.DependencyInjection.IServiceCollection services)  @LanMountainDesktop.AirAppSdk.IAirApp
+method System.Void InitializeHostContext(LanMountainDesktop.AirAppSdk.ISettingsPageHostContext hostContext)  @LanMountainDesktop.AirAppSdk.AirAppSettingsPageBase
+method System.Void MapNotification(System.String route, Func`3<TPayload, System.Threading.CancellationToken, System.Threading.Tasks.Task> handler)  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcServer
+method System.Void MapRequest(System.String route, Func`3<TRequest, System.Threading.CancellationToken, Task`1<TResponse>> handler)  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcServer
+method System.Void OnNavigatedTo(System.Object parameter)  @LanMountainDesktop.AirAppSdk.AirAppSettingsPageBase
+method System.Void OnWindowClosed()  @LanMountainDesktop.AirAppSdk.AirAppWindowBase
+method System.Void OnWindowClosed()  @LanMountainDesktop.AirAppSdk.IAirAppWindow
+method System.Void OnWindowClosing(Avalonia.Controls.WindowClosingEventArgs e)  @LanMountainDesktop.AirAppSdk.AirAppWindowBase
+method System.Void OnWindowClosing(Avalonia.Controls.WindowClosingEventArgs e)  @LanMountainDesktop.AirAppSdk.IAirAppWindow
+method System.Void OnWindowOpened()  @LanMountainDesktop.AirAppSdk.AirAppWindowBase
+method System.Void OnWindowOpened()  @LanMountainDesktop.AirAppSdk.IAirAppWindow
+method System.Void OpenDrawer(Avalonia.Controls.Control content, System.String title)  @LanMountainDesktop.AirAppSdk.ISettingsPageHostContext
+method System.Void Publish(System.String topic, System.Object payload)  @LanMountainDesktop.AirAppSdk.IAirAppMessageBus
+method System.Void Publish(TMessage message)  @LanMountainDesktop.AirAppSdk.IAirAppMessageBus
+method System.Void RequestRefresh()  @LanMountainDesktop.AirAppSdk.IComponentEditorHostContext
+method System.Void RequestRestart(System.String reason)  @LanMountainDesktop.AirAppSdk.IComponentEditorHostContext
+method System.Void RequestRestart(System.String reason)  @LanMountainDesktop.AirAppSdk.ISettingsPageHostContext
+method System.Void SaveComponentSection(System.String componentId, System.String placementId, System.String sectionId, T section, IReadOnlyCollection`1<System.String> changedKeys)  @LanMountainDesktop.AirAppSdk.IAirAppSettingsService
+method System.Void SaveSection(LanMountainDesktop.AirAppSdk.AirAppSettingsScope scope, System.String subjectId, System.String sectionId, T section, System.String placementId, IReadOnlyCollection`1<System.String> changedKeys)  @LanMountainDesktop.AirAppSdk.ISettingsService
+method System.Void SaveSection(System.String sectionId, T section, IReadOnlyCollection`1<System.String> changedKeys)  @LanMountainDesktop.AirAppSdk.IComponentSettingsAccessor
+method System.Void SaveSnapshot(LanMountainDesktop.AirAppSdk.AirAppSettingsScope scope, T snapshot, System.String subjectId, System.String placementId, System.String sectionId, IReadOnlyCollection`1<System.String> changedKeys)  @LanMountainDesktop.AirAppSdk.ISettingsService
+method System.Void SaveSnapshot(T snapshot, IReadOnlyCollection`1<System.String> changedKeys)  @LanMountainDesktop.AirAppSdk.IComponentSettingsAccessor
+method System.Void SetValue(LanMountainDesktop.AirAppSdk.AirAppSettingsScope scope, System.String key, T value, System.String subjectId, System.String placementId, System.String sectionId, IReadOnlyCollection`1<System.String> changedKeys)  @LanMountainDesktop.AirAppSdk.ISettingsService
+method System.Void SetValue(System.String key, T value, IReadOnlyCollection`1<System.String> changedKeys)  @LanMountainDesktop.AirAppSdk.IComponentSettingsAccessor
+method System.Void UpdateSnapshot(LanMountainDesktop.AirAppSdk.AirAppAppearanceSnapshot newSnapshot, IReadOnlyCollection`1<LanMountainDesktop.AirAppSdk.AppearanceProperty> changedProperties)  @LanMountainDesktop.AirAppSdk.AirAppAppearanceContext
+method System.Void Warn(System.String message)  @LanMountainDesktop.AirAppSdk.IAirAppLogger
+method System.Void Warn(System.String message, System.Exception exception)  @LanMountainDesktop.AirAppSdk.IAirAppLogger
+method T GetService()  @LanMountainDesktop.AirAppSdk.AirAppComponentContext
+method T GetService()  @LanMountainDesktop.AirAppSdk.AirAppComponentEditorContext
+method T GetService()  @LanMountainDesktop.AirAppSdk.IAirAppRuntimeContext
+method T GetValue(LanMountainDesktop.AirAppSdk.AirAppSettingsScope scope, System.String key, System.String subjectId, System.String placementId, System.String sectionId)  @LanMountainDesktop.AirAppSdk.ISettingsService
+method T GetValue(System.String key)  @LanMountainDesktop.AirAppSdk.IComponentSettingsAccessor
+method T LoadComponentSection(System.String componentId, System.String placementId, System.String sectionId)  @LanMountainDesktop.AirAppSdk.IAirAppSettingsService
+method T LoadSection(LanMountainDesktop.AirAppSdk.AirAppSettingsScope scope, System.String subjectId, System.String sectionId, System.String placementId)  @LanMountainDesktop.AirAppSdk.ISettingsService
+method T LoadSection(System.String sectionId)  @LanMountainDesktop.AirAppSdk.IComponentSettingsAccessor
+method T LoadSnapshot()  @LanMountainDesktop.AirAppSdk.IComponentSettingsAccessor
+method T LoadSnapshot(LanMountainDesktop.AirAppSdk.AirAppSettingsScope scope, System.String subjectId, System.String placementId)  @LanMountainDesktop.AirAppSdk.ISettingsService
+method TContract GetExport(System.String providerAirAppId)  @LanMountainDesktop.AirAppSdk.IAirAppExportRegistry
+method Task`1<LanMountainDesktop.AirAppSdk.IAirAppWindow> OpenWindowAsync(System.String windowId)  @LanMountainDesktop.AirAppSdk.IAirAppRuntimeContext
+method Task`1<Nullable`1<System.Text.Json.JsonElement>> EndInvoke(System.IAsyncResult result)  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcRequestDispatcher
+method Task`1<Nullable`1<System.Text.Json.JsonElement>> HandleRequestAsync(System.String route, Nullable`1<System.Text.Json.JsonElement> payload, System.Threading.CancellationToken cancellationToken)  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcServer
+method Task`1<Nullable`1<System.Text.Json.JsonElement>> Invoke(System.String route, Nullable`1<System.Text.Json.JsonElement> payload, System.Threading.CancellationToken cancellationToken)  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcRequestDispatcher
+method Task`1<TResponse> RequestAsync(System.String route, TRequest payload, System.Threading.CancellationToken cancellationToken)  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcClient
+prop AccentColor : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshot
+prop AccentColor : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppAppearanceSnapshot
+prop AccentColorChanged : System.Boolean [get/-]  @LanMountainDesktop.AirAppSdk.AppearanceChangedEvent
+prop Accepted : System.Boolean [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeResponse
+prop Accepted : System.Boolean [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsWriteResponse
+prop Accepted : System.Boolean [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiAttachResponse
+prop Accepted : System.Boolean [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiCommandResponse
+prop AirAppAppearanceChangedNotification : JsonTypeInfo`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceChangedNotification> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop AirAppAppearanceSnapshot : JsonTypeInfo`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshot> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop AirAppAppearanceSnapshotRequest : JsonTypeInfo`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshotRequest> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop AirAppCapabilityDeclaration : JsonTypeInfo`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppCapabilityDeclaration> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop AirAppDirectory : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentContext
+prop AirAppDirectory : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentEditorContext
+prop AirAppDirectory : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppLocalizer
+prop AirAppDirectory : System.String [get/-]  @LanMountainDesktop.AirAppSdk.IAirAppRuntimeContext
+prop AirAppFaultReport : JsonTypeInfo`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppFaultReport> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop AirAppHeartbeatPing : JsonTypeInfo`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppHeartbeatPing> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop AirAppHeartbeatPong : JsonTypeInfo`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppHeartbeatPong> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop AirAppId : System.String [get/-]  @LanMountainDesktop.AirAppSdk.IAirAppSettingsService
+prop AirAppId : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppInitializeRequest
+prop AirAppId : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppReadyNotification
+prop AirAppId : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeRequest
+prop AirAppInitializeRequest : JsonTypeInfo`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppInitializeRequest> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop AirAppInitializeResponse : JsonTypeInfo`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppInitializeResponse> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop AirAppLifecycleStateChanged : JsonTypeInfo`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppLifecycleStateChanged> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop AirAppLogEntry : JsonTypeInfo`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppLogEntry> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop AirAppMaterialSurfaceSnapshot : JsonTypeInfo`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppMaterialSurfaceSnapshot> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop AirAppReadyNotification : JsonTypeInfo`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppReadyNotification> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop AirAppRestartRequest : JsonTypeInfo`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppRestartRequest> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop AirAppSessionHandshakeRequest : JsonTypeInfo`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeRequest> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop AirAppSessionHandshakeResponse : JsonTypeInfo`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeResponse> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop AirAppSettings : LanMountainDesktop.AirAppSdk.IAirAppSettingsService [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentContext
+prop AirAppSettings : LanMountainDesktop.AirAppSdk.IAirAppSettingsService [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentEditorContext
+prop AirAppSettingsChangedNotification : JsonTypeInfo`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsChangedNotification> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop AirAppSettingsSnapshotRequest : JsonTypeInfo`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsSnapshotRequest> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop AirAppSettingsSnapshotResponse : JsonTypeInfo`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsSnapshotResponse> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop AirAppSettingsWriteRequest : JsonTypeInfo`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsWriteRequest> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop AirAppSettingsWriteResponse : JsonTypeInfo`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsWriteResponse> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop AirAppStopRequest : JsonTypeInfo`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppStopRequest> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop AirAppUiAttachRequest : JsonTypeInfo`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiAttachRequest> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop AirAppUiAttachResponse : JsonTypeInfo`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiAttachResponse> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop AirAppUiCommandRequest : JsonTypeInfo`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiCommandRequest> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop AirAppUiCommandResponse : JsonTypeInfo`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiCommandResponse> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop AirAppUiDetachNotification : JsonTypeInfo`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiDetachNotification> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop AirAppUiStateChangedNotification : JsonTypeInfo`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiStateChangedNotification> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop AirAppUiSurfaceDescriptor : JsonTypeInfo`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiSurfaceDescriptor> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop AllowDesktopPlacement : System.Boolean [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentRegistration
+prop AllowDesktopPlacement : System.Boolean [get/set]  @LanMountainDesktop.AirAppSdk.AirAppComponentOptions
+prop AllowStatusBarPlacement : System.Boolean [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentRegistration
+prop AllowStatusBarPlacement : System.Boolean [get/set]  @LanMountainDesktop.AirAppSdk.AirAppComponentOptions
+prop ApiVersion : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppManifest
+prop Appearance : LanMountainDesktop.AirAppSdk.IAirAppAppearanceContext [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentContext
+prop Appearance : LanMountainDesktop.AirAppSdk.IAirAppAppearanceContext [get/-]  @LanMountainDesktop.AirAppSdk.IAirAppRuntimeContext
+prop AspectRatio : System.Double [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentEditorRegistration
+prop AssemblyName : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppSharedContractReference
+prop Author : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppManifest
+prop BackgroundColor : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppMaterialSurfaceSnapshot
+prop BackgroundColor : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppMaterialSurfaceSnapshot
+prop BlurRadius : System.Double [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppMaterialSurfaceSnapshot
+prop BlurRadius : System.Double [get/set]  @LanMountainDesktop.AirAppSdk.AirAppMaterialSurfaceSnapshot
+prop Boolean : JsonTypeInfo`1<System.Boolean> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop BorderColor : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppMaterialSurfaceSnapshot
+prop BorderColor : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppMaterialSurfaceSnapshot
+prop CacheDirectory : System.String [get/-]  @LanMountainDesktop.AirAppSdk.IAirAppRuntimeContext
+prop CanResize : System.Boolean [get/set]  @LanMountainDesktop.AirAppSdk.AirAppWindowDescriptor
+prop Category : LanMountainDesktop.AirAppSdk.AirAppSettingsPageCategory [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingsPageInfoAttribute
+prop Category : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentRegistration
+prop Category : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionDefinition
+prop Category : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLogEntry
+prop Category : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppComponentManifest
+prop Category : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppComponentOptions
+prop CellSize : System.Double [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentContext
+prop CellSize : System.Double [get/set]  @LanMountainDesktop.AirAppSdk.AirAppComponentChromeContext
+prop ChangedKeys : IReadOnlyCollection`1<System.String> [get/-]  @LanMountainDesktop.AirAppSdk.SettingsChangedEvent
+prop ChangedProperties : IReadOnlyCollection`1<LanMountainDesktop.AirAppSdk.AppearanceProperty> [get/-]  @LanMountainDesktop.AirAppSdk.AppearanceChangedEvent
+prop Choices : IReadOnlyList`1<LanMountainDesktop.AirAppSdk.AirAppSettingOptionChoice> [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingOptionDefinition
+prop ChromeMode : LanMountainDesktop.AirAppSdk.AirAppWindowChromeMode [get/set]  @LanMountainDesktop.AirAppSdk.AirAppWindowDescriptor
+prop Client : LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcClient [get/-]  @LanMountainDesktop.AirAppIsolation.Ipc.InProcAirAppIpcTransport
+prop ColorRoles : IReadOnlyDictionary`2<System.String, System.String> [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshot
+prop ColorRoles : IReadOnlyDictionary`2<System.String, System.String> [get/set]  @LanMountainDesktop.AirAppSdk.AirAppAppearanceSnapshot
+prop ColorRolesChanged : System.Boolean [get/-]  @LanMountainDesktop.AirAppSdk.AppearanceChangedEvent
+prop ColorSource : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshot
+prop ColorSource : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppAppearanceSnapshot
+prop ColorSourceChanged : System.Boolean [get/-]  @LanMountainDesktop.AirAppSdk.AppearanceChangedEvent
+prop CommandName : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiCommandRequest
+prop Component : System.Double [get/set]  @LanMountainDesktop.AirAppSdk.AirAppCornerRadiusTokens
+prop ComponentId : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentContext
+prop ComponentId : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentEditorContext
+prop ComponentId : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentEditorRegistration
+prop ComponentId : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentRegistration
+prop ComponentId : System.String [get/-]  @LanMountainDesktop.AirAppSdk.IComponentSettingsAccessor
+prop ComponentId : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiSurfaceDescriptor
+prop ComponentId : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppComponentChromeContext
+prop ComponentId : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppComponentOptions
+prop ComponentInstanceId : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsChangedNotification
+prop ComponentInstanceId : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsSnapshotRequest
+prop ComponentInstanceId : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsWriteRequest
+prop Components : IReadOnlyList`1<LanMountainDesktop.AirAppSdk.AirAppComponentManifest> [get/set]  @LanMountainDesktop.AirAppSdk.AirAppManifest
+prop ConnectTimeout : System.TimeSpan [get/set]  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcClientOptions
+prop Content : System.Object [get/-]  @LanMountainDesktop.AirAppSdk.IAirAppWindow
+prop ContractType : System.Type [get/-]  @LanMountainDesktop.AirAppSdk.AirAppServiceExportRegistration
+prop ContractType : System.Type [get/set]  @LanMountainDesktop.AirAppSdk.AirAppPublicIpcServiceDescriptor
+prop ContractType : System.Type [get/set]  @LanMountainDesktop.AirAppSdk.AirAppPublicIpcServiceRegistration
+prop ContractType : System.Type [get/set]  @LanMountainDesktop.AirAppSdk.AirAppServiceExportDescriptor
+prop ControlFactory : Func`3<System.IServiceProvider, LanMountainDesktop.AirAppSdk.AirAppComponentContext, Avalonia.Controls.Control> [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentRegistration
+prop CornerRadiusChanged : System.Boolean [get/-]  @LanMountainDesktop.AirAppSdk.AppearanceChangedEvent
+prop CornerRadiusPreset : LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentRegistration
+prop CornerRadiusPreset : LanMountainDesktop.AirAppSdk.AirAppCornerRadiusPreset [get/set]  @LanMountainDesktop.AirAppSdk.AirAppComponentOptions
+prop CornerRadiusResolver : Func`3<LanMountainDesktop.AirAppSdk.IAirAppAppearanceContext, System.Double, System.Double> [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentRegistration
+prop CornerRadiusResolver : Func`3<LanMountainDesktop.AirAppSdk.IAirAppAppearanceContext, System.Double, System.Double> [get/set]  @LanMountainDesktop.AirAppSdk.AirAppComponentOptions
+prop CornerRadiusScale : System.Double [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshot
+prop CornerRadiusStyleChanged : System.Boolean [get/-]  @LanMountainDesktop.AirAppSdk.AppearanceChangedEvent
+prop CornerRadiusTokens : IReadOnlyDictionary`2<System.String, System.Double> [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshot
+prop CornerRadiusTokens : LanMountainDesktop.AirAppSdk.AirAppCornerRadiusTokens [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentContext
+prop CornerRadiusTokens : LanMountainDesktop.AirAppSdk.AirAppCornerRadiusTokens [get/set]  @LanMountainDesktop.AirAppSdk.AirAppAppearanceSnapshot
+prop CornerRadiusTokens : LanMountainDesktop.Shared.Contracts.AppearanceCornerRadiusTokens [get/set]  @LanMountainDesktop.AirAppSdk.AirAppComponentChromeContext
+prop CustomViewType : System.Type [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionBuilder
+prop CustomViewType : System.Type [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionRegistration
+prop DataDirectory : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentContext
+prop DataDirectory : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentEditorContext
+prop DataDirectory : System.String [get/-]  @LanMountainDesktop.AirAppSdk.IAirAppRuntimeContext
+prop DataDirectory : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppInitializeRequest
+prop DateTimeOffset : JsonTypeInfo`1<System.DateTimeOffset> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop Default : LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop DefaultHeight : System.Double [get/set]  @LanMountainDesktop.AirAppSdk.AirAppWindowManifest
+prop DefaultHeight : System.Int32 [get/set]  @LanMountainDesktop.AirAppSdk.AirAppComponentManifest
+prop DefaultValue : System.Object [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingOptionDefinition
+prop DefaultWidth : System.Double [get/set]  @LanMountainDesktop.AirAppSdk.AirAppWindowManifest
+prop DefaultWidth : System.Int32 [get/set]  @LanMountainDesktop.AirAppSdk.AirAppComponentManifest
+prop Description : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentRegistration
+prop Description : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppCapabilityDeclaration
+prop Description : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppComponentManifest
+prop Description : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppComponentOptions
+prop Description : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppManifest
+prop Description : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppWindowManifest
+prop DescriptionLocalizationKey : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentRegistration
+prop DescriptionLocalizationKey : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingOptionDefinition
+prop DescriptionLocalizationKey : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionBuilder
+prop DescriptionLocalizationKey : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionDefinition
+prop DescriptionLocalizationKey : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionRegistration
+prop DescriptionLocalizationKey : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppComponentOptions
+prop DescriptionLocalizationKey : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppSettingsPageInfoAttribute
+prop Descriptor : LanMountainDesktop.AirAppSdk.AirAppWindowDescriptor [get/-]  @LanMountainDesktop.AirAppSdk.AirAppWindowBase
+prop Descriptor : LanMountainDesktop.AirAppSdk.AirAppWindowDescriptor [get/-]  @LanMountainDesktop.AirAppSdk.IAirAppWindow
+prop Detail : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLifecycleStateChanged
+prop DisplayName : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentRegistration
+prop DisplayName : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppComponentOptions
+prop DisplayName : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppWindowRegistration
+prop DisplayNameLocalizationKey : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentRegistration
+prop DisplayNameLocalizationKey : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppComponentOptions
+prop Double : JsonTypeInfo`1<System.Double> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop ETag : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsChangedNotification
+prop ETag : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsSnapshotResponse
+prop ETag : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsWriteRequest
+prop ETag : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsWriteResponse
+prop EditorFactory : Func`3<System.IServiceProvider, LanMountainDesktop.AirAppSdk.AirAppComponentEditorContext, Avalonia.Controls.Control> [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentEditorRegistration
+prop EntranceAssembly : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppManifest
+prop ErrorCode : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppInitializeResponse
+prop ErrorCode : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeResponse
+prop ErrorCode : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsWriteResponse
+prop ErrorCode : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiAttachResponse
+prop ErrorCode : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiCommandResponse
+prop ErrorMessage : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppInitializeResponse
+prop ErrorMessage : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeResponse
+prop ErrorMessage : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsWriteResponse
+prop ErrorMessage : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiAttachResponse
+prop ErrorMessage : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiCommandResponse
+prop ErrorMessage : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppInstalledInfo
+prop Exception : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLogEntry
+prop ExitCode : Nullable`1<System.Int32> [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppFaultReport
+prop FaultKind : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppFaultReport
+prop GrantedCapabilities : IReadOnlyList`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppCapabilityDeclaration> [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeResponse
+prop GroupId : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppSettingsPageInfoAttribute
+prop HasAnyChanges : System.Boolean [get/-]  @LanMountainDesktop.AirAppSdk.AppearanceChangedEvent
+prop HeartbeatInterval : System.TimeSpan [get/set]  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcServerOptions
+prop HeartbeatTimeout : System.TimeSpan [get/set]  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcServerOptions
+prop Height : System.Double [get/set]  @LanMountainDesktop.AirAppSdk.AirAppWindowDescriptor
+prop HideDefault : System.Boolean [get/set]  @LanMountainDesktop.AirAppSdk.AirAppSettingsPageInfoAttribute
+prop HidePageTitle : System.Boolean [get/set]  @LanMountainDesktop.AirAppSdk.AirAppSettingsPageInfoAttribute
+prop HostContext : LanMountainDesktop.AirAppSdk.IComponentEditorHostContext [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentEditorContext
+prop HostContext : LanMountainDesktop.AirAppSdk.ISettingsPageHostContext [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingsPageBase
+prop HostPipeName : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppInitializeRequest
+prop IReadOnlyDictionaryStringAirAppMaterialSurfaceSnapshot : JsonTypeInfo`1<IReadOnlyDictionary`2<System.String, LanMountainDesktop.AirAppIsolation.Contracts.AirAppMaterialSurfaceSnapshot>> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop IReadOnlyDictionaryStringDouble : JsonTypeInfo`1<IReadOnlyDictionary`2<System.String, System.Double>> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop IReadOnlyDictionaryStringString : JsonTypeInfo`1<IReadOnlyDictionary`2<System.String, System.String>> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop IReadOnlyListAirAppCapabilityDeclaration : JsonTypeInfo`1<IReadOnlyList`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppCapabilityDeclaration>> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop IReadOnlyListAirAppUiSurfaceDescriptor : JsonTypeInfo`1<IReadOnlyList`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiSurfaceDescriptor>> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop IReadOnlyListString : JsonTypeInfo`1<IReadOnlyList`1<System.String>> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop IconKey : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentRegistration
+prop IconKey : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionBuilder
+prop IconKey : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionDefinition
+prop IconKey : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionRegistration
+prop IconKey : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppComponentManifest
+prop IconKey : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppComponentOptions
+prop IconKey : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppSettingsPageInfoAttribute
+prop Id : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingsPageInfoAttribute
+prop Id : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionBuilder
+prop Id : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionDefinition
+prop Id : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionRegistration
+prop Id : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppComponentManifest
+prop Id : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppManifest
+prop Id : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppSharedContractReference
+prop Id : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppWindowManifest
+prop Implementation : System.Object [get/set]  @LanMountainDesktop.AirAppSdk.AirAppPublicIpcServiceDescriptor
+prop ImplementationType : System.Type [get/-]  @LanMountainDesktop.AirAppSdk.AirAppServiceExportRegistration
+prop InitialState : Nullable`1<System.Text.Json.JsonElement> [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiAttachRequest
+prop InitialState : Nullable`1<System.Text.Json.JsonElement> [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiAttachResponse
+prop InstanceId : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiAttachRequest
+prop InstanceId : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiCommandRequest
+prop InstanceId : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiDetachNotification
+prop InstanceId : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiStateChangedNotification
+prop Int32 : JsonTypeInfo`1<System.Int32> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop IsEnabled : System.Boolean [get/set]  @LanMountainDesktop.AirAppSdk.AirAppInstalledInfo
+prop IsFatal : System.Boolean [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppFaultReport
+prop IsLoaded : System.Boolean [get/set]  @LanMountainDesktop.AirAppSdk.AirAppInstalledInfo
+prop IsPackage : System.Boolean [get/set]  @LanMountainDesktop.AirAppSdk.AirAppInstalledInfo
+prop Island : System.Double [get/set]  @LanMountainDesktop.AirAppSdk.AirAppCornerRadiusTokens
+prop JsonElement : JsonTypeInfo`1<System.Text.Json.JsonElement> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop Key : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingOptionDefinition
+prop LanguageCode : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppLocalizer
+prop Level : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLogEntry
+prop Lg : System.Double [get/set]  @LanMountainDesktop.AirAppSdk.AirAppCornerRadiusTokens
+prop Lifetime : Microsoft.Extensions.Hosting.IHostApplicationLifetime [get/-]  @LanMountainDesktop.AirAppSdk.IAirAppRuntimeContext
+prop ListAirAppCapabilityDeclaration : JsonTypeInfo`1<List`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppCapabilityDeclaration>> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop ListAirAppUiSurfaceDescriptor : JsonTypeInfo`1<List`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiSurfaceDescriptor>> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop Logger : LanMountainDesktop.AirAppSdk.IAirAppLogger [get/-]  @LanMountainDesktop.AirAppSdk.IAirAppRuntimeContext
+prop Manifest : LanMountainDesktop.AirAppSdk.AirAppManifest [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentContext
+prop Manifest : LanMountainDesktop.AirAppSdk.AirAppManifest [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentEditorContext
+prop Manifest : LanMountainDesktop.AirAppSdk.AirAppManifest [get/-]  @LanMountainDesktop.AirAppSdk.IAirAppRuntimeContext
+prop Manifest : LanMountainDesktop.AirAppSdk.AirAppManifest [get/set]  @LanMountainDesktop.AirAppSdk.AirAppInstalledInfo
+prop Manifest : LanMountainDesktop.AirAppSdk.AirAppManifest [get/set]  @LanMountainDesktop.AirAppSdk.AirAppPackageInstallResult
+prop MaterialSurfaces : IReadOnlyDictionary`2<System.String, LanMountainDesktop.AirAppIsolation.Contracts.AirAppMaterialSurfaceSnapshot> [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshot
+prop MaterialSurfaces : IReadOnlyDictionary`2<System.String, LanMountainDesktop.AirAppSdk.AirAppMaterialSurfaceSnapshot> [get/set]  @LanMountainDesktop.AirAppSdk.AirAppAppearanceSnapshot
+prop MaterialSurfacesChanged : System.Boolean [get/-]  @LanMountainDesktop.AirAppSdk.AppearanceChangedEvent
+prop MaxScale : System.Double [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentEditorRegistration
+prop Maximum : Nullable`1<System.Double> [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingOptionDefinition
+prop Md : System.Double [get/set]  @LanMountainDesktop.AirAppSdk.AirAppCornerRadiusTokens
+prop Message : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppFaultReport
+prop Message : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLogEntry
+prop MessageBus : LanMountainDesktop.AirAppSdk.IAirAppMessageBus [get/-]  @LanMountainDesktop.AirAppSdk.IAirAppRuntimeContext
+prop Metadata : IReadOnlyDictionary`2<System.String, System.String> [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeRequest
+prop Micro : System.Double [get/set]  @LanMountainDesktop.AirAppSdk.AirAppCornerRadiusTokens
+prop MinHeight : System.Double [get/set]  @LanMountainDesktop.AirAppSdk.AirAppWindowDescriptor
+prop MinHeightCells : System.Int32 [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentRegistration
+prop MinHeightCells : System.Int32 [get/set]  @LanMountainDesktop.AirAppSdk.AirAppComponentOptions
+prop MinScale : System.Double [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentEditorRegistration
+prop MinWidth : System.Double [get/set]  @LanMountainDesktop.AirAppSdk.AirAppWindowDescriptor
+prop MinWidthCells : System.Int32 [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentRegistration
+prop MinWidthCells : System.Int32 [get/set]  @LanMountainDesktop.AirAppSdk.AirAppComponentOptions
+prop Minimum : Nullable`1<System.Double> [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingOptionDefinition
+prop Mode : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppRuntimeConfiguration
+prop Name : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingsPageInfoAttribute
+prop Name : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppCapabilityDeclaration
+prop Name : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppComponentManifest
+prop Name : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppManifest
+prop Name : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppWindowManifest
+prop NavigationUri : System.Uri [get/set]  @LanMountainDesktop.AirAppSdk.AirAppSettingsPageBase
+prop NormalizedAssemblyName : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSharedContractReference
+prop NormalizedId : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSharedContractReference
+prop NormalizedVersion : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSharedContractReference
+prop NotificationDispatcher : LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcNotificationDispatcher [get/set]  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcClient
+prop NotifyIds : System.String[] [get/set]  @LanMountainDesktop.AirAppSdk.AirAppPublicIpcServiceDescriptor
+prop NotifyIds : System.String[] [get/set]  @LanMountainDesktop.AirAppSdk.AirAppPublicIpcServiceRegistration
+prop NullableDateTimeOffset : JsonTypeInfo`1<Nullable`1<System.DateTimeOffset>> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop NullableInt32 : JsonTypeInfo`1<Nullable`1<System.Int32>> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop NullableJsonElement : JsonTypeInfo`1<Nullable`1<System.Text.Json.JsonElement>> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop ObjectId : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppPublicIpcServiceDescriptor
+prop ObjectId : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppPublicIpcServiceRegistration
+prop OccurredAtUtc : Nullable`1<System.DateTimeOffset> [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppFaultReport
+prop Opacity : System.Double [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppMaterialSurfaceSnapshot
+prop Opacity : System.Double [get/set]  @LanMountainDesktop.AirAppSdk.AirAppMaterialSurfaceSnapshot
+prop OpenWindowHandler : Func`2<System.String, System.Threading.Tasks.Task> [get/set]  @LanMountainDesktop.AirAppSdk.AirAppComponentContext
+prop OptionType : LanMountainDesktop.AirAppSdk.AirAppSettingOptionType [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingOptionDefinition
+prop Options : IReadOnlyList`1<LanMountainDesktop.AirAppSdk.AirAppSettingOptionDefinition> [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionBuilder
+prop Options : IReadOnlyList`1<LanMountainDesktop.AirAppSdk.AirAppSettingOptionDefinition> [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionDefinition
+prop Options : IReadOnlyList`1<LanMountainDesktop.AirAppSdk.AirAppSettingOptionDefinition> [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionRegistration
+prop Options : LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcClientOptions [get/-]  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcClient
+prop Options : LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcServerOptions [get/-]  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcServer
+prop Payload : Nullable`1<System.Text.Json.JsonElement> [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiCommandRequest
+prop Payload : Nullable`1<System.Text.Json.JsonElement> [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiCommandResponse
+prop Permissions : IReadOnlyList`1<System.String> [get/set]  @LanMountainDesktop.AirAppSdk.AirAppManifest
+prop PipeName : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcClientOptions
+prop PipeName : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcServerOptions
+prop PlacementId : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentContext
+prop PlacementId : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentEditorContext
+prop PlacementId : System.String [get/-]  @LanMountainDesktop.AirAppSdk.IComponentSettingsAccessor
+prop PlacementId : System.String [get/-]  @LanMountainDesktop.AirAppSdk.SettingsChangedEvent
+prop PlacementId : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppComponentChromeContext
+prop PreferredHeight : System.Double [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentEditorRegistration
+prop PreferredWidth : System.Double [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentEditorRegistration
+prop Properties : IReadOnlyDictionary`2<System.String, System.Object> [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentContext
+prop Properties : IReadOnlyDictionary`2<System.String, System.Object> [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentEditorContext
+prop Properties : IReadOnlyDictionary`2<System.String, System.Object> [get/-]  @LanMountainDesktop.AirAppSdk.IAirAppRuntimeContext
+prop ProtocolVersion : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeRequest
+prop ProtocolVersion : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeResponse
+prop ProtocolVersion : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcClientOptions
+prop ProtocolVersion : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcServerOptions
+prop ProviderAirAppId : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppServiceExportDescriptor
+prop Reason : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppRestartRequest
+prop Reason : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppStopRequest
+prop Reason : System.String [get/set]  @LanMountainDesktop.AirAppSdk.HostApplicationLifecycleRequest
+prop ReceivedAtUtc : System.DateTimeOffset [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppHeartbeatPong
+prop ReplacedExisting : System.Boolean [get/set]  @LanMountainDesktop.AirAppSdk.AirAppPackageInstallResult
+prop RequestDispatcher : LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcRequestDispatcher [get/set]  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcClient
+prop RequestTimeout : System.TimeSpan [get/set]  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcClientOptions
+prop RequestedCapabilities : IReadOnlyList`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppCapabilityDeclaration> [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeRequest
+prop ResizeMode : LanMountainDesktop.AirAppSdk.AirAppComponentResizeMode [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentRegistration
+prop ResizeMode : LanMountainDesktop.AirAppSdk.AirAppComponentResizeMode [get/set]  @LanMountainDesktop.AirAppSdk.AirAppComponentOptions
+prop ResourceAliases : IReadOnlyDictionary`2<System.String, System.String> [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshot
+prop RestartRequested : System.Boolean [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppStopRequest
+prop RestartRequired : System.Boolean [get/set]  @LanMountainDesktop.AirAppSdk.AirAppPackageInstallResult
+prop Runtime : LanMountainDesktop.AirAppSdk.AirAppRuntimeConfiguration [get/set]  @LanMountainDesktop.AirAppSdk.AirAppManifest
+prop RuntimeMode : LanMountainDesktop.AirAppSdk.AirAppRuntimeMode [get/-]  @LanMountainDesktop.AirAppSdk.AirAppManifest
+prop RuntimeMode : LanMountainDesktop.AirAppSdk.AirAppRuntimeMode [get/-]  @LanMountainDesktop.AirAppSdk.AirAppRuntimeConfiguration
+prop RuntimeMode : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeRequest
+prop Scope : LanMountainDesktop.AirAppSdk.AirAppSettingsScope [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionDefinition
+prop Scope : LanMountainDesktop.AirAppSdk.AirAppSettingsScope [get/-]  @LanMountainDesktop.AirAppSdk.SettingsChangedEvent
+prop Scope : LanMountainDesktop.AirAppSdk.AirAppSettingsScope [get/set]  @LanMountainDesktop.AirAppSdk.AirAppComponentChromeContext
+prop Scope : LanMountainDesktop.AirAppSdk.AirAppSettingsScope [get/set]  @LanMountainDesktop.AirAppSdk.AirAppSettingsPageInfoAttribute
+prop Scope : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsChangedNotification
+prop Scope : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsSnapshotRequest
+prop Scope : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsSnapshotResponse
+prop Scope : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsWriteRequest
+prop SectionId : System.String [get/-]  @LanMountainDesktop.AirAppSdk.SettingsChangedEvent
+prop SectionId : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsChangedNotification
+prop SectionId : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsSnapshotRequest
+prop SectionId : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsWriteRequest
+prop SeedColor : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshot
+prop SeedColor : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppAppearanceSnapshot
+prop SelectedIconKey : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppSettingsPageInfoAttribute
+prop SentAtUtc : System.DateTimeOffset [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppHeartbeatPing
+prop SerializerContext : System.Text.Json.Serialization.JsonSerializerContext [get/-]  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcClient
+prop SerializerContext : System.Text.Json.Serialization.JsonSerializerContext [get/-]  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcServer
+prop SerializerContext : System.Text.Json.Serialization.JsonSerializerContext [get/set]  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcClientOptions
+prop SerializerContext : System.Text.Json.Serialization.JsonSerializerContext [get/set]  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcServerOptions
+prop SerializerOptions : System.Text.Json.JsonSerializerOptions [get/-]  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcClient
+prop SerializerOptions : System.Text.Json.JsonSerializerOptions [get/-]  @LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcServer
+prop Server : LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcServer [get/-]  @LanMountainDesktop.AirAppIsolation.Ipc.InProcAirAppIpcTransport
+prop ServiceInstance : System.Object [get/set]  @LanMountainDesktop.AirAppSdk.AirAppServiceExportDescriptor
+prop Services : System.IServiceProvider [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentContext
+prop Services : System.IServiceProvider [get/-]  @LanMountainDesktop.AirAppSdk.AirAppComponentEditorContext
+prop Services : System.IServiceProvider [get/-]  @LanMountainDesktop.AirAppSdk.IAirAppRuntimeContext
+prop SessionId : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshotRequest
+prop SessionId : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppFaultReport
+prop SessionId : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppHeartbeatPing
+prop SessionId : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppHeartbeatPong
+prop SessionId : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppInitializeRequest
+prop SessionId : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppReadyNotification
+prop SessionId : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeRequest
+prop SharedContracts : IReadOnlyList`1<LanMountainDesktop.AirAppSdk.AirAppSharedContractReference> [get/set]  @LanMountainDesktop.AirAppSdk.AirAppManifest
+prop ShowAsDialog : System.Boolean [get/set]  @LanMountainDesktop.AirAppSdk.AirAppWindowDescriptor
+prop ShowInTaskbar : System.Boolean [get/set]  @LanMountainDesktop.AirAppSdk.AirAppWindowDescriptor
+prop Sm : System.Double [get/set]  @LanMountainDesktop.AirAppSdk.AirAppCornerRadiusTokens
+prop Snapshot : LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshot [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceChangedNotification
+prop Snapshot : LanMountainDesktop.AirAppSdk.AirAppAppearanceSnapshot [get/-]  @LanMountainDesktop.AirAppSdk.AirAppAppearanceContext
+prop Snapshot : LanMountainDesktop.AirAppSdk.AirAppAppearanceSnapshot [get/-]  @LanMountainDesktop.AirAppSdk.AppearanceChangedEvent
+prop Snapshot : LanMountainDesktop.AirAppSdk.AirAppAppearanceSnapshot [get/-]  @LanMountainDesktop.AirAppSdk.IAirAppAppearanceContext
+prop Snapshot : System.Text.Json.JsonElement [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsSnapshotResponse
+prop SortOrder : System.Int32 [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionBuilder
+prop SortOrder : System.Int32 [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionDefinition
+prop SortOrder : System.Int32 [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionRegistration
+prop SortOrder : System.Int32 [get/set]  @LanMountainDesktop.AirAppSdk.AirAppSettingsPageInfoAttribute
+prop Source : System.String [get/set]  @LanMountainDesktop.AirAppSdk.HostApplicationLifecycleRequest
+prop StackTrace : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppFaultReport
+prop StartupProperties : IReadOnlyDictionary`2<System.String, System.String> [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppInitializeRequest
+prop State : Nullable`1<System.Text.Json.JsonElement> [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiStateChangedNotification
+prop State : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLifecycleStateChanged
+prop String : JsonTypeInfo`1<System.String> [get/-]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationJsonContext
+prop SubjectId : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionDefinition
+prop SubjectId : System.String [get/-]  @LanMountainDesktop.AirAppSdk.SettingsChangedEvent
+prop Succeeded : System.Boolean [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppInitializeResponse
+prop SurfaceId : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiAttachRequest
+prop SurfaceId : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiCommandRequest
+prop SurfaceId : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiDetachNotification
+prop SurfaceId : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiStateChangedNotification
+prop SurfaceId : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiSurfaceDescriptor
+prop SurfaceKind : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiAttachRequest
+prop SurfaceKind : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiDetachNotification
+prop SurfaceKind : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiStateChangedNotification
+prop SurfaceKind : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiSurfaceDescriptor
+prop SystemMaterialMode : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshot
+prop SystemMaterialMode : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppAppearanceSnapshot
+prop SystemMaterialModeChanged : System.Boolean [get/-]  @LanMountainDesktop.AirAppSdk.AppearanceChangedEvent
+prop ThemeVariant : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshot
+prop ThemeVariant : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppAppearanceSnapshot
+prop ThemeVariantChanged : System.Boolean [get/-]  @LanMountainDesktop.AirAppSdk.AppearanceChangedEvent
+prop TimestampUtc : System.DateTimeOffset [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppLogEntry
+prop Title : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiSurfaceDescriptor
+prop Title : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppWindowDescriptor
+prop TitleLocalizationKey : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingOptionChoice
+prop TitleLocalizationKey : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingOptionDefinition
+prop TitleLocalizationKey : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionBuilder
+prop TitleLocalizationKey : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionDefinition
+prop TitleLocalizationKey : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingsSectionRegistration
+prop TitleLocalizationKey : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppSettingsPageInfoAttribute
+prop UiSurfaces : IReadOnlyList`1<LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiSurfaceDescriptor> [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppReadyNotification
+prop UseFullWidth : System.Boolean [get/set]  @LanMountainDesktop.AirAppSdk.AirAppSettingsPageInfoAttribute
+prop ValidationPattern : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingOptionDefinition
+prop Value : System.String [get/-]  @LanMountainDesktop.AirAppSdk.AirAppSettingOptionChoice
+prop Value : System.Text.Json.JsonElement [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsChangedNotification
+prop Value : System.Text.Json.JsonElement [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsWriteRequest
+prop Version : System.String [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppCapabilityDeclaration
+prop Version : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppManifest
+prop Version : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppSharedContractReference
+prop WallpaperChanged : System.Boolean [get/-]  @LanMountainDesktop.AirAppSdk.AppearanceChangedEvent
+prop WallpaperSeedCandidates : IReadOnlyList`1<System.String> [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshot
+prop WallpaperSeedCandidates : IReadOnlyList`1<System.String> [get/set]  @LanMountainDesktop.AirAppSdk.AirAppAppearanceSnapshot
+prop WallpaperSeedCandidatesChanged : System.Boolean [get/-]  @LanMountainDesktop.AirAppSdk.AppearanceChangedEvent
+prop Width : System.Double [get/set]  @LanMountainDesktop.AirAppSdk.AirAppWindowDescriptor
+prop WindowId : System.String [get/set]  @LanMountainDesktop.AirAppSdk.AirAppWindowRegistration
+prop WindowType : System.Type [get/set]  @LanMountainDesktop.AirAppSdk.AirAppWindowRegistration
+prop Windows : IReadOnlyList`1<LanMountainDesktop.AirAppSdk.AirAppWindowManifest> [get/set]  @LanMountainDesktop.AirAppSdk.AirAppManifest
+prop WorkerProcessId : Nullable`1<System.Int32> [get/set]  @LanMountainDesktop.AirAppIsolation.Contracts.AirAppFaultReport
+prop Xl : System.Double [get/set]  @LanMountainDesktop.AirAppSdk.AirAppCornerRadiusTokens
+prop Xs : System.Double [get/set]  @LanMountainDesktop.AirAppSdk.AirAppCornerRadiusTokens
+sealed-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceChangedNotification
+sealed-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshot
+sealed-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppAppearanceSnapshotRequest
+sealed-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppCapabilityDeclaration
+sealed-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppFaultReport
+sealed-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppHeartbeatPing
+sealed-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppHeartbeatPong
+sealed-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppInitializeRequest
+sealed-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppInitializeResponse
+sealed-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppLifecycleStateChanged
+sealed-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppLogEntry
+sealed-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppMaterialSurfaceSnapshot
+sealed-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppReadyNotification
+sealed-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppRestartRequest
+sealed-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeRequest
+sealed-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppSessionHandshakeResponse
+sealed-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsChangedNotification
+sealed-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsSnapshotRequest
+sealed-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsSnapshotResponse
+sealed-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsWriteRequest
+sealed-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppSettingsWriteResponse
+sealed-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppStopRequest
+sealed-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiAttachRequest
+sealed-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiAttachResponse
+sealed-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiCommandRequest
+sealed-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiCommandResponse
+sealed-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiDetachNotification
+sealed-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiStateChangedNotification
+sealed-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiSurfaceDescriptor
+sealed-class LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcClient
+sealed-class LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcClientOptions
+sealed-class LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcNotificationDispatcher
+sealed-class LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcRequestDispatcher
+sealed-class LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcServer
+sealed-class LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcServerOptions
+sealed-class LanMountainDesktop.AirAppIsolation.Ipc.InProcAirAppIpcTransport
+sealed-class LanMountainDesktop.AirAppSdk.AirAppAppearanceContext
+sealed-class LanMountainDesktop.AirAppSdk.AirAppAppearanceSnapshot
+sealed-class LanMountainDesktop.AirAppSdk.AirAppComponentChromeContext
+sealed-class LanMountainDesktop.AirAppSdk.AirAppComponentContext
+sealed-class LanMountainDesktop.AirAppSdk.AirAppComponentEditorContext
+sealed-class LanMountainDesktop.AirAppSdk.AirAppComponentEditorRegistration
+sealed-class LanMountainDesktop.AirAppSdk.AirAppComponentManifest
+sealed-class LanMountainDesktop.AirAppSdk.AirAppComponentOptions
+sealed-class LanMountainDesktop.AirAppSdk.AirAppComponentRegistration
+sealed-class LanMountainDesktop.AirAppSdk.AirAppCornerRadiusTokens
+sealed-class LanMountainDesktop.AirAppSdk.AirAppEntranceAttribute
+sealed-class LanMountainDesktop.AirAppSdk.AirAppInstalledInfo
+sealed-class LanMountainDesktop.AirAppSdk.AirAppLocalizer
+sealed-class LanMountainDesktop.AirAppSdk.AirAppManifest
+sealed-class LanMountainDesktop.AirAppSdk.AirAppMaterialSurfaceSnapshot
+sealed-class LanMountainDesktop.AirAppSdk.AirAppPackageInstallResult
+sealed-class LanMountainDesktop.AirAppSdk.AirAppPublicIpcServiceDescriptor
+sealed-class LanMountainDesktop.AirAppSdk.AirAppPublicIpcServiceRegistration
+sealed-class LanMountainDesktop.AirAppSdk.AirAppRuntimeConfiguration
+sealed-class LanMountainDesktop.AirAppSdk.AirAppServiceExportDescriptor
+sealed-class LanMountainDesktop.AirAppSdk.AirAppServiceExportRegistration
+sealed-class LanMountainDesktop.AirAppSdk.AirAppSettingOptionChoice
+sealed-class LanMountainDesktop.AirAppSdk.AirAppSettingOptionDefinition
+sealed-class LanMountainDesktop.AirAppSdk.AirAppSettingsPageInfoAttribute
+sealed-class LanMountainDesktop.AirAppSdk.AirAppSettingsSectionBuilder
+sealed-class LanMountainDesktop.AirAppSdk.AirAppSettingsSectionDefinition
+sealed-class LanMountainDesktop.AirAppSdk.AirAppSettingsSectionRegistration
+sealed-class LanMountainDesktop.AirAppSdk.AirAppSharedContractReference
+sealed-class LanMountainDesktop.AirAppSdk.AirAppWindowDescriptor
+sealed-class LanMountainDesktop.AirAppSdk.AirAppWindowManifest
+sealed-class LanMountainDesktop.AirAppSdk.AirAppWindowRegistration
+sealed-class LanMountainDesktop.AirAppSdk.AppearanceChangedEvent
+sealed-class LanMountainDesktop.AirAppSdk.HostApplicationLifecycleRequest
+sealed-class LanMountainDesktop.AirAppSdk.SettingsChangedEvent
+static-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppCapabilityNames
+static-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppFaultKinds
+static-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcErrorCodes
+static-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcRoutes
+static-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcRoutes+Appearance
+static-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcRoutes+Fault
+static-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcRoutes+Heartbeat
+static-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcRoutes+Lifecycle
+static-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcRoutes+Log
+static-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcRoutes+Session
+static-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcRoutes+Settings
+static-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppIpcRoutes+Ui
+static-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppIsolationProtocolVersion
+static-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppLifecycleStates
+static-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppLogLevels
+static-class LanMountainDesktop.AirAppIsolation.Contracts.AirAppUiSurfaceKinds
+static-class LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcConstants
+static-class LanMountainDesktop.AirAppIsolation.Ipc.AirAppIpcRoutedNotifyIds
+static-class LanMountainDesktop.AirAppSdk.AirAppAppearanceExtensions
+static-class LanMountainDesktop.AirAppSdk.AirAppAppearanceHelper
+static-class LanMountainDesktop.AirAppSdk.AirAppHostPropertyKeys
+static-class LanMountainDesktop.AirAppSdk.AirAppRuntimeModes
+static-class LanMountainDesktop.AirAppSdk.AirAppSdkInfo
+static-class LanMountainDesktop.AirAppSdk.AirAppServiceCollectionExtensions
+static-class LanMountainDesktop.AirAppSdk.AirAppSettingsCategories
+static-class LanMountainDesktop.AirAppSdk.AppearanceCornerRadiusTokenFactory
+static-class LanMountainDesktop.AirAppSdk.GlobalAppearanceSettings

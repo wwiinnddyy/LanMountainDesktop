@@ -140,8 +140,8 @@ internal sealed class PlondsPreparedPackageInstaller
         var targetPath = Path.GetFullPath(Path.Combine(targetDeployment, normalizedPath));
         EnsureChildPath(targetDeployment, targetPath);
 
-        var action = string.IsNullOrWhiteSpace(entry.Action) ? "replace" : entry.Action.Trim();
-        if (string.Equals(action, "delete", StringComparison.OrdinalIgnoreCase))
+        var action = string.IsNullOrWhiteSpace(entry.Action) ? PlondsWireFormat.ActionReplace : entry.Action.Trim();
+        if (string.Equals(action, PlondsWireFormat.ActionDelete, StringComparison.OrdinalIgnoreCase))
         {
             if (File.Exists(targetPath))
             {
@@ -151,7 +151,7 @@ internal sealed class PlondsPreparedPackageInstaller
             return;
         }
 
-        if (string.Equals(action, "reuse", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(action, PlondsWireFormat.ActionReuse, StringComparison.OrdinalIgnoreCase))
         {
             return;
         }
@@ -189,7 +189,7 @@ internal sealed class PlondsPreparedPackageInstaller
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (string.Equals(entry.Action, "delete", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(entry.Action, PlondsWireFormat.ActionDelete, StringComparison.OrdinalIgnoreCase))
             {
                 verified++;
                 continue;
@@ -356,8 +356,8 @@ internal sealed class PlondsPreparedPackageInstaller
     private static string ComputeHash(string filePath, string algorithm)
     {
         using var stream = File.OpenRead(filePath);
-        var normalized = string.IsNullOrWhiteSpace(algorithm) ? "sha256" : algorithm.Trim().ToLowerInvariant();
-        var hash = normalized == "md5"
+        var normalized = string.IsNullOrWhiteSpace(algorithm) ? PlondsWireFormat.HashAlgorithmSha256 : algorithm.Trim().ToLowerInvariant();
+        var hash = normalized == PlondsWireFormat.HashAlgorithmMd5
             ? MD5.HashData(stream)
             : SHA256.HashData(stream);
         return Convert.ToHexString(hash).ToLowerInvariant();

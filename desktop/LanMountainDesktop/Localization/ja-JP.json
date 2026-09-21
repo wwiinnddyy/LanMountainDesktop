@@ -720,6 +720,7 @@
     "component.editor.placement_label": "配置ID",
     "component.editor.scope_label": "スコープ",
     "component.editor.scope_instance": "インスタンススコープのエディタ",
+    "component.editor.instance_only_hint": "「{0}」コンポーネントは現在インスタンス単位のメタ情報のみを提供しており、設定項目はありません。",
     "component_category.clock":  "時計",
     "component_category.date":  "カレンダー",
     "component_category.weather":  "天気",
@@ -1149,5 +1150,14 @@
     "settings.general.back_to_windows_fluent_icon_search_placeholder":  "アイコンを検索",
     "settings.dev.airapp_path_header":  "開発用プラグインパス",
     "settings.dev.airapp_path_description":  "パッケージング不要で反復デバッグできるよう、ローカルプラグインのビルド出力ディレクトリを読み込みます。",
-    "settings.dev.airapp_path_placeholder":  "例：C:\\path\\to\\plugin\\bin\\Debug\\net10.0"
+    "settings.dev.airapp_path_placeholder":  "例：C:\\path\\to\\plugin\\bin\\Debug\\net10.0",
+    "component.rss_reader": "RSS リーダー",
+    "component.rss_reader.description": "コンポーネントと AirApp 間で同期される RSS / Atom 受信トレイ。",
+    "component.sticky_note": "メモ",
+    "component.standby_digital_clock": "スタンバイ時計",
+    "component.shortcut": "ショートカット",
+    "component.file_manager": "ファイルマネージャー",
+    "component.zhijiao_hub": "智教Hub",
+    "component.juya_news": "橘鸦早报",
+    "component.notification_box": "通知ボックス"
 }

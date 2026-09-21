@@ -1,4 +1,5 @@
 using System.Text.Json;
+using LanMountainDesktop.Services.Plonds;
 
 namespace LanMountainDesktop.Services.Update;
 
@@ -118,7 +119,7 @@ internal static class PlondsManifestParser
             }
 
             if ((string.IsNullOrWhiteSpace(file.Hash.Algorithm) ||
-                 file.Hash.Algorithm.Contains("sha512", StringComparison.OrdinalIgnoreCase)) &&
+                 file.Hash.Algorithm.Contains(PlondsWireFormat.HashAlgorithmSha512, StringComparison.OrdinalIgnoreCase)) &&
                 UpdateHash.TryParseHashBytes(file.Hash.Value, out expected))
             {
                 return true;
@@ -148,7 +149,7 @@ internal static class PlondsManifestParser
         }
 
         if (!string.IsNullOrWhiteSpace(file.Hash.Algorithm) &&
-            !file.Hash.Algorithm.Contains("sha512", StringComparison.OrdinalIgnoreCase))
+            !file.Hash.Algorithm.Contains(PlondsWireFormat.HashAlgorithmSha512, StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
@@ -239,17 +240,32 @@ internal static class PlondsManifestParser
 
         var archiveSha512 = ReadByteArrayIgnoreCase(node, "archivesha512");
         var archiveSha512Text = ReadStringIgnoreCase(node, "archivesha512");
+
+        // 分布元数据（components[].files[]）用的是 op / contentHash / hashAlgorithm，
+        // 增量 filemap 用的是 action / sha256。两套键名都必须认，
+        // 否则条目会被静默降级成 action=replace 且没有校验值。
+        var hashAlgorithm = ReadStringIgnoreCase(node, "hashalgorithm") ?? ReadStringIgnoreCase(node, "algorithm");
+        var contentHash = ReadStringIgnoreCase(node, "contenthash");
+        var contentHashIsSha512 = !string.IsNullOrWhiteSpace(hashAlgorithm)
+            && hashAlgorithm.Contains(PlondsWireFormat.HashAlgorithmSha512, StringComparison.OrdinalIgnoreCase);
         entry = new ApplyPlondsFileEntry
         {
             Path = path,
-            Action = FirstNonEmpty(ReadStringIgnoreCase(node, "action"), "replace"),
+            Action = FirstNonEmpty(
+                ReadStringIgnoreCase(node, "action"),
+                ReadStringIgnoreCase(node, "op"),
+                PlondsWireFormat.ActionReplace),
             Url = ReadStringIgnoreCase(node, "archivedownloadurl") ?? ReadStringIgnoreCase(node, "downloadurl") ?? ReadStringIgnoreCase(node, "url"),
             ObjectUrl = ReadStringIgnoreCase(node, "objecturl"),
             ObjectPath = ReadStringIgnoreCase(node, "objectpath") ?? ReadStringIgnoreCase(node, "archivepath"),
             ObjectKey = ReadStringIgnoreCase(node, "objectkey"),
             ArchivePath = ReadStringIgnoreCase(node, "archivepath"),
-            Sha256 = ReadStringIgnoreCase(node, "sha256") ?? ReadStringIgnoreCase(node, "filesha256"),
-            Sha512 = ReadStringIgnoreCase(node, "filesha512") ?? ReadStringIgnoreCase(node, "sha512"),
+            Sha256 = ReadStringIgnoreCase(node, "sha256")
+                ?? ReadStringIgnoreCase(node, "filesha256")
+                ?? (contentHash is not null && !contentHashIsSha512 ? contentHash : null),
+            Sha512 = ReadStringIgnoreCase(node, "filesha512")
+                ?? ReadStringIgnoreCase(node, "sha512")
+                ?? (contentHashIsSha512 ? contentHash : null),
             Sha512Bytes = ReadByteArrayIgnoreCase(node, "filesha512") ?? ReadByteArrayIgnoreCase(node, "sha512"),
             Metadata = BuildMetadata(node, componentName)
         };
@@ -258,7 +274,7 @@ internal static class PlondsManifestParser
         {
             entry.Hash = new ApplyPlondsHashDescriptor
             {
-                Algorithm = "sha512",
+                Algorithm = PlondsWireFormat.HashAlgorithmSha512,
                 Bytes = archiveSha512,
                 Value = archiveSha512Text ?? (archiveSha512 is { Length: > 0 }
                     ? Convert.ToHexString(archiveSha512).ToLowerInvariant()

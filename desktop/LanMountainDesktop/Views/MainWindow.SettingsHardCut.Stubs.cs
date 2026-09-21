@@ -39,7 +39,8 @@ public partial class MainWindow : Window
             return;
         }
 
-        // 缁勪欢瀹炰緥鑼冨洿鐨勮缃彉鏇翠笉搴旇Е鍙戞暣涓闈㈤噸鏂板姞杞斤紙姣斿缈婚〉淇濆瓨鍥剧墖绱㈠紩锛?        if (e.Scope == AirAppSettingsScope.ComponentInstance)
+        // 缁勪欢瀹炰緥鑼冨洿鐨勮缃彉鏇翠笉搴旇Е鍙戞暣涓闈㈤噸鏂板姞杞斤紙姣斿缈婚〉淇濆瓨鍥剧墖绱㈠紩锛?
+        if (e.Scope == AirAppSettingsScope.ComponentInstance)
         {
             return;
         }
@@ -129,22 +130,6 @@ public partial class MainWindow : Window
         }, TimeSpan.FromMilliseconds(120));
     }
 
-    private void OnNightModeChecked(object? sender, RoutedEventArgs e)
-    {
-        _ = sender;
-        _ = e;
-        ApplyNightModeState(true, refreshPalettes: true);
-        SchedulePersistSettings();
-    }
-
-    private void OnNightModeUnchecked(object? sender, RoutedEventArgs e)
-    {
-        _ = sender;
-        _ = e;
-        ApplyNightModeState(false, refreshPalettes: true);
-        SchedulePersistSettings();
-    }
-
     private void InitializeLocalization(string? languageCode)
     {
         _languageCode = _localizationService.NormalizeLanguageCode(languageCode);
@@ -193,26 +178,6 @@ public partial class MainWindow : Window
         return $"(UTC{sign}{hours:D2}:{minutes:D2}) {name}";
     }
 
-    private void InitializeWeatherSettings(AppSettingsSnapshot snapshot)
-    {
-        _weatherLocationMode = string.Equals(snapshot.WeatherLocationMode, "Coordinates", StringComparison.OrdinalIgnoreCase)
-            ? WeatherLocationMode.Coordinates
-            : WeatherLocationMode.CitySearch;
-        _weatherLocationKey = snapshot.WeatherLocationKey ?? string.Empty;
-        _weatherLocationName = snapshot.WeatherLocationName ?? string.Empty;
-        _weatherLatitude = snapshot.WeatherLatitude;
-        _weatherLongitude = snapshot.WeatherLongitude;
-        _weatherAutoRefreshLocation = snapshot.WeatherAutoRefreshLocation;
-        _weatherExcludedAlertsRaw = snapshot.WeatherExcludedAlerts ?? string.Empty;
-        _weatherIconPackId = NormalizeWeatherIconPackId(snapshot.WeatherIconPackId);
-        _weatherNoTlsRequests = snapshot.WeatherNoTlsRequests;
-    }
-
-    private static string NormalizeWeatherIconPackId(string? iconPackId)
-    {
-        return WeatherVisualStyleCatalog.Normalize(iconPackId);
-    }
-
     private void InitializeAutoStartWithWindowsSetting(AppSettingsSnapshot snapshot)
     {
         _autoStartWithWindows = snapshot.AutoStartWithWindows;
@@ -223,7 +188,6 @@ public partial class MainWindow : Window
         _selectedAppRenderMode = string.IsNullOrWhiteSpace(snapshot.AppRenderMode)
             ? AppRenderingModeHelper.Default
             : snapshot.AppRenderMode;
-        _runningAppRenderMode = AppRenderingModeHelper.Normalize(snapshot.AppRenderMode);
     }
 
     private void InitializeUpdateSettings(AppSettingsSnapshot snapshot)
@@ -462,13 +426,13 @@ public partial class MainWindow : Window
         var brush = DesktopWallpaperLayer.Background;
         if (brush is SolidColorBrush solid)
         {
-            return CalculateRelativeLuminance(solid.Color);
+            return ColorMath.RelativeLuminance(solid.Color);
         }
 
-        return CalculateRelativeLuminance(_selectedThemeColor);
+        return ColorMath.RelativeLuminance(_selectedThemeColor);
     }
 
-    private void ApplyNightModeState(bool enabled, bool refreshPalettes)
+    private void ApplyNightModeState(bool enabled)
     {
         _isNightMode = enabled;
         var requestedThemeVariant = enabled ? ThemeVariant.Dark : ThemeVariant.Light;
@@ -480,28 +444,6 @@ public partial class MainWindow : Window
 
         ApplyAdaptiveThemeResources();
         ApplyWallpaperBrush();
-
-        if (!refreshPalettes)
-        {
-            return;
-        }
-
-        var snapshot = _appearanceThemeService.GetCurrent();
-        _recommendedColors = snapshot.MonetPalette.RecommendedColors;
-        _monetColors = snapshot.MonetPalette.MonetColors;
-    }
-
-    private static double CalculateRelativeLuminance(Color color)
-    {
-        return CalculateRelativeLuminance(color.R / 255d, color.G / 255d, color.B / 255d);
-    }
-
-    private static double CalculateRelativeLuminance(double red, double green, double blue)
-    {
-        static double ToLinear(double value) =>
-            value <= 0.03928 ? value / 12.92 : Math.Pow((value + 0.055) / 1.055, 2.4);
-
-        return 0.2126 * ToLinear(red) + 0.7152 * ToLinear(green) + 0.0722 * ToLinear(blue);
     }
 
     private void TriggerAutoUpdateCheckIfEnabled()
@@ -593,7 +535,6 @@ public partial class MainWindow : Window
             _statusBarSpacingMode = NormalizeStatusBarSpacingMode(snapshot.StatusBarSpacingMode);
             _statusBarCustomSpacingPercent = Math.Clamp(snapshot.StatusBarCustomSpacingPercent, 0, 30);
             ApplyTaskbarSettings(snapshot);
-            InitializeWeatherSettings(snapshot);
             InitializeAutoStartWithWindowsSetting(snapshot);
             InitializeAppRenderModeSetting(snapshot);
             InitializeUpdateSettings(snapshot);
@@ -617,7 +558,7 @@ public partial class MainWindow : Window
             {
                 _isNightMode = CalculateCurrentBackgroundLuminance() < LightBackgroundLuminanceThreshold;
             }
-            ApplyNightModeState(_isNightMode, refreshPalettes: true);
+            ApplyNightModeState(_isNightMode);
             ApplyWallpaperBrush();
             UpdateWallpaperDisplay();
             InitializeTimeZoneSettings();

@@ -21,7 +21,7 @@ public sealed partial class MusicControlViewModel : ViewModelBase, IDisposable
     private CancellationTokenSource? _refreshCts;
     private Bitmap? _coverBitmap;
     private bool _isExecutingCommand;
-    private string _languageCode = "zh-CN";
+    private string _languageCode = LocalizationService.DefaultLanguageCode;
 
     [ObservableProperty] private MusicPlaybackState _state = MusicPlaybackState.NoSession(isSupported: true);
     [ObservableProperty] private string _titleText = string.Empty;
@@ -261,18 +261,8 @@ public sealed partial class MusicControlViewModel : ViewModelBase, IDisposable
         old?.Dispose();
     }
 
-    private void UpdateLanguageCode()
-    {
-        try
-        {
-            var snapshot = _settingsService.Load();
-            _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
-        }
-        catch
-        {
-            _languageCode = "zh-CN";
-        }
-    }
+    private void UpdateLanguageCode() =>
+        _languageCode = _localizationService.ResolveLanguageCode(() => _settingsService.Load().LanguageCode);
 
     private string ResolveStatusText(MusicPlaybackStatus status)
         => status switch

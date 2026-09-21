@@ -8,6 +8,7 @@ using Avalonia.Platform;
 using Avalonia.Styling;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -164,7 +165,7 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
 
     private void ApplyTheme(bool force)
     {
-        var isNightMode = ResolveIsNightMode();
+        var isNightMode = ComponentThemeMode.ResolveIsNight(this, fallbackToNightWhenSurfaceUnknown: false);
         if (!force && _isNightModeApplied.HasValue && _isNightModeApplied.Value == isNightMode)
         {
             return;
@@ -193,41 +194,7 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
         AddressTextBox.CaretBrush = idleForeground;
     }
 
-    private bool ResolveIsNightMode()
-    {
-        if (ActualThemeVariant == ThemeVariant.Dark)
-        {
-            return true;
-        }
 
-        if (ActualThemeVariant == ThemeVariant.Light)
-        {
-            return false;
-        }
-
-        if (this.TryFindResource("AdaptiveSurfaceBaseBrush", out var value) &&
-            value is ISolidColorBrush brush)
-        {
-            return CalculateRelativeLuminance(brush.Color) < 0.45;
-        }
-
-        return false;
-    }
-
-    private static double CalculateRelativeLuminance(Color color)
-    {
-        static double ToLinear(double channel)
-        {
-            return channel <= 0.03928
-                ? channel / 12.92
-                : Math.Pow((channel + 0.055) / 1.055, 2.4);
-        }
-
-        var red = ToLinear(color.R / 255d);
-        var green = ToLinear(color.G / 255d);
-        var blue = ToLinear(color.B / 255d);
-        return (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
-    }
 
     private void OnRefreshButtonClick(object? sender, RoutedEventArgs e)
     {

@@ -42,7 +42,7 @@ public partial class StandbyDigitalClockWidget : UserControl,
     private TimeZoneService? _timeZoneService;
     private double _currentCellSize = 48;
     private TimeZoneInfo _clockTimeZone = WorldClockTimeZoneCatalog.ResolveTimeZoneOrLocal("China Standard Time");
-    private string _languageCode = "zh-CN";
+    private string _languageCode = LocalizationService.DefaultLanguageCode;
     private string? _componentColorScheme;
 
     // Track previous digit chars to detect changes
@@ -318,12 +318,12 @@ public partial class StandbyDigitalClockWidget : UserControl,
             _componentColorScheme,
             ComponentColorSchemeHelper.GetCurrentGlobalThemeColorMode());
 
-        var isNight = ResolveIsNightMode();
+        var isNight = ComponentThemeMode.ResolveIsNight(this, fallbackToNightWhenSurfaceUnknown: false);
 
         if (useMonetColor)
         {
             // Use the Monet accent brush from dynamic resources
-            if (this.TryFindResource("AdaptiveAccentBrush", out var accentRes) && accentRes is IBrush accentBrush)
+            if (this.TryFindResource(ThemeResourceKeys.AccentBrush, out var accentRes) && accentRes is IBrush accentBrush)
             {
                 return accentBrush;
             }
@@ -337,8 +337,8 @@ public partial class StandbyDigitalClockWidget : UserControl,
 
         // Native / fallback: warm orange-red accent (iPhone StandBy inspired)
         return isNight
-            ? CreateBrush("#FF8A65")
-            : CreateBrush("#E84530");
+            ? ComponentPaint.CreateBrush("#FF8A65")
+            : ComponentPaint.CreateBrush("#E84530");
     }
 
     private static Color Lighten(Color color, double amount)
@@ -353,7 +353,7 @@ public partial class StandbyDigitalClockWidget : UserControl,
 
     private void ApplyModeVisualIfNeeded()
     {
-        var isNightMode = ResolveIsNightMode();
+        var isNightMode = ComponentThemeMode.ResolveIsNight(this, fallbackToNightWhenSurfaceUnknown: false);
         if (_isNightModeApplied.HasValue && _isNightModeApplied.Value == isNightMode)
             return;
 
@@ -364,8 +364,8 @@ public partial class StandbyDigitalClockWidget : UserControl,
     private void ApplyModeVisual(bool isNightMode)
     {
         RootBorder.Background = isNightMode
-            ? CreateLinearGradientBrush("#1F2C4B", "#131B33")
-            : CreateLinearGradientBrush("#EEF2FA", "#E7ECF6");
+            ? ComponentPaint.CreateLinearGradientBrush("#1F2C4B", "#131B33")
+            : ComponentPaint.CreateLinearGradientBrush("#EEF2FA", "#E7ECF6");
 
         var accentBrush = ResolveAccentBrush();
 
@@ -384,50 +384,21 @@ public partial class StandbyDigitalClockWidget : UserControl,
         ColonText.Foreground = accentBrush;
 
         // Date text uses muted brush from dynamic resource
-        if (this.TryFindResource("AdaptiveTextMutedBrush", out var mutedRes) && mutedRes is IBrush mutedBrush)
+        if (this.TryFindResource(ThemeResourceKeys.TextMutedBrush, out var mutedRes) && mutedRes is IBrush mutedBrush)
         {
             DateTextBlock.Foreground = mutedBrush;
         }
         else
         {
-            DateTextBlock.Foreground = CreateBrush(isNightMode ? "#7E8593" : "#7E8593");
+            DateTextBlock.Foreground = ComponentPaint.CreateBrush(isNightMode ? "#7E8593" : "#7E8593");
         }
-    }
-
-    private bool ResolveIsNightMode()
-    {
-        if (ActualThemeVariant == ThemeVariant.Dark) return true;
-        if (ActualThemeVariant == ThemeVariant.Light) return false;
-
-        if (this.TryFindResource("AdaptiveSurfaceBaseBrush", out var value) &&
-            value is ISolidColorBrush solidBrush)
-        {
-            return CalculateRelativeLuminance(solidBrush.Color) < 0.45;
-        }
-
-        return false;
-    }
-
-    private static double CalculateRelativeLuminance(Color color)
-    {
-        static double ToLinear(double channel)
-        {
-            return channel <= 0.03928
-                ? channel / 12.92
-                : Math.Pow((channel + 0.055) / 1.055, 2.4);
-        }
-
-        var r = ToLinear(color.R / 255d);
-        var g = ToLinear(color.G / 255d);
-        var b = ToLinear(color.B / 255d);
-        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
     }
 
     // ─── Date text ──────────────────────────────────────────────
 
     private void UpdateDateText(DateTime now)
     {
-        var culture = string.Equals(_languageCode, "zh-CN", StringComparison.OrdinalIgnoreCase)
+        var culture = _localizationService.IsChineseLanguage(_languageCode)
             ? new CultureInfo("zh-CN")
             : CultureInfo.CurrentUICulture;
 
@@ -467,23 +438,4 @@ public partial class StandbyDigitalClockWidget : UserControl,
     }
 
     // ─── Brush helpers ──────────────────────────────────────────
-
-    private static IBrush CreateBrush(string colorHex)
-    {
-        return new SolidColorBrush(Color.Parse(colorHex));
-    }
-
-    private static IBrush CreateLinearGradientBrush(string fromColorHex, string toColorHex)
-    {
-        return new LinearGradientBrush
-        {
-            StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
-            EndPoint = new RelativePoint(1, 1, RelativeUnit.Relative),
-            GradientStops = new GradientStops
-            {
-                new GradientStop(Color.Parse(fromColorHex), 0),
-                new GradientStop(Color.Parse(toColorHex), 1)
-            }
-        };
-    }
 }

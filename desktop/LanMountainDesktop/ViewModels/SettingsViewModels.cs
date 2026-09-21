@@ -32,7 +32,7 @@ public sealed partial class SettingsWindowViewModel : ViewModelBase
     public SettingsWindowViewModel()
     {
         _localizationService = new();
-        _languageCode = "zh-CN";
+        _languageCode = LocalizationService.DefaultLanguageCode;
         IsWindowsOs = OperatingSystem.IsWindows();
     }
 
@@ -383,7 +383,7 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
     public IReadOnlyList<TimeZoneOption> TimeZones { get; }
 
     [ObservableProperty]
-    private SelectionOption _selectedLanguage = new("zh-CN", "中文");
+    private SelectionOption _selectedLanguage = new(LocalizationService.DefaultLanguageCode, "中文");
 
     [ObservableProperty]
     private TimeZoneOption _selectedTimeZone = new(null, "Follow system default");
@@ -732,7 +732,7 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
     {
         return
         [
-            new SelectionOption("zh-CN", L("settings.region.language_zh", "中文")),
+            new SelectionOption(LocalizationService.DefaultLanguageCode, L("settings.region.language_zh", "中文")),
             new SelectionOption("en-US", L("settings.region.language_en", "English")),
             new SelectionOption("ja-JP", L("settings.region.language_ja", "日本語")),
             new SelectionOption("ko-KR", L("settings.region.language_ko", "한국어"))

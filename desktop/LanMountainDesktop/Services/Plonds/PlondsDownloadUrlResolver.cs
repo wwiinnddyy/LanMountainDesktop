@@ -72,7 +72,7 @@ internal static class PlondsDownloadUrlResolver
         }
 
         // Accept both "Files.zip" (tool convention) and "files.zip".
-        var packageName = mode is PlondsPackageMode.Delta ? "changed.zip" : "Files.zip";
+        var packageName = mode is PlondsPackageMode.Delta ? PlondsWireFormat.DeltaPackageFileName : PlondsWireFormat.FullPackageFileName;
         var builder = new UriBuilder(uri)
         {
             Query = string.Empty,
@@ -99,7 +99,7 @@ internal static class PlondsDownloadUrlResolver
             return null;
         }
 
-        var packageName = mode is PlondsPackageMode.Delta ? "changed.zip" : "Files.zip";
+        var packageName = mode is PlondsPackageMode.Delta ? PlondsWireFormat.DeltaPackageFileName : PlondsWireFormat.FullPackageFileName;
         return $"{baseUrl}/plonds/{packageName}";
     }
 }

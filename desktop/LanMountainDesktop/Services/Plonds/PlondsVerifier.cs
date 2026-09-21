@@ -68,7 +68,7 @@ internal sealed class PlondsVerifier
         {
             var algorithm = normalized[..separatorIndex].Trim().ToLowerInvariant();
             var hash = NormalizeHash(normalized[(separatorIndex + 1)..]);
-            if (algorithm is "md5" or "sha256" && hash.Length > 0)
+            if (algorithm is PlondsWireFormat.HashAlgorithmMd5 or PlondsWireFormat.HashAlgorithmSha256 && hash.Length > 0)
             {
                 return (algorithm, hash);
             }
@@ -77,8 +77,8 @@ internal sealed class PlondsVerifier
         var inferredHash = NormalizeHash(normalized);
         return inferredHash.Length switch
         {
-            32 => ("md5", inferredHash),
-            64 => ("sha256", inferredHash),
+            32 => (PlondsWireFormat.HashAlgorithmMd5, inferredHash),
+            64 => (PlondsWireFormat.HashAlgorithmSha256, inferredHash),
             _ => throw new InvalidDataException($"Unsupported PLONDS checksum format: {checksum}")
         };
     }
@@ -90,8 +90,8 @@ internal sealed class PlondsVerifier
     {
         using HashAlgorithm hasher = algorithm switch
         {
-            "md5" => MD5.Create(),
-            "sha256" => SHA256.Create(),
+            PlondsWireFormat.HashAlgorithmMd5 => MD5.Create(),
+            PlondsWireFormat.HashAlgorithmSha256 => SHA256.Create(),
             _ => throw new InvalidDataException($"Unsupported PLONDS checksum algorithm: {algorithm}")
         };
 

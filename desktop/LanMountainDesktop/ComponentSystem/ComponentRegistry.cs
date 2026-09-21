@@ -272,7 +272,7 @@ public sealed class ComponentRegistry
                 AllowDesktopPlacement: true),
             new DesktopComponentDefinition(
                 BuiltInComponentIds.DesktopJuyaNews,
-                "橘鸦早报",
+                "Juya News",
                 "News",
                 "Info",
                 MinWidthCells: 4,
@@ -424,7 +424,7 @@ public sealed class ComponentRegistry
                 AllowDesktopPlacement: true),
             new DesktopComponentDefinition(
                 BuiltInComponentIds.DesktopZhiJiaoHub,
-                "智教Hub",
+                "ZhiJiao Hub",
                 "Image",
                 "Info",
                 MinWidthCells: 2,
@@ -434,7 +434,7 @@ public sealed class ComponentRegistry
                 ResizeMode: DesktopComponentResizeMode.Free),
             new DesktopComponentDefinition(
                 BuiltInComponentIds.DesktopFileManager,
-                "文件管理",
+                "File Manager",
                 "Folder",
                 "File",
                 MinWidthCells: 4,
@@ -444,7 +444,7 @@ public sealed class ComponentRegistry
                 ResizeMode: DesktopComponentResizeMode.Free),
             new DesktopComponentDefinition(
                 BuiltInComponentIds.DesktopNotificationBox,
-                "消息盒子",
+                "Notification Box",
                 "Inbox",
                 "Info",
                 MinWidthCells: 2,
@@ -454,7 +454,7 @@ public sealed class ComponentRegistry
                 ResizeMode: DesktopComponentResizeMode.Free),
             new DesktopComponentDefinition(
                 BuiltInComponentIds.DesktopShortcut,
-                "快捷方式",
+                "Shortcut",
                 "App",
                 "File",
                 MinWidthCells: 1,

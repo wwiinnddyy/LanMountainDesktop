@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -11,6 +10,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
+using LanMountainDesktop.Helpers;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -23,7 +23,6 @@ public partial class DailyNewsView : UserControl
 
     private readonly JuyaDailyNews _news;
     private Bitmap? _coverBitmap;
-    private bool _isNightMode;
     private bool _isExpanded;
 
     public event EventHandler? CoverImageClicked;
@@ -33,7 +32,6 @@ public partial class DailyNewsView : UserControl
     {
         InitializeComponent();
         _news = news;
-        _isNightMode = isNightMode;
 
         var dateStr = news.Date.ToString("yyyy年M月d日");
         var dayOfWeek = news.Date.ToString("dddd");
@@ -255,7 +253,7 @@ public partial class DailyNewsView : UserControl
     {
         if (!string.IsNullOrWhiteSpace(_news.BilibiliUrl))
         {
-            TryOpenUrl(_news.BilibiliUrl);
+            ExternalLinkLauncher.TryOpen(_news.BilibiliUrl);
         }
         e.Handled = true;
     }
@@ -264,30 +262,9 @@ public partial class DailyNewsView : UserControl
     {
         if (!string.IsNullOrWhiteSpace(_news.IssueUrl))
         {
-            TryOpenUrl(_news.IssueUrl);
+            ExternalLinkLauncher.TryOpen(_news.IssueUrl);
         }
         e.Handled = true;
-    }
-
-    private static void TryOpenUrl(string? url)
-    {
-        if (string.IsNullOrWhiteSpace(url))
-        {
-            return;
-        }
-
-        try
-        {
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = url,
-                UseShellExecute = true
-            };
-            Process.Start(startInfo);
-        }
-        catch
-        {
-        }
     }
 
     private async Task LoadCoverImageAsync(string? imageUrl)
@@ -328,7 +305,6 @@ public partial class DailyNewsView : UserControl
 
     public void ApplyNightMode(bool isNightMode)
     {
-        _isNightMode = isNightMode;
         var primaryColor = isNightMode ? "#d4736a" : "#bb5649";
         var textColor = isNightMode ? "#e8e4e0" : "#34495e";
         var secondaryTextColor = isNightMode ? "#9a9590" : "#757575";

@@ -67,19 +67,6 @@ public sealed partial class UpdateProgressViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private void OnError(Exception ex)
-    {
-        IsCompleted = true;
-        IsSuccess = false;
-        ErrorMessage = ex.Message;
-    }
-
-    private void OnCompleted()
-    {
-        IsCompleted = true;
-        IsSuccess = true;
-    }
-
     public void Dispose()
     {
         if (_disposed)

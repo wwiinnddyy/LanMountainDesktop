@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -170,10 +171,10 @@ public partial class MonthCalendarWidget : UserControl, IDesktopComponentWidget,
 
             if (day == today)
             {
-                var accentBrush = this.TryFindResource("AdaptiveAccentBrush", out var accent)
+                var accentBrush = this.TryFindResource(ThemeResourceKeys.AccentBrush, out var accent)
                     ? accent as IBrush
                     : Brushes.Blue;
-                var onAccentBrush = this.TryFindResource("AdaptiveOnAccentBrush", out var onAccent)
+                var onAccentBrush = this.TryFindResource(ThemeResourceKeys.OnAccentBrush, out var onAccent)
                     ? onAccent as IBrush
                     : Brushes.White;
 
@@ -198,8 +199,8 @@ public partial class MonthCalendarWidget : UserControl, IDesktopComponentWidget,
             {
                 var isWeekend = col is 0 or 6;
                 dayText.Foreground = isWeekend
-                    ? GetThemeBrush("AdaptiveTextSecondaryBrush", 0.78)
-                    : GetThemeBrush("AdaptiveTextPrimaryBrush", 0.94);
+                    ? GetThemeBrush(ThemeResourceKeys.TextSecondaryBrush, 0.78)
+                    : GetThemeBrush(ThemeResourceKeys.TextPrimaryBrush, 0.94);
                 Grid.SetRow(dayText, row);
                 Grid.SetColumn(dayText, col);
                 CalendarGrid.Children.Add(dayText);
@@ -230,11 +231,11 @@ public partial class MonthCalendarWidget : UserControl, IDesktopComponentWidget,
         var densityBoost = scale <= 0.74 ? 0.90 : scale <= 0.90 ? 0.95 : scale >= 1.45 ? 1.05 : 1.0;
 
         HeaderTextBlock.FontSize = Math.Clamp(42 * scale * headerCompression * densityBoost, 13, 62);
-        HeaderTextBlock.FontWeight = ToVariableWeight(Lerp(560, 720, Math.Clamp((scale - 0.62) / 1.2, 0, 1)));
+        HeaderTextBlock.FontWeight = ComponentTypography.ToVariableWeight(ComponentTypography.Lerp(560, 720, Math.Clamp((scale - 0.62) / 1.2, 0, 1)));
         HeaderTextBlock.LineHeight = HeaderTextBlock.FontSize * 1.05;
 
         _weekdayFontSize = Math.Clamp(20 * scale * densityBoost, 7.5, 27);
-        _weekdayFontWeight = ToVariableWeight(Lerp(500, 640, Math.Clamp((scale - 0.60) / 1.3, 0, 1)));
+        _weekdayFontWeight = ComponentTypography.ToVariableWeight(ComponentTypography.Lerp(500, 640, Math.Clamp((scale - 0.60) / 1.3, 0, 1)));
         foreach (var block in GetWeekdayHeaderBlocks())
         {
             block.FontSize = _weekdayFontSize;
@@ -243,7 +244,7 @@ public partial class MonthCalendarWidget : UserControl, IDesktopComponentWidget,
         }
 
         _calendarDayFontSize = Math.Clamp(22 * scale * densityBoost, 8, 32);
-        _calendarDayFontWeight = ToVariableWeight(Lerp(540, 680, Math.Clamp((scale - 0.60) / 1.3, 0, 1)));
+        _calendarDayFontWeight = ComponentTypography.ToVariableWeight(ComponentTypography.Lerp(540, 680, Math.Clamp((scale - 0.60) / 1.3, 0, 1)));
         _calendarTodayDotSize = Math.Clamp(_calendarDayFontSize * 1.95, 16, 62);
     }
 
@@ -268,15 +269,5 @@ public partial class MonthCalendarWidget : UserControl, IDesktopComponentWidget,
         }
 
         return new SolidColorBrush(Colors.Gray, opacity);
-    }
-
-    private static double Lerp(double from, double to, double t)
-    {
-        return from + ((to - from) * t);
-    }
-
-    private static FontWeight ToVariableWeight(double weight)
-    {
-        return (FontWeight)(int)Math.Clamp(Math.Round(weight), 1, 1000);
     }
 }

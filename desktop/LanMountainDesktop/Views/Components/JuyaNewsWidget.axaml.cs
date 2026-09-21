@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -18,6 +17,8 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Theme;
+using LanMountainDesktop.Helpers;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -34,8 +35,6 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
     private const int BaseHeightCells = 4;
     private const int InitialLoadDays = 3;
     private const int LoadMoreDays = 3;
-    private const int MaxCachedDays = 30;
-
     private readonly Dictionary<DateTime, JuyaDailyNews> _cachedNews = new();
     private readonly List<DateTime> _loadedDates = new();
     private readonly List<DailyNewsView> _dailyViews = new();
@@ -83,44 +82,8 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
 
     private void OnActualThemeVariantChanged(object? sender, EventArgs e)
     {
-        _isNightVisual = ResolveNightMode();
+        _isNightVisual = ComponentThemeMode.ResolveIsNight(this, fallbackToNightWhenSurfaceUnknown: true);
         UpdateAdaptiveLayout();
-    }
-
-    private bool ResolveNightMode()
-    {
-        if (ActualThemeVariant == ThemeVariant.Dark)
-        {
-            return true;
-        }
-
-        if (ActualThemeVariant == ThemeVariant.Light)
-        {
-            return false;
-        }
-
-        if (this.TryFindResource("AdaptiveSurfaceBaseBrush", out var value) &&
-            value is ISolidColorBrush brush)
-        {
-            return CalculateRelativeLuminance(brush.Color) < 0.45;
-        }
-
-        return true;
-    }
-
-    private static double CalculateRelativeLuminance(Color color)
-    {
-        static double ToLinear(double channel)
-        {
-            return channel <= 0.03928
-                ? channel / 12.92
-                : Math.Pow((channel + 0.055) / 1.055, 2.4);
-        }
-
-        var r = ToLinear(color.R / 255d);
-        var g = ToLinear(color.G / 255d);
-        var b = ToLinear(color.B / 255d);
-        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
     }
 
     private void ApplyNightModeVisual()
@@ -543,8 +506,8 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
     private void AddDailyNewsToView(JuyaDailyNews news)
     {
         var view = new DailyNewsView(news, _isNightVisual);
-        view.CoverImageClicked += (s, e) => TryOpenUrl(news.IssueUrl);
-        view.NewsItemClicked += (s, url) => TryOpenUrl(url);
+        view.CoverImageClicked += (s, e) => ExternalLinkLauncher.TryOpen(news.IssueUrl);
+        view.NewsItemClicked += (s, url) => ExternalLinkLauncher.TryOpen(url);
         NewsStackPanel.Children.Add(view);
         _dailyViews.Add(view);
     }
@@ -656,7 +619,7 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
                             _dailyViews.RemoveAt(existingIndex);
                             
                             var newView = new DailyNewsView(todayNews, _isNightVisual);
-                            newView.CoverImageClicked += (s, e) => TryOpenUrl(todayNews.IssueUrl);
+                            newView.CoverImageClicked += (s, e) => ExternalLinkLauncher.TryOpen(todayNews.IssueUrl);
                             
                             NewsStackPanel.Children.Insert(insertIndex, newView);
                             _dailyViews.Insert(existingIndex, newView);
@@ -665,7 +628,7 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
                     else
                     {
                         var newView = new DailyNewsView(todayNews, _isNightVisual);
-                        newView.CoverImageClicked += (s, e) => TryOpenUrl(todayNews.IssueUrl);
+                        newView.CoverImageClicked += (s, e) => ExternalLinkLauncher.TryOpen(todayNews.IssueUrl);
                         
                         NewsStackPanel.Children.Insert(0, newView);
                         _dailyViews.Insert(0, newView);
@@ -697,28 +660,6 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
         finally
         {
             _isLoading = false;
-        }
-    }
-
-    private void TryOpenUrl(string? url)
-    {
-        if (string.IsNullOrWhiteSpace(url))
-        {
-            return;
-        }
-
-        try
-        {
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = url,
-                UseShellExecute = true
-            };
-            Process.Start(startInfo);
-        }
-        catch
-        {
-            // 忽略错误
         }
     }
 

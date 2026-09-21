@@ -38,13 +38,13 @@ public static class GlassEffectService
                 : ColorMath.Blend(neutralButtonBase, Color.Parse("#FF334155"), 0.10),
             context.IsNightMode ? (byte)0x26 : (byte)0x14);
 
-        resources["AdaptiveButtonBackgroundBrush"] = new SolidColorBrush(buttonBackground);
-        resources["AdaptiveButtonBorderBrush"] = new SolidColorBrush(buttonBorder);
-        resources["AdaptiveButtonHoverBackgroundBrush"] = new SolidColorBrush(
+        resources[ThemeResourceKeys.ButtonBackgroundBrush] = new SolidColorBrush(buttonBackground);
+        resources[ThemeResourceKeys.ButtonBorderBrush] = new SolidColorBrush(buttonBorder);
+        resources[ThemeResourceKeys.ButtonHoverBackgroundBrush] = new SolidColorBrush(
             ColorMath.WithAlpha(
                 ColorMath.Blend(buttonBackground, primary, context.IsNightMode ? 0.14 : 0.08),
                 context.IsNightMode ? (byte)0xF4 : (byte)0xFF));
-        resources["AdaptiveButtonPressedBackgroundBrush"] = new SolidColorBrush(
+        resources[ThemeResourceKeys.ButtonPressedBackgroundBrush] = new SolidColorBrush(
             ColorMath.WithAlpha(
                 ColorMath.Blend(buttonBackground, primary, context.IsNightMode ? 0.24 : 0.16),
                 context.IsNightMode ? (byte)0xF8 : (byte)0xFF));
@@ -67,48 +67,48 @@ public static class GlassEffectService
             desktopComponentSurface.BorderColor,
             context.IsNightMode ? (byte)0x18 : (byte)0x10);
 
-        resources["AdaptiveWindowBackgroundBrush"] = new SolidColorBrush(windowSurface.BackgroundColor);
-        resources["AdaptiveWindowBorderBrush"] = new SolidColorBrush(windowSurface.BorderColor);
-        resources["AdaptiveSettingsWindowBackgroundBrush"] = new SolidColorBrush(settingsWindowSurface.BackgroundColor);
+        resources[ThemeResourceKeys.WindowBackgroundBrush] = new SolidColorBrush(windowSurface.BackgroundColor);
+        resources[ThemeResourceKeys.WindowBorderBrush] = new SolidColorBrush(windowSurface.BorderColor);
+        resources[ThemeResourceKeys.SettingsWindowBackgroundBrush] = new SolidColorBrush(settingsWindowSurface.BackgroundColor);
         // 可选：叠在内容区上的可读性 tint（半透明）；不改变 AdaptiveSettingsWindowBackgroundBrush 的语义权重，供 P1 绑定内容层。
         var settingsTintBase = settingsWindowSurface.BackgroundColor;
         var settingsTintAlpha = ResolveSettingsWindowTintAlpha(context);
-        resources["AdaptiveSettingsWindowTintBrush"] = new SolidColorBrush(
+        resources[ThemeResourceKeys.SettingsWindowTintBrush] = new SolidColorBrush(
             Color.FromArgb(
                 settingsTintAlpha,
                 settingsTintBase.R,
                 settingsTintBase.G,
                 settingsTintBase.B));
-        resources["AdaptiveSettingsWindowBorderBrush"] = new SolidColorBrush(settingsWindowSurface.BorderColor);
-        resources["AdaptiveDockBackgroundBrush"] = new SolidColorBrush(dockSurface.BackgroundColor);
-        resources["AdaptiveDockBorderBrush"] = new SolidColorBrush(dockSurface.BorderColor);
-        resources["AdaptiveStatusBarBackgroundBrush"] = new SolidColorBrush(statusBarSurface.BackgroundColor);
-        resources["AdaptiveStatusBarBorderBrush"] = new SolidColorBrush(statusBarSurface.BorderColor);
-        resources["AdaptiveDesktopComponentHostBackgroundBrush"] = new SolidColorBrush(desktopComponentSurface.BackgroundColor);
-        resources["AdaptiveDesktopComponentHostBorderBrush"] = new SolidColorBrush(desktopComponentSurface.BorderColor);
-        resources["AdaptiveStatusBarComponentHostBackgroundBrush"] = new SolidColorBrush(statusBarComponentSurface.BackgroundColor);
-        resources["AdaptiveStatusBarComponentHostBorderBrush"] = new SolidColorBrush(statusBarComponentSurface.BorderColor);
+        resources[ThemeResourceKeys.SettingsWindowBorderBrush] = new SolidColorBrush(settingsWindowSurface.BorderColor);
+        resources[ThemeResourceKeys.DockBackgroundBrush] = new SolidColorBrush(dockSurface.BackgroundColor);
+        resources[ThemeResourceKeys.DockBorderBrush] = new SolidColorBrush(dockSurface.BorderColor);
+        resources[ThemeResourceKeys.StatusBarBackgroundBrush] = new SolidColorBrush(statusBarSurface.BackgroundColor);
+        resources[ThemeResourceKeys.StatusBarBorderBrush] = new SolidColorBrush(statusBarSurface.BorderColor);
+        resources[ThemeResourceKeys.DesktopComponentHostBackgroundBrush] = new SolidColorBrush(desktopComponentSurface.BackgroundColor);
+        resources[ThemeResourceKeys.DesktopComponentHostBorderBrush] = new SolidColorBrush(desktopComponentSurface.BorderColor);
+        resources[ThemeResourceKeys.StatusBarComponentHostBackgroundBrush] = new SolidColorBrush(statusBarComponentSurface.BackgroundColor);
+        resources[ThemeResourceKeys.StatusBarComponentHostBorderBrush] = new SolidColorBrush(statusBarComponentSurface.BorderColor);
 
-        resources["AdaptiveGlassPanelBackgroundBrush"] = new SolidColorBrush(desktopComponentSurface.BackgroundColor);
-        resources["AdaptiveGlassPanelBorderBrush"] = new SolidColorBrush(panelBorderColor);
-        resources["AdaptiveGlassStrongBackgroundBrush"] = new SolidColorBrush(strongSurfaceColor);
-        resources["AdaptiveGlassStrongBorderBrush"] = new SolidColorBrush(strongBorderColor);
-        resources["AdaptiveDockGlassBackgroundBrush"] = new SolidColorBrush(dockSurface.BackgroundColor);
-        resources["AdaptiveDockGlassBorderBrush"] = new SolidColorBrush(dockSurface.BorderColor);
-        resources["AdaptiveGlassOverlayBackgroundBrush"] = new SolidColorBrush(overlaySurface.BackgroundColor);
+        resources[ThemeResourceKeys.GlassPanelBackgroundBrush] = new SolidColorBrush(desktopComponentSurface.BackgroundColor);
+        resources[ThemeResourceKeys.GlassPanelBorderBrush] = new SolidColorBrush(panelBorderColor);
+        resources[ThemeResourceKeys.GlassStrongBackgroundBrush] = new SolidColorBrush(strongSurfaceColor);
+        resources[ThemeResourceKeys.GlassStrongBorderBrush] = new SolidColorBrush(strongBorderColor);
+        resources[ThemeResourceKeys.DockGlassBackgroundBrush] = new SolidColorBrush(dockSurface.BackgroundColor);
+        resources[ThemeResourceKeys.DockGlassBorderBrush] = new SolidColorBrush(dockSurface.BorderColor);
+        resources[ThemeResourceKeys.GlassOverlayBackgroundBrush] = new SolidColorBrush(overlaySurface.BackgroundColor);
 
-        resources["AdaptiveGlassPanelBlurRadius"] = desktopComponentSurface.BlurRadius;
-        resources["AdaptiveGlassStrongBlurRadius"] = dockSurface.BlurRadius;
-        resources["AdaptiveGlassOverlayBlurRadius"] = overlaySurface.BlurRadius;
-        resources["AdaptiveGlassPanelOpacity"] = 1.0;
-        resources["AdaptiveGlassStrongOpacity"] = 1.0;
-        resources["AdaptiveGlassOverlayOpacity"] = overlaySurface.Opacity;
-        resources["AdaptiveGlassNoiseOpacity"] = context.IsNightMode ? 0.012 : 0.008;
+        resources[ThemeResourceKeys.GlassPanelBlurRadius] = desktopComponentSurface.BlurRadius;
+        resources[ThemeResourceKeys.GlassStrongBlurRadius] = dockSurface.BlurRadius;
+        resources[ThemeResourceKeys.GlassOverlayBlurRadius] = overlaySurface.BlurRadius;
+        resources[ThemeResourceKeys.GlassPanelOpacity] = 1.0;
+        resources[ThemeResourceKeys.GlassStrongOpacity] = 1.0;
+        resources[ThemeResourceKeys.GlassOverlayOpacity] = overlaySurface.Opacity;
+        resources[ThemeResourceKeys.GlassNoiseOpacity] = context.IsNightMode ? 0.012 : 0.008;
 
-        resources["AdaptiveDockOpacity"] = dockSurface.Opacity;
-        resources["AdaptiveStatusBarOpacity"] = statusBarSurface.Opacity;
-        resources["AdaptiveDesktopComponentHostOpacity"] = desktopComponentSurface.Opacity;
-        resources["AdaptiveStatusBarComponentHostOpacity"] = statusBarComponentSurface.Opacity;
+        resources[ThemeResourceKeys.DockOpacity] = dockSurface.Opacity;
+        resources[ThemeResourceKeys.StatusBarOpacity] = statusBarSurface.Opacity;
+        resources[ThemeResourceKeys.DesktopComponentHostOpacity] = desktopComponentSurface.Opacity;
+        resources[ThemeResourceKeys.StatusBarComponentHostOpacity] = statusBarComponentSurface.Opacity;
     }
 
     /// <summary>可选内容叠层 alpha，与设置窗表面色相一致；None 为 0 避免重复染色。</summary>

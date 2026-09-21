@@ -11,19 +11,16 @@ namespace LanDesktopPLONDS.Installer.Services;
 public sealed class UninstallService
 {
     private readonly string _installPath;
-    private readonly bool _silent;
     private readonly string? _registryBasePath;
 
     /// <summary>
     /// 初始化卸载服务。
     /// </summary>
     /// <param name="installPath">要卸载的安装根目录。</param>
-    /// <param name="silent">静默模式：不显示确认窗口。</param>
     /// <param name="registryBasePath">可选：注入的注册表基路径（测试用）。</param>
-    public UninstallService(string installPath, bool silent = false, string? registryBasePath = null)
+    public UninstallService(string installPath, string? registryBasePath = null)
     {
         _installPath = InstallerPathGuard.NormalizeInstallPath(installPath);
-        _silent = silent;
         _registryBasePath = registryBasePath;
     }
 

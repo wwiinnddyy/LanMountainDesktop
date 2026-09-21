@@ -14,6 +14,7 @@ using Avalonia.VisualTree;
 using Avalonia.Threading;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -39,7 +40,7 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
     private IRecommendationInfoService _recommendationService = DefaultRecommendationService;
     private CancellationTokenSource? _refreshCts;
     private DailyWordSnapshot? _latestSnapshot;
-    private string _languageCode = "zh-CN";
+    private string _languageCode = LocalizationService.DefaultLanguageCode;
     private double _currentCellSize = BaseCellSize;
     private bool _isAttached;
     private bool _isRefreshing;
@@ -112,44 +113,8 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
 
     private void OnActualThemeVariantChanged(object? sender, EventArgs e)
     {
-        _isNightVisual = ResolveNightMode();
+        _isNightVisual = ComponentThemeMode.ResolveIsNight(this, fallbackToNightWhenSurfaceUnknown: true);
         ApplyNightModeVisual();
-    }
-
-    private bool ResolveNightMode()
-    {
-        if (ActualThemeVariant == ThemeVariant.Dark)
-        {
-            return true;
-        }
-
-        if (ActualThemeVariant == ThemeVariant.Light)
-        {
-            return false;
-        }
-
-        if (this.TryFindResource("AdaptiveSurfaceBaseBrush", out var value) &&
-            value is ISolidColorBrush brush)
-        {
-            return CalculateRelativeLuminance(brush.Color) < 0.45;
-        }
-
-        return true;
-    }
-
-    private static double CalculateRelativeLuminance(Color color)
-    {
-        static double ToLinear(double channel)
-        {
-            return channel <= 0.03928
-                ? channel / 12.92
-                : Math.Pow((channel + 0.055) / 1.055, 2.4);
-        }
-
-        var r = ToLinear(color.R / 255d);
-        var g = ToLinear(color.G / 255d);
-        var b = ToLinear(color.B / 255d);
-        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
     }
 
     private void ApplyNightModeVisual()
@@ -386,18 +351,8 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
         RefreshIcon.Opacity = _isRefreshing ? 0.60 : 1.0;
     }
 
-    private void UpdateLanguageCode()
-    {
-        try
-        {
-            var snapshot = _appSettingsService.Load();
-            _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
-        }
-        catch
-        {
-            _languageCode = "zh-CN";
-        }
-    }
+    private void UpdateLanguageCode() =>
+        _languageCode = _localizationService.ResolveLanguageCode(() => _appSettingsService.Load().LanguageCode);
 
     private void ApplyAutoRefreshSettings()
     {
@@ -530,7 +485,7 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
         {
             var candidate = (low + high) / 2d;
             var lineHeight = candidate * lineHeightFactor;
-            var size = MeasureTextSize(content, candidate, weight, Math.Max(1, maxWidth), lineHeight);
+            var size = ComponentTypography.MeasureTextSize(content, candidate, weight, Math.Max(1, maxWidth), lineHeight);
             var lineCount = Math.Max(1, (int)Math.Ceiling(size.Height / Math.Max(1, lineHeight)));
             var fits = size.Height <= maxHeight + 0.6 && lineCount <= Math.Max(1, maxLines);
 
@@ -546,20 +501,5 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
         }
 
         return best;
-    }
-
-    private static Size MeasureTextSize(string text, double fontSize, FontWeight weight, double maxWidth, double lineHeight)
-    {
-        var probe = new TextBlock
-        {
-            Text = text,
-            FontSize = fontSize,
-            FontWeight = weight,
-            TextWrapping = TextWrapping.Wrap,
-            LineHeight = lineHeight
-        };
-
-        probe.Measure(new Size(Math.Max(1, maxWidth), double.PositiveInfinity));
-        return probe.DesiredSize;
     }
 }

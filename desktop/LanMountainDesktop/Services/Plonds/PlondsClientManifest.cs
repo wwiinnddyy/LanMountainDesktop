@@ -19,10 +19,10 @@ internal sealed record PlondsClientFileEntry(
     string Action,
     string Hash,
     long Size,
-    string HashAlgorithm = "sha256");
+    string HashAlgorithm = PlondsWireFormat.HashAlgorithmSha256);
 
 internal sealed record PlondsClientChangedFileEntry(
     string ArchivePath,
     string Hash,
     long Size,
-    string HashAlgorithm = "sha256");
+    string HashAlgorithm = PlondsWireFormat.HashAlgorithmSha256);

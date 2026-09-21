@@ -20,8 +20,6 @@ internal sealed class WindowsNotificationListener : IPlatformNotificationListene
         ResolveWinRtType("Windows.UI.Notifications.NotificationKinds");
     private static readonly Type? KnownNotificationBindingsType =
         ResolveWinRtType("Windows.UI.Notifications.KnownNotificationBindings");
-    private static readonly Type? AppInfoType =
-        ResolveWinRtType("Windows.ApplicationModel.AppInfo");
     private static readonly MethodInfo? AsTaskGenericMethodDefinition = ResolveAsTaskGenericMethod();
     private static readonly MethodInfo? AsStreamForReadMethod = ResolveAsStreamForReadMethod();
 

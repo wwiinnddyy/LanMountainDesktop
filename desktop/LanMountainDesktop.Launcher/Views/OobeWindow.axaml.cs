@@ -1000,7 +1000,6 @@ public partial class OobeWindow : Window
     }
 
     private static double EaseOutCubic(double t) => 1 - Math.Pow(1 - t, 3);
-    private static double EaseOutQuad(double t) => 1 - Math.Pow(1 - t, 2);
     private static double EaseOutBack(double t)
     {
         const double c1 = 1.70158;

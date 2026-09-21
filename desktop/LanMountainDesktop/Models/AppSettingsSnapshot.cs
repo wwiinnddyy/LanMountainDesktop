@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Shared.Contracts.Launcher;
+using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Models;
 
@@ -49,7 +50,7 @@ public sealed class AppSettingsSnapshot
 
     public string? SettingsTabTag { get; set; }
 
-    public string LanguageCode { get; set; } = "zh-CN";
+    public string LanguageCode { get; set; } = LocalizationService.DefaultLanguageCode;
 
     public string? TimeZoneId { get; set; }
 

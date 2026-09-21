@@ -682,27 +682,6 @@ public sealed class GitHubReleaseUpdateService : IDisposable
         return null;
     }
 
-    private static string GetPlatformAssetSuffix()
-    {
-        var os = OperatingSystem.IsWindows()
-            ? "windows"
-            : OperatingSystem.IsLinux()
-                ? "linux"
-                : OperatingSystem.IsMacOS()
-                    ? "macos"
-                    : "unknown";
-
-        var arch = RuntimeInformation.OSArchitecture switch
-        {
-            Architecture.X86 => "x86",
-            Architecture.Arm => "arm",
-            Architecture.Arm64 => "arm64",
-            _ => "x64"
-        };
-
-        return $"{os}-{arch}";
-    }
-
     private static int ScoreWindowsInstallerAsset(string assetName, string architectureToken)
     {
         if (string.IsNullOrWhiteSpace(assetName))

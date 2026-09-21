@@ -190,28 +190,7 @@ public partial class ClockWidget : UserControl, IDesktopComponentWidget, ITimeZo
         RootBorder.Padding = new Thickness(Math.Clamp(cellSize * 0.15, 12, 24), 0);
     }
 
-    private void ApplyChrome()
-    {
-        if (_transparentBackground)
-        {
-            RootBorder.Classes.Remove("glass-panel");
-            RootBorder.Background = Brushes.Transparent;
-            RootBorder.BorderBrush = Brushes.Transparent;
-            RootBorder.BorderThickness = new Thickness(0);
-            RootBorder.BoxShadow = default;
-            return;
-        }
-
-        if (!RootBorder.Classes.Contains("glass-panel"))
-        {
-            RootBorder.Classes.Add("glass-panel");
-        }
-
-        RootBorder.ClearValue(Border.BackgroundProperty);
-        RootBorder.ClearValue(Border.BorderBrushProperty);
-        RootBorder.ClearValue(Border.BorderThicknessProperty);
-        RootBorder.ClearValue(Border.BoxShadowProperty);
-    }
+    private void ApplyChrome() => ComponentChromePanel.Apply(RootBorder, _transparentBackground);
 
     private CornerRadius ResolveUnifiedMainRectangle() => new(ResolveUnifiedMainRadiusValue());
 

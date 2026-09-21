@@ -27,7 +27,7 @@ internal static class HostUpdateOrchestratorProvider
             var githubProvider = new GithubReleaseManifestProvider("wwiinnddyy", "LanMountainDesktop");
             var manifestProvider = githubProvider;
             var httpClient = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(30) };
-            var downloadEngine = new UpdateDownloadEngine(manifestProvider, new ResumableDownloadService(httpClient));
+            var downloadEngine = new UpdateDownloadEngine(new ResumableDownloadService(httpClient));
             var installGateway = new UpdateInstallGateway();
             var stateStore = new UpdateStateStore(settingsFacade);
             _instance = new UpdateOrchestrator(manifestProvider, downloadEngine, installGateway, stateStore);

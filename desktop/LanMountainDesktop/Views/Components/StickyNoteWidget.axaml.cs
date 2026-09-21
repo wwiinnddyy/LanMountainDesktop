@@ -39,8 +39,6 @@ public partial class StickyNoteWidget : UserControl,
     private string _markdownContent = string.Empty;
     private bool _isEditing;
     private bool _isDirty;
-    private bool _isOnActivePage = true;
-    private bool _isEditMode;
     private bool _disposed;
     private bool _isApplyingPersistedContent;
 
@@ -122,9 +120,6 @@ public partial class StickyNoteWidget : UserControl,
 
     public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)
     {
-        _isOnActivePage = isOnActivePage;
-        _isEditMode = isEditMode;
-
         ToggleButton.IsHitTestVisible = !isEditMode;
         NoteTextBox.IsReadOnly = isEditMode;
 

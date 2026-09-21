@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.Input;
 using Markdown.Avalonia;
@@ -26,22 +25,7 @@ public static class AirAppCatalogMarkdownHelper
             _ => null
         };
 
-        if (string.IsNullOrWhiteSpace(url))
-        {
-            return;
-        }
-
-        try
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = url,
-                UseShellExecute = true
-            });
-        }
-        catch
-        {
-            // Ignore browser launch failures inside the markdown viewer.
-        }
+        // 目录页渲染的是第三方 AirApp 自带的 README，只放行 http/https。
+        ExternalLinkLauncher.TryOpen(url);
     }
 }

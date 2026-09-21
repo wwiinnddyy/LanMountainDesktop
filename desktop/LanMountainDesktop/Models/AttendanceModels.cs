@@ -11,10 +11,3 @@ public sealed record AttendanceSessionRecord(
     double? Score,
     string? PayloadJson);
 
-public sealed record AttendanceEventRecord(
-    string EventId,
-    string SessionId,
-    string EventType,
-    DateTimeOffset OccurredAt,
-    string? PayloadJson);
-

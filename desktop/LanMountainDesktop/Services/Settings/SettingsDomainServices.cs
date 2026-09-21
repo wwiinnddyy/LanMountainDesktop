@@ -700,7 +700,7 @@ internal sealed class RegionSettingsService : IRegionSettingsService
     {
         var snapshot = _settingsService.Load();
         snapshot.LanguageCode = string.IsNullOrWhiteSpace(state.LanguageCode)
-            ? "zh-CN"
+            ? LocalizationService.DefaultLanguageCode
             : state.LanguageCode.Trim();
         snapshot.TimeZoneId = string.IsNullOrWhiteSpace(state.TimeZoneId)
             ? null
@@ -1978,7 +1978,7 @@ internal sealed class ApplicationInfoService : IApplicationInfoService
             .ResolveForCurrentProcess()
             .Version;
 
-        // 浼樺厛浠庣幆澧冨彉閲忚鍙栵紙Launcher 浼犻€掞級
+        // 优先从环境变量读取（Launcher 传递）
         var envVersion = Environment.GetEnvironmentVariable(LanMountainDesktop.Shared.Contracts.Launcher.LauncherIpcConstants.VersionEnvVar);
         if (!string.IsNullOrWhiteSpace(envVersion))
         {
@@ -2029,7 +2029,7 @@ internal sealed class ApplicationInfoService : IApplicationInfoService
             .ResolveForCurrentProcess()
             .Codename;
 
-        // 浼樺厛浠庣幆澧冨彉閲忚鍙栵紙Launcher 浼犻€掞級
+        // 优先从环境变量读取（Launcher 传递）
         var envCodename = Environment.GetEnvironmentVariable(LanMountainDesktop.Shared.Contracts.Launcher.LauncherIpcConstants.CodenameEnvVar);
         if (!string.IsNullOrWhiteSpace(envCodename))
         {

@@ -93,18 +93,6 @@ internal static class DesktopPlacementMath
         return !IsOccludedByComponentLibrary(placementRect, componentLibraryBounds);
     }
 
-    public static Rect GetGridBounds(DesktopGridGeometry grid)
-    {
-        if (!grid.IsValid)
-        {
-            return default;
-        }
-
-        var width = grid.ColumnCount * grid.CellSize + Math.Max(0, grid.ColumnCount - 1) * grid.CellGap;
-        var height = grid.RowCount * grid.CellSize + Math.Max(0, grid.RowCount - 1) * grid.CellGap;
-        return new Rect(grid.Origin, new Size(width, height));
-    }
-
     public static Rect GetCellRect(
         DesktopGridGeometry grid,
         int column,
@@ -122,18 +110,6 @@ internal static class DesktopPlacementMath
         var width = safeWidthCells * grid.CellSize + Math.Max(0, safeWidthCells - 1) * grid.CellGap;
         var height = safeHeightCells * grid.CellSize + Math.Max(0, safeHeightCells - 1) * grid.CellGap;
         return new Rect(x, y, width, height);
-    }
-
-    public static Rect GetSnappedCellRect(
-        DesktopGridGeometry grid,
-        Point pointerInViewport,
-        Point pointerOffset,
-        int widthCells,
-        int heightCells)
-    {
-        return TryGetSnappedCell(grid, pointerInViewport, pointerOffset, widthCells, heightCells, out var column, out var row)
-            ? GetCellRect(grid, column, row, widthCells, heightCells)
-            : default;
     }
 
     public static bool TryGetSnappedCell(

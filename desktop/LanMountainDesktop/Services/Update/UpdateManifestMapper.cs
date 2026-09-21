@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using LanMountainDesktop.Shared.Contracts.Update;
+using LanMountainDesktop.Services.Plonds;
 
 namespace LanMountainDesktop.Services.Update;
 
@@ -24,7 +25,7 @@ internal static class UpdateManifestMapper
         {
             files.Add(new UpdateFileEntry(
                 Path: installerAsset.Name,
-                Action: "add",
+                Action: PlondsWireFormat.ActionAdd,
                 Sha256: installerAsset.Sha256 ?? string.Empty,
                 Size: installerAsset.SizeBytes,
                 Mode: "file-object",

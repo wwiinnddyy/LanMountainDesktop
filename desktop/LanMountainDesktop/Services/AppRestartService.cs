@@ -8,34 +8,6 @@ namespace LanMountainDesktop.Services;
 
 public static class AppRestartService
 {
-    public static bool TryRestartApplication()
-    {
-        return App.CurrentHostApplicationLifecycle?.TryRestart(new HostApplicationLifecycleRequest(
-            Source: nameof(AppRestartService),
-            Reason: "Legacy restart entry point invoked.")) == true;
-    }
-
-    public static bool TryRestartCurrentProcess()
-    {
-        try
-        {
-            var startInfo = CreateRestartStartInfo();
-            if (startInfo is null)
-            {
-                Debug.WriteLine("[AppRestart] Failed to resolve restart start info.");
-                return false;
-            }
-
-            Process.Start(startInfo);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[AppRestart] Failed to restart app: {ex}");
-            return false;
-        }
-    }
-
     public static ProcessStartInfo? CreateRestartStartInfo(
         string[]? commandLineArgs = null,
         string? processPath = null,
@@ -89,18 +61,6 @@ public static class AppRestartService
         }
 
         return null;
-    }
-
-    public static int? TryGetRestartParentProcessId(IReadOnlyList<string> commandLineArgs)
-    {
-        ArgumentNullException.ThrowIfNull(commandLineArgs);
-        return LauncherRuntimeMetadata.GetRestartParentProcessId(commandLineArgs);
-    }
-
-    public static RestartPresentationMode? TryGetRestartPresentationMode(IReadOnlyList<string> commandLineArgs)
-    {
-        ArgumentNullException.ThrowIfNull(commandLineArgs);
-        return LauncherRuntimeMetadata.GetRestartPresentationMode(commandLineArgs);
     }
 
     private static ProcessStartInfo CreateExecutableStartInfo(

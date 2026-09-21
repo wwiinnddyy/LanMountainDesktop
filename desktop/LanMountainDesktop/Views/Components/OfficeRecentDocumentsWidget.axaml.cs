@@ -19,7 +19,6 @@ public partial class OfficeRecentDocumentsWidget : UserControl, IDesktopComponen
     private string _placementId = string.Empty;
     private IReadOnlyList<string> _enabledSources = OfficeRecentDocumentSourceTypes.DefaultValues;
     private bool _isOnActivePage;
-    private bool _isEditMode;
     private bool _isLoading;
 
     public OfficeRecentDocumentsWidget()
@@ -41,8 +40,8 @@ public partial class OfficeRecentDocumentsWidget : UserControl, IDesktopComponen
 
     public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)
     {
+        _ = isEditMode;
         _isOnActivePage = isOnActivePage;
-        _isEditMode = isEditMode;
 
         if (_isOnActivePage && !_isLoading)
         {

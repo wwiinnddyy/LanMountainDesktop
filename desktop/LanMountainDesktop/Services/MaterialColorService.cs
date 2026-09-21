@@ -30,7 +30,6 @@ internal sealed class MaterialColorService : IMaterialColorService, IDisposable
     private string _liveSystemMaterialMode;
     private string? _liveSelectedWallpaperSeed;
     private string _liveThemeWallpaperColorSource;
-    private bool _liveUseNativeWallpaperChangeEvents;
     private Timer? _systemWallpaperPollTimer;
     private string? _lastObservedWallpaperSourceKey;
     private bool _nativeWallpaperEventsActive;
@@ -57,7 +56,6 @@ internal sealed class MaterialColorService : IMaterialColorService, IDisposable
         _liveSystemMaterialMode = ResolveSupportedMaterialMode(initialThemeState.SystemMaterialMode);
         _liveSelectedWallpaperSeed = initialThemeState.SelectedWallpaperSeed;
         _liveThemeWallpaperColorSource = ThemeAppearanceValues.NormalizeWallpaperColorSource(initialThemeState.ThemeWallpaperColorSource);
-        _liveUseNativeWallpaperChangeEvents = initialThemeState.UseNativeWallpaperChangeEvents;
         _settingsFacade.Settings.Changed += OnSettingsChanged;
         ConfigureSystemWallpaperMonitoring(initialThemeState);
     }
@@ -237,7 +235,6 @@ internal sealed class MaterialColorService : IMaterialColorService, IDisposable
         _liveSystemMaterialMode = ResolveSupportedMaterialMode(latestThemeState.SystemMaterialMode);
         _liveSelectedWallpaperSeed = latestThemeState.SelectedWallpaperSeed;
         _liveThemeWallpaperColorSource = ThemeAppearanceValues.NormalizeWallpaperColorSource(latestThemeState.ThemeWallpaperColorSource);
-        _liveUseNativeWallpaperChangeEvents = latestThemeState.UseNativeWallpaperChangeEvents;
         ConfigureSystemWallpaperMonitoring(latestThemeState);
         RaiseChanged(queueWallpaperPaletteBuild: true);
     }

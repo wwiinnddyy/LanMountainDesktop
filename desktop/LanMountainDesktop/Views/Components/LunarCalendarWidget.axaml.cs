@@ -201,10 +201,10 @@ public partial class LunarCalendarWidget : UserControl, IDesktopComponentWidget,
         YiItemsTextBlock.FontSize = Math.Clamp(24 * scale * densityBoost, 10, 36);
         JiItemsTextBlock.FontSize = YiItemsTextBlock.FontSize;
 
-        _gregorianLineWeight = ToVariableWeight(Lerp(500, 640, Math.Clamp((scale - 0.58) / 1.2, 0, 1)));
-        _lunarDateWeight = ToVariableWeight(Lerp(650, 780, Math.Clamp((scale - 0.58) / 1.2, 0, 1)));
-        _labelWeight = ToVariableWeight(Lerp(620, 760, Math.Clamp((scale - 0.58) / 1.2, 0, 1)));
-        _itemsWeight = ToVariableWeight(Lerp(520, 670, Math.Clamp((scale - 0.58) / 1.2, 0, 1)));
+        _gregorianLineWeight = ComponentTypography.ToVariableWeight(ComponentTypography.Lerp(500, 640, Math.Clamp((scale - 0.58) / 1.2, 0, 1)));
+        _lunarDateWeight = ComponentTypography.ToVariableWeight(ComponentTypography.Lerp(650, 780, Math.Clamp((scale - 0.58) / 1.2, 0, 1)));
+        _labelWeight = ComponentTypography.ToVariableWeight(ComponentTypography.Lerp(620, 760, Math.Clamp((scale - 0.58) / 1.2, 0, 1)));
+        _itemsWeight = ComponentTypography.ToVariableWeight(ComponentTypography.Lerp(520, 670, Math.Clamp((scale - 0.58) / 1.2, 0, 1)));
 
         GregorianLineTextBlock.FontWeight = _gregorianLineWeight;
         LunarDateTextBlock.FontWeight = _lunarDateWeight;
@@ -228,16 +228,6 @@ public partial class LunarCalendarWidget : UserControl, IDesktopComponentWidget,
         var heightScale = Bounds.Height > 1 ? Math.Clamp(Bounds.Height / 300d, 0.58, 2.0) : 1;
         var widthScale = Bounds.Width > 1 ? Math.Clamp(Bounds.Width / 300d, 0.58, 2.0) : 1;
         return Math.Clamp(Math.Min(cellScale, Math.Min(heightScale, widthScale) * 1.05), 0.58, 1.95);
-    }
-
-    private static double Lerp(double from, double to, double t)
-    {
-        return from + ((to - from) * t);
-    }
-
-    private static FontWeight ToVariableWeight(double weight)
-    {
-        return (FontWeight)(int)Math.Clamp(Math.Round(weight), 1, 1000);
     }
 
     private static string ToChineseWeekday(DayOfWeek dayOfWeek)

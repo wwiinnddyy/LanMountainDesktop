@@ -243,26 +243,6 @@ public interface IAirAppCatalogSourceProvider
     Task<AirAppCatalogIndexResult> LoadCatalogAsync(CancellationToken cancellationToken = default);
 }
 
-public interface IAirAppCatalogService : IAirAppCatalogSourceProvider
-{
-    Task<AirAppCatalogInstallResult> InstallAsync(string airAppId, CancellationToken cancellationToken = default);
-}
-
-public interface IPackageSourceResolver
-{
-    IReadOnlyList<AirAppPackageSourceInfo> ResolveSources(AirAppCatalogItemInfo item);
-}
-
-public interface IAirAppCompatibilityEvaluator
-{
-    AirAppInstallDiagnostic? Evaluate(AirAppCatalogItemInfo item, Version? hostVersion);
-}
-
-public interface IAirAppInstallOrchestrator
-{
-    Task<AirAppCatalogInstallResult> InstallAsync(AirAppCatalogItemInfo item, CancellationToken cancellationToken = default);
-}
-
 public interface IGridSettingsService
 {
     GridSettingsState Get();

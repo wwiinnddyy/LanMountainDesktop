@@ -294,9 +294,7 @@ public static class DesktopComponentEditorRegistryFactory
 
             registrations[componentId] = new DesktopComponentEditorRegistration(
                 componentId,
-                context => new InformationalComponentEditor(
-                    context,
-                    $"This {context.Definition.DisplayName} component currently exposes instance-scoped editor metadata only."));
+                context => new InformationalComponentEditor(context));
         }
 
         return registrations.Values;

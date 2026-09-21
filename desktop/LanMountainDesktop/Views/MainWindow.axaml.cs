@@ -51,19 +51,12 @@ public partial class MainWindow : Window
         CurrentValidWallpaper
     }
 
-    private enum WeatherLocationMode
-    {
-        CitySearch,
-        Coordinates
-    }
-
     private const int StatusBarRowIndex = 0;
     private const int MinShortSideCells = 6;
     private const int MaxShortSideCells = 96;
     private const int MinEdgeInsetPercent = 0;
     private const int MaxEdgeInsetPercent = 30;
     private const int DefaultEdgeInsetPercent = 18;
-    private static readonly int SettingsTransitionDurationMs = (int)FluttermotionToken.Page.TotalMilliseconds;
     private const double LightBackgroundLuminanceThreshold = 0.57;
     private const string TaskbarLayoutBottomFullRowMacStyle = "BottomFullRowMacStyle";
     private const string BackToWindowsButtonDisplayModeIconAndText = "IconAndText";
@@ -92,11 +85,9 @@ public partial class MainWindow : Window
     private readonly IUpdateSettingsService _updateSettingsService;
     private readonly ISettingsService _settingsService;
     private readonly IComponentLayoutStore _componentLayoutStore = ComponentDomainStorageProvider.Instance;
-    private readonly IComponentStateStore _componentStateStore = ComponentDomainStorageProvider.Instance;
     private readonly IComponentInstanceSettingsStore _componentSettingsStore = HostComponentSettingsStoreProvider.GetOrCreate();
     private readonly LocalizationService _localizationService = new();
     private readonly TimeZoneService _timeZoneService;
-    private readonly WindowsStartupService _windowsStartupService = new();
     private readonly IWeatherInfoService _weatherDataService;
     private readonly IRecommendationInfoService _recommendationInfoService = new RecommendationDataService();
     private readonly ICalculatorDataService _calculatorDataService = new CalculatorDataService();
@@ -106,25 +97,18 @@ public partial class MainWindow : Window
     private readonly IComponentLibraryService _componentLibraryService;
     private readonly IComponentEditorWindowService _componentEditorWindowService;
     private readonly IEmbeddedComponentLibraryService _componentLibraryWindowService = new EmbeddedComponentLibraryService();
-    private readonly IAirAppLauncherService _airAppLauncherService = AirAppLauncherServiceProvider.GetOrCreate();
     private ComponentLibraryWindow? _detachedComponentLibraryWindow;
-    private readonly FluentAvaloniaTheme? _fluentAvaloniaTheme;
     private readonly HashSet<string> _topStatusComponentIds = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<TaskbarActionId> _pinnedTaskbarActions = [];
     private int _targetShortSideCells;
     private bool _isSettingsOpen;
     private bool _isNightMode;
     private bool _enableDynamicTaskbarActions;
-    private bool _suppressThemeToggleEvents;
-    private bool _suppressStatusBarToggleEvents;
-    private bool _suppressLanguageSelectionEvents;
     private bool _suppressTimeZoneSelectionEvents;
-    private bool _suppressWeatherLocationEvents;
     private bool _suppressSettingsPersistence;
     private bool _isComponentLibraryOpen;
     private Border? _selectedDesktopComponentHost;
     private bool _reopenSettingsAfterComponentLibraryClose;
-    private TranslateTransform? _settingsContentPanelTransform;
     private IBrush? _defaultDesktopBackground;
     private Bitmap? _wallpaperBitmap;
     private Bitmap? _lastValidWallpaperBitmap;
@@ -135,19 +119,14 @@ public partial class MainWindow : Window
     private string _wallpaperType = "Image";
     private Color? _wallpaperSolidColor;
     private string? _wallpaperPath;
-    private string _wallpaperStatus = "Current background uses solid color.";
     private int _systemWallpaperRefreshIntervalSeconds = 300;
     private DispatcherTimer? _systemWallpaperRefreshTimer;
     private readonly ISystemWallpaperProvider _systemWallpaperProvider = HostSystemWallpaperProvider.GetOrCreate();
-    private IReadOnlyList<Color> _recommendedColors = Array.Empty<Color>();
-    private IReadOnlyList<Color> _monetColors = Array.Empty<Color>();
     private Color _selectedThemeColor = Color.Parse("#FF3B82F6");
     private double _currentDesktopCellSize;
     private double _currentDesktopCellGap;
-    private double _currentDesktopEdgeInset;
     private string _gridSpacingPreset = "Relaxed";
     private bool _isSlideAnimationActive;
-    private TranslateTransform? _desktopPageSlideTransform;
     private PixelPoint? _preparedWindowTargetPosition;
     private PixelPoint? _preparedWindowHiddenPosition;
     private string _statusBarSpacingMode = "Relaxed";
@@ -175,24 +154,9 @@ public partial class MainWindow : Window
     private string _backToWindowsIconSource = BackToWindowsIconSourceFluentIcon;
     private string _backToWindowsFluentIconName = DefaultBackToWindowsFluentIconName;
     private string _backToWindowsIconText = DefaultBackToWindowsIconText;
-    private string _languageCode = "zh-CN";
-    private WeatherLocationMode _weatherLocationMode = WeatherLocationMode.CitySearch;
-    private string _weatherLocationKey = string.Empty;
-    private string _weatherLocationName = string.Empty;
-    private double _weatherLatitude = 39.9042;
-    private double _weatherLongitude = 116.4074;
-    private bool _weatherAutoRefreshLocation;
-    private string _weatherExcludedAlertsRaw = string.Empty;
-    private string _weatherIconPackId = WeatherVisualStyleId.Default;
-    private bool _weatherNoTlsRequests;
+    private string _languageCode = LocalizationService.DefaultLanguageCode;
     private bool _autoStartWithWindows;
-    private bool _suppressAutoStartToggleEvents;
-    private bool _suppressAppRenderModeSelectionEvents;
     private string _selectedAppRenderMode = AppRenderingModeHelper.Default;
-    private string _runningAppRenderMode = AppRenderingModeHelper.Default;
-    private string _weatherSearchKeyword = string.Empty;
-    private bool _isWeatherSearchInProgress;
-    private bool _isWeatherPreviewInProgress;
     private ClockDisplayFormat _clockDisplayFormat = ClockDisplayFormat.HourMinuteSecond;
     private bool _externalSettingsReloadPending;
     private int _persistSettingsRevision;
@@ -233,7 +197,6 @@ public partial class MainWindow : Window
         }
 
         InitializeTaskbarProfileFlyout();
-        _fluentAvaloniaTheme = Application.Current?.Styles.OfType<FluentAvaloniaTheme>().FirstOrDefault();
         _settingsService.Changed += OnSettingsChanged;
         _appearanceThemeService.Changed += OnAppearanceThemeChanged;
         PropertyChanged += OnWindowPropertyChanged;
@@ -410,38 +373,6 @@ public partial class MainWindow : Window
         };
     }
 
-    private void OnNightModeIsCheckedChanged(object? sender, RoutedEventArgs e)
-    {
-        if (sender is not ToggleButton toggleButton)
-        {
-            return;
-        }
-
-        if (toggleButton.IsChecked == true)
-        {
-            OnNightModeChecked(sender, e);
-            return;
-        }
-
-        OnNightModeUnchecked(sender, e);
-    }
-
-    private void OnStatusBarClockIsCheckedChanged(object? sender, RoutedEventArgs e)
-    {
-        if (sender is not ToggleButton toggleButton)
-        {
-            return;
-        }
-
-        if (toggleButton.IsChecked == true)
-        {
-            OnStatusBarClockChecked(sender, e);
-            return;
-        }
-
-        OnStatusBarClockUnchecked(sender, e);
-    }
-
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
@@ -480,7 +411,6 @@ public partial class MainWindow : Window
         _statusBarCustomSpacingPercent = Math.Clamp(snapshot.StatusBarCustomSpacingPercent, 0, 30);
         ApplyTaskbarSettings(snapshot);
         InitializeLocalization(snapshot.LanguageCode);
-        InitializeWeatherSettings(snapshot);
         InitializeAutoStartWithWindowsSetting(snapshot);
         InitializeAppRenderModeSetting(snapshot);
         InitializeUpdateSettings(snapshot);
@@ -511,7 +441,7 @@ public partial class MainWindow : Window
             _isNightMode = CalculateCurrentBackgroundLuminance() < LightBackgroundLuminanceThreshold;
         }
 
-        ApplyNightModeState(_isNightMode, refreshPalettes: true);
+        ApplyNightModeState(_isNightMode);
         ApplyLocalization();
         TelemetryServices.Usage?.TrackMainWindowOpened(
             "MainWindow.OnOpened",
@@ -589,8 +519,6 @@ public partial class MainWindow : Window
             }
 
             ApplyAdaptiveThemeResources();
-            _recommendedColors = snapshot.MonetPalette.RecommendedColors;
-            _monetColors = snapshot.MonetPalette.MonetColors;
             ApplyUnifiedMainRectangleChrome(snapshot);
         }, DispatcherPriority.Background);
     }
@@ -621,7 +549,6 @@ public partial class MainWindow : Window
         }
         _currentDesktopCellSize = gridMetrics.CellSize;
         _currentDesktopCellGap = gridMetrics.GapPx;
-        _currentDesktopEdgeInset = gridMetrics.EdgeInsetPx;
 
         DesktopGrid.RowDefinitions.Clear();
         DesktopGrid.ColumnDefinitions.Clear();
@@ -824,14 +751,6 @@ public partial class MainWindow : Window
         return _appearanceThemeService.GetCurrent().CornerRadiusTokens.Lg.TopLeft;
     }
 
-    private static void SetButtonContentSpacing(Button? button, double spacing)
-    {
-        if (button?.Content is StackPanel contentPanel)
-        {
-            contentPanel.Spacing = spacing;
-        }
-    }
-
     private double GetBackToWindowsButtonMinWidth(double taskbarCellHeight)
     {
         return _backToWindowsButtonDisplayMode switch
@@ -925,7 +844,7 @@ public partial class MainWindow : Window
             BackToWindowsIconHost.Content = new TextBlock
             {
                 Text = NormalizeBackToWindowsIconText(_backToWindowsIconText),
-                Foreground = GetThemeBrush("AdaptiveTextPrimaryBrush"),
+                Foreground = GetThemeBrush(ThemeResourceKeys.TextPrimaryBrush),
                 FontWeight = FontWeight.SemiBold,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
@@ -939,7 +858,7 @@ public partial class MainWindow : Window
         {
             Icon = NormalizeBackToWindowsFluentIcon(_backToWindowsFluentIconName),
             IconVariant = FluentIconVariant.Regular,
-            Foreground = GetThemeBrush("AdaptiveTextPrimaryBrush"),
+            Foreground = GetThemeBrush(ThemeResourceKeys.TextPrimaryBrush),
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center
         };
@@ -1016,23 +935,6 @@ public partial class MainWindow : Window
         }
 
         SlideOutAndMinimizeAsync();
-    }
-
-    private TranslateTransform GetDesktopPageSlideTransform()
-    {
-        if (_desktopPageSlideTransform is not null)
-        {
-            return _desktopPageSlideTransform;
-        }
-
-        _desktopPageSlideTransform = DesktopPage.RenderTransform as TranslateTransform;
-        if (_desktopPageSlideTransform is null)
-        {
-            _desktopPageSlideTransform = new TranslateTransform();
-            DesktopPage.RenderTransform = _desktopPageSlideTransform;
-        }
-
-        return _desktopPageSlideTransform;
     }
 
     internal bool ShouldUseFullscreenWindow()

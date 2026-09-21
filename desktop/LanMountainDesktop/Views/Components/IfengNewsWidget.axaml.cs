@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -17,6 +16,8 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Theme;
+using LanMountainDesktop.Helpers;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -52,7 +53,7 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
 
     private IRecommendationInfoService _recommendationService = DefaultRecommendationService;
     private CancellationTokenSource? _refreshCts;
-    private string _languageCode = "zh-CN";
+    private string _languageCode = LocalizationService.DefaultLanguageCode;
     private string _channelType = IfengNewsChannelTypes.Comprehensive;
     private double _currentCellSize = BaseCellSize;
     private bool _isAttached;
@@ -126,44 +127,8 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
 
     private void OnActualThemeVariantChanged(object? sender, EventArgs e)
     {
-        _isNightVisual = ResolveNightMode();
+        _isNightVisual = ComponentThemeMode.ResolveIsNight(this, fallbackToNightWhenSurfaceUnknown: true);
         UpdateAdaptiveLayout();
-    }
-
-    private bool ResolveNightMode()
-    {
-        if (ActualThemeVariant == ThemeVariant.Dark)
-        {
-            return true;
-        }
-
-        if (ActualThemeVariant == ThemeVariant.Light)
-        {
-            return false;
-        }
-
-        if (this.TryFindResource("AdaptiveSurfaceBaseBrush", out var value) &&
-            value is ISolidColorBrush brush)
-        {
-            return CalculateRelativeLuminance(brush.Color) < 0.45;
-        }
-
-        return true;
-    }
-
-    private static double CalculateRelativeLuminance(Color color)
-    {
-        static double ToLinear(double channel)
-        {
-            return channel <= 0.03928
-                ? channel / 12.92
-                : Math.Pow((channel + 0.055) / 1.055, 2.4);
-        }
-
-        var r = ToLinear(color.R / 255d);
-        var g = ToLinear(color.G / 255d);
-        var b = ToLinear(color.B / 255d);
-        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
     }
 
     private void ApplyNightModeVisual()
@@ -287,7 +252,7 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
             foreach (var item in newItems)
             {
                 var control = new NewsItemControl(item, _isNightVisual);
-                control.Clicked += (s, url) => TryOpenUrl(url);
+                control.Clicked += (s, url) => ExternalLinkLauncher.TryOpen(url);
                 NewsStackPanel.Children.Insert(NewsStackPanel.Children.Count - 1, control);
                 _itemControls.Add(control);
             }
@@ -402,18 +367,8 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
         RefreshButton.Opacity = enabled ? 1.0 : 0.65;
     }
 
-    private void UpdateLanguageCode()
-    {
-        try
-        {
-            var snapshot = _appSettingsService.Load();
-            _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
-        }
-        catch
-        {
-            _languageCode = "zh-CN";
-        }
-    }
+    private void UpdateLanguageCode() =>
+        _languageCode = _localizationService.ResolveLanguageCode(() => _appSettingsService.Load().LanguageCode);
 
     private void ApplyAutoRefreshSettings()
     {
@@ -473,7 +428,7 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
 
     private static async Task<Bitmap?> TryDownloadBitmapAsync(string? imageUrl, CancellationToken cancellationToken)
     {
-        var normalizedUrl = NormalizeHttpUrl(imageUrl);
+        var normalizedUrl = ExternalLinkLauncher.NormalizeHttpUrl(imageUrl);
         if (string.IsNullOrWhiteSpace(normalizedUrl))
         {
             return null;
@@ -507,50 +462,6 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
         {
             return null;
         }
-    }
-
-    private void TryOpenUrl(string? rawUrl)
-    {
-        var normalizedUrl = NormalizeHttpUrl(rawUrl);
-        if (string.IsNullOrWhiteSpace(normalizedUrl))
-        {
-            return;
-        }
-
-        try
-        {
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = normalizedUrl,
-                UseShellExecute = true
-            };
-            Process.Start(startInfo);
-        }
-        catch
-        {
-        }
-    }
-
-    private static string? NormalizeHttpUrl(string? rawUrl)
-    {
-        if (string.IsNullOrWhiteSpace(rawUrl))
-        {
-            return null;
-        }
-
-        var candidate = rawUrl.Trim();
-        if (!Uri.TryCreate(candidate, UriKind.Absolute, out var uri))
-        {
-            return null;
-        }
-
-        if (!string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
-        return uri.ToString();
     }
 
     private void DisposeImageCache()
@@ -617,7 +528,6 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
         private readonly TextBlock _titleTextBlock;
         private readonly Border _imageHost;
         private readonly Image _imageControl;
-        private bool _isNightVisual;
         private Point _pointerPressedPosition;
         private bool _isPointerPressed;
 
@@ -626,7 +536,6 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
         public NewsItemControl(DailyNewsItemSnapshot item, bool isNightVisual)
         {
             _item = item;
-            _isNightVisual = isNightVisual;
 
             Padding = new Thickness(0, 4);
             Background = Brushes.Transparent;
@@ -713,7 +622,6 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
 
         public void ApplyNightMode(bool isNightVisual)
         {
-            _isNightVisual = isNightVisual;
             _titleTextBlock.Foreground = new SolidColorBrush(isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327"));
             _imageHost.Background = new SolidColorBrush(isNightVisual ? Color.Parse("#3D4250") : Color.Parse("#E6E8EC"));
         }

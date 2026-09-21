@@ -1001,6 +1001,7 @@
     "component.editor.placement_label": "Placement ID",
     "component.editor.scope_label": "Scope",
     "component.editor.scope_instance": "Instance-scoped editor",
+    "component.editor.instance_only_hint": "This {0} component currently exposes instance-scoped editor metadata only.",
     "component_category.all":  "All",
     "component_category.clock":  "Clock",
     "component_category.date":  "Calendar",
@@ -1527,5 +1528,12 @@
     "rss.just_now": "Just now",
     "rss.minutes_ago": "{0} min ago",
     "rss.hours_ago": "{0} hr ago",
-    "rss.short_date_format": "MMM d"
+    "rss.short_date_format": "MMM d",
+    "component.sticky_note": "Sticky Note",
+    "component.standby_digital_clock": "StandBy Clock",
+    "component.shortcut": "Shortcut",
+    "component.file_manager": "File Manager",
+    "component.zhijiao_hub": "ZhiJiao Hub",
+    "component.juya_news": "Juya News",
+    "component.notification_box": "Notification Box"
 }

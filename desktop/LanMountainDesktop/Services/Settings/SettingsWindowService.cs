@@ -55,13 +55,6 @@ internal sealed class SettingsWindowService : ISettingsWindowService
         AppSettingsService.SettingsSaved += OnAppSettingsSaved;
     }
 
-    private string L(string key)
-    {
-        var regionState = _settingsFacade.Region.Get();
-        var languageCode = regionState.LanguageCode ?? "zh-CN";
-        return _localizationService.GetString(languageCode, key, key);
-    }
-
     public bool IsOpen => _window is { IsVisible: true };
     public event EventHandler? StateChanged;
 
@@ -103,7 +96,7 @@ internal sealed class SettingsWindowService : ISettingsWindowService
     private SettingsWindow CreateWindow()
     {
         var regionState = _settingsFacade.Region.Get();
-        var languageCode = regionState.LanguageCode ?? "zh-CN";
+        var languageCode = regionState.LanguageCode ?? LocalizationService.DefaultLanguageCode;
 
         _viewModel = new SettingsWindowViewModel(_localizationService, languageCode).Initialize();
 

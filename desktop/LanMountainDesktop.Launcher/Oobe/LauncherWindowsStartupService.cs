@@ -5,8 +5,8 @@ namespace LanMountainDesktop.Launcher.Oobe;
 
 /// <summary>
 /// 将当前 Windows 用户登录时自启动项指向<strong>本 Launcher 进程</strong>（与正式入口一致）。
-/// Host 内 WindowsStartupService 使用 Host 进程路径；
-/// OOBE 在 Launcher 内执行时应使用本类型，以便开机后仍走更新/版本协调流程。
+/// 自启动注册表项（Run key）只由本类型写入，指向 Launcher 进程，
+/// 以便开机后仍走更新/版本协调流程。
 /// </summary>
 public sealed class LauncherWindowsStartupService
 {

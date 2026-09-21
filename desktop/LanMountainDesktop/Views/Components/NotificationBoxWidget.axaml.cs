@@ -13,6 +13,7 @@ using LanMountainDesktop.Models;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -73,7 +74,7 @@ public partial class NotificationBoxWidget : UserControl,
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = true;
-        _isNightVisual = ResolveNightMode();
+        _isNightVisual = ComponentThemeMode.ResolveIsNight(this, fallbackToNightWhenSurfaceUnknown: true);
         LoadSettings();
         RefreshUI();
         UpdateAdaptiveLayout();
@@ -93,45 +94,11 @@ public partial class NotificationBoxWidget : UserControl,
 
     private void OnActualThemeVariantChanged(object? sender, EventArgs e)
     {
-        _isNightVisual = ResolveNightMode();
+        _isNightVisual = ComponentThemeMode.ResolveIsNight(this, fallbackToNightWhenSurfaceUnknown: true);
         UpdateAdaptiveLayout();
     }
 
-    private bool ResolveNightMode()
-    {
-        if (ActualThemeVariant == ThemeVariant.Dark)
-        {
-            return true;
-        }
 
-        if (ActualThemeVariant == ThemeVariant.Light)
-        {
-            return false;
-        }
-
-        if (this.TryFindResource("AdaptiveSurfaceBaseBrush", out var value) &&
-            value is ISolidColorBrush brush)
-        {
-            return CalculateRelativeLuminance(brush.Color) < 0.45;
-        }
-
-        return true;
-    }
-
-    private static double CalculateRelativeLuminance(Color color)
-    {
-        static double ToLinear(double channel)
-        {
-            return channel <= 0.03928
-                ? channel / 12.92
-                : Math.Pow((channel + 0.055) / 1.055, 2.4);
-        }
-
-        var r = ToLinear(color.R / 255d);
-        var g = ToLinear(color.G / 255d);
-        var b = ToLinear(color.B / 255d);
-        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    }
 
     private void LoadSettings()
     {

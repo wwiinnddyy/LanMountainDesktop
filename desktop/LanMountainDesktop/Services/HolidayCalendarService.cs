@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using static LanMountainDesktop.Services.Json.JsonNodeReader;
 
 namespace LanMountainDesktop.Services;
 
@@ -519,117 +520,6 @@ public sealed class HolidayCalendarService : IDisposable
                 value,
                 DateTimeOffset.UtcNow.Add(_dayCacheDuration));
         }
-    }
-
-    private static JsonElement? TryGetNode(JsonElement node, params string[] path)
-    {
-        var current = node;
-        foreach (var segment in path)
-        {
-            if (current.ValueKind != JsonValueKind.Object || !current.TryGetProperty(segment, out var next))
-            {
-                return null;
-            }
-
-            current = next;
-        }
-
-        return current;
-    }
-
-    private static string? ReadString(JsonElement? node, params string[] path)
-    {
-        if (!node.HasValue)
-        {
-            return null;
-        }
-
-        var target = path.Length == 0 ? node : TryGetNode(node.Value, path);
-        if (!target.HasValue)
-        {
-            return null;
-        }
-
-        return target.Value.ValueKind switch
-        {
-            JsonValueKind.String => target.Value.GetString(),
-            JsonValueKind.Number => target.Value.GetRawText(),
-            JsonValueKind.True => "true",
-            JsonValueKind.False => "false",
-            _ => null
-        };
-    }
-
-    private static int? ReadInt(JsonElement? node, params string[] path)
-    {
-        if (!node.HasValue)
-        {
-            return null;
-        }
-
-        var target = path.Length == 0 ? node : TryGetNode(node.Value, path);
-        if (!target.HasValue)
-        {
-            return null;
-        }
-
-        if (target.Value.ValueKind == JsonValueKind.Number && target.Value.TryGetInt32(out var number))
-        {
-            return number;
-        }
-
-        if (target.Value.ValueKind == JsonValueKind.String &&
-            int.TryParse(target.Value.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
-        {
-            return parsed;
-        }
-
-        return null;
-    }
-
-    private static bool? ReadBool(JsonElement? node, params string[] path)
-    {
-        if (!node.HasValue)
-        {
-            return null;
-        }
-
-        var target = path.Length == 0 ? node : TryGetNode(node.Value, path);
-        if (!target.HasValue)
-        {
-            return null;
-        }
-
-        if (target.Value.ValueKind == JsonValueKind.True)
-        {
-            return true;
-        }
-
-        if (target.Value.ValueKind == JsonValueKind.False)
-        {
-            return false;
-        }
-
-        if (target.Value.ValueKind == JsonValueKind.Number && target.Value.TryGetInt32(out var number))
-        {
-            return number != 0;
-        }
-
-        if (target.Value.ValueKind == JsonValueKind.String)
-        {
-            var value = target.Value.GetString();
-            if (bool.TryParse(value, out var parsedBool))
-            {
-                return parsedBool;
-            }
-
-            if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedInt))
-            {
-                return parsedInt != 0;
-            }
-        }
-
-        return null;
     }
 
     private static DateOnly? ParseDateOnly(string? value)

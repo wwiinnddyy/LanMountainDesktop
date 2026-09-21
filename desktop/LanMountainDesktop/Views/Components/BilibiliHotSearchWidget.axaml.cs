@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -13,6 +12,8 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Theme;
+using LanMountainDesktop.Helpers;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -40,7 +41,7 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
 
     private IRecommendationInfoService _recommendationService = DefaultRecommendationService;
     private CancellationTokenSource? _refreshCts;
-    private string _languageCode = "zh-CN";
+    private string _languageCode = LocalizationService.DefaultLanguageCode;
     private string? _searchPageUrl;
     private double _currentCellSize = BaseCellSize;
     private bool _isAttached;
@@ -121,44 +122,8 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
 
     private void OnActualThemeVariantChanged(object? sender, EventArgs e)
     {
-        _isNightVisual = ResolveNightMode();
+        _isNightVisual = ComponentThemeMode.ResolveIsNight(this, fallbackToNightWhenSurfaceUnknown: true);
         UpdateAdaptiveLayout();
-    }
-
-    private bool ResolveNightMode()
-    {
-        if (ActualThemeVariant == ThemeVariant.Dark)
-        {
-            return true;
-        }
-
-        if (ActualThemeVariant == ThemeVariant.Light)
-        {
-            return false;
-        }
-
-        if (this.TryFindResource("AdaptiveSurfaceBaseBrush", out var value) &&
-            value is ISolidColorBrush brush)
-        {
-            return CalculateRelativeLuminance(brush.Color) < 0.45;
-        }
-
-        return true;
-    }
-
-    private static double CalculateRelativeLuminance(Color color)
-    {
-        static double ToLinear(double channel)
-        {
-            return channel <= 0.03928
-                ? channel / 12.92
-                : Math.Pow((channel + 0.055) / 1.055, 2.4);
-        }
-
-        var r = ToLinear(color.R / 255d);
-        var g = ToLinear(color.G / 255d);
-        var b = ToLinear(color.B / 255d);
-        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
     }
 
     private void ApplyNightModeVisual()
@@ -250,7 +215,7 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
         SearchEntryTextBlock.Text = ResolveSearchEntryText(snapshot.SearchPlaceholder);
         TopRightTitleTextBlock.Text = L("bilihot.widget.top_right_label", "bilibili热搜");
 
-        _searchPageUrl = NormalizeHttpUrl(snapshot.SearchUrl) ?? BuildDefaultSearchPageUrl();
+        _searchPageUrl = ExternalLinkLauncher.NormalizeHttpUrl(snapshot.SearchUrl) ?? BuildDefaultSearchPageUrl();
 
         _activeItems.Clear();
         foreach (var item in snapshot.Items)
@@ -346,7 +311,7 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
             return;
         }
 
-        TryOpenUrl(_searchPageUrl);
+        ExternalLinkLauncher.TryOpen(_searchPageUrl);
         e.Handled = true;
     }
 
@@ -362,7 +327,7 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
             return;
         }
 
-        TryOpenUrl(_activeItems[index].Url);
+        ExternalLinkLauncher.TryOpen(_activeItems[index].Url);
         e.Handled = true;
     }
 
@@ -474,18 +439,8 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
             : new Cursor(StandardCursorType.Arrow);
     }
 
-    private void UpdateLanguageCode()
-    {
-        try
-        {
-            var snapshot = _appSettingsService.Load();
-            _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
-        }
-        catch
-        {
-            _languageCode = "zh-CN";
-        }
-    }
+    private void UpdateLanguageCode() =>
+        _languageCode = _localizationService.ResolveLanguageCode(() => _appSettingsService.Load().LanguageCode);
 
     private void ApplyAutoRefreshSettings()
     {
@@ -554,51 +509,6 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
     private static string BuildDefaultSearchPageUrl()
     {
         return "https://search.bilibili.com/all";
-    }
-
-    private static string? NormalizeHttpUrl(string? rawUrl)
-    {
-        if (string.IsNullOrWhiteSpace(rawUrl))
-        {
-            return null;
-        }
-
-        var candidate = rawUrl.Trim();
-        if (!Uri.TryCreate(candidate, UriKind.Absolute, out var uri))
-        {
-            return null;
-        }
-
-        if (!string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
-        return uri.ToString();
-    }
-
-    private void TryOpenUrl(string? rawUrl)
-    {
-        var normalizedUrl = NormalizeHttpUrl(rawUrl);
-        if (string.IsNullOrWhiteSpace(normalizedUrl))
-        {
-            return;
-        }
-
-        try
-        {
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = normalizedUrl,
-                UseShellExecute = true
-            };
-            Process.Start(startInfo);
-        }
-        catch
-        {
-            // Ignore malformed URLs or shell launch failures.
-        }
     }
 
     private double ResolveScale()

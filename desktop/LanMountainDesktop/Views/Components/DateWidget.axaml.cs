@@ -7,6 +7,7 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -278,10 +279,10 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
 
             if (day == today)
             {
-                var accentBrush = this.TryFindResource("AdaptiveAccentBrush", out var accent)
+                var accentBrush = this.TryFindResource(ThemeResourceKeys.AccentBrush, out var accent)
                     ? accent as IBrush
                     : Brushes.Blue;
-                var onAccentBrush = this.TryFindResource("AdaptiveOnAccentBrush", out var onAccent)
+                var onAccentBrush = this.TryFindResource(ThemeResourceKeys.OnAccentBrush, out var onAccent)
                     ? onAccent as IBrush
                     : Brushes.White;
 
@@ -306,8 +307,8 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
             {
                 var isWeekend = col is 0 or 6;
                 dayText.Foreground = isWeekend
-                    ? GetThemeBrush("AdaptiveTextSecondaryBrush", _weekendNumberOpacity)
-                    : GetThemeBrush("AdaptiveTextPrimaryBrush", _weekdayNumberOpacity);
+                    ? GetThemeBrush(ThemeResourceKeys.TextSecondaryBrush, _weekendNumberOpacity)
+                    : GetThemeBrush(ThemeResourceKeys.TextPrimaryBrush, _weekdayNumberOpacity);
                 Grid.SetRow(dayText, row);
                 Grid.SetColumn(dayText, col);
                 CalendarGrid.Children.Add(dayText);
@@ -349,11 +350,11 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
         var densityBoost = scale <= 0.74 ? 0.90 : scale <= 0.90 ? 0.95 : scale >= 1.45 ? 1.05 : 1.0;
 
         GregorianHeadlineTextBlock.FontSize = Math.Clamp(29 * scale * headerCompression * densityBoost, 12.5, 42);
-        GregorianHeadlineTextBlock.FontWeight = ToVariableWeight(Lerp(560, 720, Math.Clamp((scale - 0.60) / 1.2, 0, 1)));
+        GregorianHeadlineTextBlock.FontWeight = ComponentTypography.ToVariableWeight(ComponentTypography.Lerp(560, 720, Math.Clamp((scale - 0.60) / 1.2, 0, 1)));
         GregorianHeadlineTextBlock.LineHeight = GregorianHeadlineTextBlock.FontSize * 1.03;
 
         _weekdayFontSize = Math.Clamp(14.8 * scale * densityBoost, 7, 20);
-        _weekdayFontWeight = ToVariableWeight(Lerp(500, 640, Math.Clamp((scale - 0.60) / 1.2, 0, 1)));
+        _weekdayFontWeight = ComponentTypography.ToVariableWeight(ComponentTypography.Lerp(500, 640, Math.Clamp((scale - 0.60) / 1.2, 0, 1)));
         foreach (var block in GetWeekdayHeaderBlocks())
         {
             block.FontSize = _weekdayFontSize;
@@ -362,7 +363,7 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
         }
 
         _calendarDayFontSize = Math.Clamp(15.4 * scale * densityBoost, 8, 22);
-        _calendarDayFontWeight = ToVariableWeight(Lerp(540, 680, Math.Clamp((scale - 0.60) / 1.2, 0, 1)));
+        _calendarDayFontWeight = ComponentTypography.ToVariableWeight(ComponentTypography.Lerp(540, 680, Math.Clamp((scale - 0.60) / 1.2, 0, 1)));
         _calendarTodayDotSize = Math.Clamp(_calendarDayFontSize * 1.85, 16, 42);
 
         var rightDensity = scale <= 0.72 ? 0.90 : scale <= 0.90 ? 0.95 : scale >= 1.38 ? 1.03 : 1.0;
@@ -375,11 +376,11 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
         YiItemsTextBlock.LineHeight = YiItemsTextBlock.FontSize * 1.15;
         JiItemsTextBlock.LineHeight = JiItemsTextBlock.FontSize * 1.15;
 
-        LunarDateTextBlock.FontWeight = ToVariableWeight(Lerp(640, 760, Math.Clamp((scale - 0.60) / 1.2, 0, 1)));
-        LunarMetaTextBlock.FontWeight = ToVariableWeight(Lerp(500, 620, Math.Clamp((scale - 0.60) / 1.2, 0, 1)));
-        YiLabelTextBlock.FontWeight = ToVariableWeight(Lerp(620, 740, Math.Clamp((scale - 0.60) / 1.2, 0, 1)));
+        LunarDateTextBlock.FontWeight = ComponentTypography.ToVariableWeight(ComponentTypography.Lerp(640, 760, Math.Clamp((scale - 0.60) / 1.2, 0, 1)));
+        LunarMetaTextBlock.FontWeight = ComponentTypography.ToVariableWeight(ComponentTypography.Lerp(500, 620, Math.Clamp((scale - 0.60) / 1.2, 0, 1)));
+        YiLabelTextBlock.FontWeight = ComponentTypography.ToVariableWeight(ComponentTypography.Lerp(620, 740, Math.Clamp((scale - 0.60) / 1.2, 0, 1)));
         JiLabelTextBlock.FontWeight = YiLabelTextBlock.FontWeight;
-        YiItemsTextBlock.FontWeight = ToVariableWeight(Lerp(520, 660, Math.Clamp((scale - 0.60) / 1.2, 0, 1)));
+        YiItemsTextBlock.FontWeight = ComponentTypography.ToVariableWeight(ComponentTypography.Lerp(520, 660, Math.Clamp((scale - 0.60) / 1.2, 0, 1)));
         JiItemsTextBlock.FontWeight = YiItemsTextBlock.FontWeight;
 
         var maxLines = scale <= 0.82 ? 1 : 2;
@@ -402,7 +403,7 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
 
     private void ApplyModeVisualIfNeeded()
     {
-        var isNightMode = ResolveIsNightMode();
+        var isNightMode = ComponentThemeMode.ResolveIsNight(this, fallbackToNightWhenSurfaceUnknown: false);
         if (_isNightModeApplied.HasValue && _isNightModeApplied.Value == isNightMode)
         {
             return;
@@ -415,8 +416,8 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
     private void ApplyModeVisual(bool isNightMode)
     {
         LunarCardBorder.BorderBrush = isNightMode
-            ? CreateBrush("#3FFFFFFF")
-            : CreateBrush("#14000000");
+            ? ComponentPaint.CreateBrush("#3FFFFFFF")
+            : ComponentPaint.CreateBrush("#14000000");
         LunarCardBorder.BoxShadow = BoxShadows.Parse(isNightMode
             ? "0 10 26 #42000000"
             : "0 8 20 #1A000000");
@@ -425,41 +426,20 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
         _weekdayNumberOpacity = isNightMode ? 0.93 : 0.90;
         _weekendNumberOpacity = isNightMode ? 0.68 : 0.58;
 
-        GregorianHeadlineTextBlock.Foreground = GetThemeBrush("AdaptiveTextPrimaryBrush", isNightMode ? 0.97 : 0.95);
-        LunarDateTextBlock.Foreground = GetThemeBrush("AdaptiveTextPrimaryBrush", isNightMode ? 0.97 : 0.95);
-        LunarMetaTextBlock.Foreground = GetThemeBrush("AdaptiveTextSecondaryBrush", isNightMode ? 0.92 : 0.86);
-        YiItemsTextBlock.Foreground = GetThemeBrush("AdaptiveTextPrimaryBrush", isNightMode ? 0.95 : 0.92);
+        GregorianHeadlineTextBlock.Foreground = GetThemeBrush(ThemeResourceKeys.TextPrimaryBrush, isNightMode ? 0.97 : 0.95);
+        LunarDateTextBlock.Foreground = GetThemeBrush(ThemeResourceKeys.TextPrimaryBrush, isNightMode ? 0.97 : 0.95);
+        LunarMetaTextBlock.Foreground = GetThemeBrush(ThemeResourceKeys.TextSecondaryBrush, isNightMode ? 0.92 : 0.86);
+        YiItemsTextBlock.Foreground = GetThemeBrush(ThemeResourceKeys.TextPrimaryBrush, isNightMode ? 0.95 : 0.92);
         JiItemsTextBlock.Foreground = YiItemsTextBlock.Foreground;
 
         foreach (var block in GetWeekdayHeaderBlocks())
         {
-            block.Foreground = GetThemeBrush("AdaptiveTextSecondaryBrush", _weekdayHeaderOpacity);
+            block.Foreground = GetThemeBrush(ThemeResourceKeys.TextSecondaryBrush, _weekdayHeaderOpacity);
         }
 
-        YiLabelTextBlock.Foreground = CreateBrush(isNightMode ? "#8CB57D" : "#4E7D3A");
-        JiLabelTextBlock.Foreground = CreateBrush(isNightMode ? "#C98981" : "#A1473E");
+        YiLabelTextBlock.Foreground = ComponentPaint.CreateBrush(isNightMode ? "#8CB57D" : "#4E7D3A");
+        JiLabelTextBlock.Foreground = ComponentPaint.CreateBrush(isNightMode ? "#C98981" : "#A1473E");
         DividerBorder.Opacity = isNightMode ? 0.48 : 0.72;
-    }
-
-    private bool ResolveIsNightMode()
-    {
-        if (ActualThemeVariant == ThemeVariant.Dark)
-        {
-            return true;
-        }
-
-        if (ActualThemeVariant == ThemeVariant.Light)
-        {
-            return false;
-        }
-
-        if (this.TryFindResource("AdaptiveSurfaceBaseBrush", out var value) &&
-            value is ISolidColorBrush solidBrush)
-        {
-            return CalculateRelativeLuminance(solidBrush.Color) < 0.45;
-        }
-
-        return false;
     }
 
     private double ResolveScale()
@@ -483,11 +463,6 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
         }
 
         return new SolidColorBrush(Colors.Gray, opacity);
-    }
-
-    private static IBrush CreateBrush(string colorHex)
-    {
-        return new SolidColorBrush(Color.Parse(colorHex));
     }
 
     private static string BuildDailySelection(
@@ -525,16 +500,6 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
         return string.Join(useChineseSpacing ? " " : ", ", selected);
     }
 
-    private static double Lerp(double from, double to, double t)
-    {
-        return from + ((to - from) * t);
-    }
-
-    private static FontWeight ToVariableWeight(double weight)
-    {
-        return (FontWeight)(int)Math.Clamp(Math.Round(weight), 1, 1000);
-    }
-
     private static int GetCalendarRowCount(int startDayOfWeek, int daysInMonth)
     {
         return Math.Max(5, (int)Math.Ceiling((startDayOfWeek + daysInMonth) / 7d));
@@ -554,18 +519,4 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
         }
     }
 
-    private static double CalculateRelativeLuminance(Color color)
-    {
-        static double ToLinear(double channel)
-        {
-            return channel <= 0.03928
-                ? channel / 12.92
-                : Math.Pow((channel + 0.055) / 1.055, 2.4);
-        }
-
-        var r = ToLinear(color.R / 255d);
-        var g = ToLinear(color.G / 255d);
-        var b = ToLinear(color.B / 255d);
-        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    }
 }

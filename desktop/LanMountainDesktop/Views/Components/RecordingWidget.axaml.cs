@@ -12,6 +12,7 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -31,7 +32,7 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget, IDe
     private readonly List<Border> _waveBars = [];
     private readonly double[] _waveLevels = new double[WaveBarCount];
 
-    private string _languageCode = "zh-CN";
+    private string _languageCode = LocalizationService.DefaultLanguageCode;
     private string _lastSavedFilePath = string.Empty;
     private double _currentCellSize = 48;
     private bool _isAttached;
@@ -152,44 +153,8 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget, IDe
 
     private void OnActualThemeVariantChanged(object? sender, EventArgs e)
     {
-        _isNightVisual = ResolveNightMode();
+        _isNightVisual = ComponentThemeMode.ResolveIsNight(this, fallbackToNightWhenSurfaceUnknown: true);
         ApplyNightModeVisual();
-    }
-
-    private bool ResolveNightMode()
-    {
-        if (ActualThemeVariant == ThemeVariant.Dark)
-        {
-            return true;
-        }
-
-        if (ActualThemeVariant == ThemeVariant.Light)
-        {
-            return false;
-        }
-
-        if (this.TryFindResource("AdaptiveSurfaceBaseBrush", out var value) &&
-            value is ISolidColorBrush brush)
-        {
-            return CalculateRelativeLuminance(brush.Color) < 0.45;
-        }
-
-        return true;
-    }
-
-    private static double CalculateRelativeLuminance(Color color)
-    {
-        static double ToLinear(double channel)
-        {
-            return channel <= 0.03928
-                ? channel / 12.92
-                : Math.Pow((channel + 0.055) / 1.055, 2.4);
-        }
-
-        var r = ToLinear(color.R / 255d);
-        var g = ToLinear(color.G / 255d);
-        var b = ToLinear(color.B / 255d);
-        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
     }
 
     private void ApplyNightModeVisual()
@@ -359,15 +324,15 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget, IDe
 
         if (!isSupported)
         {
-            TimerTextBlock.Foreground = CreateBrush(_isNightVisual ? "#A8B1C2" : "#B2B7C0");
+            TimerTextBlock.Foreground = ComponentPaint.CreateBrush(_isNightVisual ? "#A8B1C2" : "#B2B7C0");
         }
         else if (isReady)
         {
-            TimerTextBlock.Foreground = CreateBrush(_isNightVisual ? "#A8B1C2" : "#A4A9B2");
+            TimerTextBlock.Foreground = ComponentPaint.CreateBrush(_isNightVisual ? "#A8B1C2" : "#A4A9B2");
         }
         else
         {
-            TimerTextBlock.Foreground = CreateBrush(_isNightVisual ? "#E8EAED" : "#151922");
+            TimerTextBlock.Foreground = ComponentPaint.CreateBrush(_isNightVisual ? "#E8EAED" : "#151922");
         }
         HintTextBlock.IsVisible = !isReady || !isSupported;
 
@@ -488,7 +453,7 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget, IDe
                 Width = 3,
                 Height = 6,
                 CornerRadius = new CornerRadius(1.5),
-                Background = CreateBrush("#121722"),
+                Background = ComponentPaint.CreateBrush("#121722"),
                 Opacity = 0.24,
                 VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
             };
@@ -530,18 +495,8 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget, IDe
         }
     }
 
-    private void ReloadLanguageCode()
-    {
-        try
-        {
-            var snapshot = _settingsService.Load();
-            _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
-        }
-        catch
-        {
-            _languageCode = "zh-CN";
-        }
-    }
+    private void ReloadLanguageCode() =>
+        _languageCode = _localizationService.ResolveLanguageCode(() => _settingsService.Load().LanguageCode);
 
     private string L(string key, string fallback)
     {
@@ -568,11 +523,6 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget, IDe
         }
 
         return duration.ToString(@"mm\:ss", CultureInfo.InvariantCulture);
-    }
-
-    private static IBrush CreateBrush(string colorHex)
-    {
-        return new SolidColorBrush(Color.Parse(colorHex));
     }
 
     private async Task<(bool WasCancelled, string? OutputPath)> PickSavePathAsync()

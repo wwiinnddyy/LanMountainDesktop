@@ -15,13 +15,12 @@ using LanMountainDesktop.Platform.MacOS;
 using LanMountainDesktop.Platform.Windows;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class ShortcutWidget : UserControl, IDesktopComponentWidget, IComponentPlacementContextAware, IComponentSettingsContextAware, IDisposable
+public partial class ShortcutWidget : UserControl, IDesktopComponentWidget, IComponentSettingsContextAware, IDisposable
 {
-    private string _componentId = BuiltInComponentIds.DesktopShortcut;
-    private string _placementId = string.Empty;
     private string? _targetPath;
     private string _clickMode = "Double";
     private bool _showBackground = true;
@@ -67,14 +66,6 @@ public partial class ShortcutWidget : UserControl, IDesktopComponentWidget, ICom
         {
             ApplyChrome();
         }
-    }
-
-    public void SetComponentPlacementContext(string componentId, string? placementId)
-    {
-        _componentId = string.IsNullOrWhiteSpace(componentId)
-            ? BuiltInComponentIds.DesktopShortcut
-            : componentId.Trim();
-        _placementId = placementId?.Trim() ?? string.Empty;
     }
 
     public void SetComponentSettingsContext(DesktopComponentSettingsContext context)
@@ -140,9 +131,9 @@ public partial class ShortcutWidget : UserControl, IDesktopComponentWidget, ICom
     {
         NameTextBlock.Text = "添加快捷方式";
         // 使用次要文字颜色（由主题自动适配）
-        NameTextBlock.Foreground = this.FindResource("AdaptiveTextSecondaryBrush") as IBrush;
+        NameTextBlock.Foreground = this.FindResource(ThemeResourceKeys.TextSecondaryBrush) as IBrush;
 
-        var iconBrush = this.FindResource("AdaptiveTextSecondaryBrush") as IBrush;
+        var iconBrush = this.FindResource(ThemeResourceKeys.TextSecondaryBrush) as IBrush;
         
         // 隐藏图片图标，显示符号图标
         IconImage.IsVisible = false;
@@ -256,7 +247,7 @@ public partial class ShortcutWidget : UserControl, IDesktopComponentWidget, ICom
             : FluentIcons.Common.Symbol.Document;
 
         // 使用强调色（由主题自动适配）
-        var iconBrush = this.FindResource("AdaptiveAccentBrush") as IBrush;
+        var iconBrush = this.FindResource(ThemeResourceKeys.AccentBrush) as IBrush;
 
         // 隐藏图片图标，显示符号图标
         IconImage.IsVisible = false;
@@ -290,8 +281,8 @@ public partial class ShortcutWidget : UserControl, IDesktopComponentWidget, ICom
 
         // FindResource requires the control to be attached to the visual tree.
         // If it returns null, _chromeApplied stays false so OnLoaded will retry.
-        var background = this.FindResource("AdaptiveSurfaceRaisedBrush") as IBrush;
-        var borderBrush = this.FindResource("AdaptiveButtonBorderBrush") as IBrush;
+        var background = this.FindResource(ThemeResourceKeys.SurfaceRaisedBrush) as IBrush;
+        var borderBrush = this.FindResource(ThemeResourceKeys.ButtonBorderBrush) as IBrush;
 
         if (background is null || borderBrush is null)
         {

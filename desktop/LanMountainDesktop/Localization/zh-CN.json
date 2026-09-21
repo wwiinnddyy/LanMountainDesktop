@@ -936,6 +936,7 @@
     "component.editor.placement_label": "实例 ID",
     "component.editor.scope_label": "作用域",
     "component.editor.scope_instance": "实例级编辑器",
+    "component.editor.instance_only_hint": "「{0}」组件目前仅提供实例级元数据，暂无可配置项。",
     "component_category.all":  "全部",
     "component_category.clock":  "时钟",
     "component_category.date":  "日历",
@@ -1486,5 +1487,12 @@
     "rss.just_now": "刚刚",
     "rss.minutes_ago": "{0} 分钟前",
     "rss.hours_ago": "{0} 小时前",
-    "rss.short_date_format": "M 月 d 日"
+    "rss.short_date_format": "M 月 d 日",
+    "component.sticky_note": "便签",
+    "component.standby_digital_clock": "待机时钟",
+    "component.shortcut": "快捷方式",
+    "component.file_manager": "文件管理",
+    "component.zhijiao_hub": "智教Hub",
+    "component.juya_news": "橘鸦早报",
+    "component.notification_box": "消息盒子"
 }

@@ -6,6 +6,7 @@ using Avalonia.Media;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -22,7 +23,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
     private bool _showDisplayDb = true;
     private bool _showDbfs;
     private string? _componentColorScheme;
-    private string _languageCode = "zh-CN";
+    private string _languageCode = LocalizationService.DefaultLanguageCode;
     private bool _isAttached;
     private bool _isOnActivePage = true;
     private bool _isSubscribed;
@@ -87,11 +88,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
     {
         _isAttached = true;
         ReloadDisplaySettings();
-        if (!_isSubscribed)
-        {
-            _studyAnalyticsService.SnapshotUpdated += OnStudySnapshotUpdated;
-            _isSubscribed = true;
-        }
+        StudySnapshotSubscription.Subscribe(ref _isSubscribed, _studyAnalyticsService, OnStudySnapshotUpdated);
 
         UpdateMonitoringLeaseState();
         RefreshVisual();
@@ -100,15 +97,10 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = false;
-        _monitoringLease?.Dispose();
-        _monitoringLease = null;
+        StudyMonitoringLease.Release(ref _monitoringLease);
         _renderGate.Clear();
 
-        if (_isSubscribed)
-        {
-            _studyAnalyticsService.SnapshotUpdated -= OnStudySnapshotUpdated;
-            _isSubscribed = false;
-        }
+        StudySnapshotSubscription.Unsubscribe(ref _isSubscribed, _studyAnalyticsService, OnStudySnapshotUpdated);
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -137,25 +129,8 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
         return _isAttached && _isOnActivePage;
     }
 
-    private void UpdateMonitoringLeaseState()
-    {
-        if (!_studyEnabled)
-        {
-            _monitoringLease?.Dispose();
-            _monitoringLease = null;
-            return;
-        }
-
-        var shouldMonitor = _isAttached && _isOnActivePage;
-        if (shouldMonitor)
-        {
-            _monitoringLease ??= _monitoringLeaseCoordinator.AcquireLease();
-            return;
-        }
-
-        _monitoringLease?.Dispose();
-        _monitoringLease = null;
-    }
+    private void UpdateMonitoringLeaseState() =>
+        StudyMonitoringLease.Sync(ref _monitoringLease, _monitoringLeaseCoordinator, _studyEnabled, _isAttached, _isOnActivePage);
 
     private void ReloadDisplaySettings()
     {
@@ -183,7 +158,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
         {
             StatusTitleTextBlock.Text = L("study.widget.disabled_title", "自习功能未启用");
             StatusValueTextBlock.Text = L("study.widget.disabled_hint", "请在设置中开启");
-            StatusValueTextBlock.Foreground = TryResolveThemeBrush("AdaptiveTextSecondaryBrush", "#FF9AA0A6");
+            StatusValueTextBlock.Foreground = TryResolveThemeBrush(ThemeResourceKeys.TextSecondaryBrush, "#FF9AA0A6");
             NoiseValueTextBlock.Text = "--";
             NoiseSubValueTextBlock.IsVisible = false;
             UpdateAdaptiveLayout();
@@ -197,7 +172,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
         if (isSessionReport && snapshot.LastSessionReport is not null)
         {
             StatusValueTextBlock.Text = L("study.score_overview.mode.session", "Session");
-            StatusValueTextBlock.Foreground = TryResolveThemeBrush("AdaptiveTextPrimaryBrush", "#FFEFF3FF");
+            StatusValueTextBlock.Foreground = TryResolveThemeBrush(ThemeResourceKeys.TextPrimaryBrush, "#FFEFF3FF");
 
             if (!StudySessionReportProjection.TryAggregate(snapshot.LastSessionReport, snapshot.Config, out var aggregate))
             {
@@ -329,21 +304,21 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
             snapshot.State == StudyAnalyticsRuntimeState.Error ||
             snapshot.StreamStatus == NoiseStreamStatus.Error)
         {
-            return useMonetColor ? CreateBrush("#FF6FD7A2") : CreateBrush("#FFFF7B7B");
+            return useMonetColor ? ComponentPaint.CreateBrush("#FF6FD7A2") : ComponentPaint.CreateBrush("#FFFF7B7B");
         }
 
         if (snapshot.StreamStatus == NoiseStreamStatus.Noisy)
         {
-            return useMonetColor ? CreateBrush("#FF4FC3F7") : CreateBrush("#FFFFB14A");
+            return useMonetColor ? ComponentPaint.CreateBrush("#FF4FC3F7") : ComponentPaint.CreateBrush("#FFFFB14A");
         }
 
         if (snapshot.State == StudyAnalyticsRuntimeState.Running &&
             snapshot.StreamStatus == NoiseStreamStatus.Quiet)
         {
-            return useMonetColor ? CreateBrush("#FF81C784") : CreateBrush("#FF6FD7A2");
+            return useMonetColor ? ComponentPaint.CreateBrush("#FF81C784") : ComponentPaint.CreateBrush("#FF6FD7A2");
         }
 
-        return TryResolveThemeBrush("AdaptiveTextPrimaryBrush", "#FFEFF3FF");
+        return TryResolveThemeBrush(ThemeResourceKeys.TextPrimaryBrush, "#FFEFF3FF");
     }
 
     private string FormatDisplayDb(double value)
@@ -367,11 +342,6 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
         return _localizationService.GetString(_languageCode, key, fallback);
     }
 
-    private static SolidColorBrush CreateBrush(string hexColor)
-    {
-        return new SolidColorBrush(Color.Parse(hexColor));
-    }
-
     private IBrush TryResolveThemeBrush(string resourceKey, string fallbackHex)
     {
         if (this.TryFindResource(resourceKey, out var resource) && resource is IBrush brush)
@@ -379,7 +349,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
             return brush;
         }
 
-        return CreateBrush(fallbackHex);
+        return ComponentPaint.CreateBrush(fallbackHex);
     }
 
     public void Dispose()
@@ -397,13 +367,8 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
         SizeChanged -= OnSizeChanged;
         ActualThemeVariantChanged -= OnActualThemeVariantChanged;
 
-        if (_isSubscribed)
-        {
-            _studyAnalyticsService.SnapshotUpdated -= OnStudySnapshotUpdated;
-            _isSubscribed = false;
-        }
+        StudySnapshotSubscription.Unsubscribe(ref _isSubscribed, _studyAnalyticsService, OnStudySnapshotUpdated);
 
-        _monitoringLease?.Dispose();
-        _monitoringLease = null;
+        StudyMonitoringLease.Release(ref _monitoringLease);
     }
 }

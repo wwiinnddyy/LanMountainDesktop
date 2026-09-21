@@ -330,15 +330,6 @@ public sealed class UpdateSettingsInterfaceTests
         LastUpdateCheckUtcMs: null,
         PendingUpdateSha256: null);
 
-    private static UpdateOrchestrator CreateTestOrchestrator(SettingsUpdateState state)
-    {
-        return new UpdateOrchestrator(
-            new FakeManifestProvider("github"),
-            new UpdateDownloadEngine(new FakeManifestProvider("github"), new ResumableDownloadService(new HttpClient(new EmptyHandler()))),
-            new UpdateInstallGateway(),
-            new UpdateStateStore(new FakeSettingsFacade(new FakeUpdateSettingsService { State = state })));
-    }
-
     private static PlondsClientManifest CreatePlondsManifest(string version, bool requiresCleanInstall = false)
     {
         return new PlondsClientManifest(
@@ -579,47 +570,6 @@ public sealed class UpdateSettingsInterfaceTests
             target.PendingUpdatePublishedAtUtcMs = source.PendingUpdatePublishedAtUtcMs;
             target.LastUpdateCheckUtcMs = source.LastUpdateCheckUtcMs;
             target.PendingUpdateSha256 = source.PendingUpdateSha256;
-        }
-    }
-
-    private sealed class FakeManifestProvider(string providerName) : IUpdateManifestProvider
-    {
-        public string ProviderName { get; } = providerName;
-        public int GetLatestCalls { get; private set; }
-
-        public Task<UpdateManifest?> GetLatestAsync(string channel, string platform, Version currentVersion, CancellationToken ct)
-        {
-            GetLatestCalls++;
-            return Task.FromResult<UpdateManifest?>(CreateManifest(ProviderName, channel, platform));
-        }
-
-        public Task<UpdateManifest?> GetByVersionAsync(string version, string channel, string platform, CancellationToken ct)
-            => Task.FromResult<UpdateManifest?>(CreateManifest(ProviderName, channel, platform));
-
-        public Task<IReadOnlyList<UpdateManifest>> GetIncrementalChainAsync(string channel, string platform, Version fromVersion, Version toVersion, CancellationToken ct)
-            => Task.FromResult<IReadOnlyList<UpdateManifest>>([CreateManifest(ProviderName, channel, platform)]);
-
-        private static UpdateManifest CreateManifest(string id, string channel, string platform) => new(
-            id,
-            "1.0.0",
-            "1.1.0",
-            platform,
-            channel,
-            DateTimeOffset.Parse("2026-05-06T00:00:00Z"),
-            UpdatePayloadKind.DeltaPlonds,
-            "https://example.test/filemap.json",
-            "https://example.test/filemap.json.sig",
-            null,
-            [],
-            null,
-            new Dictionary<string, string>());
-    }
-
-    private sealed class EmptyHandler : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.NotFound));
         }
     }
 

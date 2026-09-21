@@ -13,6 +13,7 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -58,7 +59,7 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
 
     private IRecommendationInfoService _recommendationService = DefaultRecommendationService;
     private CancellationTokenSource? _refreshCts;
-    private string _languageCode = "zh-CN";
+    private string _languageCode = LocalizationService.DefaultLanguageCode;
     private double _currentCellSize = 48;
     private bool _isAttached;
     private bool _isRefreshing;
@@ -308,7 +309,7 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
 
     private void ApplyModeVisualIfNeeded(bool force = false)
     {
-        var isNightMode = ResolveIsNightMode();
+        var isNightMode = ComponentThemeMode.ResolveIsNight(this, fallbackToNightWhenSurfaceUnknown: false);
         if (!force && _isNightModeApplied.HasValue && _isNightModeApplied.Value == isNightMode)
         {
             return;
@@ -326,7 +327,7 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
 
         if (isNightMode)
         {
-            RootBorder.Background = CreateBrush("#C5070D");
+            RootBorder.Background = ComponentPaint.CreateBrush("#C5070D");
             RootBorder.Padding = new Thickness(
                 Math.Clamp(20 * scale, 10, 34),
                 Math.Clamp(15 * scale, 7, 24),
@@ -334,27 +335,27 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
                 Math.Clamp(14 * scale, 7, 24));
 
             QuoteMarkTextBlock.IsVisible = true;
-            QuoteMarkTextBlock.Foreground = CreateBrush("#4AF4C5A6");
-            QuoteMarkTextBlock.FontWeight = ToVariableWeight(610);
+            QuoteMarkTextBlock.Foreground = ComponentPaint.CreateBrush("#4AF4C5A6");
+            QuoteMarkTextBlock.FontWeight = ComponentTypography.ToVariableWeight(610);
 
-            PoetryContentTextBlock.Foreground = CreateBrush("#F4D7A7");
+            PoetryContentTextBlock.Foreground = ComponentPaint.CreateBrush("#F4D7A7");
             PoetryContentTextBlock.VerticalAlignment = totalHeight >= _currentCellSize * 1.88
                 ? Avalonia.Layout.VerticalAlignment.Center
                 : Avalonia.Layout.VerticalAlignment.Top;
             PoetryContentTextBlock.Margin = new Thickness(Math.Clamp(10 * scale, 4, 18), Math.Clamp(2 * scale, 0, 6), 0, 0);
 
-            AuthorTextBlock.Foreground = CreateBrush("#F4D7A7");
-            AuthorAccent.Background = CreateBrush("#63F2AF90");
+            AuthorTextBlock.Foreground = ComponentPaint.CreateBrush("#F4D7A7");
+            AuthorAccent.Background = ComponentPaint.CreateBrush("#63F2AF90");
 
             DayDecorationCanvas.IsVisible = false;
             RefreshButton.IsVisible = true;
-            RefreshButton.Background = CreateBrush("#24F8D7B2");
-            RefreshGlyphTextBlock.Foreground = CreateBrush("#EED7B2");
-            StatusTextBlock.Foreground = CreateBrush("#D9FFFFFF");
+            RefreshButton.Background = ComponentPaint.CreateBrush("#24F8D7B2");
+            RefreshGlyphTextBlock.Foreground = ComponentPaint.CreateBrush("#EED7B2");
+            StatusTextBlock.Foreground = ComponentPaint.CreateBrush("#D9FFFFFF");
         }
         else
         {
-            RootBorder.Background = CreateBrush("#F2F2F3");
+            RootBorder.Background = ComponentPaint.CreateBrush("#F2F2F3");
             RootBorder.Padding = new Thickness(
                 Math.Clamp(20 * scale, 10, 34),
                 Math.Clamp(14 * scale, 6, 24),
@@ -363,60 +364,29 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
 
             QuoteMarkTextBlock.IsVisible = false;
 
-            PoetryContentTextBlock.Foreground = CreateBrush("#0F1218");
+            PoetryContentTextBlock.Foreground = ComponentPaint.CreateBrush("#0F1218");
             PoetryContentTextBlock.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top;
             PoetryContentTextBlock.Margin = new Thickness(Math.Clamp(6 * scale, 2, 12), 0, 0, 0);
 
-            AuthorTextBlock.Foreground = CreateBrush("#272D38");
-            AuthorAccent.Background = CreateBrush("#C8090D");
+            AuthorTextBlock.Foreground = ComponentPaint.CreateBrush("#272D38");
+            AuthorAccent.Background = ComponentPaint.CreateBrush("#C8090D");
 
             DayDecorationCanvas.IsVisible = true;
             RefreshButton.IsVisible = true;
-            RefreshButton.Background = CreateBrush("#0DA6ADB7");
-            RefreshGlyphTextBlock.Foreground = CreateBrush("#90959D");
-            WavePath.Stroke = CreateBrush("#B0B6BE");
-            MountainBackPath.Fill = CreateBrush("#112A2E36");
-            MountainFrontPath.Fill = CreateBrush("#182A2E36");
-            StatusTextBlock.Foreground = CreateBrush("#8A8F98");
+            RefreshButton.Background = ComponentPaint.CreateBrush("#0DA6ADB7");
+            RefreshGlyphTextBlock.Foreground = ComponentPaint.CreateBrush("#90959D");
+            WavePath.Stroke = ComponentPaint.CreateBrush("#B0B6BE");
+            MountainBackPath.Fill = ComponentPaint.CreateBrush("#112A2E36");
+            MountainFrontPath.Fill = ComponentPaint.CreateBrush("#182A2E36");
+            StatusTextBlock.Foreground = ComponentPaint.CreateBrush("#8A8F98");
         }
 
         UpdateRefreshButtonState();
         ApplyAdaptiveTextLayout(isNightMode, scale, totalWidth, totalHeight);
     }
 
-    private bool ResolveIsNightMode()
-    {
-        if (ActualThemeVariant == ThemeVariant.Dark)
-        {
-            return true;
-        }
-
-        if (ActualThemeVariant == ThemeVariant.Light)
-        {
-            return false;
-        }
-
-        if (this.TryFindResource("AdaptiveSurfaceBaseBrush", out var value) &&
-            value is ISolidColorBrush solidBrush)
-        {
-            return CalculateRelativeLuminance(solidBrush.Color) < 0.45;
-        }
-
-        return false;
-    }
-
-    private void UpdateLanguageCode()
-    {
-        try
-        {
-            var snapshot = _settingsService.Load();
-            _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
-        }
-        catch
-        {
-            _languageCode = "zh-CN";
-        }
-    }
+    private void UpdateLanguageCode() =>
+        _languageCode = _localizationService.ResolveLanguageCode(() => _settingsService.Load().LanguageCode);
 
     private void CancelRefreshRequest()
     {
@@ -487,7 +457,7 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
             maxWidth: poemWidth,
             maxHeight: availablePoemHeight,
             minFontSize: poemMinFontSize,
-            minFontWeight: ToVariableWeight(poemMinWeight),
+            minFontWeight: ComponentTypography.ToVariableWeight(poemMinWeight),
             lineHeightFactor: 1.12);
 
         var poemFit = FitTextStable(
@@ -523,7 +493,7 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
             maxWidth: authorWidth,
             maxHeight: AuthorAccent.Height,
             minFontSize: authorMinFontSize,
-            minFontWeight: ToVariableWeight(authorMinWeight),
+            minFontWeight: ComponentTypography.ToVariableWeight(authorMinWeight),
             lineHeightFactor: 1.12);
 
         var authorFit = FitTextStable(
@@ -854,7 +824,7 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
         }
 
         var lineHeight = fontSize * lineHeightFactor;
-        var measured = MeasureTextSize(text, fontSize, fontWeight, maxWidth, lineHeight);
+        var measured = ComponentTypography.MeasureTextSize(text, fontSize, fontWeight, maxWidth, lineHeight);
         var lineCount = Math.Max(1, (int)Math.Ceiling(measured.Height / Math.Max(1, lineHeight)));
         return measured.Height <= maxHeight + 0.6 && lineCount <= Math.Max(1, maxLines);
     }
@@ -926,7 +896,7 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
         var high = max;
 
         var bestSize = min;
-        var bestWeight = ToVariableWeight(minWeight);
+        var bestWeight = ComponentTypography.ToVariableWeight(minWeight);
 
         for (var i = 0; i < 22; i++)
         {
@@ -934,10 +904,10 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
             var progress = max <= min
                 ? 0
                 : Math.Clamp((candidate - min) / (max - min), 0, 1);
-            var candidateWeight = ToVariableWeight(Lerp(minWeight, maxWeight, progress));
+            var candidateWeight = ComponentTypography.ToVariableWeight(ComponentTypography.Lerp(minWeight, maxWeight, progress));
             var lineHeight = candidate * lineHeightFactor;
 
-            var measured = MeasureTextSize(normalizedText, candidate, candidateWeight, Math.Max(1, maxWidth), lineHeight);
+            var measured = ComponentTypography.MeasureTextSize(normalizedText, candidate, candidateWeight, Math.Max(1, maxWidth), lineHeight);
             var lineCount = Math.Max(1, (int)Math.Ceiling(measured.Height / Math.Max(1, lineHeight)));
             var fits = measured.Height <= maxHeight + 0.6 && lineCount <= Math.Max(1, maxLines);
 
@@ -957,53 +927,4 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
         return new TextFitResult(bestSize, bestWeight, lineHeightResult);
     }
 
-    private static Size MeasureTextSize(
-        string text,
-        double fontSize,
-        FontWeight fontWeight,
-        double maxWidth,
-        double lineHeight)
-    {
-        var probe = new TextBlock
-        {
-            Text = text,
-            FontSize = fontSize,
-            FontWeight = fontWeight,
-            TextWrapping = TextWrapping.Wrap,
-            LineHeight = lineHeight
-        };
-
-        probe.Measure(new Size(Math.Max(1, maxWidth), double.PositiveInfinity));
-        return probe.DesiredSize;
-    }
-
-    private static FontWeight ToVariableWeight(double weight)
-    {
-        return (FontWeight)(int)Math.Clamp(Math.Round(weight), 1, 1000);
-    }
-
-    private static double Lerp(double from, double to, double t)
-    {
-        return from + (to - from) * Math.Clamp(t, 0, 1);
-    }
-
-    private static IBrush CreateBrush(string colorHex)
-    {
-        return new SolidColorBrush(Color.Parse(colorHex));
-    }
-
-    private static double CalculateRelativeLuminance(Color color)
-    {
-        static double ToLinear(double channel)
-        {
-            return channel <= 0.03928
-                ? channel / 12.92
-                : Math.Pow((channel + 0.055) / 1.055, 2.4);
-        }
-
-        var r = ToLinear(color.R / 255d);
-        var g = ToLinear(color.G / 255d);
-        var b = ToLinear(color.B / 255d);
-        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    }
 }

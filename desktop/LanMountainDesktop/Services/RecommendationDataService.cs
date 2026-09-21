@@ -11,6 +11,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using LanMountainDesktop.Models;
+using LanMountainDesktop.Helpers;
+using static LanMountainDesktop.Services.Json.JsonNodeReader;
 
 namespace LanMountainDesktop.Services;
 
@@ -948,7 +950,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
                     continue;
                 }
 
-                var link = NormalizeHttpUrl(ReadString(node, "url"));
+                var link = ExternalLinkLauncher.NormalizeHttpUrl(ReadString(node, "url"));
                 if (string.IsNullOrWhiteSpace(link) || !seenUrls.Add(link))
                 {
                     continue;
@@ -990,7 +992,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
                     continue;
                 }
 
-                var url = NormalizeHttpUrl(ReadString(imageNode, "url"));
+                var url = ExternalLinkLauncher.NormalizeHttpUrl(ReadString(imageNode, "url"));
                 if (string.IsNullOrWhiteSpace(url))
                 {
                     continue;
@@ -1029,7 +1031,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
             _ => _options.IfengNewsComprehensiveListPageUrl
         };
 
-        return NormalizeHttpUrl(url)
+        return ExternalLinkLauncher.NormalizeHttpUrl(url)
                ?? (normalizedChannelType switch
                {
                    IfengNewsChannelTypes.Mainland => "https://news.ifeng.com/shanklist/3-35197-/",
@@ -1108,7 +1110,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
     {
         var safeCount = Math.Clamp(targetCount, 1, 20);
         var normalizedSourceType = BaiduHotSearchSourceTypes.Normalize(sourceType);
-        var boardUrl = NormalizeHttpUrl(_options.BaiduHotSearchBoardUrl)
+        var boardUrl = ExternalLinkLauncher.NormalizeHttpUrl(_options.BaiduHotSearchBoardUrl)
             ?? "https://top.baidu.com/board?tab=realtime";
 
         var items = string.Equals(
@@ -1200,7 +1202,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
                 continue;
             }
 
-            var targetUrl = NormalizeHttpUrl(
+            var targetUrl = ExternalLinkLauncher.NormalizeHttpUrl(
                 ReadString(itemNode, "rawUrl") ??
                 ReadString(itemNode, "url"));
             if (string.IsNullOrWhiteSpace(targetUrl))
@@ -1252,7 +1254,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
                 continue;
             }
 
-            var targetUrl = NormalizeHttpUrl(rssItem.Url);
+            var targetUrl = ExternalLinkLauncher.NormalizeHttpUrl(rssItem.Url);
             if (string.IsNullOrWhiteSpace(targetUrl))
             {
                 continue;
@@ -1350,7 +1352,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
                 heatScore = parsedHeatScore;
             }
 
-            var iconUrl = NormalizeHttpUrl(ReadString(itemNode, "icon"));
+            var iconUrl = ExternalLinkLauncher.NormalizeHttpUrl(ReadString(itemNode, "icon"));
             var targetUrl = ResolveBilibiliHotSearchTargetUrl(ReadString(itemNode, "uri"), keyword);
 
             items.Add(new BilibiliHotSearchItemSnapshot(
@@ -1685,7 +1687,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
 
     private string ResolveBilibiliHotSearchTargetUrl(string? rawUri, string keyword)
     {
-        var normalizedDirectUrl = NormalizeHttpUrl(rawUri);
+        var normalizedDirectUrl = ExternalLinkLauncher.NormalizeHttpUrl(rawUri);
         if (!string.IsNullOrWhiteSpace(normalizedDirectUrl))
         {
             return normalizedDirectUrl;
@@ -1700,7 +1702,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         var candidate = string.IsNullOrWhiteSpace(baseSearchUrl)
             ? fallback
             : baseSearchUrl.Trim();
-        var normalized = NormalizeHttpUrl(candidate);
+        var normalized = ExternalLinkLauncher.NormalizeHttpUrl(candidate);
         return string.IsNullOrWhiteSpace(normalized)
             ? fallback
             : normalized;
@@ -2864,7 +2866,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
 
     private static string? ResolveSmartTeachForumUrl(string? rawUrl, string? baseUrl)
     {
-        var normalizedAbsolute = NormalizeHttpUrl(rawUrl);
+        var normalizedAbsolute = ExternalLinkLauncher.NormalizeHttpUrl(rawUrl);
         if (!string.IsNullOrWhiteSpace(normalizedAbsolute))
         {
             return normalizedAbsolute;
@@ -2881,7 +2883,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         }
 
         var normalized = ResolveAbsoluteUrl(rawUrl, baseUri);
-        return NormalizeHttpUrl(normalized);
+        return ExternalLinkLauncher.NormalizeHttpUrl(normalized);
     }
 
     private static string? BuildSmartTeachDiscussionUrl(string? baseUrl, string discussionId, string slug)
@@ -2984,24 +2986,6 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         return Regex.Replace(withoutTags, "\\s+", " ").Trim();
     }
 
-    private static string? ReadString(JsonElement node, params string[] path)
-    {
-        var target = TryGetNode(node, path);
-        if (!target.HasValue)
-        {
-            return null;
-        }
-
-        return target.Value.ValueKind switch
-        {
-            JsonValueKind.String => target.Value.GetString(),
-            JsonValueKind.Number => target.Value.GetRawText(),
-            JsonValueKind.True => "true",
-            JsonValueKind.False => "false",
-            _ => null
-        };
-    }
-
     private static bool ReadBoolean(JsonElement node, params string[] path)
     {
         var target = TryGetNode(node, path);
@@ -3024,22 +3008,6 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
             default:
                 return false;
         }
-    }
-
-    private static JsonElement? TryGetNode(JsonElement node, params string[] path)
-    {
-        var current = node;
-        foreach (var segment in path)
-        {
-            if (current.ValueKind != JsonValueKind.Object || !current.TryGetProperty(segment, out var next))
-            {
-                return null;
-            }
-
-            current = next;
-        }
-
-        return current;
     }
 
     private string? BuildArtworkImageUrl(string? imageId)
@@ -3171,28 +3139,6 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
     {
         var now = DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(8));
         return DateOnly.FromDateTime(now.Date);
-    }
-
-    private static string? NormalizeHttpUrl(string? rawUrl)
-    {
-        if (string.IsNullOrWhiteSpace(rawUrl))
-        {
-            return null;
-        }
-
-        var candidate = rawUrl.Trim();
-        if (!Uri.TryCreate(candidate, UriKind.Absolute, out var uri))
-        {
-            return null;
-        }
-
-        if (!string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
-        return uri.ToString();
     }
 
     private static string Truncate(string? text, int maxLength)

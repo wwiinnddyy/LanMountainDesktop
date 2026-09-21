@@ -23,8 +23,7 @@ namespace LanMountainDesktop.Views.Components;
 public partial class ZhiJiaoHubWidget : UserControl,
     IDesktopComponentWidget,
     IRecommendationInfoAwareComponentWidget,
-    IComponentSettingsContextAware,
-    IComponentPlacementContextAware
+    IComponentSettingsContextAware
 {
     private const double BaseCellSize = 48d;
     private const double SwipeThreshold = 50;
@@ -33,15 +32,12 @@ public partial class ZhiJiaoHubWidget : UserControl,
 
     private IRecommendationInfoService _recommendationService = new RecommendationDataService();
     private IComponentSettingsAccessor? _componentSettingsAccessor;
-    private ISettingsService _appSettingsService = HostSettingsFacadeProvider.GetOrCreate().Settings;
 
     private CancellationTokenSource? _refreshCts;
     private CancellationTokenSource? _backgroundDownloadCts;
 
     private string _source = ZhiJiaoHubSources.ClassIsland;
     private string _mirrorSource = ZhiJiaoHubMirrorSources.Direct;
-    private string _componentId = BuiltInComponentIds.DesktopZhiJiaoHub;
-    private string _placementId = string.Empty;
     private double _currentCellSize = BaseCellSize;
     private bool _isAttached;
     private bool _isInitializing;
@@ -150,8 +146,6 @@ public partial class ZhiJiaoHubWidget : UserControl,
 
     public void SetComponentSettingsContext(DesktopComponentSettingsContext context)
     {
-        _componentId = context.ComponentId;
-        _placementId = context.PlacementId ?? string.Empty;
         _componentSettingsAccessor = context.ComponentSettingsAccessor;
 
         try
@@ -188,12 +182,6 @@ public partial class ZhiJiaoHubWidget : UserControl,
                 _ = InitializeAsync();
             }
         }
-    }
-
-    public void SetComponentPlacementContext(string componentId, string? placementId)
-    {
-        _componentId = componentId;
-        _placementId = placementId ?? string.Empty;
     }
 
     public void RefreshFromSettings()

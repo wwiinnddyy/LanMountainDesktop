@@ -13,6 +13,7 @@ using LanMountainDesktop.Models;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -47,9 +48,8 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
     private TimeZoneService? _timeZoneService;
     private double _currentCellSize = 48;
     private IReadOnlyList<CourseItemViewModel> _courseItems = Array.Empty<CourseItemViewModel>();
-    private IReadOnlyList<CourseItemViewModel> _lastRenderedItems = Array.Empty<CourseItemViewModel>();
     private bool _isNightVisual = true;
-    private string _languageCode = "zh-CN";
+    private string _languageCode = LocalizationService.DefaultLanguageCode;
     private string _componentId = BuiltInComponentIds.DesktopClassSchedule;
     private string _placementId = string.Empty;
     private string? _componentColorScheme;
@@ -582,7 +582,7 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
 
     private string FormatClassCount(int count)
     {
-        if (string.Equals(_languageCode, "zh-CN", StringComparison.OrdinalIgnoreCase))
+        if (_localizationService.IsChineseLanguage(_languageCode))
         {
             return string.Create(CultureInfo.InvariantCulture, $"{Math.Max(0, count)}节课");
         }
@@ -597,7 +597,7 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
 
     private string FormatWeekday(DayOfWeek dayOfWeek)
     {
-        if (string.Equals(_languageCode, "zh-CN", StringComparison.OrdinalIgnoreCase))
+        if (_localizationService.IsChineseLanguage(_languageCode))
         {
             return dayOfWeek switch
             {
@@ -673,8 +673,6 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         {
             IncrementalUpdateItems();
         }
-
-        _lastRenderedItems = _courseItems.ToList();
     }
 
     private void RebuildAllItems()
@@ -730,9 +728,9 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
     {
         var subjectBrush = SubjectColorService.ResolveForegroundBrush(item.Name, _isNightVisual);
         var cardBackground = SubjectColorService.ResolveBackgroundBrush(item.Name, item.IsCurrent);
-        var secondaryBrush = CreateBrush(_isNightVisual ? "#848B99" : "#667084");
-        var timeBrush = CreateBrush(_isNightVisual ? "#6B7280" : "#9AA3B2");
-        var timeEndBrush = CreateBrush(_isNightVisual ? "#4B5563" : "#B8BEC9");
+        var secondaryBrush = ComponentPaint.CreateBrush(_isNightVisual ? "#848B99" : "#667084");
+        var timeBrush = ComponentPaint.CreateBrush(_isNightVisual ? "#6B7280" : "#9AA3B2");
+        var timeEndBrush = ComponentPaint.CreateBrush(_isNightVisual ? "#4B5563" : "#B8BEC9");
 
         var startTimeText = new TextBlock
         {
@@ -766,7 +764,7 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         {
             Text = item.Name,
             FontSize = courseNameFontSize,
-            FontWeight = ToVariableWeight(Lerp(650, 800, Math.Clamp((scale - 0.60) / 1.2, 0, 1))),
+            FontWeight = ComponentTypography.ToVariableWeight(ComponentTypography.Lerp(650, 800, Math.Clamp((scale - 0.60) / 1.2, 0, 1))),
             Foreground = subjectBrush,
             TextTrimming = TextTrimming.CharacterEllipsis,
             TextWrapping = TextWrapping.NoWrap
@@ -776,7 +774,7 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         {
             Text = item.Detail,
             FontSize = detailFontSize,
-            FontWeight = ToVariableWeight(Lerp(450, 550, Math.Clamp((scale - 0.60) / 1.2, 0, 1))),
+            FontWeight = ComponentTypography.ToVariableWeight(ComponentTypography.Lerp(450, 550, Math.Clamp((scale - 0.60) / 1.2, 0, 1))),
             Foreground = secondaryBrush,
             TextTrimming = TextTrimming.CharacterEllipsis,
             TextWrapping = TextWrapping.NoWrap
@@ -796,7 +794,7 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
             {
                 Height = progressBarHeight,
                 CornerRadius = new CornerRadius(progressBarHeight * 0.5),
-                Background = CreateBrush(_isNightVisual ? "#1AFFFFFF" : "#0D000000"),
+                Background = ComponentPaint.CreateBrush(_isNightVisual ? "#1AFFFFFF" : "#0D000000"),
                 ClipToBounds = true,
                 Child = new Border
                 {
@@ -928,7 +926,7 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
             if (contentPanel == null) continue;
 
             var subjectBrush = SubjectColorService.ResolveForegroundBrush(item.Name, _isNightVisual);
-            var secondaryBrush = CreateBrush(_isNightVisual ? "#848B99" : "#667084");
+            var secondaryBrush = ComponentPaint.CreateBrush(_isNightVisual ? "#848B99" : "#667084");
 
             foreach (var child in contentPanel.Children)
             {
@@ -997,21 +995,21 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         }
 
         var scale = ResolveScale();
-        _isNightVisual = ResolveNightMode();
+        _isNightVisual = ComponentThemeMode.ResolveIsNight(this, fallbackToNightWhenSurfaceUnknown: true);
 
         var useMonetColor = ComponentColorSchemeHelper.ShouldUseMonetColor(
             _componentColorScheme,
             ComponentColorSchemeHelper.GetCurrentGlobalThemeColorMode());
 
         var slashBrush = useMonetColor
-            ? CreateBrush("#FF4FC3F7")
-            : CreateBrush("#FF3250");
+            ? ComponentPaint.CreateBrush("#FF4FC3F7")
+            : ComponentPaint.CreateBrush("#FF3250");
 
         RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadius();
         RootBorder.Background = _isNightVisual
             ? CreateGradientBrush("#171A21", "#0C0E14")
             : CreateGradientBrush("#F7F8FC", "#ECEFF6");
-        RootBorder.BorderBrush = CreateBrush(_isNightVisual ? "#24FFFFFF" : "#15000000");
+        RootBorder.BorderBrush = ComponentPaint.CreateBrush(_isNightVisual ? "#24FFFFFF" : "#15000000");
 
         var headerPadding = new Thickness(
             ComponentChromeCornerRadiusHelper.SafeValue(16 * scale, 10, 24),
@@ -1048,26 +1046,26 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         DayTextBlock.FontSize = dateFont;
         SlashTextBlock.FontSize = dateFont;
 
-        MonthTextBlock.Foreground = CreateBrush(_isNightVisual ? "#F8FAFF" : "#131722");
-        DayTextBlock.Foreground = CreateBrush(_isNightVisual ? "#F8FAFF" : "#131722");
+        MonthTextBlock.Foreground = ComponentPaint.CreateBrush(_isNightVisual ? "#F8FAFF" : "#131722");
+        DayTextBlock.Foreground = ComponentPaint.CreateBrush(_isNightVisual ? "#F8FAFF" : "#131722");
         SlashTextBlock.Foreground = slashBrush;
-        WeekdayTextBlock.Foreground = CreateBrush(_isNightVisual ? "#C6CBD5" : "#4B5463");
-        StatusTextBlock.Foreground = CreateBrush(_isNightVisual ? "#9AA2B1" : "#4B5565");
+        WeekdayTextBlock.Foreground = ComponentPaint.CreateBrush(_isNightVisual ? "#C6CBD5" : "#4B5463");
+        StatusTextBlock.Foreground = ComponentPaint.CreateBrush(_isNightVisual ? "#9AA2B1" : "#4B5565");
 
         WeekdayTextBlock.FontSize = weekdayFontByScale;
-        WeekdayTextBlock.FontWeight = ToVariableWeight(Lerp(560, 700, Math.Clamp((scale - 0.60) / 1.2, 0, 1)));
+        WeekdayTextBlock.FontWeight = ComponentTypography.ToVariableWeight(ComponentTypography.Lerp(560, 700, Math.Clamp((scale - 0.60) / 1.2, 0, 1)));
 
         ClassCountTextBlock.FontSize = classCountFontByScale;
-        ClassCountTextBlock.FontWeight = ToVariableWeight(Lerp(560, 680, Math.Clamp((scale - 0.60) / 1.2, 0, 1)));
+        ClassCountTextBlock.FontWeight = ComponentTypography.ToVariableWeight(ComponentTypography.Lerp(560, 680, Math.Clamp((scale - 0.60) / 1.2, 0, 1)));
 
         var badgeBrush = useMonetColor
-            ? CreateBrush(_isNightVisual ? "#1A4FC3F7" : "#124FC3F7")
-            : CreateBrush(_isNightVisual ? "#1AFF4D5A" : "#12FF4D5A");
+            ? ComponentPaint.CreateBrush(_isNightVisual ? "#1A4FC3F7" : "#124FC3F7")
+            : ComponentPaint.CreateBrush(_isNightVisual ? "#1AFF4D5A" : "#12FF4D5A");
         ClassCountBadge.Background = badgeBrush;
         ClassCountBadge.CornerRadius = new CornerRadius(ComponentChromeCornerRadiusHelper.Micro());
         ClassCountTextBlock.Foreground = useMonetColor
-            ? CreateBrush("#FF4FC3F7")
-            : CreateBrush("#FF4D5A");
+            ? ComponentPaint.CreateBrush("#FF4FC3F7")
+            : ComponentPaint.CreateBrush("#FF4D5A");
 
         StatusTextBlock.FontSize = Math.Clamp(14 * scale, 10, 18);
     }
@@ -1083,57 +1081,6 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         var widthScale = Bounds.Width > 1 ? Math.Clamp(Bounds.Width / 230d, 0.52, 2.4) : 1;
         var heightScale = Bounds.Height > 1 ? Math.Clamp(Bounds.Height / 440d, 0.52, 2.4) : 1;
         return Math.Clamp(Math.Min(cellScale, Math.Min(widthScale, heightScale) * 1.04), 0.52, 2.2);
-    }
-
-    private bool ResolveNightMode()
-    {
-        if (ActualThemeVariant == ThemeVariant.Dark)
-        {
-            return true;
-        }
-
-        if (ActualThemeVariant == ThemeVariant.Light)
-        {
-            return false;
-        }
-
-        if (this.TryFindResource("AdaptiveSurfaceBaseBrush", out var value) &&
-            value is ISolidColorBrush brush)
-        {
-            return CalculateRelativeLuminance(brush.Color) < 0.45;
-        }
-
-        return true;
-    }
-
-    private static double CalculateRelativeLuminance(Color color)
-    {
-        static double ToLinear(double channel)
-        {
-            return channel <= 0.03928
-                ? channel / 12.92
-                : Math.Pow((channel + 0.055) / 1.055, 2.4);
-        }
-
-        var r = ToLinear(color.R / 255d);
-        var g = ToLinear(color.G / 255d);
-        var b = ToLinear(color.B / 255d);
-        return 0.2126 * r + 0.7155 * g + 0.0722 * b;
-    }
-
-    private static FontWeight ToVariableWeight(double value)
-    {
-        return (FontWeight)(int)Math.Clamp(Math.Round(value), 1, 1000);
-    }
-
-    private static double Lerp(double from, double to, double t)
-    {
-        return from + ((to - from) * t);
-    }
-
-    private static IBrush CreateBrush(string colorHex)
-    {
-        return new SolidColorBrush(Color.Parse(colorHex));
     }
 
     private static IBrush CreateGradientBrush(string fromHex, string toHex)

@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using LanMountainDesktop.Services.Plonds;
 
 namespace LanMountainDesktop.Services.Update;
 
@@ -88,7 +89,7 @@ internal sealed class ApplyPlondsComponentEntry
 internal sealed class ApplyPlondsFileEntry
 {
     public string Path { get; set; } = string.Empty;
-    public string? Action { get; set; } = "replace";
+    public string? Action { get; set; } = PlondsWireFormat.ActionReplace;
     public string? Url { get; set; }
     public string? ObjectUrl { get; set; }
     public string? ObjectPath { get; set; }

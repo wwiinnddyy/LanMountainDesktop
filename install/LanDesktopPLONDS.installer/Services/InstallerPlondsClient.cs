@@ -27,13 +27,6 @@ internal sealed class InstallerPlondsClient
     private readonly string _stagingRoot;
     private readonly Func<int, TimeSpan>? _retryDelayFactory;
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        ReadCommentHandling = JsonCommentHandling.Skip,
-        AllowTrailingCommas = true
-    };
-
     /// <summary>
     /// 生产构造函数。
     /// </summary>
