@@ -390,7 +390,9 @@ public partial class StandbyDigitalClockWidget : UserControl,
         }
         else
         {
-            DateTextBlock.Foreground = ComponentPaint.CreateBrush(isNightMode ? "#7E8593" : "#7E8593");
+            // 兜底色不分成夜/白两个值：走到这里说明 AdaptiveTextMutedBrush 没注册，
+            // 而那条现在由 EveryAdaptiveResourceRequested_IsAlsoRegistered 拦着。
+            DateTextBlock.Foreground = ComponentPaint.CreateBrush("#7E8593");
         }
     }
 

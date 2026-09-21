@@ -476,15 +476,8 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         }
     }
 
-    private IBrush ResolveThemeBrush(string key, Color fallback)
-    {
-        if (this.TryFindResource(key, out var resource) && resource is IBrush brush)
-        {
-            return brush;
-        }
-
-        return new SolidColorBrush(fallback);
-    }
+    private IBrush ResolveThemeBrush(string key, Color fallback) =>
+        AdaptiveTokens.Brush(this, key, new SolidColorBrush(fallback));
 
     private void OnPenButtonClick(object? sender, RoutedEventArgs e)
     {

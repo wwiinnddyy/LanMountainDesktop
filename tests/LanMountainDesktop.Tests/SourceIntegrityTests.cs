@@ -760,6 +760,39 @@ public sealed class SourceIntegrityTests
             string.Join(Environment.NewLine, offenders));
     }
 
+    /// <summary>
+    /// 读主题资源不许再问"只看得见自己那本字典"的那套 API。<c>Resources.TryGetResource(key, variant)</c>
+    /// 只查这一本字典、<c>Application.Resources.TryGetResource</c> 只查应用那本，
+    /// 而注册方写在哪儿是另一回事 —— 于是同一个键在 A 处取得到、在 B 处取不到，
+    /// 症状还是"那块 UI 静默失色"。口径统一在 <c>Theme/AdaptiveTokens.cs</c>（沿作用域往上找）。
+    /// </summary>
+    [Fact]
+    public void ThemeResourceReads_GoThroughAdaptiveTokens()
+    {
+        var offenders = new List<string>();
+
+        foreach (var file in SourceFiles().Where(IsHostProjectFile))
+        {
+            if (Path.GetFileName(file).Equals("AdaptiveTokens.cs", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var lines = File.ReadAllLines(file);
+            for (var index = 0; index < lines.Length; index++)
+            {
+                if (lines[index].Contains("TryGetResource(", StringComparison.Ordinal))
+                {
+                    offenders.Add($"{RelativeToRepo(file)}:{index + 1} 直接问某一本字典，请用 AdaptiveTokens.TryGet / Brush");
+                }
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 处窄作用域的主题资源读取：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
     private static bool IsHostProjectFile(string file) => RelativeToRepo(file)
         .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
         .StartsWith($"desktop{Path.DirectorySeparatorChar}LanMountainDesktop{Path.DirectorySeparatorChar}", StringComparison.Ordinal);

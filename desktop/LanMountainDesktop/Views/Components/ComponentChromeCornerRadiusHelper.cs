@@ -4,6 +4,7 @@ using Avalonia.Media;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -31,9 +32,7 @@ internal static class ComponentChromeCornerRadiusHelper
     public static CornerRadius ResolveToken(string key, double fallback)
     {
         var application = Application.Current;
-        return application is not null &&
-               application.Resources.TryGetResource(key, application.ActualThemeVariant, out var resource) &&
-               resource is CornerRadius radius
+        return application is not null && AdaptiveTokens.TryGet<CornerRadius>(application, key, out var radius)
             ? radius
             : new CornerRadius(fallback);
     }

@@ -331,15 +331,7 @@ public partial class MainWindow : Window
         _currentDesktopSurfaceIndex = Math.Clamp(_currentDesktopSurfaceIndex, 0, LauncherSurfaceIndex);
     }
 
-    private IBrush GetThemeBrush(string key)
-    {
-        if (Resources.TryGetResource(key, ActualThemeVariant, out var resource) && resource is IBrush brush)
-        {
-            return brush;
-        }
-
-        return Brushes.Transparent;
-    }
+    private IBrush GetThemeBrush(string key) => AdaptiveTokens.Brush(this, key, Brushes.Transparent);
 
     private void ApplyDesktopSurfaceOffset()
     {

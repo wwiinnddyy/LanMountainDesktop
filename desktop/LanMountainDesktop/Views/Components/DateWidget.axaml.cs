@@ -450,20 +450,8 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
         return Math.Clamp(Math.Min(cellScale, Math.Min(heightScale, widthScale) * 1.08), 0.62, 1.8);
     }
 
-    private IBrush GetThemeBrush(string key, double opacity)
-    {
-        if (this.TryFindResource(key, out var value) && value is IBrush brush)
-        {
-            if (brush is ISolidColorBrush solid)
-            {
-                return new SolidColorBrush(solid.Color, opacity);
-            }
-
-            return brush;
-        }
-
-        return new SolidColorBrush(Colors.Gray, opacity);
-    }
+    private IBrush GetThemeBrush(string key, double opacity) =>
+        AdaptiveTokens.Brush(this, key, new SolidColorBrush(Colors.Gray), opacity);
 
     private static string BuildDailySelection(
         DateTime date,

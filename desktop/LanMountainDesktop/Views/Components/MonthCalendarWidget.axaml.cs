@@ -256,18 +256,6 @@ public partial class MonthCalendarWidget : UserControl, IDesktopComponentWidget,
         return Math.Clamp(Math.Min(cellScale, Math.Min(heightScale, widthScale) * 1.06), 0.60, 1.85);
     }
 
-    private IBrush GetThemeBrush(string key, double opacity)
-    {
-        if (this.TryFindResource(key, out var value) && value is IBrush brush)
-        {
-            if (brush is ISolidColorBrush solid)
-            {
-                return new SolidColorBrush(solid.Color, opacity);
-            }
-
-            return brush;
-        }
-
-        return new SolidColorBrush(Colors.Gray, opacity);
-    }
+    private IBrush GetThemeBrush(string key, double opacity) =>
+        AdaptiveTokens.Brush(this, key, new SolidColorBrush(Colors.Gray), opacity);
 }

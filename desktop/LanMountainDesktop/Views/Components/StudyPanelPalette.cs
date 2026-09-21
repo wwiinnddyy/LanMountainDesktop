@@ -88,8 +88,7 @@ public static class StudyPanelPalette
             return solidBackground.Color;
         }
 
-        if (owner.TryFindResource(ThemeResourceKeys.GlassStrongBackgroundBrush, out var resource) &&
-            resource is ISolidColorBrush solidBrush)
+        if (AdaptiveTokens.TryGet<ISolidColorBrush>(owner, ThemeResourceKeys.GlassStrongBackgroundBrush, out var solidBrush))
         {
             return solidBrush.Color;
         }
