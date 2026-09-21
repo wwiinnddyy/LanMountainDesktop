@@ -1138,6 +1138,82 @@ public sealed class SourceIntegrityTests
             $"{offenders.Count} 处绕开共享快照模型：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
     }
 
+    /// <summary>
+    /// <c>.axaml</c> 里写 <c>Classes="foo"</c> 而全仓没有任何 <c>Selector="...foo"</c> 定义它，
+    /// 控件就静默走默认样式：不报错、不警告，只是那块 UI 少了它本该有的样子——
+    /// 2026-09-21 首扫量到 4 个，其中 <c>component-editor-primary-text</c> 是"主/次文本"配对里
+    /// 只有次文本有样式（另一个 <c>component-editor-numeric</c> 从来没定义过，已删标记；
+    /// 补样式算设计决定，没替他做）。外部主题库自带的类名要登记在名单里并写清来源。
+    /// </summary>
+    [Fact]
+    public void StyleClasses_UsedInMarkup_AreAlsoDefined()
+    {
+        // 本仓扫不到、由外部主题库定义的类名。新增就往这里加一条并写清是哪来的。
+        string[] externalClasses =
+        [
+            "accent",       // Avalonia FluentTheme 的强调色按钮类
+            "AppBarButton", // FluentAvalonia 的应用栏按钮
+        ];
+
+        var markupFiles = ProductionDirectories
+            .Select(part => Path.Combine(RepoRoot, part))
+            .Where(Directory.Exists)
+            .SelectMany(dir => Directory.EnumerateFiles(dir, "*.axaml", SearchOption.AllDirectories))
+            .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        var defined = new HashSet<string>(StringComparer.Ordinal);
+        var classInSelector = new Regex(@"\.([A-Za-z][\w\-]*)", RegexOptions.Compiled);
+
+        foreach (var file in markupFiles.Concat(SourceFiles()))
+        {
+            var text = File.ReadAllText(file);
+            foreach (Match selector in Regex.Matches(text, "Selector=\"([^\"]+)\"").Cast<Match>())
+            {
+                foreach (Match className in classInSelector.Matches(selector.Groups[1].Value))
+                {
+                    defined.Add(className.Groups[1].Value);
+                }
+            }
+
+            foreach (Match added in Regex.Matches(text, "Classes\\.Add\\(\\s*\"([^\"]+)\"").Cast<Match>())
+            {
+                defined.Add(added.Groups[1].Value);
+            }
+        }
+
+        var orphans = new SortedSet<string>(StringComparer.Ordinal);
+
+        foreach (var file in markupFiles)
+        {
+            var lines = File.ReadAllLines(file);
+            for (var index = 0; index < lines.Length; index++)
+            {
+                var match = Regex.Match(lines[index], "\\sClasses=\"([^\"]+)\"");
+                if (!match.Success)
+                {
+                    continue;
+                }
+
+                var undefined = match.Groups[1].Value
+                    .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Where(className => !defined.Contains(className)
+                        && !externalClasses.Contains(className, StringComparer.Ordinal))
+                    .ToArray();
+
+                foreach (var className in undefined)
+                {
+                    orphans.Add($"{className}  ({RelativeToRepo(file)}:{index + 1})");
+                }
+            }
+        }
+
+        Assert.True(
+            orphans.Count == 0,
+            $"{orphans.Count} 个样式类只在标记里被贴上、没有任何选择器定义它，控件实际走默认样式："
+            + $"{Environment.NewLine}{string.Join(Environment.NewLine, orphans)}");
+    }
+
     private static bool IsHostProjectFile(string file) => RelativeToRepo(file)
         .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
         .StartsWith($"desktop{Path.DirectorySeparatorChar}LanMountainDesktop{Path.DirectorySeparatorChar}", StringComparison.Ordinal);

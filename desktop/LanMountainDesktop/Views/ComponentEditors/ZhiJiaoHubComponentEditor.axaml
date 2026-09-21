@@ -84,7 +84,6 @@
                     <TextBlock x:Name="IntervalLabelTextBlock"
                                Classes="component-editor-primary-text" />
                     <NumericUpDown x:Name="IntervalNumeric"
-                                   Classes="component-editor-numeric"
                                    Minimum="5"
                                    Maximum="1440"
                                    Increment="5"

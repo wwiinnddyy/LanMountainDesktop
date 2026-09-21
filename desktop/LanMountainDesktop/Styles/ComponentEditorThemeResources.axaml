@@ -160,6 +160,11 @@
         <Setter Property="Foreground" Value="{DynamicResource EditorPrimaryBrush}" />
     </Style>
 
+    <Style Selector="TextBlock.component-editor-primary-text">
+        <Setter Property="Foreground" Value="{DynamicResource ComponentEditorPrimaryTextBrush}" />
+        <Setter Property="FontSize" Value="14" />
+    </Style>
+
     <Style Selector="TextBlock.component-editor-secondary-text">
         <Setter Property="Foreground" Value="{DynamicResource ComponentEditorSecondaryTextBrush}" />
         <Setter Property="FontSize" Value="14" />
