@@ -85,6 +85,15 @@ public sealed partial class MaterialColorSettingsPageViewModel : ViewModelBase
 
     public event Action<string>? RestartRequested;
 
+    /// <summary>
+    /// 设置窗口每次打开都会新建这一页；关掉时如果不解订，单例服务会一直攥着这个 VM 和它的视图树，
+    /// 之后每次换色还会往已经销毁的页面回写。页面脱离视觉树时调这里。
+    /// </summary>
+    public void Detach()
+    {
+        _materialColorService.MaterialColorChanged -= OnMaterialColorChanged;
+    }
+
     public IReadOnlyList<SelectionOption> ColorModes { get; }
 
     public IReadOnlyList<SelectionOption> WallpaperColorSources { get; }

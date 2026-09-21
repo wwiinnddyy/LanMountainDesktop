@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using LanMountainDesktop.AirAppSdk;
@@ -30,6 +31,8 @@ public partial class MaterialColorSettingsPage : AirAppSettingsPageBase
         ViewModel.RestartRequested += OnRestartRequested;
         DataContext = ViewModel;
         InitializeComponent();
+        // Control.OnDetachedFromVisualTreeCore 在这个 Avalonia 版本里是 sealed，只能挂实例事件。
+        DetachedFromVisualTree += (_, _) => ViewModel.Detach();
     }
 
     public MaterialColorSettingsPageViewModel ViewModel { get; }

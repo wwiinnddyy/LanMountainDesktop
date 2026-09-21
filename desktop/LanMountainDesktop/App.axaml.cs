@@ -36,7 +36,6 @@ namespace LanMountainDesktop;
 
 public partial class App : Application
 {
-    private static readonly Color DefaultAccentColor = Color.Parse("#FF3B82F6");
     private enum DesktopShellState
     {
         ForegroundDesktop = 0,
@@ -58,7 +57,6 @@ public partial class App : Application
     private readonly FontFamilyService _fontFamilyService = new();
     private readonly IHostApplicationLifecycle _hostApplicationLifecycle = new HostApplicationLifecycleService();
     private readonly HostShutdownGate _shutdownGate = new();
-    private readonly IDetachedComponentLibraryWindowService _detachedComponentLibraryWindowService = new DetachedComponentLibraryWindowService();
     private readonly IMainWindowDesktopLayerService _mainWindowDesktopLayerService = MainWindowDesktopLayerServiceFactory.GetOrCreate();
     private readonly ILocationService _locationService = HostLocationServiceProvider.GetOrCreate();
     private readonly DateTimeOffset _startupAt = DateTimeOffset.UtcNow;
@@ -94,14 +92,6 @@ public partial class App : Application
         (Current as App)?._hostApplicationLifecycle;
     internal static INotificationService? CurrentNotificationService =>
         (Current as App)?._notificationService;
-
-    // 闅愮鏀跨瓥鏌ョ湅浜嬩欢
-    public static event Action? CurrentPrivacyPolicyViewRequested;
-
-    public static void RaisePrivacyPolicyViewRequested()
-    {
-        CurrentPrivacyPolicyViewRequested?.Invoke();
-    }
 
     public AirAppRuntimeService? AirAppRuntimeService => _airAppRuntimeService;
     public ISettingsFacadeService SettingsFacade => _settingsFacade;
@@ -1123,7 +1113,7 @@ public partial class App : Application
 
             if (languageChanged)
             {
-                // 娓呴櫎鏈湴鍖栫紦瀛橈紝寮哄埗閲嶆柊鍔犺浇璇█鏂囦欢
+                // 清除本地化缓存，强制重新加载语言文件
                 _localizationService.ClearCache();
                 ApplyCurrentCultureFromSettings();
                 RefreshTrayIconContent();

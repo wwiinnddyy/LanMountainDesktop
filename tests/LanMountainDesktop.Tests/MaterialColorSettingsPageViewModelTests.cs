@@ -15,6 +15,24 @@ namespace LanMountainDesktop.Tests;
 
 public sealed class MaterialColorSettingsPageViewModelTests
 {
+    /// <summary>
+    /// 设置窗口每次打开都会新建这一页（关闭时 <c>_window</c> 被置空），而 <c>IMaterialColorService</c>
+    /// 是全进程单例。不解订的话每开一次就永久多留一个 VM 和它的视图树，之后每次换色还会回写给已销毁的页面。
+    /// </summary>
+    [Fact]
+    public void Detach_ReleasesTheSubscriptionHeldByTheSingletonService()
+    {
+        var facade = new FakeSettingsFacade(CreateThemeState(ThemeAppearanceValues.MaterialNone));
+        var materialService = new FakeMaterialColorService(CreateSnapshot(ThemeAppearanceValues.MaterialNone));
+        var viewModel = new MaterialColorSettingsPageViewModel(facade, materialService);
+
+        Assert.Equal(1, materialService.LiveSubscribers);
+
+        viewModel.Detach();
+
+        Assert.Equal(0, materialService.LiveSubscribers);
+    }
+
     [Fact]
     public void Load_SelectsSavedNoneMaterialMode()
     {
@@ -288,5 +306,8 @@ public sealed class MaterialColorSettingsPageViewModelTests
             _snapshot = snapshot;
             MaterialColorChanged?.Invoke(this, snapshot);
         }
+
+        /// <summary>还攥着多少个订阅者——用来证明页面关掉时 VM 真的被放开了。</summary>
+        public int LiveSubscribers => MaterialColorChanged?.GetInvocationList().Length ?? 0;
     }
 }
