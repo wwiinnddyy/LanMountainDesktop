@@ -1284,6 +1284,46 @@ public sealed class SourceIntegrityTests
             + $"{Environment.NewLine}{string.Join(Environment.NewLine, orphans)}");
     }
 
+    /// <summary>
+    /// 主程序设置文件的文件名只认 <c>UserDataRoot.SettingsFileName</c> 一处。
+    /// 读写它的是三个二进制（宿主读写、首启向导写、Core 的启动偏好读），各自的目录不同但文件名必须同一个；
+    /// 2026-09-21 收口前 <c>"settings.json"</c> 这个字面量在生产代码里有 7 份。
+    /// 漂了的后果不是崩，而是"设置读不到、界面回默认值"——和它本来要防的那类事故一模一样。
+    /// </summary>
+    [Fact]
+    public void SettingsFileName_LivesInExactlyOnePlace()
+    {
+        var allowedFile = @"core\LanMountainDesktop.Core\Data\UserDataRoot.cs";
+        var offenders = new List<string>();
+
+        foreach (var file in SourceFiles())
+        {
+            if (string.Equals(RelativeToRepo(file), allowedFile, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var lines = File.ReadAllLines(file);
+            for (var index = 0; index < lines.Length; index++)
+            {
+                var trimmed = lines[index].AsSpan().TrimStart();
+                if (trimmed.StartsWith("//") || trimmed.StartsWith('*'))
+                {
+                    continue;
+                }
+
+                if (lines[index].Contains("\"settings.json\"", StringComparison.Ordinal))
+                {
+                    offenders.Add($"{RelativeToRepo(file)}:{index + 1} 自己写了设置文件名，请用 UserDataRoot.SettingsFileName");
+                }
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 处硬编码的 settings.json 文件名：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
     private static bool IsHostProjectFile(string file) => RelativeToRepo(file)
         .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
         .StartsWith($"desktop{Path.DirectorySeparatorChar}LanMountainDesktop{Path.DirectorySeparatorChar}", StringComparison.Ordinal);
