@@ -24,7 +24,8 @@ public partial class ZhiJiaoHubWidget : UserControl,
     IDesktopComponentWidget,
     IRecommendationInfoAwareComponentWidget,
     IComponentSettingsContextAware
-{    private const double SwipeThreshold = 50;
+{
+    private const double SwipeThreshold = 50;
 
     private readonly DispatcherTimer _refreshTimer = new();
 

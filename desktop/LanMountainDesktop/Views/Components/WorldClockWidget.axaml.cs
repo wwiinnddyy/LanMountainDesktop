@@ -22,7 +22,8 @@ public partial class WorldClockWidget : UserControl,
     IComponentRuntimeContextAware
 {
     private const int BaseWidthCells = 4;
-    private const int BaseHeightCells = 2;    private const double DialDesignSize = 100;
+    private const int BaseHeightCells = 2;
+    private const double DialDesignSize = 100;
     private const double DialCenter = DialDesignSize / 2d;
 
     private static readonly IReadOnlyDictionary<string, string> ZhCityNames =

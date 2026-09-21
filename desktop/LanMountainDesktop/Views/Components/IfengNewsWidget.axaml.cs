@@ -31,7 +31,8 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
     };
 
     private const string BrowserUserAgent =
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36";    private const int BaseWidthCells = 4;
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36";
+    private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 4;
     private const int MaxDisplayItemCount = 12;
     private static readonly IReadOnlyList<int> SupportedAutoRefreshIntervalsMinutes = RefreshIntervalCatalog.SupportedIntervalsMinutes;

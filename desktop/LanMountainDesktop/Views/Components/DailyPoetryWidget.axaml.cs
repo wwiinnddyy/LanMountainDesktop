@@ -39,7 +39,8 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
         '\u00B7'
     ];
     private static readonly HashSet<char> NaturalBreakCharSet = new(NaturalBreakChars);
-    private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationDataService();    private const int BaseWidthCells = 4;
+    private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationDataService();
+    private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 2;
     private const double MinPoetryFontSize = 8;
     private const double MinAuthorFontSize = 7;

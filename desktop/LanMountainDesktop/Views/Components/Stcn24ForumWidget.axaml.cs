@@ -31,7 +31,8 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
     };
 
     private const string AvatarRequestUserAgent =
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36";    private const int BaseWidthCells = 4;
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36";
+    private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 4;
     private const int BaseDisplayItemCount = 4;
     private const int MaxDisplayItemCount = 8;

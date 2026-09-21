@@ -104,8 +104,12 @@ AirApp 本地包生成：
 - **反射挂载**：Harmony 补丁（`Platform/Windows/Patches/**`）、`[ComImport]` + CLSID 的 COM 互操作、`JsonSerializerContext` 源生成类型。
 - **已发布包的表面**：`core/` 与 `AirAppSdk` 的 public 类型在本仓库零引用不代表没人用——要按**方法名**去同级 AirApp 仓库查（实测 `ResolveCornerRadius` 命中 8 个外部文件）。
 
-批量删完必须 `dotnet build`（编译器是唯一能证伪的闸），再跑回归闸门：
+批量删完必须 `dotnet build`（编译器只是最低那道闸），再跑回归闸门：
 `dotnet test LanMountainDesktop.slnx --no-build --filter "Category!=EcosystemProbe"`。
+**但编译器不是够用的闸**：它不在乎换行、也不把重复 using 当错误，于是两类只有按行看才暴露的伤会一路绿过去
+——把前后两条声明并成一行（守卫 `MemberDeclarations_OwnTheirOwnLine`，2026-09-21 两次批量脚本共留下 12 处），
+以及同一条 using 写两遍（CS0105 只是警告，守卫 `UsingDirectives_AreNotDeclaredTwiceInAFile`，
+`plugin → airapp` 那次留下 28 条 / 21 个文件）。批量脚本改完要把这两条也跑到 0，而不是只确认能编译。
 注释吞语句、IDE0051 未使用成员这两类由 `tests/LanMountainDesktop.Tests/SourceIntegrityTests.cs` 与
 `dotnet format style --diagnostics IDE0051 --severity hidden` 守；新增死码规则时请同步扩这两处。
 

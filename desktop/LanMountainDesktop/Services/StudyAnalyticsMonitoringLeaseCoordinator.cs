@@ -17,7 +17,8 @@ public static class StudyAnalyticsMonitoringLeaseCoordinatorFactory
 }
 
 public sealed class StudyAnalyticsMonitoringLeaseCoordinator
-{    private readonly object _syncRoot = new();
+{
+    private readonly object _syncRoot = new();
     private readonly IStudyAnalyticsService _studyAnalyticsService;
     private int _activeLeaseCount;
 

@@ -23,7 +23,8 @@ public partial class StandbyDigitalClockWidget : UserControl,
     ITimeZoneAwareComponentWidget,
     IComponentPlacementContextAware,
     IComponentRuntimeContextAware
-{    private const int BaseWidthCells = 4;
+{
+    private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 2;
     private const double DigitHeight = 130d;
 

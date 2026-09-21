@@ -1452,6 +1452,41 @@ public sealed class SourceIntegrityTests
             $"{offenders.Count} 处重复的 using 指令：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
     }
 
+    /// <summary>
+    /// 一条成员声明占一行。批量删声明的脚本如果只删内容不删换行，就会把前后两条声明并成一行：
+    /// 编译器不在乎，所以构建全绿、测试全绿，但下一次按行做的扫描（本文件里那一大排守卫全是按行的）
+    /// 会成批漏掉这条，人读 diff 也看不出少了什么。
+    /// 2026-09-21 删 12 份 <c>BaseCellSize</c> 与 b21d296 删租约字段时各留下过这种并线，共 12 处。
+    /// 认的是"分号或大括号后紧跟 4 个以上空格再跟声明关键字"，单空格的 <c>{ get; set; }</c> 这类不会误报。
+    /// </summary>
+    [Fact]
+    public void MemberDeclarations_OwnTheirOwnLine()
+    {
+        var joined = new Regex(@".*[;{]\s{4,}(?:private|internal|public|protected|static|readonly|const|sealed)[ \t]");
+        var offenders = new List<string>();
+
+        foreach (var file in RepositoryCSharpFiles())
+        {
+            foreach (var (line, number) in RawLines(file))
+            {
+                var trimmed = line.AsSpan().TrimStart();
+                if (trimmed.IsEmpty || trimmed.StartsWith("//") || trimmed.StartsWith('*'))
+                {
+                    continue;
+                }
+
+                if (joined.IsMatch(line))
+                {
+                    offenders.Add($"{RelativeToRepo(file)}:{number}");
+                }
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 处把两条成员声明写在同一行：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
     private static IEnumerable<(string Line, int Number)> CodeLines(string file)
     {
         var all = File.ReadAllLines(file);
