@@ -289,7 +289,7 @@ public abstract class WeatherWidgetBase : UserControl,
                     config.Latitude,
                     config.Longitude,
                     ForecastDays: 7,
-                    Locale: NormalizeWeatherLocale(language),
+                    Locale: XiaomiWeatherLocales.ForLanguageCode(language),
                     ForceRefresh: forceRefresh),
                 cts.Token);
 
@@ -415,13 +415,6 @@ public abstract class WeatherWidgetBase : UserControl,
     private void UpdateAnimationState()
     {
         ApplyCurrentScene();
-    }
-
-    private static string NormalizeWeatherLocale(string? languageCode)
-    {
-        return LanguageCodes.IsEnglishCode(languageCode)
-            ? "en_us"
-            : "zh_cn";
     }
 
     private readonly record struct WeatherConfig(string LocationKey, string LocationName, double Latitude, double Longitude);

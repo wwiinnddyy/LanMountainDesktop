@@ -327,6 +327,13 @@ helper 住在 Core 是因为写同一批磁盘文件的是三个进程（宿主�
 唯一的实际行为变化是 `Normalize` 现在会 Trim：`settings.json` 里写成 `" en-US "` 时以前落回中文、
 现在落回英文；这个值只有手改才会出现，取更正确的那个解释（`LanguageCodeContractTests` 里钉着）。
 
+**天气接口的 locale 拼法另有一处家**：`en_us` / `zh_cn` 是供应商词表，不是 IETF 语言码，一律走
+`desktop/LanMountainDesktop/Services/XiaomiWeatherLocales.cs`（守卫 `WeatherProviderLocaleValues_LiveInExactlyOnePlace`，
+连"再写一份 `NormalizeWeatherLocale`"一起禁掉）。收口前这两个拼法散在 3 份逐字相同的私有方法与 1 处选项默认值里；
+改一份的症状是"设置页天气是英文、桌面组件还是中文"，而两边都看着正常。
+`ForLanguageCode` 保持逐字比较（`LanguageCodes.IsEnglishCode`），所以 `"en"` 仍按中文走——这是收口前的口径，
+`XiaomiWeatherLocaleTests` 里用一条 InlineData 钉住，别哪天顺手改成归一化。
+
 **崩溃转储的磁盘契约只认一处**：宿主崩溃时写 `LocalApplicationData/LanMountainDesktop/crashes/`，
 启动器与错误窗口再读它——两个二进制之间没有共享类型，全靠 `crashes` / `crash-*.txt` / `latest.txt`
 三个名字逐字对齐。收口前这三个名字在 4 个文件里各抄一份，抄错一个字母的症状是崩溃对话框什么都不显示

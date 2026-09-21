@@ -27,7 +27,7 @@ public sealed record XiaomiWeatherApiOptions
 
     public string Source { get; init; } = "xiaomi";
 
-    public string Locale { get; init; } = "zh_cn";
+    public string Locale { get; init; } = XiaomiWeatherLocales.Chinese;
 
     public bool IsGlobal { get; init; }
 

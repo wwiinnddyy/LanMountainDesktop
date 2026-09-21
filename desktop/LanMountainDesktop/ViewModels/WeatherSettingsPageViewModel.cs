@@ -339,7 +339,7 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
         {
             var result = await _settingsFacade.Weather.SearchLocationsAsync(
                 SearchKeyword.Trim(),
-                NormalizeWeatherLocale(_languageCode));
+                XiaomiWeatherLocales.ForLanguageCode(_languageCode));
             if (!result.Success)
             {
                 SearchStatus = string.Format(
@@ -475,7 +475,7 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
                     state.Latitude,
                     state.Longitude,
                     ForecastDays: 3,
-                    Locale: NormalizeWeatherLocale(_languageCode),
+                    Locale: XiaomiWeatherLocales.ForLanguageCode(_languageCode),
                     ForceRefresh: true));
             if (!result.Success || result.Data is null)
             {
@@ -922,13 +922,6 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
         {
             return CultureInfo.InvariantCulture;
         }
-    }
-
-    private static string NormalizeWeatherLocale(string? languageCode)
-    {
-        return LanguageCodes.IsEnglishCode(languageCode)
-            ? "en_us"
-            : "zh_cn";
     }
 }
 

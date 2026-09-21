@@ -1676,6 +1676,51 @@ public sealed class SourceIntegrityTests
             $"{stale.Count} 条语言码免检条目已失效，请删掉：{Environment.NewLine}{string.Join(Environment.NewLine, stale)}");
     }
 
+    /// <summary>
+    /// 小米天气接口 locale 参数的拼法（<c>en_us</c> / <c>zh_cn</c>，供应商自己的写法）只认
+    /// <c>desktop/.../Services/XiaomiWeatherLocales.cs</c> 一处，也不许再各写一份 <c>NormalizeWeatherLocale</c>。
+    /// 收口前这两个拼法散在 3 份逐字相同的私有方法（刷新服务、设置页视图模型、天气组件基类）
+    /// 与 1 处选项默认值里。改一份剩下三份照旧，而两边都"看起来工作正常"——
+    /// 症状是设置页的天气是英文、桌面上那个组件还是中文。
+    /// </summary>
+    [Fact]
+    public void WeatherProviderLocaleValues_LiveInExactlyOnePlace()
+    {
+        var homeFile = @"desktop\LanMountainDesktop\Services\XiaomiWeatherLocales.cs";
+        var literals = new[] { "\"en_us\"", "\"zh_cn\"" };
+        var declRe = new Regex(@"^\s*(?:private|internal|public|protected)\s+static\s+string\s+NormalizeWeatherLocale\s*\(");
+        var offenders = new List<string>();
+
+        foreach (var file in SourceFiles())
+        {
+            var relative = RelativeToRepo(file);
+            if (string.Equals(relative, homeFile, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            foreach (var (line, number) in CodeLines(file))
+            {
+                foreach (var literal in literals)
+                {
+                    if (line.Contains(literal, StringComparison.Ordinal))
+                    {
+                        offenders.Add($"{relative}:{number} 自带了天气 locale {literal}，请用 XiaomiWeatherLocales");
+                    }
+                }
+
+                if (declRe.IsMatch(line))
+                {
+                    offenders.Add($"{relative}:{number} 又写了一份 NormalizeWeatherLocale，请用 XiaomiWeatherLocales.ForLanguageCode");
+                }
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 处重复的天气 locale 真源：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
     private static IEnumerable<(string Line, int Number)> CodeLines(string file)
     {
         var all = File.ReadAllLines(file);

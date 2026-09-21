@@ -63,7 +63,7 @@ public sealed class WeatherLocationRefreshService
         var coordinate = locationResult.Coordinate.Value;
         var settingsState = _settingsFacade.Weather.Get();
         var languageCode = _settingsFacade.Region.Get().LanguageCode;
-        var locale = NormalizeWeatherLocale(languageCode);
+        var locale = XiaomiWeatherLocales.ForLanguageCode(languageCode);
 
         WeatherLocation? resolvedLocation = null;
         var weatherService = _settingsFacade.Weather.GetWeatherInfoService();
@@ -146,12 +146,5 @@ public sealed class WeatherLocationRefreshService
     private static string BuildCoordinateKey(double latitude, double longitude)
     {
         return FormattableString.Invariant($"coord:{latitude:F4},{longitude:F4}");
-    }
-
-    private static string NormalizeWeatherLocale(string? languageCode)
-    {
-        return LanguageCodes.IsEnglishCode(languageCode)
-            ? "en_us"
-            : "zh_cn";
     }
 }
