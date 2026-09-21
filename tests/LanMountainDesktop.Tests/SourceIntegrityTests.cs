@@ -1454,16 +1454,18 @@ public sealed class SourceIntegrityTests
     }
 
     /// <summary>
-    /// 一条成员声明占一行。批量删声明的脚本如果只删内容不删换行，就会把前后两条声明并成一行：
+    /// 一条成员声明（或一条语句）占一行。批量删声明的脚本如果只删内容不删换行，就会把前后两条并成一行：
     /// 编译器不在乎，所以构建全绿、测试全绿，但下一次按行做的扫描（本文件里那一大排守卫全是按行的）
     /// 会成批漏掉这条，人读 diff 也看不出少了什么。
-    /// 2026-09-21 删 12 份 <c>BaseCellSize</c> 与 b21d296 删租约字段时各留下过这种并线，共 12 处。
-    /// 认的是"分号或大括号后紧跟 4 个以上空格再跟声明关键字"，单空格的 <c>{ get; set; }</c> 这类不会误报。
+    /// 2026-09-21 删 12 份 <c>BaseCellSize</c> 与 b21d296 删租约字段时各留下过这种并线，共 12 处；
+    /// 2026-09-22 又把口径从"声明"扩到"语句"，抓到 <c>LocalizationService.NormalizeLanguageCode</c> 的
+    /// 方法体开括号与首条 <c>if</c> 并在同一行（1 处，非本轮脚本所伤）。
+    /// 认的是"分号或大括号后紧跟 4 个以上空格再跟声明/语句关键字"，单空格的 <c>{ get; set; }</c> 这类不会误报。
     /// </summary>
     [Fact]
     public void MemberDeclarations_OwnTheirOwnLine()
     {
-        var joined = new Regex(@".*[;{]\s{4,}(?:private|internal|public|protected|static|readonly|const|sealed)[ \t]");
+        var joined = new Regex(@".*[;{]\s{4,}(?:private|internal|public|protected|static|readonly|const|sealed|if|foreach|for|while|switch|return|throw|var|try|lock)[ \t(;]");
         var offenders = new List<string>();
 
         foreach (var file in RepositoryCSharpFiles())

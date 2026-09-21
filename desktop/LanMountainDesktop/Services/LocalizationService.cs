@@ -55,7 +55,8 @@ public sealed class LocalizationService
     }
 
     public string NormalizeLanguageCode(string? languageCode)
-    {        if (string.IsNullOrWhiteSpace(languageCode))
+    {
+        if (string.IsNullOrWhiteSpace(languageCode))
         {
             return DefaultLanguageCode;
         }

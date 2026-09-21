@@ -107,7 +107,8 @@ AirApp 本地包生成：
 批量删完必须 `dotnet build`（编译器只是最低那道闸），再跑回归闸门：
 `dotnet test LanMountainDesktop.slnx --no-build --filter "Category!=EcosystemProbe"`。
 **但编译器不是够用的闸**：它不在乎换行、也不把重复 using 当错误，于是两类只有按行看才暴露的伤会一路绿过去
-——把前后两条声明并成一行（守卫 `MemberDeclarations_OwnTheirOwnLine`，2026-09-21 两次批量脚本共留下 12 处），
+——把前后两条声明并成一行（守卫 `MemberDeclarations_OwnTheirOwnLine`，2026-09-21 两次批量脚本共留下 12 处，
+2026-09-22 把口径从"声明"扩到"语句"后又抓到 1 处方法体开括号与首条 `if` 并线），
 以及同一条 using 写两遍（CS0105 只是警告，守卫 `UsingDirectives_AreNotDeclaredTwiceInAFile`，
 `plugin → airapp` 那次留下 28 条 / 21 个文件）。批量脚本改完要把这两条也跑到 0，而不是只确认能编译。
 注释吞语句、IDE0051 未使用成员这两类由 `tests/LanMountainDesktop.Tests/SourceIntegrityTests.cs` 与
