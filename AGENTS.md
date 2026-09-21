@@ -238,6 +238,16 @@ live 路径各自走 `TryGetSnappedCell`+`GetCellRect`）和一个 `[Obsolete]` 
 `.axaml` 里的 `StaticResource` 仍是字符串（XAML 取不到 C# 常量），这条约束只管 C# 侧。
 守卫 `ThemeResourceKeyLiterals_OnlyLiveInThemeResourceKeys`。
 
+**主题资源的读取也只认一处**：取一个 `Adaptive*` 画笔/令牌一律走 `Theme/AdaptiveTokens.cs`
+（`TryGet<T>` / `Brush`），不要再自己调 `TryFindResource(` 或 `TryGetResource(`。
+这两个底层 API 的差别本身就是缺陷来源：`TryGetResource` 只看你递进去的那一本字典
+（实测曾有 5 份私有实现分别在问 MainWindow 自己、Application、组件自身三条不同作用域），
+于是同一个键在 A 处取到、B 处取不到；`TryFindResource` 作用域对，但取不到时各文件自己兜一个值。
+现在作用域只有一份，**兜底值仍由调用方给**（各块 UI 的兜底口径本来就不一样，别去统一它们）。
+守卫 `ThemeResourceReads_GoThroughAdaptiveTokens`；"注册了什么"另有一条
+`EveryAdaptiveResourceRequested_IsAlsoRegistered`（它实测抓到预览卡片没底色：
+`AdaptiveCardBackgroundBrush` 有人读、没人注册，而兜底是 `Brushes.Transparent`）。
+
 **PLONDS 线上协议字面量**：宿主与服务端没有共享类型，全靠字符串对齐，所以包名
 （`Files.zip` / `files.zip` / `changed.zip` / `files-windows-x64.zip` / `PLONDS.json`）与动作值
 （`add` / `replace` / `reuse` / `delete`）只许写在 `Services/Plonds/PlondsWireFormat.cs` 一处，

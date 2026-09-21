@@ -31,8 +31,7 @@ public static class ComponentThemeMode
             return false;
         }
 
-        if (control.TryFindResource(SurfaceBaseBrushKey, out var value) &&
-            value is ISolidColorBrush brush)
+        if (AdaptiveTokens.TryGet<ISolidColorBrush>(control, SurfaceBaseBrushKey, out var brush))
         {
             return ColorMath.RelativeLuminance(brush.Color) < NightSurfaceLuminanceThreshold;
         }

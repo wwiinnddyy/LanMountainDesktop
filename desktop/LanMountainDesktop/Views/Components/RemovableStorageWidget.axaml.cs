@@ -498,17 +498,9 @@ public partial class RemovableStorageWidget : UserControl, IDesktopComponentWidg
 
     private Color ResolveThemeColor(string resourceKey, string fallbackHex)
     {
-        if (this.TryFindResource(resourceKey, out var resource))
+        if (AdaptiveTokens.TryGet<ISolidColorBrush>(this, resourceKey, out var solidBrush))
         {
-            if (resource is ISolidColorBrush solidBrush)
-            {
-                return solidBrush.Color;
-            }
-
-            if (resource is SolidColorBrush directSolidBrush)
-            {
-                return directSolidBrush.Color;
-            }
+            return solidBrush.Color;
         }
 
         return Color.Parse(fallbackHex);

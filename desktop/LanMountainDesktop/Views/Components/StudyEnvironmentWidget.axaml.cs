@@ -344,12 +344,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
 
     private IBrush TryResolveThemeBrush(string resourceKey, string fallbackHex)
     {
-        if (this.TryFindResource(resourceKey, out var resource) && resource is IBrush brush)
-        {
-            return brush;
-        }
-
-        return ComponentPaint.CreateBrush(fallbackHex);
+        return AdaptiveTokens.Brush(this, resourceKey, ComponentPaint.CreateBrush(fallbackHex));
     }
 
     public void Dispose()

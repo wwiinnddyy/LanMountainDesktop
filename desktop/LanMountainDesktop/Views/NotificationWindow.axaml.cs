@@ -101,7 +101,7 @@ public partial class NotificationWindow : Window
     {
         if (_viewModel is null) return;
         
-        if (this.TryFindResource(_viewModel.SeverityColorResource, out var resource) && resource is IBrush brush)
+        if (AdaptiveTokens.TryGet<IBrush>(this, _viewModel.SeverityColorResource, out var brush))
         {
             SeverityIndicator.Background = brush;
         }

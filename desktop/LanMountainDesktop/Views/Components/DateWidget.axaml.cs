@@ -279,12 +279,8 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
 
             if (day == today)
             {
-                var accentBrush = this.TryFindResource(ThemeResourceKeys.AccentBrush, out var accent)
-                    ? accent as IBrush
-                    : Brushes.Blue;
-                var onAccentBrush = this.TryFindResource(ThemeResourceKeys.OnAccentBrush, out var onAccent)
-                    ? onAccent as IBrush
-                    : Brushes.White;
+                var accentBrush = AdaptiveTokens.Brush(this, ThemeResourceKeys.AccentBrush, Brushes.Blue);
+                var onAccentBrush = AdaptiveTokens.Brush(this, ThemeResourceKeys.OnAccentBrush, Brushes.White);
 
                 dayText.Foreground = onAccentBrush;
                 var dot = new Border

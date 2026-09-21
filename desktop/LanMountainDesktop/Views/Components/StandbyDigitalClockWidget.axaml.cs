@@ -323,13 +323,13 @@ public partial class StandbyDigitalClockWidget : UserControl,
         if (useMonetColor)
         {
             // Use the Monet accent brush from dynamic resources
-            if (this.TryFindResource(ThemeResourceKeys.AccentBrush, out var accentRes) && accentRes is IBrush accentBrush)
+            if (AdaptiveTokens.TryGet<IBrush>(this, ThemeResourceKeys.AccentBrush, out var accentBrush))
             {
                 return accentBrush;
             }
 
             // Fallback: compute from SystemAccentColor
-            if (this.TryFindResource("SystemAccentColor", out var sysAccent) && sysAccent is Color sysColor)
+            if (AdaptiveTokens.TryGet<Color>(this, "SystemAccentColor", out var sysColor))
             {
                 return new SolidColorBrush(isNight ? Lighten(sysColor, 0.3) : sysColor);
             }
@@ -384,16 +384,11 @@ public partial class StandbyDigitalClockWidget : UserControl,
         ColonText.Foreground = accentBrush;
 
         // Date text uses muted brush from dynamic resource
-        if (this.TryFindResource(ThemeResourceKeys.TextMutedBrush, out var mutedRes) && mutedRes is IBrush mutedBrush)
-        {
-            DateTextBlock.Foreground = mutedBrush;
-        }
-        else
-        {
-            // 兜底色不分成夜/白两个值：走到这里说明 AdaptiveTextMutedBrush 没注册，
-            // 而那条现在由 EveryAdaptiveResourceRequested_IsAlsoRegistered 拦着。
-            DateTextBlock.Foreground = ComponentPaint.CreateBrush("#7E8593");
-        }
+        // Date text uses muted brush from dynamic resource
+        DateTextBlock.Foreground = AdaptiveTokens.Brush(
+            this,
+            ThemeResourceKeys.TextMutedBrush,
+            ComponentPaint.CreateBrush("#7E8593"));
     }
 
     // ─── Date text ──────────────────────────────────────────────
