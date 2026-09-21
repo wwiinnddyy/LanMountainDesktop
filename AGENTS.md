@@ -123,6 +123,18 @@ dotnet format style <csproj> --diagnostics IDE0051 IDE0052 --severity hidden --v
 2026-09-20 基线：宿主 43 → **0**（已并入 `.github/workflows/code-quality.yml` 的 Check unused members 闸门），
 Core / Platform / AirAppSdk / AirAppRuntime / tests / installer 均为 0；剩 Launcher 5、AirAppHost 1、
 AirAppDevServer 1，都是"UI 收了输入但不落地"或"CLI 承诺了没实现"的待决项，不要当噪声删掉。
+2026-09-22 把这条闸门从"只有宿主"扩到**进闸的 11 个二进制**（宿主 + Core + 启动器 + AirApp 的
+Sdk/Runtime/Host/DevServer/Template + 安装器 + Platform + Mobile，逐个量过 IDE0051+IDE0052 全为 0；
+`Mobile.Android` 要 android workload，本地也量到 0，但不进 CI 循环），扩的同时清了 Launcher 那 5 处里的 4 处：
+
+- `OobeStateService._stateDirectory`、`LoadingDetailsWindow._startTime` —— 纯解构/赋值剩余，删。
+- `OobeWindow._isDebugMode` 与 `OobeWindow.SetDebugMode(bool)` —— 全仓**没人调用**这个 setter
+  （Splash 与 ErrorWindow 上的同名方法有调用，OOBE 这个没有），是接了一半的线，连字段一起删。
+- `OobeWindow._selectedMonetSource` —— **留着并 `#pragma warning disable IDE0052` 带说明**：向导第三步的
+  莫奈单选框是真的（点了会换单选框状态），但没人读它，接上它等于替产品决定"OOBE 到底给不给莫奈"。
+  同理 `ClockAirAppView._options`（宿主打开时钟时传 `AirAppLaunchOptions`，视图收下从不读）也留着带说明。
+  这两处是"入口有效果没有"的实物证据，删掉闸门会绿，但就再没人看得出这里本来打算有这个能力。
+
 删这类字段时注意：赋值常发生在接口实现里（`SetComponentPlacementContext`、`SetDesktopPageContext`），
 先确认该接口是否只有这一个消费者，是的话连同接口实现一起摘掉，别只留一个空方法。
 

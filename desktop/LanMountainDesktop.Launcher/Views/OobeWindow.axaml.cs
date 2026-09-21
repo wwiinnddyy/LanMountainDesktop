@@ -20,7 +20,6 @@ public partial class OobeWindow : Window
     private readonly TaskCompletionSource<OobeSessionDraft?> _completionSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly DataLocationResolver _resolver;
     private bool _isTransitioning;
-    private bool _isDebugMode;
     private bool _isCompleting;
     private int _currentStep = 1;
     
@@ -31,7 +30,11 @@ public partial class OobeWindow : Window
     // 主题选择
     private ThemeMode _selectedThemeMode = ThemeMode.Light;
     private string _selectedAccentColor = "#0078D4";
+#pragma warning disable IDE0052 // 故意留着：向导第三步的莫奈选择现在只改单选框外观，没人读它。
+    // 把它接上（写进草稿并应用）等于替产品决定"OOBE 到底给不给莫奈"，这一条等拍板。
+    // 删掉也行，但那样就再没人看得出这个产品本来打算有这个能力。
     private MonetSource _selectedMonetSource = MonetSource.Wallpaper;
+#pragma warning restore IDE0052
 
     private readonly bool _startupSlideUiAvailable;
     private bool _suppressOobeStartupTransitionHandlers;
@@ -46,11 +49,6 @@ public partial class OobeWindow : Window
         var appRoot = AppDomain.CurrentDomain.BaseDirectory;
         _resolver = new DataLocationResolver(appRoot);
         _startupSlideUiAvailable = OperatingSystem.IsWindows();
-    }
-
-    public void SetDebugMode(bool isDebugMode)
-    {
-        _isDebugMode = isDebugMode;
     }
 
     internal Task<OobeSessionDraft?> WaitForCompletionAsync() => _completionSource.Task;

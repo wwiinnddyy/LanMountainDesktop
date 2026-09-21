@@ -60,11 +60,31 @@ jobs:
       # 反射调用，分析器看不见，所以排除；除此之外新增死成员要在这里被拦下。
       # IDE0052（只写不读）此前有 43 处：字段被赋值却从未读取，看着像接了线其实没接，
       # 全部清零后一并纳入闸门。
+      # 2026-09-22 起闸门覆盖全部二进制而不是只有宿主：逐个量过 IDE0051+IDE0052 均为 0
+      # （宿主 0 + 3 处在 Patches 里已排除、Core 0、启动器 0、AirAppSdk/Runtime/Host/DevServer/Template 全 0、
+      #  安装器 0、Platform 0、Mobile 0）。启动器那 4 处与 AirAppHost 那 1 处的来历见
+      #  AGENTS.md "未使用成员" 一节；Mobile.Android 需要 android workload，本地量到 0，不进 CI 循环。
       - name: Check unused members
-        run: >
-          dotnet format style desktop/LanMountainDesktop/LanMountainDesktop.csproj
-          --diagnostics IDE0051 IDE0052 --severity hidden --verify-no-changes
-          --exclude desktop/LanMountainDesktop/Platform/Windows/Patches
+        run: |
+          set -e
+          dotnet format style desktop/LanMountainDesktop/LanMountainDesktop.csproj \
+            --diagnostics IDE0051 IDE0052 --severity hidden --verify-no-changes \
+            --exclude desktop/LanMountainDesktop/Platform/Windows/Patches
+          for proj in \
+            core/LanMountainDesktop.Core/LanMountainDesktop.Core.csproj \
+            desktop/LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj \
+            airapp/LanMountainDesktop.AirAppSdk/LanMountainDesktop.AirAppSdk.csproj \
+            airapp/LanMountainDesktop.AirAppRuntime/LanMountainDesktop.AirAppRuntime.csproj \
+            airapp/LanMountainDesktop.AirAppHost/LanMountainDesktop.AirAppHost.csproj \
+            airapp/LanMountainDesktop.AirAppDevServer/LanMountainDesktop.AirAppDevServer.csproj \
+            airapp/LanMountainDesktop.AirAppTemplate/LanMountainDesktop.AirAppTemplate.csproj \
+            install/LanDesktopPLONDS.installer/LanDesktopPLONDS.installer.csproj \
+            platform/LanMountainDesktop.Platform/LanMountainDesktop.Platform.csproj \
+            mobile/LanMountainDesktop.Mobile/LanMountainDesktop.Mobile.csproj; do
+            echo "::group::$proj"
+            dotnet format style "$proj" --diagnostics IDE0051 IDE0052 --severity hidden --verify-no-changes
+            echo "::endgroup::"
+          done
 
       - name: Check formatting
         run: dotnet format --verify-no-changes --verbosity diagnostic || true

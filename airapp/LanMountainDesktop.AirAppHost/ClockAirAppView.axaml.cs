@@ -30,7 +30,10 @@ public sealed partial class ClockAirAppView : UserControl
         Interval = TimeSpan.FromMilliseconds(250)
     };
 
+#pragma warning disable IDE0052 // 故意留着：宿主打开时钟时会传 AirAppLaunchOptions，这个视图收下却从不读。
+    // 接上去要用哪个字段是产品行为（现无任何证据说明该用它），删掉又会抹掉"这条打开路径本来带参数"的事实。
     private readonly AirAppLaunchOptions _options;
+#pragma warning restore IDE0052
     private readonly ClockAirAppSettingsStore _settingsStore = new();
     private readonly LocalizationService _localizationService = new();
     private readonly ClockAirAppStopwatchState _stopwatchState = new();

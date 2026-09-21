@@ -17,7 +17,6 @@ internal sealed class OobeStateService
 
     private readonly string _appRoot;
     private readonly string? _stateRootOverride;
-    private readonly string _stateDirectory;
     private readonly string _statePath;
     private readonly IReadOnlyList<string> _legacyStatePaths;
     private readonly IReadOnlyList<string> _legacyMarkerPaths;
@@ -35,7 +34,7 @@ internal sealed class OobeStateService
         _executionSnapshot = executionSnapshot ?? LauncherExecutionContext.Capture();
 
         var stateRoot = ResolveCurrentStateRoot();
-        (_stateDirectory, _statePath) = BuildStatePaths(stateRoot);
+        _statePath = BuildStatePaths(stateRoot).StatePath;
 
         _legacyStatePaths = BuildLegacyPaths("oobe-state.json");
         _legacyMarkerPaths = BuildLegacyPaths("first_run_completed");

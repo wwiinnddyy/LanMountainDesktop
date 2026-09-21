@@ -18,7 +18,6 @@ public partial class LoadingDetailsWindow : Window
 {
     private readonly ObservableCollection<LoadingItemViewModel> _items = new();
     private readonly DispatcherTimer _updateTimer;
-    private DateTimeOffset _startTime;
 
     public LoadingDetailsWindow()
     {
@@ -35,8 +34,6 @@ public partial class LoadingDetailsWindow : Window
             Interval = TimeSpan.FromMilliseconds(100)
         };
         _updateTimer.Tick += OnUpdateTimerTick;
-
-        _startTime = DateTimeOffset.UtcNow;
     }
 
     /// <summary>
