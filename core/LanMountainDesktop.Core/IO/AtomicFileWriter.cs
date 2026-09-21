@@ -72,6 +72,35 @@ public static class AtomicFileWriter
         }
     }
 
+    /// <summary>
+    /// 把磁盘上已有的一个文件原子地"放"到目标位置：同样走唯一临时名 + 带重试的覆盖式 Move。
+    /// 与 <see cref="WriteStreamAsync"/> 的区别只是内容来源是现成文件（换壁纸、落下载包这类
+    /// "用户选了一张图，系统要把它换成受管文件名"的场合）。源文件保留，删除由调用方决定。
+    /// </summary>
+    public static void PlaceFile(string sourceFilePath, string destinationFilePath, string category)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceFilePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(destinationFilePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(category);
+
+        var directory = Path.GetDirectoryName(destinationFilePath);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        var tempPath = $"{destinationFilePath}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            FileOperationRetryHelper.CopyWithRetry(sourceFilePath, tempPath, overwrite: false, category);
+            FileOperationRetryHelper.MoveWithOverwriteRetry(tempPath, destinationFilePath, category);
+        }
+        finally
+        {
+            TryDelete(tempPath);
+        }
+    }
+
     private static void Write(string filePath, string content, Encoding? encoding, string category)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);

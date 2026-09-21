@@ -1,5 +1,6 @@
 using Avalonia.Media.Imaging;
 using SkiaSharp;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanMountainDesktop.Launcher.Shell;
 
@@ -194,22 +195,9 @@ internal static class LauncherBackgroundService
             }
 
             var launcherPath = ResolveLauncherDataPath();
-            Directory.CreateDirectory(launcherPath);
-
             var destinationPath = Path.Combine(launcherPath, PictureFileName + extension);
-            var tempPath = Path.Combine(launcherPath, $".{PictureFileName}.{Guid.NewGuid():N}.tmp");
-
-            try
-            {
-                File.Copy(fullSourcePath, tempPath, overwrite: true);
-                ClearCache();
-                File.Move(tempPath, destinationPath, overwrite: true);
-                DeleteManagedImageFiles(launcherPath, destinationPath);
-            }
-            finally
-            {
-                TryDeleteFile(tempPath);
-            }
+            AtomicFileWriter.PlaceFile(fullSourcePath, destinationPath, "LauncherBackground");
+            DeleteManagedImageFiles(launcherPath, destinationPath);
 
             ClearCache();
 

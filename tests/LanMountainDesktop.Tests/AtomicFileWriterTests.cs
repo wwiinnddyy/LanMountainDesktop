@@ -23,6 +23,12 @@ public sealed class AtomicFileWriterTests : IDisposable
         nameof(AtomicFileWriterTests),
         Guid.NewGuid().ToString("N"));
 
+    public AtomicFileWriterTests()
+    {
+        // 有些用例要先自己造一个"用户选中的源文件"，那时写入器还没被调用、目录还不存在。
+        Directory.CreateDirectory(_directory);
+    }
+
     [Fact]
     public void WritesContent_CreatesMissingDirectory_LeavesNoTempFile()
     {
@@ -95,10 +101,56 @@ public sealed class AtomicFileWriterTests : IDisposable
     }
 
     [Fact]
+    public void PlaceFile_CopiesIntoPlace_KeepsSource_LeavesNoTempFile()
+    {
+        // 换壁纸那条路径的形状：源是用户选中的文件，目标是受管文件名，两边都得活着。
+        var source = Path.Combine(_directory, "picked.png");
+        File.WriteAllBytes(source, new byte[] { 1, 2, 3, 4 });
+        var target = Path.Combine(_directory, "nested", "background.png");
+
+        AtomicFileWriter.PlaceFile(source, target, Category);
+
+        Assert.Equal(new byte[] { 1, 2, 3, 4 }, File.ReadAllBytes(target));
+        Assert.True(File.Exists(source));
+        Assert.Empty(TempFiles(target));
+    }
+
+    [Fact]
+    public void PlaceFile_OverwritesShorterExistingTargetCompletely()
+    {
+        var source = Path.Combine(_directory, "small.bin");
+        File.WriteAllBytes(source, new byte[] { 7 });
+        var target = Path.Combine(_directory, "managed.bin");
+        File.WriteAllBytes(target, new byte[] { 1, 2, 3, 4, 5, 6 });
+
+        AtomicFileWriter.PlaceFile(source, target, Category);
+
+        Assert.Equal(new byte[] { 7 }, File.ReadAllBytes(target));
+        Assert.Empty(TempFiles(target));
+    }
+
+    [Fact]
+    public void PlaceFile_WhenTargetCannotBeReplaced_NoTempIsLeftBehind()
+    {
+        var source = Path.Combine(_directory, "again.bin");
+        File.WriteAllBytes(source, new byte[] { 1 });
+        var target = Path.Combine(_directory, "blocked-dir-target.bin");
+        Directory.CreateDirectory(target);
+
+        var error = Record.Exception(() => AtomicFileWriter.PlaceFile(source, target, Category));
+
+        Assert.True(
+            error is IOException or UnauthorizedAccessException,
+            $"预期 IO/权限类失败，实际：{error?.GetType().Name}: {error?.Message}");
+        Assert.Empty(TempFiles(target));
+    }
+
+    [Fact]
     public void NullArguments_AreRejectedBeforeAnythingTouchesDisk()
     {
         Assert.Throws<ArgumentException>(() => AtomicFileWriter.WriteText("", "{}", Category));
         Assert.Throws<ArgumentException>(() => AtomicFileWriter.WriteText("x", "{}", " "));
+        Assert.Throws<ArgumentException>(() => AtomicFileWriter.PlaceFile("a", "b", " "));
     }
 
     public void Dispose()

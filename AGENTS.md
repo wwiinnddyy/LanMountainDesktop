@@ -282,8 +282,9 @@ live 路径各自走 `TryGetSnappedCell`+`GetCellRect`）和一个 `[Obsolete]` 
 helper 住在 Core 是因为写同一批磁盘文件的是三个进程（宿主、首启向导 Launcher、安装器），
 跨二进制没有共享日志器，所以重试告警走 `FileOperationRetryHelper.FailureNotice`，各入口在启动时接自己的日志。
 守卫 `SourceIntegrityTests.AtomicFileReplacement_LivesInExactlyOnePlace` 现已覆盖全部二进制；
-唯一挂名的例外是 `LauncherBackgroundService`（"把用户选中的图片搬成目标名"，需要的是"原子落一个已有文件"
-这个原语，现在只有 WriteText / WriteStreamAsync），以及 `.write-test-` 开头的可写性探针。
+免检的只剩"拿 `.tmp` 试这块盘能不能写"的可写性探针（`AppLogger`、`AirAppInstallTargetAccess`、
+`.write-test-` 开头的文件名）。"把用户选中的图片原子搬成受管文件名"走 `PlaceFile`（换壁纸已经用上），
+要写内容用 `WriteText` / `WriteStreamAsync`。
 
 **安装根目录下那个 `.Launcher` 数据目录名只认一处**：一律用 `core/LanMountainDesktop.Core/Deployment/DeploymentLayout.cs`
 的 `LauncherStateDirectoryName`，不要在 Core / 宿主 / 启动器里再抄字面量（该类注释本来就写着"禁止在任何一侧硬编码"，

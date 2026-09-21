@@ -660,15 +660,15 @@ public sealed class SourceIntegrityTests
     /// Move 失败后 .tmp 永远留在 AppData 里。
     ///
     /// helper 挪进 Core 之后这条覆盖全部二进制（原先只管宿主，剩下的启动器两处就是这么漏掉的）。
-    /// 免检的两类：<c>.write-test-</c> 开头的是"这块盘能不能写"的探针，不是替换文件；
-    /// <c>LauncherBackgroundService</c> 是"把用户选中的图片搬成目标名"，需要的是"原子落一个已有文件"
-    /// 这个原语（现在还只有 WriteText / WriteStreamAsync），已登记待办，不是漏网。
-    /// 写权限探针（<c>AppLogger</c>、<c>AirAppInstallTargetAccess</c>）拿 .tmp 也是为了试写。
+    /// 免检的只有一类：拿 ".tmp" 试"这块盘能不能写"的探针（<c>AppLogger</c>、
+    /// <c>AirAppInstallTargetAccess</c>，以及文件名以 <c>.write-test-</c> 开头的可写性检查），
+    /// 它们不替换任何正式文件。<c>LauncherBackgroundService</c> 曾经挂在名单里等
+    /// "原子落一个已有文件"这个原语，<c>AtomicFileWriter.PlaceFile</c> 补上后已经收进来。
     /// </summary>
     [Fact]
     public void AtomicFileReplacement_LivesInExactlyOnePlace()
     {
-        string[] handWrittenProbes = ["AppLogger.cs", "AirAppInstallTargetAccess.cs", "LauncherBackgroundService.cs"];
+        string[] handWrittenProbes = ["AppLogger.cs", "AirAppInstallTargetAccess.cs"];
         var offenders = new List<string>();
 
         foreach (var file in SourceFiles())
