@@ -31,10 +31,12 @@ internal static class StartupDiagnostics
 
         try
         {
+            // 启动诊断落在启动器自己的每用户目录里，和 Logger / StartupAttemptRegistry
+            // 兜底用的 LocalAppData/LanMountainDesktop/Launcher/{logs,state} 同级。
             var directory = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "LanMountainDesktop",
-                ".launcher",
+                "Launcher",
                 "diag");
             Directory.CreateDirectory(directory);
             var filePath = Path.Combine(directory, $"startup-{DateTime.UtcNow:yyyyMMdd}.jsonl");

@@ -1,8 +1,9 @@
+using LanMountainDesktop.Shared.Contracts.Deployment;
+
 namespace LanMountainDesktop.Shared.Contracts.Update;
 
 public static class UpdatePaths
 {
-    private const string LauncherDirectoryName = ".Launcher";
     private const string UpdateDirectoryName = "update";
     private const string IncomingDirectoryName = "incoming";
     private const string ObjectsDirectoryName = "objects";
@@ -17,12 +18,16 @@ public static class UpdatePaths
 
     public static string GetLauncherDataRoot(string launcherRoot)
     {
-        return Path.Combine(launcherRoot, LauncherDirectoryName);
+        return Path.Combine(launcherRoot, DeploymentLayout.LauncherStateDirectoryName);
     }
 
     public static string GetIncomingDirectory(string launcherRoot)
     {
-        return Path.Combine(launcherRoot, LauncherDirectoryName, UpdateDirectoryName, IncomingDirectoryName);
+        return Path.Combine(
+            launcherRoot,
+            DeploymentLayout.LauncherStateDirectoryName,
+            UpdateDirectoryName,
+            IncomingDirectoryName);
     }
 
     public static string GetObjectsDirectory(string launcherRoot)
@@ -32,7 +37,7 @@ public static class UpdatePaths
 
     public static string GetSnapshotsDirectory(string launcherRoot)
     {
-        return Path.Combine(launcherRoot, LauncherDirectoryName, SnapshotsDirectoryName);
+        return Path.Combine(launcherRoot, DeploymentLayout.LauncherStateDirectoryName, SnapshotsDirectoryName);
     }
 
     public static string GetDownloadMarkerPath(string launcherRoot)

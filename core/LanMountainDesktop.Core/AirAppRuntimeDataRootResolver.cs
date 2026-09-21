@@ -1,10 +1,10 @@
 using System.Text.Json;
+using LanMountainDesktop.Shared.Contracts.Deployment;
 
 namespace LanMountainDesktop.Shared.IPC;
 
 public static class AirAppRuntimeDataRootResolver
 {
-    private const string LauncherDataFolderName = ".Launcher";
     private const string ConfigFileName = "data-location.config.json";
     private const string DesktopFolderName = "Desktop";
 
@@ -20,7 +20,10 @@ public static class AirAppRuntimeDataRootResolver
         }
 
         var normalizedAppRoot = Path.GetFullPath(appRoot);
-        var configPath = Path.Combine(normalizedAppRoot, LauncherDataFolderName, ConfigFileName);
+        var configPath = Path.Combine(
+            normalizedAppRoot,
+            DeploymentLayout.LauncherStateDirectoryName,
+            ConfigFileName);
         if (!File.Exists(configPath))
         {
             return defaultSystemDataPath;

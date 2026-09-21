@@ -1,3 +1,4 @@
+using LanMountainDesktop.Shared.Contracts.Deployment;
 using LanMountainDesktop.Shared.Contracts.Update;
 
 namespace LanMountainDesktop.Services.Update;
@@ -41,7 +42,11 @@ internal sealed class PlondsApplyPaths
     public string PlondsUpdateMetadataPath => Path.Combine(IncomingRoot, PlondsUpdateMetadataName);
     public string PlondsObjectsRoot => Path.Combine(IncomingRoot, PlondsObjectsDirectoryName);
 
-    public string PublicKeyPath => Path.Combine(LauncherRoot, ".Launcher", UpdateDirectoryName, PublicKeyFileName);
+    public string PublicKeyPath => Path.Combine(
+        LauncherRoot,
+        DeploymentLayout.LauncherStateDirectoryName,
+        UpdateDirectoryName,
+        PublicKeyFileName);
 
     public bool HasPlondsPayload => File.Exists(PlondsFileMapPath) && File.Exists(PlondsSignaturePath);
 

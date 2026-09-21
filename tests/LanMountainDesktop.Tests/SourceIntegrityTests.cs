@@ -839,6 +839,53 @@ public sealed class SourceIntegrityTests
             $"{offenders.Count} 处假承诺：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
     }
 
+    /// <summary>
+    /// 安装根目录下那个 <c>.Launcher</c> 数据目录名只许写在 <c>DeploymentLayout</c> 一处。
+    /// 该类自己的注释就写着"禁止在任何一侧硬编码这些标记文件名或目录前缀"，但 2026-09-21 实测
+    /// 仍有 4 处各自抄了一遍（Core 两份、宿主 <c>PlondsApplyPaths</c> 一份、启动器
+    /// <c>DataLocationResolver</c> 一份），安装器倒是老老实实用了常量。抄一份不会报错，
+    /// 改拼写时只会让某一条路径指向不存在的目录。
+    /// 另禁 <c>".launcher"</c>：启动器曾把启动诊断写进 <c>LocalAppData/LanMountainDesktop/.launcher/diag</c>，
+    /// 与它自己的 <c>Launcher/{logs,state}</c> 兜底布局是第三种拼法，谁也不读那个目录。
+    /// </summary>
+    [Fact]
+    public void LauncherStateDirectoryName_LivesInExactlyOnePlace()
+    {
+        string[] allowedFiles =
+        [
+            // 真源。
+            @"core\LanMountainDesktop.Core\Deployment\DeploymentLayout.cs",
+            // 改名前的老目录名，只用于读旧数据，与新布局不是同一个文件夹。
+            @"desktop\LanMountainDesktop.Launcher\Oobe\OobeStateService.cs",
+        ];
+
+        var offenders = new List<string>();
+
+        foreach (var file in SourceFiles().Where(file => !allowedFiles.Contains(
+                     RelativeToRepo(file), StringComparer.OrdinalIgnoreCase)))
+        {
+            var lines = File.ReadAllLines(file);
+            for (var index = 0; index < lines.Length; index++)
+            {
+                var trimmed = lines[index].AsSpan().TrimStart();
+                if (trimmed.StartsWith("//") || trimmed.StartsWith('*'))
+                {
+                    continue;
+                }
+
+                if (lines[index].Contains("\".Launcher\"", StringComparison.Ordinal) ||
+                    lines[index].Contains("\".launcher\"", StringComparison.Ordinal))
+                {
+                    offenders.Add($"{RelativeToRepo(file)}:{index + 1} 自己写了 .Launcher 目录名，请用 DeploymentLayout.LauncherStateDirectoryName");
+                }
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 处硬编码启动器数据目录名：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
     private static bool IsHostProjectFile(string file) => RelativeToRepo(file)
         .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
         .StartsWith($"desktop{Path.DirectorySeparatorChar}LanMountainDesktop{Path.DirectorySeparatorChar}", StringComparison.Ordinal);

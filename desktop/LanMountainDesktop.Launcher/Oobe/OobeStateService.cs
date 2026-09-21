@@ -7,6 +7,12 @@ internal sealed class OobeStateService
 {
     private const int CurrentSchemaVersion = 1;
 
+    /// <summary>
+    /// 改名前的每用户状态目录名。现行位置是 <c>{dataRoot}/Launcher/state</c>，
+    /// 这里只用于读老数据（<c>.launcher</c> 与 <c>Launcher</c> 在 Windows 上也不是同一个目录）。
+    /// </summary>
+    private const string LegacyStateDirectoryName = ".launcher";
+
     private readonly string _appRoot;
     private readonly string? _stateRootOverride;
     private readonly string _stateDirectory;
@@ -273,7 +279,7 @@ internal sealed class OobeStateService
 
         return roots
             .Where(root => !string.IsNullOrWhiteSpace(root))
-            .Select(root => Path.Combine(Path.GetFullPath(root), ".launcher", "state", fileName))
+            .Select(root => Path.Combine(Path.GetFullPath(root), LegacyStateDirectoryName, "state", fileName))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }

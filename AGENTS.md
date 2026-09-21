@@ -275,6 +275,15 @@ live 路径各自走 `TryGetSnappedCell`+`GetCellRect`）和一个 `[Obsolete]` 
 守卫 `SourceIntegrityTests.AtomicFileReplacement_LivesInExactlyOnePlace`；
 Launcher 进程里的 `OobeStateService` / `LauncherBackgroundService` 属另一份二进制，还没并进来。
 
+**安装根目录下那个 `.Launcher` 数据目录名只认一处**：一律用 `core/LanMountainDesktop.Core/Deployment/DeploymentLayout.cs`
+的 `LauncherStateDirectoryName`，不要在 Core / 宿主 / 启动器里再抄字面量（该类注释本来就写着"禁止在任何一侧硬编码"，
+2026-09-21 实测仍有 4 处各抄一份；安装器倒是用了常量）。同族另一个坑：启动器把启动诊断写进
+`LocalAppData/LanMountainDesktop/.launcher/diag`，而它自己的日志与状态兜底用的是
+`LocalAppData/LanMountainDesktop/Launcher/{logs,state}` —— 第三种拼法，谁也不读那个目录，已统一。
+注意这是两个不同的文件夹：`{安装根}/.Launcher`（数据位置配置、日志、状态）与 `{数据根}/Launcher`（每用户兜底）。
+唯一保留的字面量是 `OobeStateService` 里改名前的 `.launcher/state`（只读旧数据，与 `Launcher/state` 不是同一个目录）。
+守卫 `SourceIntegrityTests.LauncherStateDirectoryName_LivesInExactlyOnePlace`。
+
 ## 6. 权威来源
 
 - 产品定位：`docs/00-快速开始/01-项目介绍.md`（归档见 `docs/archive/PRODUCT.md`）

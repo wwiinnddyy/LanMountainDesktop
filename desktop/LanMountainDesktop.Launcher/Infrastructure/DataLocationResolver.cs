@@ -1,5 +1,6 @@
 using System.Text.Json;
 using LanMountainDesktop.Launcher.Models;
+using LanMountainDesktop.Shared.Contracts.Deployment;
 
 namespace LanMountainDesktop.Launcher.Infrastructure;
 
@@ -26,7 +27,6 @@ internal sealed class DataLocationResolver
 {
     private const string ConfigFileName = "data-location.config.json";
     private const string DesktopFolderName = "Desktop";
-    private const string LauncherDataFolderName = ".Launcher";
 
     private readonly string _appRoot;
     private readonly string _defaultSystemDataPath;
@@ -57,7 +57,7 @@ internal sealed class DataLocationResolver
     /// </summary>
     public string ResolveLauncherDataPath()
     {
-        return Path.Combine(_appRoot, LauncherDataFolderName);
+        return Path.Combine(_appRoot, DeploymentLayout.LauncherStateDirectoryName);
     }
 
     /// <summary>
