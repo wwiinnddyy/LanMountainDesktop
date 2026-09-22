@@ -83,6 +83,13 @@ AirApp 本地包生成：
   所以"与底板不同"这种判据在类名拼错时照样绿——变异验证抓到过。
   取像素这几条把整套闸门从 1m46s–3m59s 的区间推到 3m06s/4m17s 两次；区间本来就宽，
   不足以断定是渲染的开销。真在意就把它们拆进独立的 visual 测试工程，别为此关掉桩绘制。
+- **样式类普查的边界要按实测读**：`tests/.../Visual/BorderStyleClassPixelTests.cs` 对"App 级样式字典里
+  设过 Background 的 Border 类"逐个比对贴类/不贴类两帧（当前 5 个：`glass-panel` 与 `surface-*` 四档）。
+  它只声称"这个类改没改画面"：样式常一并设 `Opacity` / `BoxShadow` / `CornerRadius`，所以**把主题资源注册
+  整个摘掉它照样绿**（实测），别拿它当"画刷注册得上"的证据——那条键断言加过、实测不红，属于假守卫，已删。
+  "有人要某个 `Adaptive*` 键、没人注册"归 `CapabilityEntryPointTests` 的键覆盖探针管。
+  普查锚点是"设过 Background"，删 setter 会让类从普查里静默消失，所以另配一条覆盖面下限守卫兜住
+  （实测删掉一个 setter：它红并点名少了哪个类）。
 
 ### AirApp
 
