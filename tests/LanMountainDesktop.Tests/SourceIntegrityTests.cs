@@ -1376,6 +1376,65 @@ public sealed class SourceIntegrityTests
     }
 
     /// <summary>
+    /// 更新布局的磁盘名只许 Core 的 <c>UpdatePaths</c> 一家有。2026-09-22 实测：宿主
+    /// <c>PlondsApplyPaths</c> 把 7 个文件名 + 4 个目录名各抄了一份常量，而 Core 那边
+    /// <c>GetPlondsFileMapPath</c> / <c>GetPlondsSignaturePath</c> / <c>GetPublicKeyFileName</c> /
+    /// <c>GetLauncherDataRoot</c> 四个访问器零调用——"立了家不等于收了口"。
+    /// 两份常量今天还逐字相同，改一边就是跨二进制的磁盘契约漂移（更新包读不到、回滚找不到快照），
+    /// 而且启动器与安装器各自算同一个路径时没有任何东西保证它们算得一样。
+    /// 文件名按字面量判（除家以外任何生产 .cs 出现都红）；目录名 update/incoming/objects/snapshots
+    /// 是常用词、另有导航键与 CLI 动词撞名，所以只判"常量声明"这一形态——复制真源的动作必然是声明一个常量。
+    /// </summary>
+    [Fact]
+    public void UpdateLayoutDiskNames_LiveInExactlyOnePlace()
+    {
+        var home = @"core\LanMountainDesktop.Core\Update\UpdatePaths.cs";
+        var fileNames = new[]
+        {
+            "plonds-filemap.json", "plonds-filemap.sig", "plonds-update.json",
+            "files.json", "files.json.sig", "update.zip", "public-key.pem",
+        };
+        var directoryNames = new[] { "update", "incoming", "objects", "snapshots" };
+        var dirDeclRe = directoryNames
+            .Select(name => new Regex($@"const\s+string\s+\w+\s*=\s*""{name}""\s*;"))
+            .ToList();
+
+        var offenders = new List<string>();
+        foreach (var file in SourceFiles())
+        {
+            if (string.Equals(RelativeToRepo(file), home, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            foreach (var (line, number) in CodeLines(file))
+            {
+                foreach (var name in fileNames)
+                {
+                    if (line.Contains($"\"{name}\"", StringComparison.Ordinal))
+                    {
+                        offenders.Add(
+                            $"{RelativeToRepo(file)}:{number} 自己写了磁盘文件名 \"{name}\"，请用 UpdatePaths 的 Get*Name() / Get*Path()");
+                    }
+                }
+
+                for (var index = 0; index < dirDeclRe.Count; index++)
+                {
+                    if (dirDeclRe[index].IsMatch(line))
+                    {
+                        offenders.Add(
+                            $"{RelativeToRepo(file)}:{number} 自己声明了更新布局目录名 \"{directoryNames[index]}\"，请用 UpdatePaths 的目录访问器");
+                    }
+                }
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 处绕开 UpdatePaths 的更新布局磁盘名：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
+    /// <summary>
     /// 网格密度/边缘留白的量程与默认值只在 <c>desktop/.../DesktopEditing/DesktopGridLimits.cs</c> 声明一份，
     /// 并且设置页的滑杆必须绑 <c>ComponentsSettingsPageViewModel</c> 暴露的量程，不能在 .axaml 里另写数字。
     /// 收口前这 6 个数在 <c>MainWindow</c>（含 partial 分片）、<c>FusedDesktopEditGridAdapter</c>、

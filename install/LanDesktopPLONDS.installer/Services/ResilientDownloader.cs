@@ -142,28 +142,6 @@ internal static class ResilientDownloader
     }
 
     /// <summary>
-    /// 发送带 Range 头的 HEAD 请求检测服务器是否支持续传。
-    /// </summary>
-    public static async Task<bool> CheckRangeSupportAsync(
-        HttpClient httpClient,
-        Uri url,
-        long existingBytes,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            using var request = new HttpRequestMessage(HttpMethod.Head, url);
-            using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
-                .ConfigureAwait(false);
-            return response.Headers.AcceptRanges.Contains("bytes");
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    /// <summary>
     /// 发送带 Range 头的 GET 请求开始续传下载。
     /// </summary>
     private static async Task<HttpResponseMessage> SendRangeRequestAsync(

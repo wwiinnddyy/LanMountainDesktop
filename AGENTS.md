@@ -516,6 +516,23 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 **滑杆的 `Minimum`/`Maximum` 不许写死数字**，要绑视图模型上从 `DesktopGridLimits` 读的那四个量程属性——
 设置页量程是这套数的第四份副本，漂了的症状不是崩，而是"拖到尽头网格不动"或"存进去被运行期悄悄钳掉"。
 
+**更新布局的磁盘名只认 Core 的 `UpdatePaths` 一家**：`.Launcher` / `update` / `incoming` / `objects` /
+`snapshots` 这几级目录，以及 `plonds-filemap.json`、`plonds-filemap.sig`、`plonds-update.json`、
+`files.json`、`files.json.sig`、`update.zip`、`public-key.pem` 这些文件名，跨启动器 / 宿主 / 安装器三份二进制
+都按字面量拼同一条路径，所以只有 `core/LanMountainDesktop.Core/Update/UpdatePaths.cs` 能写字面量，
+别处一律走它的访问器（守卫 `UpdateLayoutDiskNames_LiveInExactlyOnePlace`：文件名按字面量全文拦，
+目录名按"声明常量"这一形态拦——update/objects 这类词另有导航键与 CLI 动词撞名，拦全文会假红）。
+2026-09-22 收这一族时实测到的形态是：宿主 `PlondsApplyPaths` 把 7 个文件名 + 4 个目录名各抄一份常量，
+而 `UpdatePaths` 那 4 个对应访问器零调用——**家立着、调用点绕过去**，改一边就跨二进制漂移
+（症状是更新包读不到清单、回滚找不到快照，而且没有任何东西保证三个进程算出同一个路径）。
+同族另外两处：`DataLocationResolver.ResolveLauncherDataPath()` 自己拼 `.Launcher`、
+`DeploymentLocator` 自己拼 `snapshots`，现在都指回 `UpdatePaths.GetLauncherDataRoot` / `GetSnapshotsDirectory`。
+**零引用成员棘轮的口径要覆盖所有二进制**：它原先只看宿主工程，Core / 启动器 / 安装器 / Platform 里的
+静态类完全没被数过——把口径从 1 个目录扩到 7 个，当场量出 21 条零引用成员（判法见该文件里的名单注释）。
+**这条探针数的是裸方法名，名字越常用越容易被无关文本喂饱**：`SettingsServiceAppSnapshotExtensions.Save()`
+零调用却报不出来（`Save` 在全仓出现几百次），终判靠的是"删掉方法后全解决方案是否仍 0 错误"。
+名单里的条目要复核，别只信计数。
+
 **对外报出去的身份只有一处字面量**：所有 HTTP 请求的 User-Agent 都写进
 `desktop/LanMountainDesktop/Services/HttpUserAgents.cs`，别处只引用不再抄（守卫
 `HttpRequestIdentityStrings_LiveInOnePlace`；允许的字面量只有请求头名 `"User-Agent"` 本身）。

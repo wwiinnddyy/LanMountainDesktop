@@ -43,7 +43,7 @@ internal sealed class PlondsUpdateApplier(
     public async Task<ApplyUpdateResult> ApplyAsync()
     {
         progressReporter.ReportProgress(new InstallProgressReport(InstallStage.VerifySignature, "Verifying PLONDS signature...", 0, null, 0, 0));
-        var verifyResult = signatureVerifier.Verify(paths.PlondsFileMapPath, paths.PlondsSignaturePath, PlondsApplyPaths.PlondsSignatureFileName);
+        var verifyResult = signatureVerifier.Verify(paths.PlondsFileMapPath, paths.PlondsSignaturePath, UpdatePaths.GetPlondsSignatureName());
         if (!verifyResult.Success)
         {
             progressReporter.ReportComplete(new InstallCompleteReport(false, null, null, verifyResult.Message, false));

@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using LanMountainDesktop.Shared.Contracts.Update;
 
 namespace LanMountainDesktop.Services.Update;
 
@@ -17,14 +18,14 @@ internal sealed class PlondsPayloadResolver(PlondsApplyPaths paths)
             PlondsManifestParser.TryGetExpectedSha512(file, out expectedSha512))
         {
             var hashHex = Convert.ToHexString(expectedSha512).ToLowerInvariant();
-            AddPathCandidates(candidates, Path.Combine(PlondsApplyPaths.PlondsObjectsDirectoryName, hashHex));
+            AddPathCandidates(candidates, Path.Combine(UpdatePaths.ObjectsDirectoryName, hashHex));
             if (hashHex.Length > 2)
             {
-                AddPathCandidates(candidates, Path.Combine(PlondsApplyPaths.PlondsObjectsDirectoryName, hashHex[..2], hashHex));
-                AddPathCandidates(candidates, Path.Combine(PlondsApplyPaths.PlondsObjectsDirectoryName, hashHex[..2], hashHex[2..]));
+                AddPathCandidates(candidates, Path.Combine(UpdatePaths.ObjectsDirectoryName, hashHex[..2], hashHex));
+                AddPathCandidates(candidates, Path.Combine(UpdatePaths.ObjectsDirectoryName, hashHex[..2], hashHex[2..]));
             }
 
-            AddPathCandidates(candidates, Path.Combine(PlondsApplyPaths.PlondsObjectsDirectoryName, $"{hashHex}.gz"));
+            AddPathCandidates(candidates, Path.Combine(UpdatePaths.ObjectsDirectoryName, $"{hashHex}.gz"));
         }
 
         foreach (var relativePath in candidates.Distinct(StringComparer.OrdinalIgnoreCase))
@@ -82,15 +83,15 @@ internal sealed class PlondsPayloadResolver(PlondsApplyPaths paths)
         normalized = normalized.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
         candidates.Add(normalized);
 
-        if (!normalized.StartsWith($"{PlondsApplyPaths.PlondsObjectsDirectoryName}{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+        if (!normalized.StartsWith($"{UpdatePaths.ObjectsDirectoryName}{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
         {
-            candidates.Add(Path.Combine(PlondsApplyPaths.PlondsObjectsDirectoryName, normalized));
+            candidates.Add(Path.Combine(UpdatePaths.ObjectsDirectoryName, normalized));
         }
 
         var fileName = Path.GetFileName(normalized);
         if (!string.IsNullOrWhiteSpace(fileName))
         {
-            candidates.Add(Path.Combine(PlondsApplyPaths.PlondsObjectsDirectoryName, fileName));
+            candidates.Add(Path.Combine(UpdatePaths.ObjectsDirectoryName, fileName));
         }
     }
 }

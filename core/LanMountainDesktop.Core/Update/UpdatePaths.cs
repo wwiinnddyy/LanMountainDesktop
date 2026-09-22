@@ -4,9 +4,9 @@ namespace LanMountainDesktop.Shared.Contracts.Update;
 
 public static class UpdatePaths
 {
-    private const string UpdateDirectoryName = "update";
+    public const string UpdateDirectoryName = "update";
     private const string IncomingDirectoryName = "incoming";
-    private const string ObjectsDirectoryName = "objects";
+    public const string ObjectsDirectoryName = "objects";
     private const string SnapshotsDirectoryName = "snapshots";
 
     public static string ResolveLauncherRoot(string appBaseDirectory)

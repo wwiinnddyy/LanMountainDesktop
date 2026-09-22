@@ -48,11 +48,6 @@ public static class LauncherRuntimeMetadata
         return null;
     }
 
-    public static bool HasOption(string key, IReadOnlyList<string>? commandLineArgs = null)
-    {
-        return !string.IsNullOrWhiteSpace(GetOptionValue(key, commandLineArgs));
-    }
-
     public static string? GetPackageRoot(IReadOnlyList<string>? commandLineArgs = null)
     {
         return FirstNonEmpty(

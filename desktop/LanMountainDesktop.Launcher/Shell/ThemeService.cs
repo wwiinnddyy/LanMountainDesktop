@@ -41,21 +41,6 @@ public static class ThemeService
         }
     }
 
-    /// <summary>
-    /// 应用浅色主题
-    /// </summary>
-    public static void ApplyLightTheme(string accentColor)
-    {
-        ApplyTheme(ThemeMode.Light, accentColor);
-    }
-
-    /// <summary>
-    /// 应用深色主题
-    /// </summary>
-    public static void ApplyDarkTheme(string accentColor)
-    {
-        ApplyTheme(ThemeMode.Dark, accentColor);
-    }
 }
 
 /// <summary>

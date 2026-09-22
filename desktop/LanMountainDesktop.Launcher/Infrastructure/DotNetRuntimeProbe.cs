@@ -157,12 +157,6 @@ internal static class DotNetRuntimeProbe
         };
     }
 
-    public static string? FindDotNetHostPath(DotNetRuntimeProbeOptions? options = null)
-    {
-        options ??= new DotNetRuntimeProbeOptions();
-        return EnumerateDotNetHostCandidates(options).FirstOrDefault(File.Exists);
-    }
-
     public static bool IsFrameworkDependentWindowsApp(string executablePath)
     {
         if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(executablePath))

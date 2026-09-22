@@ -25,20 +25,6 @@ public static class AppVersionProvider
             codenameOverride: LauncherRuntimeMetadata.GetForwardedCodename(args));
     }
 
-    public static AppVersionInfo ResolveFromDeploymentDirectory(
-        string? deploymentDirectory,
-        string? executablePath = null,
-        string? versionOverride = null,
-        string? codenameOverride = null)
-    {
-        return Resolve(
-            packageRoot: null,
-            deploymentDirectory: deploymentDirectory,
-            executablePath: executablePath,
-            versionOverride: versionOverride,
-            codenameOverride: codenameOverride);
-    }
-
     public static AppVersionInfo ResolveFromPackageRoot(
         string? packageRoot,
         string executableName,

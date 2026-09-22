@@ -61,9 +61,6 @@ public enum UpdateDownloadSource
 
 public static class UpdatePhaseExtensions
 {
-    public static bool IsTerminal(this UpdatePhase phase) =>
-        phase is UpdatePhase.Completed or UpdatePhase.Failed or UpdatePhase.RolledBack;
-
     public static bool IsBusy(this UpdatePhase phase) =>
         phase is UpdatePhase.Checking or UpdatePhase.Downloading or UpdatePhase.Installing
             or UpdatePhase.Verifying or UpdatePhase.Recovering or UpdatePhase.RollingBack;

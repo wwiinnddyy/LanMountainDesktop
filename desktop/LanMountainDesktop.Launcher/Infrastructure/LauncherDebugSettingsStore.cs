@@ -44,18 +44,6 @@ internal static class LauncherDebugSettingsStore
         }
     }
 
-    public static void SaveDevModeState(bool enabled)
-    {
-        var current = Load();
-        Save(current with { DevModeEnabled = enabled });
-    }
-
-    public static void SaveCustomHostPath(string? customHostPath)
-    {
-        var current = Load();
-        Save(current with { CustomHostPath = customHostPath });
-    }
-
     private static bool LoadDevModeState()
     {
         var newValue = TryReadText(GetPath(DevModeFileName));

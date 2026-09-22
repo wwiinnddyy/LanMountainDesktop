@@ -528,8 +528,7 @@ internal sealed class DeploymentLocator
             }
 
             // 3. 淇濈暀鏈夊揩鐓х殑鐗堟湰锛堢敤浜庡洖婊氾級
-            var resolver = new DataLocationResolver(_appRoot);
-            var snapshotDir = Path.Combine(resolver.ResolveLauncherDataPath(), "snapshots");
+            var snapshotDir = UpdatePaths.GetSnapshotsDirectory(_appRoot);
             if (Directory.Exists(snapshotDir))
             {
                 try

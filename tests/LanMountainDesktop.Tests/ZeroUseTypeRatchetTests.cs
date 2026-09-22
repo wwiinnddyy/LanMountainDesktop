@@ -15,17 +15,30 @@ namespace LanMountainDesktop.Tests;
 /// </summary>
 public sealed class ZeroUseTypeRatchetTests
 {
+    /// <summary>
+    /// 2026-09-22 把这 15 条逐条查证过：3 条扩展方法宿主都有真调用点（实测
+    /// <c>.WithArgument(...)</c> 1 处、<c>UpdatePhase</c> 扩展 19 处、<c>settings.Load()/Save()</c> 见行内说明），
+    /// 2 条 Harmony 补丁确有 <c>[HarmonyPatch]</c> 特性，基接口那条确在 <c>SettingsContracts.cs:393</c> 被继承。
+    /// <c>IWshShortcut</c> 原来记的理由（"COM 后期绑定走 Type.GetTypeFromProgID(\"WScript.Shell\")"）当场被证伪：
+    /// 全仓没有那行代码，<c>ShortcutHelper</c> 用的是 <c>[ComImport] class WshShell</c> + dynamic，
+    /// 这个接口一处都没引用——已删除，名单 15 → 14。
+    /// </summary>
     private static readonly Dictionary<string, string> Accepted = new(StringComparer.Ordinal)
     {
-        ["ProcessStartInfoArgumentExtensions"] = "扩展方法宿主，调用点写成 .WithArgument(...)，类型名本身不出现",
-        ["UpdatePhaseExtensions"] = "扩展方法宿主，调用点写成 phase.IsBusy() / CanCheck()",
-        ["SettingsServiceAppSnapshotExtensions"] = "扩展方法宿主，调用点写成 settings.Load() / Save()",
+        ["ProcessStartInfoArgumentExtensions"] = "扩展方法宿主，调用点写成 .WithArgument(...)，类型名本身不出现"
+            + "（实测 LinuxNotificationListener.cs:254 一处链式调用）",
+        ["UpdatePhaseExtensions"] = "扩展方法宿主，调用点写成 phase.IsBusy() / CanCheck()："
+            + "实测 19 处（UpdateSettingsViewModel 9 / SettingsDomainServices 4 / UpdateOrchestrator 6）",
+        ["SettingsServiceAppSnapshotExtensions"] = "扩展方法宿主，调用点写成 settings.Load()，ISettingsService 上没有同名实例方法："
+            + "实测各组件/ViewModel 经 ISettingsService 字段调用（WorldClockWidget.cs:525 等）；"
+            + "另一半 Save() 零调用点（删掉整个方法全解决方案仍 0 错误），已删",
         ["AppWindowInitializeAppWindowPatcher"] = "Harmony 补丁，靠 [HarmonyPatch] 反射挂接",
         ["Win32WindowManagerConstructorPatcher"] = "Harmony 补丁，靠 [HarmonyPatch] 反射挂接",
-        ["IWshShortcut"] = "COM 后期绑定：Type.GetTypeFromProgID(\"WScript.Shell\")，真 .lnk 能力的欠账",
         ["MainActivity"] = "Android 运行时按类型名实例化，源码里不会出现引用",
-        ["IAirAppCatalogSourceProvider"] = "只作为 IAirAppCatalogSettingsService 的基接口存在（分段接口写法）",
-        ["IDetachedComponentLibraryWindowService"] = "已实现但宿主内无触发点，等用户拍板，别当死码删",
+        ["IAirAppCatalogSourceProvider"] = "只作为 IAirAppCatalogSettingsService 的基接口存在（分段接口写法），"
+            + "实测唯一列名处是 SettingsContracts.cs:393",
+        ["IDetachedComponentLibraryWindowService"] = "已实现但宿主内无触发点，等用户拍板，别当死码删："
+            + "实测无人 new、无人注册，MainWindow 那 3 个 *FromService 入口只被它自己调",
         ["DetachedComponentLibraryWindowService"] = "同上：分离式组件库窗口的实现",
         ["AttendanceDataStore"] = "考勤整模块（含 AttendanceModels）无入口，等用户拍板",
         ["CompositeManifestProvider"] = "主备双清单组合器，更新路径没接线，等用户拍板",

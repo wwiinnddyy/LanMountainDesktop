@@ -2,7 +2,7 @@ using System.Text.Json;
 using LanMountainDesktop.Shared.Data;
 using LanMountainDesktop.Shared.Contracts.Data;
 using LanMountainDesktop.Launcher.Models;
-using LanMountainDesktop.Shared.Contracts.Deployment;
+using LanMountainDesktop.Shared.Contracts.Update;
 using LanMountainDesktop.Shared.IO;
 
 namespace LanMountainDesktop.Launcher.Infrastructure;
@@ -60,7 +60,7 @@ internal sealed class DataLocationResolver
     /// </summary>
     public string ResolveLauncherDataPath()
     {
-        return Path.Combine(_appRoot, DeploymentLayout.LauncherStateDirectoryName);
+        return UpdatePaths.GetLauncherDataRoot(_appRoot);
     }
 
     /// <summary>

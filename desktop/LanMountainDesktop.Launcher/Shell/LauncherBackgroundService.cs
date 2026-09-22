@@ -246,11 +246,6 @@ internal static class LauncherBackgroundService
         _cachedHeight = 0;
     }
 
-    internal static string? FindManagedImageFile()
-    {
-        return FindImageFile(ResolveLauncherDataPath());
-    }
-
     internal static IReadOnlyList<string> GetSupportedExtensions() => SupportedExtensions;
 
     private static BackgroundImageMutationResult FailMutation(string message)

@@ -11,10 +11,4 @@ public static class SettingsServiceAppSnapshotExtensions
         ArgumentNullException.ThrowIfNull(settingsService);
         return settingsService.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
     }
-
-    public static void Save(this ISettingsService settingsService, AppSettingsSnapshot snapshot)
-    {
-        ArgumentNullException.ThrowIfNull(settingsService);
-        settingsService.SaveSnapshot(AirAppSettingsScope.App, snapshot ?? new AppSettingsSnapshot());
-    }
 }
