@@ -3406,8 +3406,6 @@ public partial class MainWindow : Window
         {
             ComponentLibraryBackTextBlock.Text = L("common.back", "Back");
         }
-
-        EnsureComponentLibraryPreviewWarmup();
     }
 
     private IReadOnlyList<ComponentLibraryCategory> GetComponentLibraryCategories()

@@ -1,0 +1,339 @@
+using System.Text.RegularExpressions;
+
+using Xunit;
+
+namespace LanMountainDesktop.Tests;
+
+/// <summary>
+/// "有入口、效果为空"这条轴：<b>方法体一个字都没有、却仍有活调用点</b>的成员。
+///
+/// 为什么值得钉：零使用棘轮数的是相反的一半——"没人调"。这条数的是"有人调，但那件事不发生"。
+/// 它不崩、不报错，只是行为静默缺一块；2026-09-23 是因为先问了一句
+/// "有没有组件在没有附着判据时把刷新表起起来"才撞出来的（那一趟还暴露出普查把空实现
+/// 当成"没有这个方法"整条跳过）。
+///
+/// 口径：整个方法体只剩空白或一句注释（同行 <c>{ }</c>、Allman 的签名/<c>{</c>/<c>}</c> 三行、
+/// 以及 <c>{ // … }</c>），
+/// 且能找到一处不是声明的调用（成员访问 <c>x.Foo()</c>、裸调用、<c>new Foo()</c> 都算；
+/// <c>void Foo(</c>、<c>public Foo(</c> 这类"名字前面隔着类型或修饰符"的是声明）。
+/// 构造器也在范围内——它同样能"收一个参数然后丢掉"（名单里就有一条是这么被抓出来的）。
+///
+/// 名单是 <c>键 → 为什么空着是对的</c>：说不出理由的不许加，只能挂待办编号（G1-xx）。
+/// 一次性的"看起来无害"不是理由：<c>Null-object</c> 要写出那个类叫什么，
+/// <c>平台没有这个能力</c> 要写出是哪个平台分支把它换成了空实现。
+/// </summary>
+public sealed class EmptyImplementationWithCallerRatchetTests
+{
+    private static readonly string[] ProductionDirectories =
+        ["core", "desktop", "airapp", "install", "platform", "mobile"];
+
+    /// <summary>语料覆盖面下限：目录改名或整块移出编译时，先在这里红，而不是让名单"自己变干净"。</summary>
+    private const int ScannedFileFloor = 700;
+
+    /// <summary>
+    /// 检测器金丝雀：两条都是"必须在名单里"的已知空实现，各走一条判空路径——
+    /// <see cref="ActionObserver"/> 是同行 <c>{ }</c>，<see cref="IWindowPassthroughServices"/> 里的空壳是 Allman 三行。
+    /// 检测器瞎了时这里红，而不是"零处未解释"的绿色假象。
+    /// </summary>
+    private static readonly string[] MustBeDetected =
+    [
+        "ActionObserver.cs|OnCompleted",
+        "IWindowPassthroughServices.cs|SendToBottom",
+    ];
+
+    private static readonly Dictionary<string, string> ExplainedNoops = new(StringComparer.Ordinal)
+    {
+        // —— Null-object：整个类的存在意义就是"这台机器上没有这件事"，调用方按"可能没效果"写 ——
+        ["SettingsWindow.axaml.cs|Rebuild"] =
+            "SettingsWindow.EmptySettingsPageRegistry：没有外部设置页注册时的空注册表，Rebuild 无事可重建。",
+        ["IAudioRecorderService.cs|Discard"] =
+            "NoOpAudioRecorderService（麦克风不可用时工厂给的就是它）：没开过流，Discard 没有东西可丢。",
+        ["IAudioRecorderService.cs|Dispose"] =
+            "同上：这个替身不持有任何句柄。",
+        ["IMainWindowDesktopLayerService.cs|Disable"] =
+            "NullMainWindowDesktopLayerService：IsSupported=false 的平台，没有桌面层可解除（Enable 侧至少留了一行日志）。",
+        ["IPowerManagementService.cs|ShowNativePowerUI"] =
+            "NullPowerManagementService：非 Windows 没有系统电源对话框可弹。",
+        ["IWindowPassthroughServices.cs|SetupBottomMost"] =
+            "NullWindowBottomMostService：非 Windows 没有置底样式位可写。",
+        ["IWindowPassthroughServices.cs|SendToBottom"] =
+            "同上。",
+        ["IWindowPassthroughServices.cs|SetInteractiveRegions"] =
+            "NullRegionPassthroughService：非 Windows 没有区域穿透（WS_EX_TRANSPARENT 那一套）可设。",
+        ["IWindowPassthroughServices.cs|ClearInteractiveRegions"] =
+            "同上。",
+        ["UpdateProgressSubject.cs|Dispose"] =
+            "UpdateProgressSubject.EmptyDisposable：给『取消一个已经不存在的订阅』返回的令牌，Dispose 就是它的全部实现。",
+        ["ActionObserver.cs|OnCompleted"] =
+            "ActionObserver<T>：把 IObservable 适配成一个 Action 的适配器，只关心 OnNext；完成/出错都转发给调用方自己的续体没有意义。",
+        ["ActionObserver.cs|OnError"] =
+            "同上。",
+        ["SystemWallpaperProvider.cs|Dispose"] =
+            "这个类不持有需要释放的东西——读注册表那几句是就地 using 释放的；IDisposable 只为 HostSystemWallpaperProvider 的静态实例生命周期而挂。" +
+            "（顺带记着：它的 WallpaperChanged 事件全仓既不 raise 也不 subscribe，那是另一条轴的账。）",
+
+        // —— SDK 的虚基类默认行为：轻应用不覆写就是不做事，宿主照常调用 ——
+        ["AirAppWindowBase.cs|OnWindowOpened"] =
+            "AirAppSdk 给第三方轻应用的 opt-in 钩子，宿主在 AirAppWindow.axaml.cs:276 调它；不覆写＝没有开窗后要做的私事。",
+        ["AirAppWindowBase.cs|OnWindowClosing"] =
+            "同上（覆写它可以取消关闭）。",
+        ["AirAppWindowBase.cs|OnWindowClosed"] =
+            "同上。",
+        ["AirAppSettingsPageBase.cs|OnNavigatedTo"] =
+            "同上：设置页进页钩子，多数页面只需要 XAML 绑定。",
+
+        // —— 反序列化用的无参构造：契约是"造一个可被属性填充的对象"，空体就是全部实现 ——
+        ["AirAppMarketAssetCacheService.cs|AssetCacheEntry"] =
+            "AssetCacheEntry 的无参构造，给市场资产缓存 JSON 反序列化用；另一个四参构造才是代码里 new 的那条路。",
+
+        // —— 挂账：不是"空着是对的"，是已知缺陷，等用户拍板 ——
+        ["RssReaderWidget.axaml.cs|ApplyCellSize"] =
+            "G1-BE：声明了缩放契约却什么都不干——格子变大时 RSS 条目字号/行数不跟着变。怎么缩放是产品设计，等他拍。",
+        ["ResumableDownloadService.cs|ResumableDownloadService"] =
+            "G1-BF：构造参数 httpClient 在整个文件里被用了 0 次（ResumableDownloadService.cs:36），实际传输走 Downloader 库" +
+            "（:286 的 CreateConfiguration 没有 Timeout / UserAgent 字段）。三处调用方各自设的 20s/30s/2min 超时与 UA" +
+            "（AirAppMarketInstallService.cs:33、GitHubReleaseUpdateService.cs:68、UpdateOrchestrator.cs:30）对下载请求不生效。" +
+            "接上会改变下载语义（大包超时失败），删掉参数则抹掉一份意图——等他拍。",
+    };
+
+    /// <summary>一行方法签名（参数表不跨行）：抓名字，并把 <c>)</c> 之后的残余留给 <see cref="IsEmptyBody"/> 判体形。</summary>
+    private static readonly Regex Signature = new(
+        @"^\s*(?:public|private|protected|internal)[\w<>?,\s\.]*\b(?<name>[A-Za-z_]\w*)\s*\([^()]*\)\s*(?<tail>.*)$",
+        RegexOptions.Compiled);
+
+    [Fact]
+    public void EmptyImplementations_WithLiveCallers_AreAllExplained()
+    {
+        var repoRoot = RepoRoot();
+        var sources = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var directory in ProductionDirectories)
+        {
+            var full = Path.Combine(repoRoot, directory);
+            if (!Directory.Exists(full))
+            {
+                continue;
+            }
+
+            foreach (var path in Directory.EnumerateFiles(full, "*.cs", SearchOption.AllDirectories))
+            {
+                var relative = Relative(repoRoot, path);
+                if (relative.Split(Path.DirectorySeparatorChar)
+                        .Any(part => part.Equals("obj", StringComparison.OrdinalIgnoreCase)
+                            || part.Equals("bin", StringComparison.OrdinalIgnoreCase)))
+                {
+                    continue;
+                }
+
+                if (path.EndsWith("Tests.cs", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                sources[relative] = File.ReadAllText(path);
+            }
+        }
+
+        // 覆盖面先判：语料缩了的话，下面的"零处未解释"就没有意义。
+        Assert.True(
+            sources.Count >= ScannedFileFloor,
+            $"这一跑只扫到 {sources.Count} 个源文件（下限 {ScannedFileFloor}，2026-09-23 实测 745 个）：" +
+            "目录改名/移出编译面会让这条尺子悄悄失明，先确认语料还在。");
+
+        var detected = new List<string>();
+
+        foreach (var (relative, text) in sources)
+        {
+            var lines = text.Replace("\r\n", "\n").Split('\n');
+            for (var index = 0; index < lines.Length; index++)
+            {
+                if (Signature.Match(lines[index]) is not { Success: true } signature)
+                {
+                    continue;
+                }
+
+                if (!IsEmptyBody(lines, index, signature.Groups["tail"].Value))
+                {
+                    continue;
+                }
+
+                var name = signature.Groups["name"].Value;
+                if (!HasCallSite(name, sources))
+                {
+                    continue;
+                }
+
+                detected.Add($"{Path.GetFileName(relative)}|{name}");
+            }
+        }
+
+        foreach (var anchor in MustBeDetected)
+        {
+            Assert.Contains(anchor, detected);
+        }
+
+        var stale = ExplainedNoops.Keys
+            .Where(key => !detected.Contains(key, StringComparer.Ordinal))
+            .ToList();
+
+        // 先判陈旧：改错一个键名会同时触发"未解释"和"陈旧"，而"你名单里这条已经不存在了"才是有用的那句话。
+        Assert.True(
+            stale.Count == 0,
+            $"名单里 {stale.Count} 条已经不是活的了：{string.Join(", ", stale.Order(StringComparer.Ordinal))}。" +
+            "它对应的空实现被接上或删掉了——账本要跟着收，不然下一个人会以为那里还有个坑。");
+
+        var unexplained = detected
+            .Where(item => !ExplainedNoops.ContainsKey(item))
+            .ToList();
+
+        Assert.True(
+            unexplained.Count == 0,
+            $"{unexplained.Count} 处方法体是空的却仍有调用点（事件真的发生了，做的事没有）：" +
+            string.Join(", ", unexplained.Order(StringComparer.Ordinal)) +
+            $"{Environment.NewLine}要么接上（它本该做的那件事在别处能找到），要么把空壳与它的调用点一起删掉" +
+            "（本次就这么清了两处迁移遗留：InitializeSettingsIcons、EnsureComponentLibraryPreviewWarmup），" +
+            "要么在 ExplainedNoops 里写清为什么空着是对的——说不出理由不许加，只能挂待办编号。");
+    }
+
+    private static int NextNonBlank(string[] lines, int from, string? mustBe = null)
+    {
+        for (var index = from; index < lines.Length; index++)
+        {
+            if (lines[index].Trim().Length == 0)
+            {
+                continue;
+            }
+
+            return mustBe is null || lines[index].Trim() == mustBe ? index : -1;
+        }
+
+        return -1;
+    }
+
+    /// <summary>整个方法体一个字都没有。只认注释算空——<c>// TODO</c> 挂着调用点正是这条尺子要抓的。</summary>
+    private static bool IsEmptyBody(string[] lines, int index, string tail)
+    {
+        if (tail.Contains("=>", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var rest = tail.Trim();
+
+        if (rest.Length == 0)
+        {
+            var open = NextNonBlank(lines, index + 1, "{");
+            return open > 0 && NextNonBlank(lines, open + 1, "}") > 0;
+        }
+
+        if (rest == "{")
+        {
+            return NextNonBlank(lines, index + 2, "}") > 0;
+        }
+
+        if (rest[0] != '{' || rest[^1] != '}')
+        {
+            return false;
+        }
+
+        var body = rest[1..^1].Trim();
+
+        return body.Length == 0
+            || body.StartsWith("//", StringComparison.Ordinal)
+            || (body.StartsWith("/*", StringComparison.Ordinal) && body.EndsWith("*/", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// 除"声明"之外还能找到一处调用。逐次出现判定，不按整行：
+    /// 一行 <c>private void A() =&gt; B();</c> 里 A 是声明、B 是调用，按行判会把 B 一起吃掉。
+    /// 名字前面隔着空白的是类型或修饰符（<c>void Foo(</c>、<c>public Foo(</c>）→ 声明；
+    /// 前面是 <c>.</c>、<c>=</c>、<c>(</c>、<c>&gt;</c> 或 <c>new</c>/<c>return</c> 这类关键字 → 调用。
+    /// </summary>
+    private static bool HasCallSite(string name, Dictionary<string, string> sources)
+    {
+        foreach (var text in sources.Values)
+        {
+            foreach (var line in text.Replace("\r\n", "\n").Split('\n'))
+            {
+                for (var at = line.IndexOf(name, StringComparison.Ordinal);
+                     at >= 0;
+                     at = line.IndexOf(name, at + 1, StringComparison.Ordinal))
+                {
+                    var after = at + name.Length;
+                    while (after < line.Length && line[after] is ' ' or '\t')
+                    {
+                        after++;
+                    }
+
+                    if (after >= line.Length || line[after] != '(')
+                    {
+                        continue;
+                    }
+
+                    if (at > 0 && IsIdentifierChar(line[at - 1]))
+                    {
+                        continue; // 命中的是更长标识符的尾巴
+                    }
+
+                    if (!IsDeclaration(line, at))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsDeclaration(string line, int at)
+    {
+        var cursor = at - 1;
+        while (cursor >= 0 && line[cursor] is ' ' or '\t')
+        {
+            cursor--;
+        }
+
+        if (cursor < 0 || !IsIdentifierChar(line[cursor]))
+        {
+            return false;
+        }
+
+        var end = cursor;
+        while (cursor >= 0 && (IsIdentifierChar(line[cursor]) || line[cursor] is '>' or ']' or ',' or '.'))
+        {
+            cursor--;
+        }
+
+        return !NotDeclarations.Contains(line[(cursor + 1)..(end + 1)], StringComparer.Ordinal);
+    }
+
+    private static bool IsIdentifierChar(char c) => char.IsLetterOrDigit(c) || c == '_';
+
+    /// <summary>能合法出现在"调用"前面的关键字。修饰符不在这里——<c>public Foo(</c> 是声明。</summary>
+    private static readonly string[] NotDeclarations =
+    [
+        "new", "return", "await", "yield", "throw", "is", "as", "in", "out", "ref", "params",
+        "nameof", "default", "operator", "when", "where", "let", "from", "into", "by", "on",
+        "equals", "ascending", "descending", "select", "group", "checked", "unchecked", "stackalloc",
+    ];
+
+    private static string Relative(string root, string path) => Path.GetRelativePath(root, path)
+        .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+
+    private static string RepoRoot()
+    {
+        var current = new DirectoryInfo(AppContext.BaseDirectory);
+        while (current is not null)
+        {
+            if (File.Exists(Path.Combine(current.FullName, "LanMountainDesktop.slnx")))
+            {
+                return current.FullName;
+            }
+
+            current = current.Parent;
+        }
+
+        throw new InvalidOperationException("Unable to locate repository root.");
+    }
+}

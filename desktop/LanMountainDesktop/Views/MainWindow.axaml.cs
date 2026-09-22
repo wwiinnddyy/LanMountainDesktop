@@ -413,7 +413,6 @@ public partial class MainWindow : Window
         InitializeDesktopSurfaceState(desktopLayoutSnapshot);
         InitializeLauncherVisibilitySettings(launcherSnapshot);
         InitializeDesktopComponentPlacements(desktopLayoutSnapshot);
-        InitializeSettingsIcons();
 
         if (TryParseColor(snapshot.ThemeColor, out var savedThemeColor))
         {

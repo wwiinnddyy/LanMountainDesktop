@@ -14,10 +14,6 @@ public partial class MainWindow : Window
 {
     private FusedDesktopComponentLibraryWindow? _fusedLibraryWindow;
 
-    private void EnsureComponentLibraryPreviewWarmup()
-    {
-    }
-
     private Control CreateStaticComponentLibraryPreview(
         string componentId,
         double cellSize,

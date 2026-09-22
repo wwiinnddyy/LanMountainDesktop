@@ -197,10 +197,6 @@ public partial class MainWindow : Window
         _ = _updateSettingsService.Get();
     }
 
-    private void InitializeSettingsIcons()
-    {
-    }
-
     private static bool TryParseColor(string? colorText, out Color color)
     {
         if (!string.IsNullOrWhiteSpace(colorText) && Color.TryParse(colorText, out color))

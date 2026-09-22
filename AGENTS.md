@@ -791,6 +791,34 @@ Sharp 与 Fluent 才相同。也就是说默认风格下桌面组件面板本来
 删兄弟块的同名指令会真的改变解析结果）。2026-09-21 那次 `plugin → airapp` 批量改名按目录补 using，
 一次留下 26 处重复 / 20 个文件——批量脚本补完必须让 CS0105 归零，而不是只确认能编译。
 
+**第七把尺子数的是"有入口、效果为空"**：`tests/LanMountainDesktop.Tests/EmptyImplementationWithCallerRatchetTests.cs`。
+前面几条量的都是"没人调"（静态/实例零引用、孤儿资源、孤儿样式类），这条量相反的一半——
+**方法体一个字都没有、却仍有活调用点**。它不崩不报错，只是那件事静默不发生，所以没有别的探针会碰它。
+判据：整个体只剩空白或一句注释（同行 `{ }`、Allman 的签名/`{`/`}` 三行、`{ // … }` 三种形态），
+且能在语料里找到一次不是声明的调用；名单是 `键 → 为什么空着是对的`，
+说不出理由不许加，只能挂待办编号（G1-xx）。构造器也在范围内——这条尺子开出来当天就靠它抓到
+`ResumableDownloadService` 收下 `HttpClient` 然后整个文件一次都没用（G1-BF）。
+
+2026-09-23 首量：**语料 745 个 `.cs`，20 处空实现带活调用点**，其中 Null-object 12 处
+（`NullWindowBottomMostService` / `NullRegionPassthroughService` / `NullPowerManagementService` /
+`NullMainWindowDesktopLayerService` / `NoOpAudioRecorderService` / `EmptySettingsPageRegistry` /
+`UpdateProgressSubject.EmptyDisposable` / `ActionObserver`）、SDK 虚基类默认行为 4 处、
+反序列化无参构造 1 处、挂账待办 3 处（G1-BE 的 RSS 缩放、G1-BF 的下载 client，加 `SystemWallpaperProvider.Dispose`
+旁边那条"事件既没人 raise 也没人 subscribe"另立 G1-BG）。**清掉两处迁移遗留的空壳**（`git diff --shortstat` 实测删 11 行、增 0 行）：
+`InitializeSettingsIcons`——它当年是给 MainWindow 内嵌设置页的 expander 刷图标，那批控件在 XAML/C# 里已经
+一处都不剩（设置页早就硬切进 `SettingsWindow`，图标由 `CreateSettingsIconSource`/`MapIcon` 负责）；
+`EnsureComponentLibraryPreviewWarmup`——`git log -S` 查到实现 `WarmComponentLibraryPreviewsSeriallyAsync`
+是在 `eb066b5`（改成渲染期静态预览）里整块撤掉的，只剩下缝和它的调用点。**两处都是空体，删除不可能改变行为**，
+而"当年为什么砍掉"有提交号可查，所以这是死代码清理，不是产品决定。
+
+判据本身被自己的探针骗过一次：初版只认同行 `{ }`，Allman 三行整条看不见——20 处里有 11 处是补完才露出来的，
+差点把 9 当成基线。调用点那条判据初版**两个方向都是错的**：`(?<![A-Za-z0-9_.])` 把 `x.Foo()` 这种成员访问
+全排除掉（少），而别的文件里同名的**声明行**会被当成调用（多，`Dispose` 尤其明显）。现在改成逐次出现判定：
+名字前隔着空白的是类型或修饰符（`void Foo(`、`public Foo(`）算声明，前面是 `.`、`=`、`(`、`>`
+或 `new`/`return` 这类关键字算调用。四个方向都种过变异：干净树绿、名单多一条不存在的键→陈旧红、
+把 Allman 判空关掉→11 条同时变陈旧（检测器瞎是响的，不是"零处未解释"的绿）、加一个空的 `DoIt()` 并调用它→新站点红。
+覆盖面下限 700 钉在语料数上，防止某天目录改名让这条尺子悄悄失业。
+
 ## 6. 权威来源
 
 - 产品定位：`docs/00-快速开始/01-项目介绍.md`（归档见 `docs/archive/PRODUCT.md`）
