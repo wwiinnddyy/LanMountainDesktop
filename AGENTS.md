@@ -71,6 +71,18 @@ AirApp 本地包生成：
     - **禁止修改系数**：严禁在圆角资源上乘以任何 `scale` 变量，圆角现在由全局样式固定控制。
 - 设置页相关改动通常同时落在 `Views/`、`ViewModels/`、`Services/` 和 `.trae/specs/`
 - UI 启动与窗口生命周期主线在 `Program.cs` 和 `App.axaml.cs`
+- **headless 里取真像素要三件事同时成立**，缺一件就退回"帧是 null / 整幅透明 / 逐次不一致"：
+  `UseHeadlessDrawing = false`、显式 `.UseSkia()`（关掉桩绘制后 Skia 的后端服务不会自动注册，
+  实测表现为启动即抛 `Unable to locate 'Avalonia.Platform.IFontManagerImpl'`），
+  以及采集前泵一次 `AvaloniaHeadlessPlatform.ForceRenderTimerTick()`。
+  帧缓冲实测是 RGBA8888（红像素 = `[255,0,0,255]`），逐行按 `RowBytes` 拷。
+  入口在 `tests/LanMountainDesktop.Tests/Visual/VisualTestApp.cs`，判据在
+  `VisualTestAppHarnessTests.CapturedFrame_*`：一条测管线（红块压在蓝底上，两区各是各的颜色），
+  一条测样式真的落到画面（**同一个位置贴类 vs 不贴类两帧必须不同**）。
+  为什么不是"和背景比颜色"：实测发现不贴类的 `Border` 画出来也不是底板色（主题对 `Border` 有默认外观），
+  所以"与底板不同"这种判据在类名拼错时照样绿——变异验证抓到过。
+  取像素这几条把整套闸门从 1m46s–3m59s 的区间推到 3m06s/4m17s 两次；区间本来就宽，
+  不足以断定是渲染的开销。真在意就把它们拆进独立的 visual 测试工程，别为此关掉桩绘制。
 
 ### AirApp
 

@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
+using Avalonia.Skia;
 
 using LanMountainDesktop;
 
@@ -24,9 +25,10 @@ public static class VisualTestApp
 {
     public static AppBuilding BuildAvaloniaApp() => AppBuilding
         .Configure<App>()
+        .UseSkia()
         .UseHeadless(new AvaloniaHeadlessPlatformOptions
         {
-            UseHeadlessDrawing = true
+            UseHeadlessDrawing = false
         })
         .WithInterFont();
 }

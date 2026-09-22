@@ -1,5 +1,7 @@
+using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -18,8 +20,12 @@ namespace LanMountainDesktop.Tests;
 /// 于是读到 Bold 被当成"样式没落"。换成本地不可能有值的判据（全局样式要求 FontFeatures=tnum，
 /// TextBlock 默认是 null）后，样式确实落到了控件上——下面的卡片背景断言就是据此写的真视觉回归。
 ///
-/// 仍然实测确认的堵点只剩一个：取像素（RenderTargetBitmap.Save 写 0 字节、
-/// Window.CaptureRenderedFrame() 返回 null、CopyPixels 取到整幅透明且逐次不一致）。
+/// 曾经的第二个堵点"取像素"已经打通，条件是两件事同时做到（缺一件就退回原症状）：
+/// <c>UseHeadlessDrawing = false</c>（默认 true 时 Avalonia 只挂桩绘制，Save 写 0 字节、
+/// CaptureRenderedFrame 返回 null）+ <c>UseSkia()</c>（关掉桩绘制后 Skia 后端不会自动注册，
+/// 实测表现为启动就抛 Unable to locate 'Avalonia.Platform.IFontManagerImpl'）+ 采集前
+/// 泵一次 <c>AvaloniaHeadlessPlatform.ForceRenderTimerTick()</c>（不泵就没有渲染帧，仍是 null）。
+/// 下面两条像素断言就是这个条件的守卫：任何一件被改回去，它们会先红。
 /// </summary>
 public sealed class VisualTestAppHarnessTests
 {
@@ -79,6 +85,116 @@ public sealed class VisualTestAppHarnessTests
             Assert.True(solid.Color != Colors.Transparent, $"{styleClass} 的背景是 Transparent，等于没有卡片底");
             Assert.True(solid.Opacity > 0, $"{styleClass} 的背景不透明度为 0");
         }
+    }
+
+    /// <summary>
+    /// 像素管线自己得先可信：红方块压在蓝底上，取到的帧必须两个区域各是各的颜色。
+    /// 这条不测产品，测的是"取像素"这条路还通不通——桩绘制一开、Skia 一掉、或忘了泵渲染帧，
+    /// 帧要么 null 要么整幅透明，这条立刻红，下面那条真视觉回归才有意义。
+    /// </summary>
+    [AvaloniaFact]
+    public void CapturedFrame_DistinguishesPaintedRegionsFromTheBackdrop()
+    {
+        var card = new Border
+        {
+            Width = 60,
+            Height = 60,
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
+            Background = Brushes.Red,
+        };
+        var backdrop = new Grid { Background = Brushes.Blue, Children = { card } };
+
+        var frame = Capture(backdrop, 100, 100);
+
+        var onCard = frame.At(frame.Width / 6, frame.Height / 6);
+        var onBackdrop = frame.At(frame.Width * 5 / 6, frame.Height * 5 / 6);
+
+        Assert.Equal(255, onCard.Alpha);
+        Assert.True(onCard.Red > 128 && onCard.Green < 90 && onCard.Blue < 90, $"卡片位置取到的不是红：{onCard}");
+        Assert.Equal(255, onBackdrop.Alpha);
+        Assert.True(onBackdrop.Blue > 128 && onBackdrop.Red < 90, $"背景位置取到的不是蓝：{onBackdrop}");
+    }
+
+    /// <summary>
+    /// 上面那批"样式解析得出可见画刷"的断言到此为止都只是逻辑；这条把它推到 framebuffer：
+    /// 同一个位置，贴类的与不贴类各采一帧，两帧必须不一样。
+    /// 为什么不是"和背景比"：实测发现不贴类的 Border 画出来也已经不是底板颜色（主题给 Border 有默认外观），
+    /// 所以"和底板不同"这种判据在类名拼错时照样绿——变异验证就是这么抓到它的。
+    /// 现在比的是"这个类到底改没改画面"，类名拼错、样式被删、资源没注册（兜底 Transparent）都会两帧相同。
+    /// </summary>
+    [AvaloniaTheory]
+    [InlineData("settings-section-card")]
+    [InlineData("settings-option-card")]
+    [InlineData("settings-list-item")]
+    public void CapturedFrame_PaintsStyledCardsDistinctlyFromUnstyled(string styleClass)
+    {
+        var styled = Capture(CardsAt(styleClass), 100, 100);
+        var plain = Capture(CardsAt(null), 100, 100);
+        var styledPixel = styled.At(styled.Width / 6, styled.Height / 6);
+        var plainPixel = plain.At(plain.Width / 6, plain.Height / 6);
+
+        var distance = Math.Abs(styledPixel.Red - plainPixel.Red)
+            + Math.Abs(styledPixel.Green - plainPixel.Green)
+            + Math.Abs(styledPixel.Blue - plainPixel.Blue);
+        Assert.True(
+            distance > 2,
+            $"{styleClass} 贴类与不贴类画出来一样（通道总差 {distance}）：styled={styledPixel} plain={plainPixel}");
+    }
+
+    private static Grid CardsAt(string? styleClass)
+    {
+        var card = new Border
+        {
+            Width = 60,
+            Height = 60,
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
+        };
+        if (styleClass is not null)
+        {
+            card.Classes.Add(styleClass);
+        }
+
+        return new Grid { Background = Brushes.Magenta, Children = { card } };
+    }
+
+    private sealed record CapturedFrame(int Width, int Height, int Stride, byte[] Pixels)
+    {
+        public Pixel At(int x, int y)
+        {
+            var i = (y * Stride) + (x * 4);
+            return new Pixel(Pixels[i], Pixels[i + 1], Pixels[i + 2], Pixels[i + 3]);
+        }
+    }
+
+    private readonly record struct Pixel(byte Red, byte Green, byte Blue, byte Alpha)
+    {
+        public override string ToString() => $"rgba({Red},{Green},{Blue},{Alpha})";
+    }
+
+    private static CapturedFrame Capture(Control content, int width, int height)
+    {
+        var window = new Window { Width = width, Height = height, Content = content };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+        Dispatcher.UIThread.RunJobs();
+
+        using var frame = window.CaptureRenderedFrame()
+            ?? throw new InvalidOperationException("CaptureRenderedFrame 返回 null：检查 UseHeadlessDrawing / UseSkia / 有没有泵渲染帧");
+
+        var pixelWidth = frame.PixelSize.Width;
+        var pixelHeight = frame.PixelSize.Height;
+        using var locked = frame.Lock();
+        var rowBytes = locked.RowBytes;
+        var buffer = new byte[rowBytes * pixelHeight];
+        for (var y = 0; y < pixelHeight; y++)
+        {
+            Marshal.Copy(locked.Address + (y * rowBytes), buffer, y * rowBytes, rowBytes);
+        }
+
+        return new CapturedFrame(pixelWidth, pixelHeight, rowBytes, buffer);
     }
 
     private static void ShowAndLayout(Control control)
