@@ -565,6 +565,20 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 交接方式若改掉（例如变成每请求建一个 client）就会重新变成未解释线索。
 两个**实测到的假阳性来源**别忘：释放常写成 `CancellationHelper.CancelAndDispose(...)`（判据里 `Dispose` 前不能加词边界，
 否则两处正常站点会被报成缺陷，本轮就踩了）；工厂方法 `Create()` 本身就是交接。
+**第六把尺子数的是"实例方法定义了有没有人调"**：`python scripts/dump-dead-instance-methods.py`。
+开它的原因是另外两条路都量不到：`ZeroUseMemberRatchetTests` 的口径是 `static class` 上的静态方法，
+一条实例方法都不看；编译器也不管——`Directory.Build.props` 里 `EnforceCodeStyleInBuild=false`，
+IDE0051（未使用私有成员）在构建里一条都不出（2026-09-22 实测：塞一个零调用 `private` 方法，
+`--no-incremental` 重建后错误 0、IDE0051 计数 0）。所以按可见性全收，连 `private` 一起量。
+两条**判据边界**（都是踩出来的）：① 语料必须含 `airapp/`、`mobile/`、Plonds 树，只数宿主七个目录会
+把 8 条活成员判成死码——它们的调用点在 `AirAppHost` 的视图里（样本：`ClockAirAppStopwatchState.AddLap`
+被 `ClockAirAppView.axaml.cs:519` 调）；② 实现"本仓之外的接口"的成员名收不进 `iface_names`，
+要按实测进 `EXTERNAL_INTERFACE_MEMBERS`（`IValueConverter.ConvertBack`、`IHostApplicationLifetime.StopApplication`
+就是首轮抓到的两条假阳性）。正对照已做：临时文件的零调用 `private` 方法必须报出来，而接口实现、
+`virtual`、同类内部被调的三种形状必须都不报。
+2026-09-22 首跑真值：**A 级（生产语料里除声明本身零出现）44 处、T 级（只有测试在调）6 处**，
+已判 8 条（拖拽手势一套 4 条、`RelayCommand.RaiseCanExecuteChanged`、Core 公开面 3 条），其余按族待判。
+终判永远是删除法：A 级只是线索，删掉重建看编译红不红。
 **滑杆的 `Minimum`/`Maximum` 不许写死数字**，要绑视图模型上从 `DesktopGridLimits` 读的那四个量程属性——
 设置页量程是这套数的第四份副本，漂了的症状不是崩，而是"拖到尽头网格不动"或"存进去被运行期悄悄钳掉"。
 
