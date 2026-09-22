@@ -144,7 +144,7 @@ public partial class ClockWidget : UserControl, IDesktopComponentWidget, ITimeZo
         RootBorder.Height = targetHeight;
         
         // 2. 主矩形统一到主题主档圆角
-        RootBorder.CornerRadius = ResolveUnifiedMainRectangle();
+        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.ResolveLgRectangle();
         RootBorder.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center;
         
         // 3. 核心：满盈字阶 (Filled Typography)
@@ -187,8 +187,4 @@ public partial class ClockWidget : UserControl, IDesktopComponentWidget, ITimeZo
 
     private void ApplyChrome() => ComponentChromePanel.Apply(RootBorder, _transparentBackground);
 
-    private CornerRadius ResolveUnifiedMainRectangle() => new(ResolveUnifiedMainRadiusValue());
-
-    private static double ResolveUnifiedMainRadiusValue() =>
-        HostAppearanceThemeProvider.GetOrCreate().GetCurrent().CornerRadiusTokens.Lg.TopLeft;
 }

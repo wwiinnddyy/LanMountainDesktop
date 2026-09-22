@@ -98,8 +98,6 @@ public partial class NotificationBoxWidget : UserControl,
         UpdateAdaptiveLayout();
     }
 
-
-
     private void LoadSettings()
     {
         var appSettingsFacade = HostSettingsFacadeProvider.GetOrCreate();
@@ -305,7 +303,7 @@ public partial class NotificationBoxWidget : UserControl,
         var scale = Math.Clamp(_currentCellSize / ComponentDesignMetrics.BaseCellSize, 0.7, 1.8);
         var fontScale = Math.Clamp(scale, 0.8, 1.4);
 
-        var cornerRadius = ResolveUnifiedMainRadiusValue();
+        var cornerRadius = ComponentChromeCornerRadiusHelper.ResolveLgRectangleRadiusValue();
         RootBorder.CornerRadius = new CornerRadius(cornerRadius);
         CardBorder.CornerRadius = new CornerRadius(cornerRadius);
 
@@ -327,8 +325,6 @@ public partial class NotificationBoxWidget : UserControl,
         }
     }
 
-    private static double ResolveUnifiedMainRadiusValue() =>
-        HostAppearanceThemeProvider.GetOrCreate().GetCurrent().CornerRadiusTokens.Lg.TopLeft;
 }
 
 public class NotificationItemControl : Border

@@ -119,7 +119,7 @@ public partial class TextCapsuleWidget : UserControl, IDesktopComponentWidget
         RootBorder.Height = targetHeight;
 
         // 主矩形统一到主题主档圆角
-        RootBorder.CornerRadius = ResolveUnifiedMainRectangle();
+        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.ResolveLgRectangle();
         RootBorder.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center;
 
         // 设置最小和最大宽度
@@ -139,8 +139,4 @@ public partial class TextCapsuleWidget : UserControl, IDesktopComponentWidget
 
     private void ApplyChrome() => ComponentChromePanel.Apply(RootBorder, _transparentBackground);
 
-    private CornerRadius ResolveUnifiedMainRectangle() => new(ResolveUnifiedMainRadiusValue());
-
-    private static double ResolveUnifiedMainRadiusValue() =>
-        HostAppearanceThemeProvider.GetOrCreate().GetCurrent().CornerRadiusTokens.Lg.TopLeft;
 }

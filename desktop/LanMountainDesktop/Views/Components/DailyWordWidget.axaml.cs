@@ -286,7 +286,7 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
             isFourByThree = widthRatio >= 0.9 && heightRatio >= 1.35;
         }
 
-        var containerRadius = ResolveUnifiedMainRectangle();
+        var containerRadius = ComponentChromeCornerRadiusHelper.ResolveLgRectangle();
         RootBorder.CornerRadius = containerRadius;
         RootBorder.Padding = new Thickness(0);
 
@@ -492,11 +492,6 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
             : 1;
         return Math.Clamp(Math.Min(cellScale, Math.Min(widthScale, heightScale)), 0.56, 2.0);
     }
-
-    private CornerRadius ResolveUnifiedMainRectangle() => new(ResolveUnifiedMainRadiusValue());
-
-    private static double ResolveUnifiedMainRadiusValue() =>
-        HostAppearanceThemeProvider.GetOrCreate().GetCurrent().CornerRadiusTokens.Lg.TopLeft;
 
     private string BuildPronunciationText(DailyWordSnapshot snapshot)
     {

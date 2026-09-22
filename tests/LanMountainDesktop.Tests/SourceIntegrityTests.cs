@@ -1436,6 +1436,51 @@ public sealed class SourceIntegrityTests
     }
 
     /// <summary>
+    /// 组件侧取圆角只认 <c>ComponentChromeCornerRadiusHelper</c> 一家。
+    /// 2026-09-22 实测到的形态：13 个组件各自抄了一份 <c>ResolveUnifiedMainRadiusValue()</c>
+    /// （读 <c>HostAppearanceThemeProvider.GetOrCreate().GetCurrent().CornerRadiusTokens.Lg.TopLeft</c>）
+    /// 加一份 <c>ResolveUnifiedMainRectangle()</c>，而同目录另一批组件走的是家
+    /// （<c>ResolveMainRectangleRadius</c>，同一张 token 表的 <c>Component</c> 档）。
+    /// 抄的那 13 份除了没有家里的"非有限值兜底"，还一律无视 <c>chromeContext</c>——
+    /// 宿主可以按组件下发 chrome，它们不吃，于是"统一主矩形圆角"在部分圆角风格下真的不统一。
+    /// 两档数值差异本身（Balanced 下 24 vs 28）是设计问题，另立待办，不在这里替你选。
+    /// </summary>
+    [Fact]
+    public void ComponentCornerRadius_LivesInExactlyOnePlace()
+    {
+        var home = @"desktop\LanMountainDesktop\Views\Components\ComponentChromeCornerRadiusHelper.cs";
+        var componentsDir = Path.Combine(RepoRoot, @"desktop\LanMountainDesktop\Views\Components");
+        var redeclaration = new Regex(
+            @"private\s+(?:static\s+)?(?:CornerRadius|double)\s+ResolveUnifiedMain(?:Rectangle|RadiusValue)\s*\(");
+
+        var offenders = new List<string>();
+        foreach (var file in Directory.EnumerateFiles(componentsDir, "*.cs", SearchOption.AllDirectories))
+        {
+            if (string.Equals(RelativeToRepo(file), home, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            foreach (var (line, number) in CodeLines(file))
+            {
+                if (Regex.IsMatch(line, @"CornerRadiusTokens\s*[.?]"))
+                {
+                    offenders.Add($"{RelativeToRepo(file)}:{number} 组件自己读 CornerRadiusTokens，请用 ComponentChromeCornerRadiusHelper");
+                }
+
+                if (redeclaration.IsMatch(line))
+                {
+                    offenders.Add($"{RelativeToRepo(file)}:{number} 又抄了一份私有的\"统一主矩形圆角\"，请用 ComponentChromeCornerRadiusHelper");
+                }
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 处绕开圆角家的组件实现：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
+    /// <summary>
     /// 每个 <c>.cs</c> 都得被某个工程认领：就近目录有 <c>.csproj</c>，且不被那个工程的
     /// <c>Compile Remove/Exclude</c> 排除。2026-09-22 第一次量：18 个工程的 Compile 项共 899 个文件，
     /// 磁盘上 900 个，多出来的那个是 <c>scripts/GitCommitAnalyzer.cs</c>——662 行 C#，没有任何工程编译它、

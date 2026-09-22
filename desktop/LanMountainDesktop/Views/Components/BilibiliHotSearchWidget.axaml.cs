@@ -334,7 +334,7 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
         var totalWidth = Bounds.Width > 1 ? Bounds.Width : _currentCellSize * BaseWidthCells;
         var totalHeight = Bounds.Height > 1 ? Bounds.Height : _currentCellSize * BaseHeightCells;
 
-        var unifiedMainRectangle = ResolveUnifiedMainRectangle();
+        var unifiedMainRectangle = ComponentChromeCornerRadiusHelper.ResolveLgRectangle();
         RootBorder.CornerRadius = unifiedMainRectangle;
         RootBorder.Padding = new Thickness(0);
 
@@ -512,11 +512,6 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
         var scaleY = actualHeight / expectedHeight;
         return Math.Clamp(Math.Min(scaleX, scaleY), 0.72, 2.8);
     }
-
-    private CornerRadius ResolveUnifiedMainRectangle() => new(ResolveUnifiedMainRadiusValue());
-
-    private static double ResolveUnifiedMainRadiusValue() =>
-        HostAppearanceThemeProvider.GetOrCreate().GetCurrent().CornerRadiusTokens.Lg.TopLeft;
 
     private string L(string key, string fallback)
     {

@@ -532,7 +532,7 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
         var totalWidth = Bounds.Width > 1 ? Bounds.Width : _currentCellSize * BaseWidthCells;
         var totalHeight = Bounds.Height > 1 ? Bounds.Height : _currentCellSize * BaseHeightCells;
 
-        var unifiedMainRectangle = ResolveUnifiedMainRectangle();
+        var unifiedMainRectangle = ComponentChromeCornerRadiusHelper.ResolveLgRectangle();
         RootBorder.CornerRadius = unifiedMainRectangle;
         CardBorder.CornerRadius = unifiedMainRectangle;
         CardBorder.Padding = new Thickness(
@@ -708,11 +708,6 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
         var scaleY = actualHeight / expectedHeight;
         return Math.Clamp(Math.Min(scaleX, scaleY), 0.62, 2.6);
     }
-
-    private CornerRadius ResolveUnifiedMainRectangle() => new(ResolveUnifiedMainRadiusValue());
-
-    private static double ResolveUnifiedMainRadiusValue() =>
-        HostAppearanceThemeProvider.GetOrCreate().GetCurrent().CornerRadiusTokens.Lg.TopLeft;
 
     private string L(string key, string fallback)
     {

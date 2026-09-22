@@ -380,7 +380,7 @@ public partial class NetworkSpeedWidget : UserControl, IDesktopComponentWidget
         RootBorder.Height = targetHeight;
 
         // 主矩形统一到主题主档圆角
-        RootBorder.CornerRadius = ResolveUnifiedMainRectangle();
+        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.ResolveLgRectangle();
         RootBorder.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center;
 
         // 根据单元格大小和字体大小设置调整字体大小
@@ -416,11 +416,6 @@ public partial class NetworkSpeedWidget : UserControl, IDesktopComponentWidget
     }
 
     private void ApplyChrome() => ComponentChromePanel.Apply(RootBorder, _transparentBackground);
-
-    private CornerRadius ResolveUnifiedMainRectangle() => new(ResolveUnifiedMainRadiusValue());
-
-    private static double ResolveUnifiedMainRadiusValue() =>
-        HostAppearanceThemeProvider.GetOrCreate().GetCurrent().CornerRadiusTokens.Lg.TopLeft;
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {

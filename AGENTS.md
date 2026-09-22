@@ -516,6 +516,19 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 **滑杆的 `Minimum`/`Maximum` 不许写死数字**，要绑视图模型上从 `DesktopGridLimits` 读的那四个量程属性——
 设置页量程是这套数的第四份副本，漂了的症状不是崩，而是"拖到尽头网格不动"或"存进去被运行期悄悄钳掉"。
 
+**组件取圆角只认 `ComponentChromeCornerRadiusHelper` 一家**：`Views/Components/*.cs` 里不许再出现
+`CornerRadiusTokens`（无论 `.X` 还是 `?.X`）也不许再自己声明 `ResolveUnifiedMainRectangle()` /
+`ResolveUnifiedMainRadiusValue()`（守卫 `ComponentCornerRadius_LivesInExactlyOnePlace`，两条规则都种过 scratch 文件验红）。
+2026-09-22 量到的形态：13 个组件各抄了这两个私有方法（合计 26 个方法、读同一张 token 表的 `Lg` 档），
+同目录另一批组件走家（`ResolveMainRectangleRadius`，读 `Component` 档）。抄的那 13 份有两处真缺口：
+**没有家里的"非有限值兜底"**，且**一律无视 `chromeContext`**——宿主可以按组件下发 chrome（`DesktopComponentRuntimeRegistry`
+就在传），这 13 个组件不吃，所以"统一主矩形圆角"名字统一、实际不统一。现已全部改走家新增的
+`ResolveLgRectangle` / `ResolveLgRectangleRadiusValue`（行为保持：默认仍取 `Lg`，兜底只在 NaN/∞ 时生效）。
+**没替你选的一件事**：家原本读的 `Component` 档与这 13 处读的 `Lg` 档数值不同——
+`AppearanceCornerRadiusTokenFactory` 实测 Balanced(默认) 24 vs 28、Rounded 28 vs 32、Open 32 vs 36，
+Sharp 与 Fluent 才相同。也就是说默认风格下桌面组件面板本来就有两种外框圆角。统一到哪一档是设计决定（另立待办），
+这里只先把"一个数两处实现"变成"一个数、两处显式选档"。
+
 **更新布局的磁盘名只认 Core 的 `UpdatePaths` 一家**：`.Launcher` / `update` / `incoming` / `objects` /
 `snapshots` 这几级目录，以及 `plonds-filemap.json`、`plonds-filemap.sig`、`plonds-update.json`、
 `files.json`、`files.json.sig`、`update.zip`、`public-key.pem` 这些文件名，跨启动器 / 宿主 / 安装器三份二进制

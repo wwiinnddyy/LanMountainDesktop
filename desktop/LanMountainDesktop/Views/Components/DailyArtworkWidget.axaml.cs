@@ -98,7 +98,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         _currentCellSize = Math.Max(1, cellSize);
         var scale = ResolveScale();
 
-        RootBorder.CornerRadius = ResolveUnifiedMainRectangle();
+        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.ResolveLgRectangle();
 
         InfoPanel.Padding = new Thickness(
             Math.Clamp(18 * scale, 10, 28),
@@ -729,11 +729,6 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
             : 1;
         return Math.Clamp(Math.Min(cellScale, Math.Min(widthScale, heightScale)), 0.56, 2.0);
     }
-
-    private CornerRadius ResolveUnifiedMainRectangle() => new(ResolveUnifiedMainRadiusValue());
-
-    private static double ResolveUnifiedMainRadiusValue() =>
-        HostAppearanceThemeProvider.GetOrCreate().GetCurrent().CornerRadiusTokens.Lg.TopLeft;
 
     private static double FitFontSize(
         string? text,
