@@ -10,6 +10,7 @@ using LanMountainDesktop.Models;
 using LanMountainDesktop.Platform.Abstractions;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.Views.Components;
 
 namespace LanMountainDesktop.Views;
 
@@ -724,6 +725,12 @@ public partial class DesktopWidgetWindow : Window
         {
             componentContent.Loaded -= OnComponentContentLoaded;
             componentContent.PropertyChanged -= OnComponentContentPropertyChanged;
+        }
+
+        // 窗口关掉后控件就不再存在，但 TimeZoneService 是应用级单例：不退订等于让它替这棵丢掉的控件树一直挂着
+        if (ComponentContainer.Child is ITimeZoneAwareComponentWidget timeZoneAware)
+        {
+            timeZoneAware.ClearTimeZoneService();
         }
 
         if (ComponentContainer.Child is IDisposable disposable)
