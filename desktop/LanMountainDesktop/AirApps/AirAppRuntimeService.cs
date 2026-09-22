@@ -832,7 +832,7 @@ public sealed class AirAppRuntimeService : IDisposable
         }
 
         SavePendingAirAppDeletions(remainingPaths);
-        CleanupPendingDeletionDirectory();
+        AirAppPackaging.AirAppPendingDeletionDirectory.CleanupAfterInstall(AirAppPackaging.AirAppPendingDeletionDirectory.PathFor(AirAppsDirectory));
     }
 
     private void ApplyPendingAirAppOperations()
@@ -856,39 +856,6 @@ public sealed class AirAppRuntimeService : IDisposable
         }
     }
 
-    private void CleanupPendingDeletionDirectory()
-    {
-        var pendingDeletionDir = Path.Combine(AirAppsDirectory, AirAppPackaging.AirAppPackagingConstants.PendingDeletionDirectoryName);
-        if (!Directory.Exists(pendingDeletionDir))
-        {
-            return;
-        }
-
-        foreach (var pendingFile in Directory.EnumerateFiles(pendingDeletionDir, "*.pending"))
-        {
-            try
-            {
-                File.Delete(pendingFile);
-            }
-            catch
-            {
-                // Ignore cleanup failures for pending deletions.
-            }
-        }
-
-        try
-        {
-            if (Directory.GetFiles(pendingDeletionDir).Length == 0 &&
-                Directory.GetDirectories(pendingDeletionDir).Length == 0)
-            {
-                Directory.Delete(pendingDeletionDir);
-            }
-        }
-        catch
-        {
-            // Ignore directory cleanup failures.
-        }
-    }
 
     private string ResolveAirAppRemovalTargetPath(AirAppCatalogEntry entry)
     {

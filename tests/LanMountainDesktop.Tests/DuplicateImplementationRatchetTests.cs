@@ -56,8 +56,15 @@ public sealed class DuplicateImplementationRatchetTests
     /// Core 的 <c>AppVersionProvider</c> 与宿主的 <c>AppRestartService</c> 各抄一对，
     /// 进 <c>Shared/IO/ExistingPath.cs</c>，10 个调用点改走家——两份算的是"这条路径能不能信"，
     /// 漂开的后果是同一个安装被启动器与宿主判成两种结论）。
+    /// 59 → 58 收一族（安装期"待删除包暂存目录"的收尾在 Core 的 <c>AirAppPackageInstaller</c>
+    /// 与启动器的 <c>AirAppInstallerService</c> 各抄一份逐字 14 行，宿主的 <c>AirAppRuntimeService</c>
+    /// 还有第三份、而且**多一段"空目录顺手删掉"**——三份做的不是同一件事。收进
+    /// <c>Shared/AirAppPendingDeletionDirectory</c> 时取超集那版：安装器现在也会回收留空的目录，
+    /// 目录只在需要时被重建，没有任何一侧依赖它一直存在（这条差异本身写在家的注释里）。
+    /// 家新方法刻意取名 <c>PathFor</c>/<c>CleanupAfterInstall</c>：先用了 <c>Resolve</c>/<c>Cleanup</c>，
+    /// 漂移普查当场从 192 涨到 194——不是多了重复，是**通用名把无关实现并进同一族**，上限红得对。）
     /// </summary>
-    private const int IdenticalBodyFamilyCeiling = 59;
+    private const int IdenticalBodyFamilyCeiling = 58;
 
     /// <summary>
     /// 今天实测：192 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。

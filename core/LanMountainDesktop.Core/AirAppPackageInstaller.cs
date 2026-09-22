@@ -48,7 +48,7 @@ public sealed class AirAppPackageInstaller
     {
         var runtimeRootDirectory = PathSeparators.EnsureTrailingSeparator(
             Path.Combine(Path.GetFullPath(airAppsDirectory), AirAppPackagingConstants.RuntimeDirectoryName));
-        var pendingDeletionDir = Path.Combine(airAppsDirectory, AirAppPackagingConstants.PendingDeletionDirectoryName);
+        var pendingDeletionDir = AirAppPendingDeletionDirectory.PathFor(airAppsDirectory);
         Directory.CreateDirectory(pendingDeletionDir);
 
         foreach (var existingPackagePath in EnumerateExistingPackages(airAppsDirectory, options)
@@ -77,7 +77,7 @@ public sealed class AirAppPackageInstaller
             }
         }
 
-        CleanupPendingDeletions(pendingDeletionDir);
+        AirAppPendingDeletionDirectory.CleanupAfterInstall(pendingDeletionDir);
     }
 
     private static IEnumerable<string> EnumerateExistingPackages(string airAppsDirectory, AirAppPackageInstallOptions options)
@@ -108,26 +108,6 @@ public sealed class AirAppPackageInstaller
             var fileName = Path.GetFileName(existingPackagePath);
             var pendingPath = Path.Combine(pendingDeletionDir, $"{fileName}.{Guid.NewGuid():N}.pending");
             File.Move(existingPackagePath, pendingPath);
-        }
-    }
-
-    private static void CleanupPendingDeletions(string pendingDeletionDir)
-    {
-        if (!Directory.Exists(pendingDeletionDir))
-        {
-            return;
-        }
-
-        foreach (var pendingFile in Directory.EnumerateFiles(pendingDeletionDir, "*.pending"))
-        {
-            try
-            {
-                File.Delete(pendingFile);
-            }
-            catch
-            {
-                // Best-effort cleanup only.
-            }
         }
     }
 
