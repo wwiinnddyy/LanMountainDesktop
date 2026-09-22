@@ -518,6 +518,14 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 （同一个名字、各组件各写一份、每份差一点）只有这把能看见——2026-09-22 就是靠它挖出
 `ResolveUnifiedMainRadiusValue`（13 个组件各抄一份，家早已存在）。已知样本：`ApplyCellSize` 应报 44 处 / 32 种体 /
 最大同体组 13；`L`（组件的本地化小助手）50 处 / 21 种体。
+**第三把尺子数的是"动词配对"，不是方法体**：`python scripts/check-component-pairs.py`
+（组件是短命的、服务与计时器是长命的：`Attach` 里起来的东西必须在 `Detach`/`Dispose` 收回去）。
+2026-09-22 首跑：46 个有 attach/detach 的组件文件里 **0 处未配对**
+（覆盖 timer 起 35 / 收 59、service 事件 5 / 5、PropertyChanged 类 1 / 1、快照订阅 8 / 13、时区 Set/Clear 10 / 10）。
+**"报 0"之前必须先拿正对照验它**：临时放一个只 `_probeTimer.Start()` + `X.PropertyChanged += …` 的文件，两形都要报出来才算有效——
+这一跑就是这么抓出判据自身的两个洞（`_timer?.Stop()` 的空条件形式漏认；把 `Set/ClearTimeZoneService` 按不同 key 配对，
+一度报出 39 个文件的假阳性）。**监视租约故意不数**：它走 `StudyMonitoringLease.Sync(ref …状态位)`，
+取放由家按状态对账，按动词数只会得出假结论。
 **滑杆的 `Minimum`/`Maximum` 不许写死数字**，要绑视图模型上从 `DesktopGridLimits` 读的那四个量程属性——
 设置页量程是这套数的第四份副本，漂了的症状不是崩，而是"拖到尽头网格不动"或"存进去被运行期悄悄钳掉"。
 
