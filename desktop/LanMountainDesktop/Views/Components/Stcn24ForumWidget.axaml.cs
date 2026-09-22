@@ -34,7 +34,6 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
     private const int BaseHeightCells = 4;
     private const int BaseDisplayItemCount = 4;
     private const int MaxDisplayItemCount = 8;
-    private static readonly IReadOnlyList<int> SupportedAutoRefreshIntervalsMinutes = RefreshIntervalCatalog.SupportedIntervalsMinutes;
 
     private readonly DispatcherTimer _refreshTimer = new()
     {
@@ -479,7 +478,7 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
             var snapshot = _componentSettingsService.Load();
             _sourceType = Stcn24ForumSourceTypes.Normalize(snapshot.Stcn24ForumSourceType);
             enabled = snapshot.Stcn24ForumAutoRefreshEnabled;
-            intervalMinutes = NormalizeAutoRefreshIntervalMinutes(snapshot.Stcn24ForumAutoRefreshIntervalMinutes);
+            intervalMinutes = RefreshIntervalCatalog.Normalize(snapshot.Stcn24ForumAutoRefreshIntervalMinutes, 20);
         }
         catch
         {
@@ -506,23 +505,6 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
         {
             _refreshTimer.Stop();
         }
-    }
-
-    private static int NormalizeAutoRefreshIntervalMinutes(int minutes)
-    {
-        if (minutes <= 0)
-        {
-            return 20;
-        }
-
-        if (SupportedAutoRefreshIntervalsMinutes.Contains(minutes))
-        {
-            return minutes;
-        }
-
-        return SupportedAutoRefreshIntervalsMinutes
-            .OrderBy(value => Math.Abs(value - minutes))
-            .FirstOrDefault(20);
     }
 
     private void UpdateAdaptiveLayout()

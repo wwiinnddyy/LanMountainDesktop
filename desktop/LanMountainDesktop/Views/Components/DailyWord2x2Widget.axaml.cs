@@ -24,7 +24,6 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
     private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationDataService();
     private const int BaseWidthCells = 2;
     private const int BaseHeightCells = 2;
-    private static readonly IReadOnlyList<int> SupportedAutoRefreshIntervalsMinutes = RefreshIntervalCatalog.SupportedIntervalsMinutes;
 
     private readonly DispatcherTimer _refreshTimer = new()
     {
@@ -360,7 +359,7 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
         {
             var snapshot = _componentSettingsService.Load();
             enabled = snapshot.DailyWordAutoRefreshEnabled;
-            intervalMinutes = NormalizeAutoRefreshIntervalMinutes(snapshot.DailyWordAutoRefreshIntervalMinutes);
+            intervalMinutes = RefreshIntervalCatalog.Normalize(snapshot.DailyWordAutoRefreshIntervalMinutes, 360);
         }
         catch
         {
@@ -386,23 +385,6 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
         {
             _refreshTimer.Stop();
         }
-    }
-
-    private static int NormalizeAutoRefreshIntervalMinutes(int minutes)
-    {
-        if (minutes <= 0)
-        {
-            return 360;
-        }
-
-        if (SupportedAutoRefreshIntervalsMinutes.Contains(minutes))
-        {
-            return minutes;
-        }
-
-        return SupportedAutoRefreshIntervalsMinutes
-            .OrderBy(value => Math.Abs(value - minutes))
-            .FirstOrDefault(360);
     }
 
     private double ResolveScale()

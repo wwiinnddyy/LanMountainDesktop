@@ -33,7 +33,6 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
     private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 4;
     private const int MaxDisplayItemCount = 12;
-    private static readonly IReadOnlyList<int> SupportedAutoRefreshIntervalsMinutes = RefreshIntervalCatalog.SupportedIntervalsMinutes;
 
     private readonly DispatcherTimer _refreshTimer = new()
     {
@@ -375,7 +374,7 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
         {
             var snapshot = _componentSettingsService.Load();
             enabled = snapshot.IfengNewsAutoRefreshEnabled;
-            intervalMinutes = NormalizeAutoRefreshIntervalMinutes(snapshot.IfengNewsAutoRefreshIntervalMinutes);
+            intervalMinutes = RefreshIntervalCatalog.Normalize(snapshot.IfengNewsAutoRefreshIntervalMinutes, 20);
             channelType = IfengNewsChannelTypes.Normalize(snapshot.IfengNewsChannelType);
         }
         catch
@@ -402,23 +401,6 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
         {
             _refreshTimer.Stop();
         }
-    }
-
-    private static int NormalizeAutoRefreshIntervalMinutes(int minutes)
-    {
-        if (minutes <= 0)
-        {
-            return 20;
-        }
-
-        if (SupportedAutoRefreshIntervalsMinutes.Contains(minutes))
-        {
-            return minutes;
-        }
-
-        return SupportedAutoRefreshIntervalsMinutes
-            .OrderBy(value => Math.Abs(value - minutes))
-            .FirstOrDefault(20);
     }
 
     private static async Task<Bitmap?> TryDownloadBitmapAsync(string? imageUrl, CancellationToken cancellationToken)

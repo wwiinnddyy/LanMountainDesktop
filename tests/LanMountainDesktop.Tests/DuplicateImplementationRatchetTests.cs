@@ -24,9 +24,15 @@ namespace LanMountainDesktop.Tests;
 public sealed class DuplicateImplementationRatchetTests
 {
     /// <summary>
-    /// 实测：71 组逐字相同、且**至少两条语句**的方法体（73 → 71 又收两族：6 处"判黑夜 + 重排"收进 ComponentThemeMode.RefreshNightVisual、6 处学习组件 detach 四步收进 StudyComponentLifecycle.Detach）。只能降，要升必须在这里写清理由。
-    /// 74 → 73 这一档是真收口：7 个学习组件各抄一份的
-    /// "读快照 → 归一语言 → 取学习监测开关"收进 <c>StudyComponentSettings.Reload</c>。
+    /// 实测：68 组逐字相同、且**至少两条语句**的方法体。只能降，要升必须在这里写清理由。
+    /// 71 → 68 是真收口：6 个新闻/热词组件各抄一份 11 行的"自动刷新分钟数落到最近一档"
+    /// （三族各 2 份逐字相同），绕开的正是早就存在的 <c>RefreshIntervalCatalog.Normalize</c>——
+    /// 现在 6 处调用点直接调那个家，收口时顺手删掉只为它存在的档位表字段，
+    /// 并给它补上第一条行为钉（<c>RefreshIntervalCatalogTests</c>，此前测试工程对它零引用）。
+    /// 更早的三笔：73 → 71 收两族（6 处"判黑夜 + 重排"进 <c>ComponentThemeMode.RefreshNightVisual</c>、
+    /// 6 处学习组件 detach 四步进 <c>StudyComponentLifecycle.Detach</c>）；
+    /// 74 → 73 收 7 个学习组件各抄一份的
+    /// "读快照 → 归一语言 → 取学习监测开关"（进 <c>StudyComponentSettings.Reload</c>）；
     /// 从 86 降到 74 有两笔，别记成一笔：
     /// ① 判据修正（按语句数而不是按行数）去掉 12 族单语句转手——它们本来就不是"复制了一份逻辑"；
     /// ② 18 个组件的 ApplyCellSize 收进 <c>ComponentDesignMetrics.ApplyCellSize</c>。
@@ -34,27 +40,32 @@ public sealed class DuplicateImplementationRatchetTests
     ///    收口后如果还按行数算，18 处转手调用又是新的一族同文——行数骗人的地方就在这。
     ///    它真正的收益是"钳到最少 1 格再重排"这段逻辑从各写一遍变成只有一处（18 个调用点）。
     /// </summary>
-    private const int IdenticalBodyFamilyCeiling = 71;
+    private const int IdenticalBodyFamilyCeiling = 68;
 
     /// <summary>
-    /// 今天实测：192 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
-    /// 193 → 192 这一档是**改判据**，不是收口（一处代码都没删）：
+    /// 今天实测：191 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
+    /// 192 → 191 是真收口（与上面 71 → 68 同一笔）：<c>NormalizeAutoRefreshIntervalMinutes</c>
+    /// 的 6 处各抄本改调早就存在的 <c>RefreshIntervalCatalog.Normalize</c>，这个名字连同 3 种体一起消失。
+    /// 再往前 193 → 192 是**改判据**，不是收口（一处代码都没删）：
     /// <c>NormalizeBody</c> 过去只认"签名行尾的 <c>=></c>"，两种真实写法被它整条丢掉——
     /// ① Allman 箭头体（<c>private void UpdateLanguageCode()</c> 换行 <c>=></c> 表达式）；
     /// ② 插值字符串里的 <c>{message}</c> 被当成方法体的开括号，一路扫到类末尾
     ///    （实测 AirAppRuntimeLogger.cs:7 的 <c>Info</c>、PlondsApplyPaths.cs:39 的 <c>GetSnapshotPath</c>）。
-    /// 修完后与 <c>dump-drift-methods.py</c> **逐处对齐**：两边同为 192 族、5449 处声明，
+    /// 修完后与 <c>dump-drift-methods.py</c> **逐处对齐**：两边同为 192 族、5449 处声明（收口前），
     /// 站点清单（文件+行号）完全相同——这条口径差异（以前是 196 对 193、差 3 族没对过）就此结清。
     /// 组成变化：<c>nameof</c>／<c>VALUES</c>／<c>SelectionOption</c>／<c>UpdateMonitoringLeaseState</c> 掉出
     /// （它们的"多种体"是吞出来的假体）；<c>GetSessionsAsync</c>／<c>GetThemeBrush</c>／<c>SetValue</c> 新进来
     /// （接口默认实现真的有多种写法，这是以前被假体挤掉的漏报）。
     /// 被这条修反转量的是最大的两族：<c>L</c> 50 处但只有 7 种体（旧数 43 处 / 18 种体），
-    /// <c>UpdateLanguageCode</c> 11 处 / 3 种体（旧数 11 处 / 10 种体）——仍是待收口的最大两族。
+    /// <c>UpdateLanguageCode</c> 11 处 / 3 种体（旧数 11 处 / 10 种体）——它两仍是待收口的最大两族；
+    /// 但 <c>L</c> 的 50 处里 44 处是**单条语句的转手**（<c>return _localizationService.GetString(...)</c>），
+    /// 按这把尺子的口径（单语句转手不算复制了一份逻辑）它不构成收口目标，别再为凑族数去动它。
     /// </summary>
-    private const int DriftFamilyCeiling = 192;
+    private const int DriftFamilyCeiling = 191;
 
     /// <summary>
-    /// 漂移普查认领的声明处数下限（今天实测 5449）。钉这个不是为了查新增，是为了查**判据自己塌掉**：
+    /// 漂移普查认领的声明处数下限（今天实测 5443：改判据后 5449，收掉 6 处各抄本少 6）。
+    /// 钉这个不是为了查新增，是为了查**判据自己塌掉**：
     /// 上面那两处 bug 都是"少认声明"，族数看着像收口（193→189），实际是普查瞎了。
     /// 只冻族数会被这种错法骗过去，冻住认领量就不会。
     /// </summary>
@@ -207,7 +218,7 @@ public sealed class DuplicateImplementationRatchetTests
         var censusSites = bodiesByName.Values.Sum(tally => tally.Sites);
         Assert.True(
             censusSites >= DriftCensusSiteFloor,
-            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5449）。" +
+            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5443）。" +
             "族数没变也说明判据在丢声明：查 NormalizeBody 又漏掉了哪种成员写法（历史上漏过 Allman 箭头体与插值字符串的大括号）");
 
         var driftFamilies = bodiesByName.Count(pair => pair.Value.VariantCount >= 2 &&

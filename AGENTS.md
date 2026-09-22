@@ -552,13 +552,23 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 `ResolveUnifiedMainRadiusValue`（13 个组件各抄一份，家早已存在）。
 已知样本（2026-09-23 重测，改判据后的数）：`L`（组件与视图的本地化小助手）50 处 / **7 种体** / 41 文件，
 最大同体组 25；`ApplyCellSize` 45 处 / 33 种体 / 最大同体组 13；`UpdateLanguageCode` 11 处 / 3 种体 / 11 文件。
+**`L` 不是收口目标，别为降族数去动它**：50 处里 46 处是单条语句的转手
+（`return _localizationService.GetString(_languageCode, key, fallback);`，只差字段名 `_localization`
+与"Allman 还是箭头"两种写法），按这把尺子的口径（单语句转手不算复制了一份逻辑）它不构成重复真源；
+剩下 4 处各有自己的语义——1 处现读快照设置、1 处走 `GetStringWithSourceFallback`（兜底口径不同）、
+2 处调静态 `LocalizationService.GetString`。真要动它得先定"兜底到底听谁的"，那是产品口径不是机械收口。
 **这两把普查尺子的结果已经冻成上限**：`tests/.../DuplicateImplementationRatchetTests.cs`，
-只许降不许升——当前 **71 组逐字相同的方法体（脚本同数）、192 个同名不同体的漂移族**，
-外加一条"普查认领量 ≥5400 处声明"的下限（今天实测 5449）。
+只许降不许升——当前 **68 组逐字相同的方法体（脚本同数）、191 个同名不同体的漂移族**，
+外加一条"漂移普查认领量 ≥5400 处声明"的下限（今天实测 5443）。
 新抄一份就是红灯；收口一族就必须把常量改小（那条红是给你记账的，不是故障）。
-降的三笔分开记：**86 → 74** 是判据从"行数 ≥2"改成"语句数 ≥2"（去掉 12 族单语句转手，不是收口成果）；
+降的几笔分开记：**86 → 74** 是判据从"行数 ≥2"改成"语句数 ≥2"（去掉 12 族单语句转手，不是收口成果）；
 **74 → 73** 收 `ReloadLanguageCode`（7 处）；**73 → 71** 收两族——6 处"判黑夜 + `UpdateAdaptiveLayout`"
-进 `ComponentThemeMode.RefreshNightVisual`、6 处学习组件 detach 四步进 `StudyComponentLifecycle.Detach`。
+进 `ComponentThemeMode.RefreshNightVisual`、6 处学习组件 detach 四步进 `StudyComponentLifecycle.Detach`；
+**71 → 68（同时漂移 192 → 191）** 收 `NormalizeAutoRefreshIntervalMinutes`——6 个组件各抄一份 11 行的
+"落到最近一档"，**绕开的就是早就存在的 `RefreshIntervalCatalog.Normalize`**（档位表 6 家全部共享同一份，
+没有一个组件自带表），改调家之后连带删掉只为它存在的 `SupportedAutoRefreshIntervalsMinutes` 字段
+（6 处 × 16 行、净 -108 行），并给这个家补上第一条行为钉 `RefreshIntervalCatalogTests`
+（此前测试工程对 `RefreshIntervalCatalog` **零引用**，7 个调用点的档位规则从没被测过）。
 "钳到最少 1 格再重排"那次收口（18 处）对族数无净影响，它的收益是逻辑只有一处实现。
 "逐字相同"那一族数按**语句数 ≥2** 算，不是按行数：一条语句写成两行不算复制了一份逻辑。
 这条是 2026-09-22 收 18 处 `ApplyCellSize` 时逼出来的——收口后各组件只剩

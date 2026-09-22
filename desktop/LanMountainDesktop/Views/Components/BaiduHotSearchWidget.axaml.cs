@@ -26,7 +26,6 @@ public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget
     private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 2;
     private const int MaxDisplayItemCount = 4;
-    private static readonly IReadOnlyList<int> SupportedAutoRefreshIntervalsMinutes = RefreshIntervalCatalog.SupportedIntervalsMinutes;
 
     private readonly DispatcherTimer _refreshTimer = new()
     {
@@ -436,7 +435,7 @@ public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget
         {
             var snapshot = _componentSettingsService.Load();
             enabled = snapshot.BaiduHotSearchAutoRefreshEnabled;
-            intervalMinutes = NormalizeAutoRefreshIntervalMinutes(snapshot.BaiduHotSearchAutoRefreshIntervalMinutes);
+            intervalMinutes = RefreshIntervalCatalog.Normalize(snapshot.BaiduHotSearchAutoRefreshIntervalMinutes, 15);
             sourceType = BaiduHotSearchSourceTypes.Normalize(snapshot.BaiduHotSearchSourceType);
             _componentColorScheme = snapshot.ColorSchemeSource;
         }
@@ -465,23 +464,6 @@ public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget
         {
             _refreshTimer.Stop();
         }
-    }
-
-    private static int NormalizeAutoRefreshIntervalMinutes(int minutes)
-    {
-        if (minutes <= 0)
-        {
-            return 15;
-        }
-
-        if (SupportedAutoRefreshIntervalsMinutes.Contains(minutes))
-        {
-            return minutes;
-        }
-
-        return SupportedAutoRefreshIntervalsMinutes
-            .OrderBy(value => Math.Abs(value - minutes))
-            .FirstOrDefault(15);
     }
 
     private double ResolveScale()
