@@ -170,11 +170,6 @@ internal sealed class DeploymentLocator
         };
     }
 
-    public string? ResolveHostExecutablePath()
-    {
-        return ResolveHostExecutablePathLegacy();
-    }
-
     private string? TryResolveExplicitAppRoot(
         string explicitRoot,
         string executable,
@@ -616,15 +611,6 @@ internal sealed class DeploymentLocator
             Console.Error.WriteLine($"[DeploymentLocator] Cleanup failed: {ex.Message}");
             // 蹇界暐娓呯悊澶辫触
         }
-    }
-
-    /// <summary>
-    /// 浠呮竻鐞嗗凡鏍囪涓?destroy鐨勯儴缃诧紙鍏煎鏃ф柟娉曪級
-    /// </summary>
-    [Obsolete("Use CleanupOldDeployments instead")]
-    public void CleanupDestroyedDeployments()
-    {
-        CleanupOldDeployments(3);
     }
 
     public static Version ParseVersionFromDirectory(string path)

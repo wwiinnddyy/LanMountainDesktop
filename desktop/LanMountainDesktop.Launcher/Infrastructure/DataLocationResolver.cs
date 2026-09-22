@@ -64,14 +64,6 @@ internal sealed class DataLocationResolver
     }
 
     /// <summary>
-    /// 桌面应用数据目录（组件、设置、插件等）
-    /// </summary>
-    public string ResolveDesktopDataPath()
-    {
-        return Path.Combine(ResolveDataRoot(), DesktopFolderName);
-    }
-
-    /// <summary>
     /// 数据位置配置文件路径（保存在 Launcher 数据目录下）
     /// </summary>
     public string ResolveConfigPath()
@@ -111,19 +103,6 @@ internal sealed class DataLocationResolver
         {
             return false;
         }
-    }
-
-    public DataLocationMode ResolveMode()
-    {
-        var config = LoadConfig();
-        if (config is null)
-        {
-            return DataLocationMode.System;
-        }
-
-        return string.Equals(config.DataLocationMode, DataLocationContract.PortableModeValue, StringComparison.OrdinalIgnoreCase)
-            ? DataLocationMode.Portable
-            : DataLocationMode.System;
     }
 
     /// <summary>

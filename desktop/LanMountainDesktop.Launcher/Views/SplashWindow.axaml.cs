@@ -213,24 +213,6 @@ public partial class SplashWindow : Window, ISplashStageReporter
         });
     }
 
-    public void UpdateProgress(int percent, string? message = null)
-    {
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (!string.IsNullOrWhiteSpace(message) &&
-                this.FindControl<TextBlock>("StatusText") is { } statusText)
-            {
-                statusText.Text = message;
-            }
-
-            if (this.FindControl<ProgressBar>("ProgressIndicator") is { } progressIndicator)
-            {
-                progressIndicator.IsIndeterminate = false;
-                progressIndicator.Value = Math.Clamp(percent, 0, 100);
-            }
-        });
-    }
-
     public void UpdateStatus(string message)
     {
         Dispatcher.UIThread.Post(() =>

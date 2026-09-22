@@ -203,36 +203,6 @@ internal sealed class StartupAttemptRegistry
         return result;
     }
 
-    public StartupAttemptRecord? TryGetLiveCoordinatorAttempt()
-    {
-        StartupAttemptRecord? result = null;
-        ExecuteWithLock(() =>
-        {
-            var record = LoadUnsafe();
-            if (record is not null && IsCoordinatorLive(record))
-            {
-                result = Clone(record);
-            }
-        });
-
-        return result;
-    }
-
-    public StartupAttemptRecord? TryGetLatestAttempt()
-    {
-        StartupAttemptRecord? result = null;
-        ExecuteWithLock(() =>
-        {
-            var record = LoadUnsafe();
-            if (record is not null)
-            {
-                result = Clone(record);
-            }
-        });
-
-        return result;
-    }
-
     public StartupAttemptRecord AssignOwnedHostProcess(
         int hostPid,
         StartupStage stage,

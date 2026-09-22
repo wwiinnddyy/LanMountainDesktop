@@ -478,12 +478,6 @@ public partial class MainWindow : Window
         _componentLibraryWindowService.Close(this);
     }
 
-    private void OnCloseComponentSettingsClick(object? sender, RoutedEventArgs e)
-    {
-        _ = sender;
-        _ = e;
-    }
-
     private void ApplyTaskbarSettings(AppSettingsSnapshot snapshot)
     {
         _topStatusComponentIds.Clear();

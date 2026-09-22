@@ -1,5 +1,3 @@
-using System.Globalization;
-
 namespace LanMountainDesktop.Launcher;
 
 internal sealed class CommandContext
@@ -91,14 +89,6 @@ internal sealed class CommandContext
     public string? GetOption(string key)
     {
         return Options.TryGetValue(key, out var value) ? value : null;
-    }
-
-    public int GetIntOption(string key, int fallback)
-    {
-        var raw = GetOption(key);
-        return int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
-            ? value
-            : fallback;
     }
 
     private string InferLaunchSource()
