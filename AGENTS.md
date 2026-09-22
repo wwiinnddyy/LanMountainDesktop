@@ -439,6 +439,15 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 唯一的实际行为变化是 `Normalize` 现在会 Trim：`settings.json` 里写成 `" en-US "` 时以前落回中文、
 现在落回英文；这个值只有手改才会出现，取更正确的那个解释（`LanguageCodeContractTests` 里钉着）。
 
+**取文案不许拿键名当兜底**：`GetString(语言, key, key)` 在那种语言缺键时就把标识符印到界面上。
+统一走 `LocalizationService.GetStringWithSourceFallback(语言, key)`（当前语言 → 源语言 `zh-CN` → 才回键名），
+或者像其余 44 处那样给一句真文案。守卫 `LocalizationLookups_NeverFallBackToTheRawKey`（种过 scratch 文件验红）。
+这条是 2026-09-22 量出来的真缺陷：设置页 VM 的 `L(string key)` 是单参形态，15 个调用点里
+**ja-JP 与 ko-KR 各缺 7 个键**（`settings.search.placeholder`、`settings.search.no_results`、`settings.window.back` 等，
+按 `desktop/LanMountainDesktop/Localization/*.json` 逐键对过），所以日/韩用户打开设置页看到的就是这些英文标识符。
+**没有顺手补翻译**——日/韩用词的措辞属内容决定（见待办 G1-K 的缺口口径），这里只把"缺键时说什么"接对：
+现在的行为是那 7 处显示 zh-CN 原文，而不是键名。
+
 **天气接口的 locale 拼法另有一处家**：`en_us` / `zh_cn` 是供应商词表，不是 IETF 语言码，一律走
 `desktop/LanMountainDesktop/Services/XiaomiWeatherLocales.cs`（守卫 `WeatherProviderLocaleValues_LiveInExactlyOnePlace`，
 连"再写一份 `NormalizeWeatherLocale`"一起禁掉）。收口前这两个拼法散在 3 份逐字相同的私有方法与 1 处选项默认值里；

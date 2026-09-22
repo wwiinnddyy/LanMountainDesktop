@@ -43,7 +43,7 @@ public sealed partial class SettingsWindowViewModel : ViewModelBase
         IsWindowsOs = OperatingSystem.IsWindows();
     }
 
-    private string L(string key) => _localizationService.GetString(_languageCode, key, key);
+    private string L(string key) => _localizationService.GetStringWithSourceFallback(_languageCode, key);
 
     [ObservableProperty]
     private string _title = string.Empty;

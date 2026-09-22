@@ -1481,6 +1481,40 @@ public sealed class SourceIntegrityTests
     }
 
     /// <summary>
+    /// 取文案时不许把**键名自己**当兜底：<c>GetString(语言, key, key)</c> 一旦该语言缺这个键，
+    /// 界面上印出来的就是 <c>settings.search.placeholder</c> 这种标识符。
+    /// 2026-09-22 实测到一例真的：设置页 VM 的 <c>L(key)</c> 是单参形态，15 个调用点里有 7 个键
+    /// 在 ja-JP 与 ko-KR 表里都不存在（<c>LocalizationParityRatchetTests</c> 量的那批缺口的子集），
+    /// 日/韩用户打开设置页就看到键名。现改走 <c>LocalizationService.GetStringWithSourceFallback</c>
+    /// （当前语言 → 源语言 zh-CN → 才回键名）。
+    /// 其余 <c>GetString(语言, key, "文案")</c> 的写法不受这条约束：兜底是真句子，不是标识符。
+    /// </summary>
+    [Fact]
+    public void LocalizationLookups_NeverFallBackToTheRawKey()
+    {
+        var rawKeyFallback = new Regex(@"GetString\s*\([^,()]+,\s*(\w+)\s*,\s*\1\s*\)");
+
+        var offenders = new List<string>();
+        foreach (var file in SourceFiles())
+        {
+            foreach (var (line, number) in CodeLines(file))
+            {
+                var match = rawKeyFallback.Match(line);
+                if (match.Success)
+                {
+                    offenders.Add(
+                        $"{RelativeToRepo(file)}:{number} 用键名 \"{match.Groups[1].Value}\" 自己当兜底文案，"
+                        + "该语言缺键时界面会印出标识符——请用 GetStringWithSourceFallback 或给一句真文案");
+                }
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 处把键名当兜底文案的取词调用：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
+    /// <summary>
     /// 每个 <c>.cs</c> 都得被某个工程认领：就近目录有 <c>.csproj</c>，且不被那个工程的
     /// <c>Compile Remove/Exclude</c> 排除。2026-09-22 第一次量：18 个工程的 Compile 项共 899 个文件，
     /// 磁盘上 900 个，多出来的那个是 <c>scripts/GitCommitAnalyzer.cs</c>——662 行 C#，没有任何工程编译它、

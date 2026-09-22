@@ -80,4 +80,31 @@ public sealed class LocalizationServiceTests
         var result = _service.GetString("ja-JP", "test.key", "AllCleared");
         Assert.Equal("AllCleared", result);
     }
+
+    /// <summary>
+    /// 实测（2026-09-22）：设置页在用的 15 个键里，ja-JP 与 ko-KR 各缺 7 个
+    /// （<c>settings.search.placeholder</c>、<c>settings.window.back</c> 等），
+    /// 而 GetString 不做跨语言回退——修复前那些位置直接把键名印给用户。
+    /// </summary>
+    [Theory]
+    [InlineData("ja-JP")]
+    [InlineData("ko-KR")]
+    [InlineData("en-US")]
+    public void GetStringWithSourceFallback_NeverHandsOutTheRawKey(string languageCode)
+    {
+        const string key = "settings.search.placeholder";
+
+        var result = _service.GetStringWithSourceFallback(languageCode, key);
+
+        Assert.NotEqual(key, result);
+        Assert.False(string.IsNullOrWhiteSpace(result));
+    }
+
+    [Fact]
+    public void GetStringWithSourceFallback_StillReturnsKeyWhenNoLocaleHasIt()
+    {
+        const string key = "no.such.key.in.any.language.table";
+
+        Assert.Equal(key, _service.GetStringWithSourceFallback("ja-JP", key));
+    }
 }

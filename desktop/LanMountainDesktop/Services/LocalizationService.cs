@@ -39,6 +39,26 @@ public sealed class LocalizationService
     }
 
     /// <summary>
+    /// 只给键名的取法：当前语言没有这个键时退回**源语言（zh-CN）文案**，两边都没有才退回键名。
+    /// 2026-09-22 实测的必要性：ja-JP / ko-KR 各缺 300 多个键（见 <c>LocalizationParityRatchetTests</c>），
+    /// 而 <see cref="GetString"/> 不做跨语言回退——设置页里有 15 处 <c>L(key)</c> 直接把键名当兜底，
+    /// 其中 7 个键（<c>settings.search.placeholder</c>、<c>settings.window.back</c> 等）在日/韩表里就没有，
+    /// 于是日语/韩语用户的设置页上显示的是 <c>settings.search.placeholder</c> 这种标识符。
+    /// 这里不新增任何译文，只是把已有的源语言文案接上；补翻译仍是单独的决定。
+    /// </summary>
+    public string GetStringWithSourceFallback(string languageCode, string key)
+    {
+        var text = GetString(languageCode, key, string.Empty);
+        if (!string.IsNullOrWhiteSpace(text))
+        {
+            return text;
+        }
+
+        var sourceText = GetString(DefaultLanguageCode, key, string.Empty);
+        return string.IsNullOrWhiteSpace(sourceText) ? key : sourceText;
+    }
+
+    /// <summary>
     /// 清除指定语言代码的缓存，强制下次重新加载。
     /// 在语言切换时调用此方法以确保加载最新的语言文件。
     /// </summary>
