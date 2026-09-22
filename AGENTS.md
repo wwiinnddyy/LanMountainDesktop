@@ -533,6 +533,20 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 零调用却报不出来（`Save` 在全仓出现几百次），终判靠的是"删掉方法后全解决方案是否仍 0 错误"。
 名单里的条目要复核，别只信计数。
 
+**每个 `.cs` 都必须被某个工程认领**：就近目录要有 `.csproj`，且不被该工程的 `Compile Remove/Exclude` 命中
+（守卫 `EveryCSharpFile_IsClaimedByAProject`；模板包 `content/**` 与 SDK 的 `_build_verify_*/**/*.cs` 是有意排除，算认领）。
+2026-09-22 第一次量的数：18 个工程的 Compile 项共 899 个文件，磁盘上 900 个，多出来的是
+`scripts/GitCommitAnalyzer.cs`——662 行 C#，没工程编译、没脚本/工作流调用、只在 `docs/archive/` 的一次自动提交记录里被提过，
+而同样的分析在 `scripts/Analyze-GitCommits.ps1` 与 `scripts/analyze_git_commits.py` 里各有一份，已删（**这两份脚本副本还在**，
+它们是 dev 工具、不进产品，要不要合一份属另一件事）。这条守卫存在的理由不只是"少 662 行"：
+**编译器与 IDE 都不看没被认领的文件，而两条零使用棘轮把 `scripts` 当生产目录数**——那种文件里声明的类型会被当成"待判死码"，
+它文件体内部的自引用又会被当成"有人用"，等于让前面的探针说谎。
+判据是文本级的（不展开 MSBuild 条件与 `Directory.Build.props`：那只会让"没人编译"更多，不会反过来误判）。
+两次变异都验过：在 `scripts/` 放一个野文件→红并报出路径；在 SDK 的 `Compile Remove` glob 下放一个→仍绿（证明排除逻辑真的在跑，不是恒假）。
+**顺带量到的一件事**（不改，先记）：`mobile/LanMountainDesktop.Mobile(.Android)` 两个工程不在 `LanMountainDesktop.slnx` 里
+（CI 用 `dotnet build <csproj>` 单独编，见 `build.yml:218`、`code-quality.yml:83`），所以本地 `dotnet build` 全量门覆盖 11 个工程、
+不等于仓库里的 18 个——移动端编译破了，本地这道门不会响。
+
 **对外报出去的身份只有一处字面量**：所有 HTTP 请求的 User-Agent 都写进
 `desktop/LanMountainDesktop/Services/HttpUserAgents.cs`，别处只引用不再抄（守卫
 `HttpRequestIdentityStrings_LiveInOnePlace`；允许的字面量只有请求头名 `"User-Agent"` 本身）。

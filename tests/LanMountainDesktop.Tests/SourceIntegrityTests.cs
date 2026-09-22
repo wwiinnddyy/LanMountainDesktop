@@ -1,4 +1,5 @@
 using LanMountainDesktop.Shared.Contracts.Deployment;
+using System.Text;
 using System.Text.RegularExpressions;
 
 using Xunit;
@@ -1432,6 +1433,130 @@ public sealed class SourceIntegrityTests
         Assert.True(
             offenders.Count == 0,
             $"{offenders.Count} 处绕开 UpdatePaths 的更新布局磁盘名：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
+    /// <summary>
+    /// 每个 <c>.cs</c> 都得被某个工程认领：就近目录有 <c>.csproj</c>，且不被那个工程的
+    /// <c>Compile Remove/Exclude</c> 排除。2026-09-22 第一次量：18 个工程的 Compile 项共 899 个文件，
+    /// 磁盘上 900 个，多出来的那个是 <c>scripts/GitCommitAnalyzer.cs</c>——662 行 C#，没有任何工程编译它、
+    /// 没有任何脚本或工作流调用它，而同样的活在 <c>scripts/Analyze-GitCommits.ps1</c> 与
+    /// <c>scripts/analyze_git_commits.py</c> 里各有一份（那两份是 dev 工具，不进产品，先只删这份没人认领的）。
+    /// 为什么值得立一条守卫：编译器不看它、IDE 也不看它，而两条零使用棘轮把 <c>scripts</c> 当生产目录数——
+    /// 它声明的类型会被当成"待判死码"，它自己文件体内的互相引用又会被当成"有人用"。
+    /// 判据是文本级的（只认"就近有 csproj"与"被 Remove/Exclude 命中"），不展开 MSBuild 条件与
+    /// <c>Directory.Build.props</c>：那些只会让"其实没人编译"更多，不会把没人编译的判成有人编译。
+    /// </summary>
+    [Fact]
+    public void EveryCSharpFile_IsClaimedByAProject()
+    {
+        var projectDirectories = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var project in Directory.EnumerateFiles(RepoRoot, "*.csproj", SearchOption.AllDirectories))
+        {
+            if (IsUnderBuildArtifactDirectory(project))
+            {
+                continue;
+            }
+
+            projectDirectories[Path.GetDirectoryName(project)!] = project;
+        }
+
+        var scannedDirectories = new[] { "core", "desktop", "airapp", "install", "mobile", "platform", "packaging", "scripts", "tests" };
+        var offenders = new List<string>();
+        var claimed = 0;
+
+        foreach (var directory in scannedDirectories)
+        {
+            var root = Path.Combine(RepoRoot, directory);
+            if (!Directory.Exists(root))
+            {
+                continue;
+            }
+
+            foreach (var file in Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories))
+            {
+                if (IsUnderBuildArtifactDirectory(file))
+                {
+                    continue;
+                }
+
+                var owner = FindNearestProjectDirectory(file, projectDirectories.Keys);
+                if (owner is null)
+                {
+                    offenders.Add($"{RelativeToRepo(file)} 没有任何工程认领（就近目录里没有 .csproj），它不会被编译进任何二进制");
+                    continue;
+                }
+
+                var relativeToProject = Path.GetRelativePath(owner, file).Replace('\\', '/');
+                if (IsExcludedByProject(File.ReadAllText(projectDirectories[owner]), relativeToProject))
+                {
+                    continue;
+                }
+
+                claimed++;
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{claimed} 个 .cs 被工程认领，另有 {offenders.Count} 个没人认领：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
+    private static bool IsUnderBuildArtifactDirectory(string path) => path
+        .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+        .Any(segment => segment is "obj" or "bin" or ".git" or "artifacts" or "node_modules");
+
+    private static string? FindNearestProjectDirectory(string file, IEnumerable<string> projectDirectories)
+    {
+        var current = Path.GetDirectoryName(file);
+        while (!string.IsNullOrEmpty(current))
+        {
+            if (projectDirectories.Contains(current))
+            {
+                return current;
+            }
+
+            current = Path.GetDirectoryName(current);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// 工程自己说"这些不编译"（<c>Compile Remove/Exclude</c>）就当它有意为之：
+    /// 模板包 <c>content/**</c> 与 SDK 的 <c>_build_verify_*/**/*.cs</c> 临时目录都是这种。
+    /// </summary>
+    private static bool IsExcludedByProject(string projectXml, string relativeToProject) => Regex
+        .Matches(projectXml, @"<Compile\s+(?:Remove|Exclude)=""([^""]+)""")
+        .Select(match => match.Groups[1].Value.Replace('\\', '/'))
+        .Any(pattern => GlobMatches(pattern.TrimEnd('/'), relativeToProject));
+
+    /// <summary>只支持 MSBuild 通配里会出现的三种：<c>**/</c>（任意层级，可空）、<c>**</c>、<c>*</c>（单层）。</summary>
+    private static bool GlobMatches(string pattern, string path)
+    {
+        var builder = new StringBuilder("^");
+        for (var index = 0; index < pattern.Length; index++)
+        {
+            if (pattern.Length >= index + 3 && pattern[index..(index + 3)] == "**/")
+            {
+                builder.Append("(?:.*/)?");
+                index += 2;
+            }
+            else if (pattern.Length >= index + 2 && pattern[index..(index + 2)] == "**")
+            {
+                builder.Append(".*");
+                index++;
+            }
+            else if (pattern[index] == '*')
+            {
+                builder.Append("[^/]*");
+            }
+            else
+            {
+                builder.Append(Regex.Escape(pattern[index..(index + 1)]));
+            }
+        }
+
+        return new Regex(builder.Append('$').ToString()).IsMatch(path);
     }
 
     /// <summary>
