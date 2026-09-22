@@ -5,6 +5,7 @@ using System.Reflection;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using LanMountainDesktop.Views.Components;
 
 namespace LanMountainDesktop.ComponentSystem;
 
@@ -21,15 +22,21 @@ internal static class ComponentPreviewRuntimeQuiescer
         control.Focusable = false;
         control.AttachedToVisualTree += (_, _) =>
             Dispatcher.UIThread.Post(() => Quiesce(control), DispatcherPriority.Background);
-        control.DetachedFromVisualTree += (_, _) => Quiesce(control);
+        control.DetachedFromVisualTree += (_, _) =>
+        {
+            Quiesce(control);
+            ReleaseTimeZoneBindings(control);
+        };
         Quiesce(control);
     }
 
+    /// <summary>预览控件被丢掉时调这里：停表之外还要退掉服务订阅，否则应用级的 TimeZoneService 会一直替它持有这棵已分离的 visual tree。</summary>
     public static void Detach(Control control)
     {
         ArgumentNullException.ThrowIfNull(control);
 
         Quiesce(control);
+        ReleaseTimeZoneBindings(control);
     }
 
     public static void Quiesce(Control control)
@@ -51,6 +58,14 @@ internal static class ComponentPreviewRuntimeQuiescer
         foreach (var descendant in root.GetVisualDescendants().OfType<Control>())
         {
             yield return descendant;
+        }
+    }
+
+    private static void ReleaseTimeZoneBindings(Control root)
+    {
+        foreach (var candidate in EnumerateControls(root))
+        {
+            (candidate as ITimeZoneAwareComponentWidget)?.ClearTimeZoneService();
         }
     }
 

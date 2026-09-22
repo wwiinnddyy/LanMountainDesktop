@@ -355,6 +355,20 @@ helper 住在 Core 是因为写同一批磁盘文件的是三个进程（宿主�
 `CancellationHelper` 已搬到 Core（与 `AtomicFileWriter`、`FileOperationRetryHelper` 同一先例：同一动作散在多个二进制里就住 Core），
 启动器与安装器现在够得到它，守卫也据此覆盖全部二进制。
 
+**组件与时区服务之间那对订阅/退订只认一处**：一律走 `desktop/LanMountainDesktop/Views/Components/TimeZoneServiceBinding.cs`
+的 `Replace` / `Clear`（两个方法都返回新的字段值，语义与原来逐字一致：换服务时先退旧再订新，退订不刷新），
+不要在组件里手写 `TimeZoneChanged += / -=`。收口前 10 个时钟/日历组件各抄了一份 Set 与一份 Clear（20 个方法体，
+实测唯一差异是 `StandbyDigitalClockWidget` 把 4 行守卫压成 1 行）。为什么要收成一家：`TimeZoneService` 是应用级
+长命对象、事件没有任何退订兜底，谁抄漏 `-=` 那一边，服务就替一个已经从桌面分离掉的控件一直持有整棵 visual tree。
+顺带去掉一处潜在崩溃：原来 `SetTimeZoneService(null)` 会在 `+=` 那行抛 `NullReferenceException`（今天没有调用方传 null）。
+**已修的真实泄漏**：组件库预览（`FusedDesktopComponentLibraryControl`、`ComponentLibraryWindow`、`MainWindow.ComponentPreviewImages`
+三处）每换一次选中项就造一个预览控件、`Detach`/`Dispose` 时只停了计时器、没退订——浏览一轮组件库就往那个长命服务上
+挂一串永不释放的控件。现在 `ComponentPreviewRuntimeQuiescer` 在丢预览时统一退订
+（`TimeZoneServiceBindingTests.QuiescingAPreview_ReleasesTheServiceReferenceToTheWidget` 用订阅数 0→1→0 钉住，
+把那一行注释掉立刻红）。
+`FusedDesktopManagerService.CreateWidgetWindow`（662 起）那条路仍只 `window.Close()` + `_widgetWindows.Clear()`、
+不退订，与 #47 的安装器 VM 同族（要给窗口/VM 接上生命周期），登记未修。
+
 **安装根目录下那个 `.Launcher` 数据目录名只认一处**：一律用 `core/LanMountainDesktop.Core/Deployment/DeploymentLayout.cs`
 的 `LauncherStateDirectoryName`，不要在 Core / 宿主 / 启动器里再抄字面量（该类注释本来就写着"禁止在任何一侧硬编码"，
 2026-09-21 实测仍有 4 处各抄一份；安装器倒是用了常量）。同族另一个坑：启动器把启动诊断写进
