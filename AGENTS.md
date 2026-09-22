@@ -594,6 +594,14 @@ C# 主构造器会被当成方法声明（`class X(IProgress<…>? p)` 报成一
 以及**用 python heredoc 写 `\b` 会落成一个退格控制字符**——规则看着在文件里，正则永远不匹配，
 这条直到重跑才发现。所以新增/改动判据后必须**直接调用被改的函数验一次**，别只看总计数。
 终判永远是删除法：A 级只是线索，删掉重建看编译红不红。
+**这条轴已经进闸门**：判据与名单的唯一权威是 `tests/LanMountainDesktop.Tests/ZeroUseInstanceMemberRatchetTests.cs`
+（29 条登记、`CensusAnchors` 钉覆盖面、"条目没了"和"条目已被真引用"两个方向都会红；
+种一个零调用 `private` 实例方法立刻红，变异验过）。`scripts/dump-dead-instance-methods.py` 降级成**报告面**：
+判据相同、退出码恒 0、**不再持有名单**——理由抄两份就是第二个真源，一定会漂。
+剥字符串这件事另有一份共享实现 `tests/LanMountainDesktop.Tests/SourceTextScanning.cs`，
+两条棘轮（类型与实例成员）都用它：只剥引号内文本、**插值洞 `{expr}` 必须保留**——
+第一版整段换掉就把 `$"… {FormatRelative(…)}"` 里的真调用吞了，当场把活方法报成死码（这条是实测踩的，
+`StringLiteralStrippingKeepsInterpolationHoles` 四个方向钉住）。
 **滑杆的 `Minimum`/`Maximum` 不许写死数字**，要绑视图模型上从 `DesktopGridLimits` 读的那四个量程属性——
 设置页量程是这套数的第四份副本，漂了的症状不是崩，而是"拖到尽头网格不动"或"存进去被运行期悄悄钳掉"。
 

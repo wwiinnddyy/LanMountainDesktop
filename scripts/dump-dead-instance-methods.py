@@ -1,4 +1,7 @@
-"""实例成员死约定普查：非静态类型上"定义了、生产里没人调"的实例方法。
+"""实例成员死约定普查（报告用）：非静态类型上"定义了、生产里没人调"的实例方法。
+
+本脚本是 C# 棘轮 ZeroUseInstanceMemberRatchetTests 的报告面：判据一样，但**名单只有一份**，
+在 C# 那边的 Accepted 里，改判据要两边同步、以 C# 为准（它是会红的闸门，这里只是看线索）。
 
 为什么要有这把尺子（2026-09-22 实测的两条盲区，都不是推测）：
 ① ZeroUseMemberRatchetTests 的口径是 `static class` 上的 `public/internal static` 方法，
@@ -32,7 +35,7 @@
 所以 A 级是线索不是终判——终判是删除法（删掉后重建，编译红不红）。
 
 用法：
-    python scripts/dump-dead-instance-methods.py            # 报未解释的 A/T 级 + 汇总，未解释>0 时退出码 1
+    python scripts/dump-dead-instance-methods.py            # 列 A/T 级原始线索 + 汇总（退出码恒 0）
     python scripts/dump-dead-instance-methods.py --all      # 连已登记的一起报
     python scripts/dump-dead-instance-methods.py desktop/LanMountainDesktop/Services   # 只看这个范围
 """
@@ -101,80 +104,10 @@ CONVENTION_NAMES = {
     "OnUnloaded", "Initialize", "Setup", "Teardown", "Main",
 }
 
-# 已逐条读过、写清"为什么还留着"的条目。键 = 类型路径.方法名。
-# 只许缩短；这次没再命中的条目会进"名单失效"（防名单烂掉）。
-# 同名重载共用一个键（如 RelayCommand 与 RelayCommand<T>），理由要覆盖两者。
-EXPLAINED = {
-    "MainWindow.OnComponentLibraryCategoryViewportPointerPressed":
-        "组件库分类条的一整套拖拽手势（配套字段 _isComponentLibraryCategoryGestureActive 等只被这四个"
-        "方法读写）。MainWindow.axaml:681 的 ComponentLibraryCategoryViewport 存在，但四个指针事件"
-        "一个都没接上 → 删掉等于丢掉一个写完了的交互，接不接是产品决定：待办 G1-AW",
-    "MainWindow.OnComponentLibraryCategoryViewportPointerMoved": "同上，G1-AW 的一套手势",
-    "MainWindow.OnComponentLibraryCategoryViewportPointerReleased": "同上，G1-AW 的一套手势",
-    "MainWindow.OnComponentLibraryCategoryViewportPointerCaptureLost": "同上，G1-AW 的一套手势",
-    "RelayCommand.RaiseCanExecuteChanged":
-        "ICommand 不含这个方法，靠宿主在条件变化时主动调；全仓（含 .axaml）零调用＝命令可用态从不重算。"
-        "与 G1-AU（RefreshFromSettings 从不被推）同族：这是缺口不是死码，接线与否等拍板",
-    "PublicIpcHostService.PublishLoadingStateAsync":
-        "Core 是已发布包：删公开成员属跨二进制破坏性变更，跟 SDK 版本号一起定：待办 G1-U",
-    "LanMountainDesktopIpcClient.GetSessionInfoAsync": "同上，Core 公开面：待办 G1-U",
-    # —— 启动进度那条链（族①，8 条一次判完，全部挂 G1-AZ）——
-    "LoadingTimeoutHandler.SetItemTimeout":
-        "所属类型 LoadingTimeoutHandler 整个类没被 new 过（已在 ZeroUseTypeRatchetTests 名单里）："
-        "超时监控 + 重试计数这套能力从来没跑过",
-    "LoadingTimeoutHandler.ResetRetryCount": "同上，没被构造的类型里的方法",
-    "LoadingStateManager.UpdateProgress":
-        "manager 本身是活的（App.axaml.cs:235 new、239 RegisterItem、240 StartItem），"
-        "但这个'推进度'的入口没人调——全仓只注册了 system.init 一个条目，进度基本是静态的",
-    "LoadingStateManager.SetStage": "同上：阶段切换的入口没人调，CurrentStage 一直停在初始值",
-    "LoadingStateManager.CheckTimeouts": "同上：这是超时监控的心跳，配合从没被 new 的 LoadingTimeoutHandler 用",
-    "LoadingStateReporter.ReportItemProgressAsync":
-        "上报链的活路径是事件驱动（Start() 里订阅 StateChanged/OverallProgressChanged），"
-        "这三个 Report*Async 是'显式调用'版备用 API，零调用点",
-    "LoadingStateReporter.ReportStageChangeAsync": "同上，事件路径已覆盖",
-    "LoadingStateReporter.ReportErrorAsync": "同上，事件路径已覆盖（错误态另有 AppLogger）",
-    "AttendanceDataStore.LoadSessions":
-        "所属类型已在 ZeroUseTypeRatchetTests 名单里（考勤整模块含 AttendanceModels 无入口，等拍板）："
-        "这两个是它的读/写侧，模块接不接一起定，不单独删",
-    "AttendanceDataStore.UpsertSession": "同上，考勤模块无入口",
-    # —— 三条"能力实现完整、界面上没有任何入口"（待办 G1-BA）——
-    "DataStorageService.GetAvailableDiskSpaceAsync":
-        "全仓只有这一处算 AvailableFreeSpace（grep 实测），也就是说"
-        "\"还剩多少磁盘\"这件事在设置页/存储页上根本没有地方显示；删掉就是把能力抹掉，先登记",
-    "StudyDataStore.TryGetSessionReport":
-        "按 sessionId 读单份会话报告，生产零调用（同类其它读取路径是活的）："
-        "学习面板列得出历史、点不开单场报告，属能力没入口",
-    "TimeZoneService.GetCommonTimeZones":
-        "那张 7 个常用时区的表只有这里构造（活路径 TimeZoneService.cs:57 是按 id 解析单个时区）："
-        "没有\"从常用列表里挑\"的界面，用户只能填 id",
-    # —— 隐私同意（待办 G1-AY）：写侧活着、读侧整条没人接 ——
-    "PrivacyAgreementService.HasUserAgreed":
-        "SaveAgreement 是活的（OobeSessionCommitService.cs:67 会落盘），但没人回头查这个位："
-        "同意状态只写不读＝启动流程没有这道闸。它是唯一的读取实现，删了就再看不出这里缺什么",
-    "PrivacyAgreementService.GetCurrentAgreementVersion":
-        "同上家族：协议版本号只有这里给（返回常量 CurrentAgreementVersion），"
-        "\"版本变了要不要重新征同意\"没接，属产品决定",
-    "PrivacyAgreementService.ClearAgreement":
-        "重置同意状态（删文件）的能力，注释自己写着\"用于测试或重置\"，但既没挂设置页也没挂 dev 面板",
-    # —— AirApp 包管理侧的三条断头路（待办 G1-BB）——
-    "AirAppRuntimeService.RegisterInstalledAirAppPackageCore":
-        "把\"外部已经放进包目录的包\"登记进目录的唯一实现（ReadManifest → EnsureInstalled → 更新目录 → "
-        "标 PendingRestart）。它的两个公开入口（InstallAirAppPackage / RegisterInstalledAirAppPackage）"
-        "本轮实测零调用已删，于是这条能力整体不可达；活的安装路径走 facade 的 InstallPackage → "
-        "InstallAirAppPackageCore(375)。留作\"支持手工放包/修复目录\"这条能力的证据，删了就没人在重做时知道它有过",
-    "AirAppMarketAssetCacheService.Invalidate":
-        "注释写着\"卸载后清缓存\"，但**宿主根本没有 AirApp 卸载路径**（全仓 grep Uninstall 只有遥测事件名、"
-        "启动器的旧版本迁移与文案，没有一处是轻应用卸载）：所以这条不是漏调，是整条能力没入口",
-    "AirAppMarketAirAppEntry.GetVersionSummary":
-        "\"v版本 | API x | Host >= y\" 这行摘要只有这里构造，市场页/详情面板都没地方显示它",
-    "AirAppLoader.LoadAll":
-        "一次装载全部已装包的入口，生产走的是别的加载路径（按安装/启动时机增量装），"
-        "只有 AirAppLoaderTests 在调 → 属\"能用但没人用\"，接不接是设计决定",
-    "CompositionVisualAnimationService.TrySetOpacity":
-        "与活的 SetOffset 同族（都走 TryApply + StopAnimation），但这两个\"停掉动画后直接落值\"的"
-        "入口只有 CompositionVisualAnimationServiceTests 在调 → 组件淡入淡出/缩放目前没走这里",
-    "CompositionVisualAnimationService.TrySetUniformScale": "同上，另一条轴",
-}
+# 本脚本只出原始线索。名单（为什么还留着）与闸门判据只有一份，在
+# tests/LanMountainDesktop.Tests/ZeroUseInstanceMemberRatchetTests.cs 的 Accepted 里；
+# 这里再抄一份就是第二个真源，会漂。要复查已判条目请跑那条测试。
+EXPLAINED = {}
 
 
 def walk(directory):
@@ -390,7 +323,7 @@ def main():
     print(f"名单失效（登记的条目这次没再报出来，理由该删）：{len(stale)} 条")
     for key in stale:
         print(f"  ! {key}")
-    return 1 if (unexplained_a or unexplained_t or stale) else 0
+    return 0   # 只报线索；红不红由 C# 棘轮判，不在这里再造一份名单
 
 
 if __name__ == "__main__":
