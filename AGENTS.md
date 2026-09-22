@@ -535,6 +535,13 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 这一跑就是这么抓出判据自身的两个洞（`_timer?.Stop()` 的空条件形式漏认；把 `Set/ClearTimeZoneService` 按不同 key 配对，
 一度报出 39 个文件的假阳性）。**监视租约故意不数**：它走 `StudyMonitoringLease.Sync(ref …状态位)`，
 取放由家按状态对账，按动词数只会得出假结论。
+**第四把尺子问的是"定义了有没有人调"**：`python scripts/check-widget-layout-applied.py`
+（组件自己那套 `ApplyCellSize` / `UpdateAdaptiveLayout` / `ApplyLayoutMetrics` / `ApplyResponsiveLayout` /
+`ApplyTypographyByBackground` / `ApplyChrome` 若没有任何调用点，组件就按 XAML 默认样式画出来、缩放应用不上，
+不报错只是不对）。2026-09-22 首跑：87 个组件文件、80 个这类方法，**未被调用 0 处**。
+这一条的关键判据是**`override`/`abstract` 要豁免**：`WeatherWidgetBase.cs:86` 会在基类里调子类的
+`ApplyResponsiveLayout`，第一版没豁免时 5 个天气组件全被报成缺陷（全是假阳性）。
+正对照：临时放一个只定义 `private void UpdateAdaptiveLayout() {}` 的文件必须被报出来，报完删掉。
 **滑杆的 `Minimum`/`Maximum` 不许写死数字**，要绑视图模型上从 `DesktopGridLimits` 读的那四个量程属性——
 设置页量程是这套数的第四份副本，漂了的症状不是崩，而是"拖到尽头网格不动"或"存进去被运行期悄悄钳掉"。
 
