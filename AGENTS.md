@@ -267,6 +267,13 @@ en/ja/ko 还缺 25/313/275 条，只许降不许升；补翻译就把数字改�
 （`RelativeLuminance` / `ToOpaqueAgainst` / `MinContrastRatio` / `ContrastRatio`）。此前 15 个组件各自复制了
 `CalculateRelativeLuminance`、6 个学习组件又各自复制了另一套同名不同实现的算式，且两份 sRGB 阈值不一样
 （0.03928 与 0.04045 并存），组件之间的取色判定因此可能悄悄不一致。
+
+**头像占位字只认 `Services/Monogram.cs` 一家**（`Monogram.From(显示名)`：按空格分段取首字母、最多两个、
+大写，空名给 `"?"`）。此前用户头像与启动台磁贴各抄一份逐字相同的 15 行（2026-09-23 收口，
+5 个调用点都改走家）——改了头像规则而磁贴没跟上，症状是同一个人/同一个磁贴两种缩写，不报错。
+行为钉 `MonogramTests` 把"最多两个字母""多空格要钳掉""CJK 取第一个字""空名兜底"四件事各钉一格
+（把 `Take(2)` 改成 `Take(1)` 会红 4 格，验过）。这一族的"不许再抄第二份"由逐字普查的上限兜着，
+没有单独设守卫：新增一份就会顶破上限。
 `SourceIntegrityTests.WcagColorMath_LivesInExactlyOnePlace` 会拦新的复制实现。
 
 **打开外部链接只认一处**：组件要点开一条网页链接，一律 `Helpers/ExternalLinkLauncher.cs`

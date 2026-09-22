@@ -37,7 +37,7 @@ internal sealed class CurrentUserProfileService : ICurrentUserProfileService, ID
             _cachedSnapshot = new CurrentUserProfileSnapshot(
                 displayName,
                 _cachedAvatarBitmap,
-                BuildMonogram(displayName),
+                Monogram.From(displayName),
                 _cachedAvatarBitmap is null);
             return _cachedSnapshot;
         }
@@ -158,27 +158,6 @@ internal sealed class CurrentUserProfileService : ICurrentUserProfileService, ID
         }
     }
 
-    private static string BuildMonogram(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return "?";
-        }
-
-        var letters = text
-            .Trim()
-            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-            .Select(part => part[0])
-            .Take(2)
-            .ToArray();
-
-        if (letters.Length == 0)
-        {
-            return "?";
-        }
-
-        return new string(letters).ToUpperInvariant();
-    }
 }
 
 internal static class HostCurrentUserProfileProvider

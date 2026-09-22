@@ -49,8 +49,11 @@ public sealed class DuplicateImplementationRatchetTests
     /// 收完 5 个调用点都是单语句转手，按本判据口径不再算"复制了一份逻辑"）。
     /// 63 → 62 收一族（每日一词 1x1 与 2x2 读的是<b>同一对设置键</b>，所以那 13 行是逐字相同的两份，
     /// 进 <c>DailyWordAutoRefresh.Apply</c>；顺带把编辑器注册表里第三份 <c>360</c> 也指回这个常量）。
+    /// 62 → 61 收一族（头像占位字 15 行逐字两份：<c>CurrentUserProfileService</c> 与 <c>MainWindow.DesktopPaging</c>
+    /// 各一份，进 <c>Services/Monogram.cs</c>，5 个调用点改走家；改了头像规则而磁贴没跟上，
+    /// 症状是同一个人/同一个磁贴两种缩写，不报错）。
     /// </summary>
-    private const int IdenticalBodyFamilyCeiling = 62;
+    private const int IdenticalBodyFamilyCeiling = 61;
 
     /// <summary>
     /// 今天实测：192 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。

@@ -1029,7 +1029,7 @@ public partial class MainWindow : Window
     private Button CreateLauncherAppTile(StartMenuAppEntry app)
     {
         var iconBitmap = GetLauncherIconBitmap(app);
-        var monogram = BuildMonogram(app.DisplayName);
+        var monogram = Monogram.From(app.DisplayName);
         var appKey = NormalizeLauncherHiddenKey(app.RelativePath);
         return CreateLauncherTileButton(
             app.DisplayName,
@@ -1351,7 +1351,7 @@ public partial class MainWindow : Window
                     LauncherEntryKind.Shortcut,
                     key,
                     fallbackName,
-                    BuildMonogram(fallbackName),
+                    Monogram.From(fallbackName),
                     IconBitmap: null));
             }
         }
@@ -1400,7 +1400,7 @@ public partial class MainWindow : Window
                 LauncherEntryKind.Shortcut,
                 appKey,
                 app.DisplayName,
-                BuildMonogram(app.DisplayName),
+                Monogram.From(app.DisplayName),
                 GetLauncherIconBitmap(app)));
         }
     }
@@ -1639,7 +1639,7 @@ public partial class MainWindow : Window
     private Button CreateLauncherFolderGridTile(StartMenuAppEntry app, Action clickAction)
     {
         var iconBitmap = GetLauncherIconBitmap(app);
-        var monogram = BuildMonogram(app.DisplayName);
+        var monogram = Monogram.From(app.DisplayName);
 
         Control iconControl = iconBitmap is not null
             ? new Image
@@ -1824,26 +1824,6 @@ public partial class MainWindow : Window
         return cell;
     }
 
-    private static string BuildMonogram(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return "?";
-        }
-
-        var letters = text
-            .Trim()
-            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-            .Select(part => part[0])
-            .Take(2)
-            .ToArray();
-        if (letters.Length == 0)
-        {
-            return "?";
-        }
-
-        return new string(letters).ToUpperInvariant();
-    }
 
     private string GetLauncherEmptyText()
     {
