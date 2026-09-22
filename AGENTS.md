@@ -349,8 +349,14 @@ helper 住在 Core 是因为写同一批磁盘文件的是三个进程（宿主�
 症状＝最后一次上报静默丢失）。其余 9 处是"取消一个仍在飞的操作、释放另有其人"：
 `LinuxNotificationListener`(365)、`NotificationListenerService`(401)、`WindowsNotificationListener`(477)、
 `UpdateProgressViewModel`(79)、启动器 `LauncherCoordinatorIpcServer`(79)、`UpdateOrchestrator`(469/508)，
-以及安装器 `MainWindowViewModel` 的 2 处（232/371：只在"走下一步"时释放，做完检查/安装直接关窗那一会漏一个源，
-补它要给 VM 加 `IDisposable` 并在窗口关闭处接上——结构改动，单独待办）。
+以及安装器 `MainWindowViewModel` 的 2 处——**已修**：VM 现在实现 `IDisposable`（取消＋释放两个源），
+`installer/Views/MainWindow.axaml.cs` 的 `OnClosed` 里收尾；判据是 `InstallerUxTests.WindowClose_CancelsAndReleasesTheInFlightCheckSource`
+（在飞的检查关窗后既被取消、源也真的被释放，把 `Dispose` 里的释放去掉这条就红）。
+**顺带量到但没动的一处**：`MainWindowViewModel` 的 232/371 是 `_checkCts?.Dispose()` / `_installCts?.Dispose()`——
+只 Dispose 不 Cancel，而 Dispose 一个还有注册的源只会悄悄摘掉注册，等于让上一次检查/安装变成"取消不了"继续跑完，
+完成时还会把 `TargetVersion`/`StatusText`/`IsCheckingUpdate` 写回去（与新的一次竞态）。
+改成 `CancelAndDispose` 语义上更对，但会让上一次操作立刻走"版本检查已取消。"那条提示，
+UI 文案要不要跟着变是产品判断，先登记不擅自动。
 教训写在这里：**文本扫描只能当线索，不能当结论**——这条"5 行窗口"的启发式实测 12 命中里 9 个是假阳性。
 `CancellationHelper` 已搬到 Core（与 `AtomicFileWriter`、`FileOperationRetryHelper` 同一先例：同一动作散在多个二进制里就住 Core），
 启动器与安装器现在够得到它，守卫也据此覆盖全部二进制。
@@ -364,10 +370,10 @@ helper 住在 Core 是因为写同一批磁盘文件的是三个进程（宿主�
 **已修的真实泄漏**：组件库预览（`FusedDesktopComponentLibraryControl`、`ComponentLibraryWindow`、`MainWindow.ComponentPreviewImages`
 三处）每换一次选中项就造一个预览控件、`Detach`/`Dispose` 时只停了计时器、没退订——浏览一轮组件库就往那个长命服务上
 挂一串永不释放的控件。现在 `ComponentPreviewRuntimeQuiescer` 在丢预览时统一退订
-（`TimeZoneServiceBindingTests.QuiescingAPreview_ReleasesTheServiceReferenceToTheWidget` 用订阅数 0→1→0 钉住，
-把那一行注释掉立刻红）。
-`FusedDesktopManagerService.CreateWidgetWindow`（662 起）那条路仍只 `window.Close()` + `_widgetWindows.Clear()`、
-不退订，与 #47 的安装器 VM 同族（要给窗口/VM 接上生命周期），登记未修。
+（`ComponentPreviewTimeZoneReleaseTests` 用服务侧订阅数 0→1→0 钉住，把那一行注释掉立刻红）。
+`FusedDesktopManagerService.CreateWidgetWindow`（662 起）那条路也接上了：组件浮窗 `DesktopWidgetWindow.OnClosing`
+原本只退自己的事件、`Dispose` 子控件，现在顺手 `ClearTimeZoneService()`
+（`DesktopWidgetWindowTimeZoneReleaseTests` 数同一个订阅者计数，去掉那行立刻红）。
 
 **安装根目录下那个 `.Launcher` 数据目录名只认一处**：一律用 `core/LanMountainDesktop.Core/Deployment/DeploymentLayout.cs`
 的 `LauncherStateDirectoryName`，不要在 Core / 宿主 / 启动器里再抄字面量（该类注释本来就写着"禁止在任何一侧硬编码"，

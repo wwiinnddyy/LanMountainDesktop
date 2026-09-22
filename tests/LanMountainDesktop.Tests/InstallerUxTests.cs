@@ -1,3 +1,4 @@
+using System.Reflection;
 using LanDesktopPLONDS.Installer.Localization;
 using LanDesktopPLONDS.Installer.Models;
 using LanDesktopPLONDS.Installer.Services;
@@ -229,9 +230,46 @@ public sealed class InstallerUxTests : IDisposable
         Assert.Equal("阑山桌面 安装程序", vm.WindowTitle);
     }
 
+    /// <summary>
+    /// 关窗（MainWindow.OnClosed → VM.Dispose）要把手里那两个源取消并释放。
+    /// 原来只在"走下一步"时 Dispose：做完在线检查后直接关窗，那个源既不释放、
+    /// 仍在飞的检查也没人再取消得了（Dispose 一个已有注册的源只是把注册悄悄摘掉）。
+    /// </summary>
+    [Fact]
+    public async Task WindowClose_CancelsAndReleasesTheInFlightCheckSource()
+    {
+        var vm = CreateVm(new BlockingInstallService());
+        vm.InstallPath = Path.Combine(_tempRoot, "LanMountainDesktop");
+        await vm.NextCommand.ExecuteAsync(null);
+
+        var checkTask = vm.NextCommand.ExecuteAsync(null);
+        for (var i = 0; i < 50 && !vm.IsCheckingUpdate; i++)
+        {
+            await Task.Delay(50);
+        }
+
+        Assert.True(vm.IsCheckingUpdate, "检查应在飞行中");
+        var source = ReadCtsField(vm, "_checkCts");
+        Assert.False(source.IsCancellationRequested);
+
+        vm.Dispose();
+        await checkTask;
+
+        Assert.True(source.IsCancellationRequested, "关窗要取消仍在飞的检查");
+        Assert.Throws<ObjectDisposedException>(() => source.Cancel());
+        vm.Dispose();
+    }
+
     // =====================================================================
     // Helpers
     // =====================================================================
+
+    private static CancellationTokenSource ReadCtsField(MainWindowViewModel viewModel, string fieldName)
+    {
+        var field = typeof(MainWindowViewModel).GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
+        return (CancellationTokenSource?)field?.GetValue(viewModel)
+            ?? throw new InvalidOperationException($"读不到 {fieldName}，说明检查根本没建源");
+    }
 
     private MainWindowViewModel CreateVm(IOnlineInstallService service)
     {

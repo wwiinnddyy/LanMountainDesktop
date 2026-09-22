@@ -48,6 +48,17 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>窗口真的关掉了才收尾：VM 手里那两个 CancellationTokenSource 原来只在"走下一步"时释放。</summary>
+    protected override void OnClosed(EventArgs e)
+    {
+        base.OnClosed(e);
+
+        if (DataContext is IDisposable viewModel)
+        {
+            viewModel.Dispose();
+        }
+    }
+
     private async Task<bool> ShowCloseConfirmDialogAsync()
     {
         var tcs = new TaskCompletionSource<bool>();

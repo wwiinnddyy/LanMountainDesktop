@@ -8,10 +8,11 @@ using LanDesktopPLONDS.Installer.Localization;
 using LanDesktopPLONDS.Installer.Models;
 using LanDesktopPLONDS.Installer.Services;
 using LanMountainDesktop.Shared.Contracts.Privacy;
+using LanMountainDesktop.Shared.Threading;
 
 namespace LanDesktopPLONDS.Installer.ViewModels;
 
-public sealed partial class MainWindowViewModel : ObservableObject
+public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
 {
     private readonly IOnlineInstallService _installService;
     private readonly IPrivacyDeviceIdentityProvider _privacyIdentity;
@@ -405,6 +406,17 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private void CancelInstall()
     {
         _installCts?.Cancel();
+    }
+
+    /// <summary>
+    /// 关窗时收尾。原来这两个源只在"走下一步"时释放（<c>CheckLatest</c> / <c>StartInstall</c> 各自开头），
+    /// 所以做完在线检查或直接开装又取消后直接关窗，那一会就留着一个不释放的源；
+    /// 这里还顺手把仍在飞的检查/安装取消掉——关窗之后没人再等它的结果。
+    /// </summary>
+    public void Dispose()
+    {
+        CancellationHelper.CancelAndDispose(ref _checkCts);
+        CancellationHelper.CancelAndDispose(ref _installCts);
     }
 
     [RelayCommand]
