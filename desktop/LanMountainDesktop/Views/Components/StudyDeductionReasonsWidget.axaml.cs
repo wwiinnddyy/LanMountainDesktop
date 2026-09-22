@@ -328,7 +328,7 @@ public partial class StudyDeductionReasonsWidget : UserControl, IDesktopComponen
         }
 
         var dbfsValues = points.Select(p => p.Dbfs).OrderBy(v => v).ToArray();
-        var p50Dbfs = Percentile(dbfsValues, 0.50);
+        var p50Dbfs = StudyStatistics.Percentile(dbfsValues, 0.50, emptySentinel: -100);
 
         var overDurationMs = 0d;
         var weightedDurationMs = 0d;
@@ -420,31 +420,6 @@ public partial class StudyDeductionReasonsWidget : UserControl, IDesktopComponen
             P50Dbfs: aggregate.P50Dbfs,
             OverRatio: aggregate.OverRatio,
             SegmentsPerMin: aggregate.SegmentsPerMin);
-    }
-
-    private static double Percentile(double[] sortedValues, double percentile)
-    {
-        if (sortedValues.Length == 0)
-        {
-            return -100;
-        }
-
-        if (sortedValues.Length == 1)
-        {
-            return sortedValues[0];
-        }
-
-        var clamped = Math.Clamp(percentile, 0, 1);
-        var position = (sortedValues.Length - 1) * clamped;
-        var lower = (int)Math.Floor(position);
-        var upper = (int)Math.Ceiling(position);
-        if (lower == upper)
-        {
-            return sortedValues[lower];
-        }
-
-        var factor = position - lower;
-        return sortedValues[lower] + ((sortedValues[upper] - sortedValues[lower]) * factor);
     }
 
     private static double Clamp01(double value)

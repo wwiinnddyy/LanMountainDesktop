@@ -276,6 +276,15 @@ en/ja/ko 还缺 25/313/275 条，只许降不许升；补翻译就把数字改�
 没有单独设守卫：新增一份就会顶破上限。
 `SourceIntegrityTests.WcagColorMath_LivesInExactlyOnePlace` 会拦新的复制实现。
 
+**分位数算法只认 `Services/StudyStatistics.cs` 一家**（`Percentile(已排序数组, 0~1, 空数组哨兵)`）。
+此前 3 份：两个学习面板各一份逐字 24 行，`StudyAnalyticsInternals` 又一份，**三份只差"空数组返回什么"**
+（面板 `-100`＝把没测量值压到 dBFS 刻度底端；分析服务 `0`＝在 dBFS 里这是"有读数"）。
+同一场没数据的统计，面板与学习报告因此一个显示刻度尽头、一个显示 0 dB——这个不一致是既有行为，
+收口只保证"算法一份"，所以把哨兵做成参数由调用方显式给，统一成哪个要先拍板（`G1-BK`）。
+两处守卫：`StudyStatisticsTests` 钉算法（去掉钳位红 2 格、插值系数取反红 2 格、写死哨兵红 1 格，逐条验过），
+`PercentileCallSites_KeepTheirOwnSentinel` 钉"哪个调用方用哪个哨兵"——收口之后这条分歧只剩一个字面量的距离，
+把某个调用点的 `-100` 顺手改成 `0` 时算法测试照样全绿，而且它还钉住站点数（少一条断言就是判据静默变窄）。
+
 **打开外部链接只认一处**：组件要点开一条网页链接，一律 `Helpers/ExternalLinkLauncher.cs`
 （`TryOpen(url)` 打开、`NormalizeHttpUrl(url)` 只做归一化）。此前 http/https 归一化被逐字抄了 6 份
 （含 `RecommendationDataService`），shell 打开又抄了 9 份，其中 3 份（`DailyNewsView`、`JuyaNewsWidget`、

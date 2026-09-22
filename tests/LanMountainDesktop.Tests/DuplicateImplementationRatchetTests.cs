@@ -71,11 +71,21 @@ public sealed class DuplicateImplementationRatchetTests
     /// 进 <c>StudyPanelPalette.ApplyModeBadge</c>，两族一次消掉；两张自绘图表控件各抄一份
     /// 逐字相同的 <c>AddLine</c> 三步，进 <c>StudyChartGeometry</c>）。行为钉 <c>StudyPanelBadgeTests</c>：
     /// 注入"少涂描边"与"线段画回起点"两处变异，恰好各红 1 条、另 2 条不动，验过。）
+    /// 54 → 53 收一族（学习统计的分位数 <c>Percentile</c> 共 3 份：扣分原因面板、成绩总览面板各一份
+    /// 逐字 24 行，<c>StudyAnalyticsInternals</c> 又一份——**只差空数组返回什么**（面板 -100、分析服务 0）。
+    /// 进 <c>Services/StudyStatistics</c>，把哨兵做成参数由调用方显式给，5 个调用点改走家。
+    /// 没替 <c>G1-BK</c> 统一那个分歧：同一场没数据的统计，面板显示刻度尽头、学习报告显示 0 dB，
+    /// 这个不一致是既有行为，收口只保证"算法只有一份"，改口径要拍板。
+    /// 行为钉 <c>StudyStatisticsTests</c>：注入"去掉钳位"红 2 条（-3 与 5 两行）、
+    /// "插值系数取反"红 2 条（0.5 与 0.95 两行）、"哨兵写死成 0"红 1 条，各自只红该红的，验过。）
     /// </summary>
-    private const int IdenticalBodyFamilyCeiling = 54;
+    private const int IdenticalBodyFamilyCeiling = 53;
 
     /// <summary>
-    /// 今天实测：192 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
+    /// 今天实测：191 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
+    /// 192 → 191 是真收口（与上面 54 → 53 同一笔）：分位数 <c>Percentile</c> 一家 3 份抄本
+    /// （2 种体）全改调 <c>StudyStatistics.Percentile</c>，这个名字连同它的 2 种体一起消失——
+    /// 实测族 192→191、族内站点 1371→1368，逐处比对只有 <c>Percentile</c> 这一项变动。
     /// 191 → 192 是**改判据**（又一处"判据瞎了"，与下面 193 → 192 同一类）：
     /// <c>void Foo() { }</c> 这种"有实现、但什么都不做"以前与接口方法的声明一起被当成"没有体"跳过，
     /// 于是全仓 28 处空实现全体隐身；现在空实现算一种体（规范成空串），有一族因此显形。
@@ -97,13 +107,24 @@ public sealed class DuplicateImplementationRatchetTests
     /// 但 <c>L</c> 的 50 处里 44 处是**单条语句的转手**（<c>return _localizationService.GetString(...)</c>），
     /// 按这把尺子的口径（单语句转手不算复制了一份逻辑）它不构成收口目标，别再为凑族数去动它。
     /// </summary>
-    private const int DriftFamilyCeiling = 192;
+    private const int DriftFamilyCeiling = 191;
 
     /// <summary>
-    /// 漂移普查认领的声明处数下限（今天实测 5443：改判据后 5449，收掉 6 处各抄本少 6）。
+    /// 漂移普查认领的声明处数下限（今天实测 5442）。
     /// 钉这个不是为了查新增，是为了查**判据自己塌掉**：
     /// 上面那两处 bug 都是"少认声明"，族数看着像收口（193→189），实际是普查瞎了。
     /// 只冻族数会被这种错法骗过去，冻住认领量就不会。
+    ///
+    /// 5456 → 5444 那 12 处是**记账欠的**，不是判据丢了声明：这条注释停在 <c>9882a21</c> 那天，
+    /// 之后陆续提交的收口各自删掉的私有方法声明没回写到这儿。逐条对过（把 9882a21 与 HEAD 各归档一份，
+    /// 按名字比对声明数）：少 18 条——<c>CleanupPendingDeletions</c>(2)/<c>NormalizeExistingDirectory</c>(2)/
+    /// <c>NormalizeExistingFile</c>(2)/<c>BuildMonogram</c>(2)/<c>BuildLauncherHiddenFallbackDisplayName</c>(2)
+    /// 五族被各自的家替掉，<c>AddLine</c> 2→1（家里那一头同名），再加 7 个删掉的空壳与死缝
+    /// （<c>InitializeSettingsIcons</c>、<c>EnsureComponentLibraryPreviewWarmup</c>、
+    /// <c>QueuePlacementPreviewRefresh</c>、<c>RemovePlacementPreviewImage</c>/<c>s</c>、
+    /// <c>UpdateSettingsViewportInsets</c>、<c>CleanupPendingDeletionDirectory</c>）；多 6 条是新增的入口
+    /// （<c>PathFor</c>/<c>CleanupAfterInstall</c>/<c>DirectoryOrNull</c>/<c>FileOrNull</c>/
+    /// <c>FallbackDisplayName</c>/<c>From</c>）。18−6=12，一条不差，认领量降的全是"真少了一条声明"。
     /// </summary>
     private const int DriftCensusSiteFloor = 5400;
 
@@ -267,7 +288,7 @@ public sealed class DuplicateImplementationRatchetTests
         var censusSites = bodiesByName.Values.Sum(tally => tally.Sites);
         Assert.True(
             censusSites >= DriftCensusSiteFloor,
-            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5456）。" +
+            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5442）。" +
             "族数没变也说明判据在丢声明：查 NormalizeBody 又漏掉了哪种成员写法（历史上漏过 Allman 箭头体与插值字符串的大括号）");
 
         var driftFamilies = bodiesByName.Count(pair => pair.Value.VariantCount >= 2 &&

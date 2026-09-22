@@ -224,8 +224,8 @@ internal sealed class NoiseFramePipeline
 
         var avgDbfs = ScoreCalculator.ComputeAverageDbfs(dbfsList);
         var maxDbfs = dbfsList[^1];
-        var p50Dbfs = Percentile(sortedValues: dbfsList, percentile: 0.50);
-        var p95Dbfs = Percentile(sortedValues: dbfsList, percentile: 0.95);
+        var p50Dbfs = StudyStatistics.Percentile(sortedValues: dbfsList, percentile: 0.50, emptySentinel: 0);
+        var p95Dbfs = StudyStatistics.Percentile(sortedValues: dbfsList, percentile: 0.95, emptySentinel: 0);
         var overRatio = _overThresholdFrameCount / (double)_slicePoints.Count;
 
         var raw = new NoiseSliceRawStats(
@@ -241,7 +241,7 @@ internal sealed class NoiseFramePipeline
 
         var display = new NoiseSliceDisplayStats(
             AvgDb: Math.Round(displayList.Average(), 2),
-            P95Db: Math.Round(Percentile(displayList, 0.95), 2));
+            P95Db: Math.Round(StudyStatistics.Percentile(displayList, 0.95, emptySentinel: 0), 2));
 
         var score = ScoreCalculator.Calculate(
             p50Dbfs: raw.P50Dbfs,
@@ -271,31 +271,6 @@ internal sealed class NoiseFramePipeline
         _segmentOpen = false;
         _gapCount = 0;
         _maxGapMs = 0;
-    }
-
-    private static double Percentile(double[] sortedValues, double percentile)
-    {
-        if (sortedValues.Length == 0)
-        {
-            return 0;
-        }
-
-        if (sortedValues.Length == 1)
-        {
-            return sortedValues[0];
-        }
-
-        var clamped = Math.Clamp(percentile, 0, 1);
-        var position = (sortedValues.Length - 1) * clamped;
-        var lower = (int)Math.Floor(position);
-        var upper = (int)Math.Ceiling(position);
-        if (lower == upper)
-        {
-            return sortedValues[lower];
-        }
-
-        var factor = position - lower;
-        return sortedValues[lower] + ((sortedValues[upper] - sortedValues[lower]) * factor);
     }
 
     private static StudyAnalyticsConfig NormalizeConfig(StudyAnalyticsConfig config)
