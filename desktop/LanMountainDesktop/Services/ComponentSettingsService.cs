@@ -1,5 +1,4 @@
 using System;
-using System.Reflection;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services.Settings;
@@ -188,42 +187,6 @@ public sealed class ComponentSettingsService : IComponentInstanceSettingsStore
     {
         _scopedComponentId = string.Empty;
         _scopedPlacementId = string.Empty;
-    }
-
-    public static void ApplyScopedContextToTarget(object? target, string componentId, string? placementId)
-    {
-        if (target is null)
-        {
-            return;
-        }
-
-        var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
-        foreach (var field in target.GetType().GetFields(flags))
-        {
-            if (field.FieldType != typeof(ComponentSettingsService))
-            {
-                continue;
-            }
-
-            if (field.GetValue(target) is ComponentSettingsService settingsService)
-            {
-                settingsService.SetScopedComponentContext(componentId, placementId);
-            }
-        }
-
-        foreach (var property in target.GetType().GetProperties(flags))
-        {
-            if (property.PropertyType != typeof(ComponentSettingsService) ||
-                !property.CanRead)
-            {
-                continue;
-            }
-
-            if (property.GetValue(target) is ComponentSettingsService settingsService)
-            {
-                settingsService.SetScopedComponentContext(componentId, placementId);
-            }
-        }
     }
 
     internal static void ResetCacheForTests()

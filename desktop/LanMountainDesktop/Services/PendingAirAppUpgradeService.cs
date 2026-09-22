@@ -20,11 +20,6 @@ public sealed class PendingAirAppUpgradeService
 
     public IReadOnlyList<PendingAirAppUpgrade> GetPendingUpgrades() => _store.GetPendingUpgrades();
 
-    public void AddPendingUpgrade(string airAppId, string sourcePackagePath, string targetVersion)
-    {
-        AddPendingInstallOrUpgrade(airAppId, sourcePackagePath, targetVersion);
-    }
-
     public void AddPendingInstallOrUpgrade(string airAppId, string sourcePackagePath, string targetVersion)
     {
         _store.AddPendingInstallOrUpgrade(airAppId, sourcePackagePath, targetVersion);
