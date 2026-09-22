@@ -181,43 +181,6 @@ public sealed class ZhiJiaoHubCacheService : IDisposable
         }
     }
 
-    public string? GetLocalPath(string source, string originalUrl)
-    {
-        lock (_manifestLock)
-        {
-            if (!File.Exists(_manifestPath))
-            {
-                return null;
-            }
-
-            try
-            {
-                var json = File.ReadAllText(_manifestPath);
-                var manifest = JsonSerializer.Deserialize<CacheManifest>(json, JsonOptions);
-                if (manifest?.Entries?.TryGetValue(source, out var entry) != true)
-                {
-                    return null;
-                }
-
-                var img = entry.Images.FirstOrDefault(i =>
-                    string.Equals(i.OriginalUrl, originalUrl, StringComparison.OrdinalIgnoreCase));
-
-                if (img == null)
-                {
-                    return null;
-                }
-
-                var sourceDir = GetSourceDirectory(source);
-                var localPath = Path.Combine(sourceDir, img.LocalFileName);
-                return File.Exists(localPath) ? localPath : null;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-    }
-
     public async Task<string?> DownloadAndSaveImageAsync(
         string source,
         string name,

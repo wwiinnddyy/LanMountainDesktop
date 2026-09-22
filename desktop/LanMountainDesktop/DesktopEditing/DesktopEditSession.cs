@@ -93,16 +93,6 @@ internal readonly record struct DesktopEditSession
         return this with { Mode = DesktopEditSessionMode.DraggingNew };
     }
 
-    public DesktopEditSession PromoteToDraggingExisting()
-    {
-        return this with { Mode = DesktopEditSessionMode.DraggingExisting };
-    }
-
-    public DesktopEditSession PromoteToResizingExisting()
-    {
-        return this with { Mode = DesktopEditSessionMode.ResizingExisting };
-    }
-
     public static DesktopEditSession CreatePendingNew(
         string componentId,
         int pageIndex,

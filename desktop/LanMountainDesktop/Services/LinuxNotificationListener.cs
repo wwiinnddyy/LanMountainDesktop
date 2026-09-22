@@ -209,35 +209,6 @@ internal sealed class LinuxNotificationListener : IPlatformNotificationListener
         _parent.AddNotification(notification);
     }
 
-    public void HandleNotification(
-        string appName,
-        uint replacesId,
-        string appIcon,
-        string summary,
-        string body,
-        string[] actions,
-        object hints,
-        int expireTimeout)
-    {
-        var sourceId = replacesId == 0 ? _nextSyntheticId++ : replacesId;
-        var notification = new NotificationItem
-        {
-            Id = $"linux:{sourceId}",
-            SourceNotificationId = sourceId.ToString(),
-            Platform = "Linux",
-            CaptureMode = _requestedMode,
-            AppId = NormalizeAppId(appName),
-            AppName = appName,
-            Title = StripHtmlTags(summary),
-            Content = StripHtmlTags(body),
-            AppIconPath = ResolveIconPath(appIcon, appName),
-            ReceivedAtUtc = DateTimeOffset.UtcNow,
-            ReceivedTime = DateTime.Now
-        };
-
-        _parent.AddNotification(notification);
-    }
-
     private static async Task<bool> CheckNotificationDaemonAsync(CancellationToken cancellationToken)
     {
         var processNames = new[] { "gnome-shell", "plasmashell", "kded5", "dunst", "mako", "swaync", "xfce4-notifyd" };

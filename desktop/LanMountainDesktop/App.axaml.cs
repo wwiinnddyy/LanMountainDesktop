@@ -1034,27 +1034,6 @@ public partial class App : Application
         }
     }
 
-    internal void PrepareForShutdown(bool isRestart, string source)
-    {
-        void Mark()
-        {
-            _shutdownIntent = isRestart
-                ? ShutdownIntent.RestartRequested
-                : ShutdownIntent.ExitRequested;
-            AppLogger.Info(
-                "DesktopShell",
-                $"Shutdown intent marked. Intent='{_shutdownIntent}'; Source='{source}'; CurrentShellState='{_desktopShellState}'.");
-        }
-
-        if (Dispatcher.UIThread.CheckAccess())
-        {
-            Mark();
-            return;
-        }
-
-        Dispatcher.UIThread.InvokeAsync(Mark, DispatcherPriority.Send).GetAwaiter().GetResult();
-    }
-
     internal void ResetShutdownIntent(string source)
     {
         void Reset()

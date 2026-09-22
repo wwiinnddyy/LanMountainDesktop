@@ -183,12 +183,6 @@ public sealed class ComponentSettingsService : IComponentInstanceSettingsStore
         _scopedPlacementId = placementId?.Trim() ?? string.Empty;
     }
 
-    public void ClearScopedComponentContext()
-    {
-        _scopedComponentId = string.Empty;
-        _scopedPlacementId = string.Empty;
-    }
-
     internal static void ResetCacheForTests()
     {
         // no-op: SQLite storage is directly persisted without in-memory cache.

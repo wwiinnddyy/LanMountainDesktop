@@ -31,18 +31,4 @@ public sealed class FontFamilyService
         };
     }
 
-    public string GetFontFamilyResourceKey(string? languageCode)
-    {
-        if (string.IsNullOrWhiteSpace(languageCode))
-        {
-            return "AppFontFamily";
-        }
-
-        return languageCode.ToLowerInvariant() switch
-        {
-            "ja-jp" or "ja" => "AppFontFamilyJP",
-            "ko-kr" or "ko" => "AppFontFamilyKR",
-            _ => "AppFontFamily"
-        };
-    }
 }
