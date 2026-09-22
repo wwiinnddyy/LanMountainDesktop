@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using LanMountainDesktop.Shared.Threading;
 using Tmds.DBus.Protocol;
 
 namespace LanMountainDesktop.Services;
@@ -207,9 +208,8 @@ internal sealed class LinuxMprisMusicSessionProvider : IMusicSessionProvider
 
     public void Dispose()
     {
-        _disposeCts.Cancel();
+        CancellationHelper.CancelAndDispose(_disposeCts);
         _nameOwnerChangedWatcher?.Dispose();
-        _disposeCts.Dispose();
     }
 
     private async Task EnsureSignalWatchAsync(CancellationToken cancellationToken)

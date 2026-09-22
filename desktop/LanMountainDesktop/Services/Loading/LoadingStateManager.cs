@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using LanMountainDesktop.Shared.Contracts.Launcher;
+using LanMountainDesktop.Shared.Threading;
 
 namespace LanMountainDesktop.Services.Loading;
 
@@ -352,7 +353,7 @@ public class LoadingStateManager : IDisposable
     
     public void Dispose()
     {
-        _cts.Cancel();
+        CancellationHelper.CancelAndDispose(_cts);
         _items.Clear();
         _startTimes.Clear();
     }

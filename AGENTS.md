@@ -340,15 +340,18 @@ helper 住在 Core 是因为写同一批磁盘文件的是三个进程（宿主�
 `TextCapsule` 1、`MusicControlViewModel` 2）。
 守卫 `SourceIntegrityTests.CancelAndDisposeRitual_LivesInExactlyOnePlace` 两种形态都拦（声明 + 相邻 Cancel/Dispose 对），
 顺序之所以是"先摘字段再取消"：对已 Dispose 的源再 `Cancel()` 会抛 `ObjectDisposedException`。
-**同一把尺子量出来的欠账（还剩 12 处）**：把窗口放宽到"Cancel 后 5 行内没有 Dispose"再扫一遍，
-收口前有 22 处字段级取消不释放，修掉宿主那 10 处后仍剩 12 处，散在 3 个二进制里
-（`LinuxMprisMusicSessionProvider`、`LinuxNotificationListener`、`LoadingStateManager`、`NotificationListenerService`、
-`PostHogUsageTelemetryService`、`WindowsNotificationListener`、`UpdateProgressViewModel`、启动器的 `LauncherCoordinatorIpcServer`、
-安装器的 `MainWindowViewModel`；`UpdateOrchestrator` 那两处是"取消一个仍在跑的源"，由 `RegisterOperationCancellation` 负责释放，属正当用法）。
-已修的是宿主里 3 个高频刷新的点（`WeatherWidgetBase` 2 处——那里的源带 12 秒超时，不释放等于每次刷新留一个定时器；
-`ZhiJiaoHubWidget` 7 处；`DataSettingsPageViewModel` 1 处）。
-剩下的不能无脑补 `Dispose`：调用点如果之后还拿那个 token 去 `Task.Delay(..., ct)`、`token.Register(...)` 或
-`CreateLinkedTokenSource(ct)` 就会抛 `ObjectDisposedException`，得逐处读到底才敢动。
+**同一把尺子量出来的欠账（逐处读到底之后的真值）**：把窗口放宽到"Cancel 后 5 行内没有 Dispose"再扫，
+收口前命中 22 处；修掉宿主高频刷新的 10 处（`WeatherWidgetBase` 2 处——那里的源带 12 秒超时，不释放等于每次刷新
+留一个还挂着的定时器；`ZhiJiaoHubWidget` 7 处；`DataSettingsPageViewModel` 1 处）后剩 12 处。
+**这 12 处逐处查证后的结论是：只有 3 处真的从不释放，已修**
+（`LinuxMprisMusicSessionProvider.Dispose`、`LoadingStateManager.Dispose`、`PostHogUsageTelemetryService.Dispose`——
+最后一处的释放刻意排在 `_client.Dispose()` 之后，否则 client 收尾那趟 flush 会在还有注册时抛 `ObjectDisposedException`，
+症状＝最后一次上报静默丢失）。其余 9 处是"取消一个仍在飞的操作、释放另有其人"：
+`LinuxNotificationListener`(365)、`NotificationListenerService`(401)、`WindowsNotificationListener`(477)、
+`UpdateProgressViewModel`(79)、启动器 `LauncherCoordinatorIpcServer`(79)、`UpdateOrchestrator`(469/508)，
+以及安装器 `MainWindowViewModel` 的 2 处（232/371：只在"走下一步"时释放，做完检查/安装直接关窗那一会漏一个源，
+补它要给 VM 加 `IDisposable` 并在窗口关闭处接上——结构改动，单独待办）。
+教训写在这里：**文本扫描只能当线索，不能当结论**——这条"5 行窗口"的启发式实测 12 命中里 9 个是假阳性。
 `CancellationHelper` 已搬到 Core（与 `AtomicFileWriter`、`FileOperationRetryHelper` 同一先例：同一动作散在多个二进制里就住 Core），
 启动器与安装器现在够得到它，守卫也据此覆盖全部二进制。
 

@@ -5,6 +5,7 @@ using System.Threading;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.Shared.Threading;
 using PostHog;
 
 namespace LanMountainDesktop.Services;
@@ -293,6 +294,9 @@ public sealed class PostHogUsageTelemetryService : IDisposable
             Shutdown(isRestart: false, source: "Dispose");
             _cts.Cancel();
             _client.Dispose();
+            // 释放排在 client 之后：_client.Dispose() 自己会收尾那趟 flush，
+            // 先把源 Dispose 掉会让它在还有注册时抛 ObjectDisposedException（症状＝最后一次上报静默丢失）
+            CancellationHelper.CancelAndDispose(_cts);
         }
         catch (Exception ex)
         {
