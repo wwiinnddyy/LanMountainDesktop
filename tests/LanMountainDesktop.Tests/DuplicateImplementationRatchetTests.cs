@@ -52,8 +52,12 @@ public sealed class DuplicateImplementationRatchetTests
     /// 62 → 61 收一族（头像占位字 15 行逐字两份：<c>CurrentUserProfileService</c> 与 <c>MainWindow.DesktopPaging</c>
     /// 各一份，进 <c>Services/Monogram.cs</c>，5 个调用点改走家；改了头像规则而磁贴没跟上，
     /// 症状是同一个人/同一个磁贴两种缩写，不报错）。
+    /// 61 → 59 收两族（<c>NormalizeExistingDirectory</c> 与 <c>NormalizeExistingFile</c> 各 2 份逐字 17 行：
+    /// Core 的 <c>AppVersionProvider</c> 与宿主的 <c>AppRestartService</c> 各抄一对，
+    /// 进 <c>Shared/IO/ExistingPath.cs</c>，10 个调用点改走家——两份算的是"这条路径能不能信"，
+    /// 漂开的后果是同一个安装被启动器与宿主判成两种结论）。
     /// </summary>
-    private const int IdenticalBodyFamilyCeiling = 61;
+    private const int IdenticalBodyFamilyCeiling = 59;
 
     /// <summary>
     /// 今天实测：192 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。

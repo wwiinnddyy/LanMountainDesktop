@@ -4,6 +4,7 @@ using System.Text;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 
+using LanMountainDesktop.Shared.IO;
 namespace LanMountainDesktop.Services;
 
 public static class AppRestartService
@@ -15,8 +16,8 @@ public static class AppRestartService
         RestartPresentationMode? restartPresentationMode = null)
     {
         var args = commandLineArgs ?? Environment.GetCommandLineArgs();
-        var resolvedProcessPath = NormalizeExistingFile(processPath ?? Environment.ProcessPath);
-        var resolvedEntryAssemblyPath = NormalizeExistingFile(
+        var resolvedProcessPath = ExistingPath.FileOrNull(processPath ?? Environment.ProcessPath);
+        var resolvedEntryAssemblyPath = ExistingPath.FileOrNull(
             entryAssemblyLocation ?? Assembly.GetEntryAssembly()?.Location);
         var normalizedRestartPresentation = restartPresentationMode
             ?? LauncherRuntimeMetadata.GetRestartPresentationMode(args)
@@ -143,7 +144,7 @@ public static class AppRestartService
 
         foreach (var packageRootCandidate in GetPackageRootCandidates(commandLineArgs, processPath, entryAssemblyPath))
         {
-            var normalizedRoot = NormalizeExistingDirectory(packageRootCandidate);
+            var normalizedRoot = ExistingPath.DirectoryOrNull(packageRootCandidate);
             if (string.IsNullOrWhiteSpace(normalizedRoot))
             {
                 continue;
@@ -306,42 +307,6 @@ public static class AppRestartService
 
         builder.Append('"');
         return builder.ToString();
-    }
-
-    private static string? NormalizeExistingFile(string? path)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return null;
-        }
-
-        try
-        {
-            var fullPath = Path.GetFullPath(path);
-            return File.Exists(fullPath) ? fullPath : null;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private static string? NormalizeExistingDirectory(string? path)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return null;
-        }
-
-        try
-        {
-            var fullPath = Path.GetFullPath(path);
-            return Directory.Exists(fullPath) ? fullPath : null;
-        }
-        catch
-        {
-            return null;
-        }
     }
 
     private static bool IsDotnetHost(string? processPath)

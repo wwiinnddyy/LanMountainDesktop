@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Text.Json;
 using LanMountainDesktop.Shared.Contracts.Deployment;
 
+using LanMountainDesktop.Shared.IO;
 namespace LanMountainDesktop.Shared.Contracts.Launcher;
 
 public static class AppVersionProvider
@@ -61,7 +62,7 @@ public static class AppVersionProvider
             return Create(versionOverride, codenameOverride);
         }
 
-        var normalizedDeploymentDirectory = NormalizeExistingDirectory(deploymentDirectory)
+        var normalizedDeploymentDirectory = ExistingPath.DirectoryOrNull(deploymentDirectory)
             ?? ResolveDeploymentFromPackageRoot(packageRoot, executablePath);
 
         if (!string.IsNullOrWhiteSpace(normalizedDeploymentDirectory) &&
@@ -70,7 +71,7 @@ public static class AppVersionProvider
             return OverrideMissingParts(fileInfo, versionOverride, codenameOverride);
         }
 
-        var normalizedExecutablePath = NormalizeExistingFile(executablePath)
+        var normalizedExecutablePath = ExistingPath.FileOrNull(executablePath)
             ?? ResolveExecutableFromDeployment(normalizedDeploymentDirectory, executablePath);
 
         if (!string.IsNullOrWhiteSpace(normalizedExecutablePath) &&
@@ -213,16 +214,16 @@ public static class AppVersionProvider
 
     private static string? ResolveDeploymentFromPackageRoot(string? packageRoot, string? executablePath)
     {
-        var normalizedPackageRoot = NormalizeExistingDirectory(packageRoot);
+        var normalizedPackageRoot = ExistingPath.DirectoryOrNull(packageRoot);
         if (string.IsNullOrWhiteSpace(normalizedPackageRoot))
         {
             return null;
         }
 
-        var normalizedExecutablePath = NormalizeExistingFile(executablePath);
+        var normalizedExecutablePath = ExistingPath.FileOrNull(executablePath);
         if (!string.IsNullOrWhiteSpace(normalizedExecutablePath))
         {
-            var executableDirectory = NormalizeExistingDirectory(Path.GetDirectoryName(normalizedExecutablePath));
+            var executableDirectory = ExistingPath.DirectoryOrNull(Path.GetDirectoryName(normalizedExecutablePath));
             if (!string.IsNullOrWhiteSpace(executableDirectory) &&
                 executableDirectory.StartsWith(normalizedPackageRoot, StringComparison.OrdinalIgnoreCase))
             {
@@ -236,13 +237,13 @@ public static class AppVersionProvider
 
     private static string? ResolveExecutableFromDeployment(string? deploymentDirectory, string? executablePath)
     {
-        var normalizedExecutablePath = NormalizeExistingFile(executablePath);
+        var normalizedExecutablePath = ExistingPath.FileOrNull(executablePath);
         if (!string.IsNullOrWhiteSpace(normalizedExecutablePath))
         {
             return normalizedExecutablePath;
         }
 
-        var normalizedDeploymentDirectory = NormalizeExistingDirectory(deploymentDirectory);
+        var normalizedDeploymentDirectory = ExistingPath.DirectoryOrNull(deploymentDirectory);
         if (string.IsNullOrWhiteSpace(normalizedDeploymentDirectory))
         {
             return null;
@@ -319,42 +320,6 @@ public static class AppVersionProvider
         return segments.Length > 0
             ? NormalizeVersionText(segments[0])
             : null;
-    }
-
-    private static string? NormalizeExistingDirectory(string? path)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return null;
-        }
-
-        try
-        {
-            var fullPath = Path.GetFullPath(path);
-            return Directory.Exists(fullPath) ? fullPath : null;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private static string? NormalizeExistingFile(string? path)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return null;
-        }
-
-        try
-        {
-            var fullPath = Path.GetFullPath(path);
-            return File.Exists(fullPath) ? fullPath : null;
-        }
-        catch
-        {
-            return null;
-        }
     }
 
     private static string? ReadStringProperty(JsonElement root, string propertyName)
