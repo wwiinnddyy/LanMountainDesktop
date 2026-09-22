@@ -98,9 +98,7 @@ public partial class ExchangeRateCalculatorWidget : UserControl, IDesktopCompone
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        _isAttached = false;
-        _refreshTimer.Stop();
-        CancellationHelper.CancelAndDispose(ref _refreshCts);
+        ComponentRefreshLifetime.Detach(ref _isAttached, _refreshTimer, ref _refreshCts);
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)

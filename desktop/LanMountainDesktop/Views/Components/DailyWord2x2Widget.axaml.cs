@@ -97,10 +97,7 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        _isAttached = false;
-        _refreshTimer.Stop();
-        CancellationHelper.CancelAndDispose(ref _refreshCts);
-        UpdateRefreshButtonState();
+        ComponentRefreshLifetime.Detach(ref _isAttached, _refreshTimer, ref _refreshCts, UpdateRefreshButtonState);
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)

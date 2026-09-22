@@ -156,10 +156,7 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        _isAttached = false;
-        _refreshTimer.Stop();
-        CancellationHelper.CancelAndDispose(ref _refreshCts);
-        UpdateRefreshButtonState();
+        ComponentRefreshLifetime.Detach(ref _isAttached, _refreshTimer, ref _refreshCts, UpdateRefreshButtonState);
     }
 
     private async void OnRefreshButtonClick(object? sender, RoutedEventArgs e)

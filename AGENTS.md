@@ -1,4 +1,4 @@
-# LanMountainDesktop AI Guide
+﻿# LanMountainDesktop AI Guide
 
 本文件是 AI 助手进入本仓库时的第一入口。面向 Codex、Cursor、Trae 等工具，目标是减少重复探索，快速定位权威文档、关键目录和执行约束。
 
@@ -558,7 +558,7 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 剩下 4 处各有自己的语义——1 处现读快照设置、1 处走 `GetStringWithSourceFallback`（兜底口径不同）、
 2 处调静态 `LocalizationService.GetString`。真要动它得先定"兜底到底听谁的"，那是产品口径不是机械收口。
 **这两把普查尺子的结果已经冻成上限**：`tests/.../DuplicateImplementationRatchetTests.cs`，
-只许降不许升——当前 **68 组逐字相同的方法体（脚本同数）、191 个同名不同体的漂移族**，
+只许降不许升——当前 **66 组逐字相同的方法体（脚本同数）、191 个同名不同体的漂移族**，
 外加一条"漂移普查认领量 ≥5400 处声明"的下限（今天实测 5443）。
 新抄一份就是红灯；收口一族就必须把常量改小（那条红是给你记账的，不是故障）。
 降的几笔分开记：**86 → 74** 是判据从"行数 ≥2"改成"语句数 ≥2"（去掉 12 族单语句转手，不是收口成果）；
@@ -609,9 +609,16 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 property-changed 1/1、snapshot 8/13、timezone 10/10）——删掉一批收尾或改窄正则都会当场红。
 变异验证过：只 `_forgottenTimer?.Start()` 不 Stop 的被点名，配对的 `_runningTimer` 不报。
 **"收"的一侧要认家**：快照订阅的 stop 模式除 `StudySnapshotSubscription.Unsubscribe` 外，
-还算 `StudyComponentLifecycle.Detach`（学习组件 detach 的四步已收进这个家，真 Unsubscribe 在家里）。
+还算 `StudyComponentLifecycle.Detach`（学习组件 detach 的四步已收进这个家，真 Unsubscribe 在家里）；
+timer 族同理算上 `ComponentRefreshLifetime.Detach`（2026-09-23：11 个组件各写一遍的
+"置标志 + 停表 + 取消并释放刷新 CTS" 收进这个家，表是它内部停的）。
 判据不认家就会反过来逼代码保留逐字复制——那是本末倒置；两向都验过（只有 Subscribe 没有收 → 红，
 只起一个计时器不配对 → 红，走家 detach → 绿）。
+**两道哨兵各管一半，别以为"未配对"那条什么都抓得住**：同日实测摘掉某个组件的 `Detach(...)` 调用，
+"未配对"**没报**（该文件在别处还留着一句 `_refreshTimer.Stop()`，按 key 配对确实成立），
+是覆盖面下限先红（收 58/59）。所以"整批收尾交给家"之后，真正兜得住的是族计数，
+配对检查只保证"这个 key 在本文件里被收过"。配套行为钉 `ComponentRefreshLifetimeTests`
+（停表 / 取消并释放 / 收尾回调 / 空 CTS 安全 / 字段必须被清空），家里删掉 `Stop()` → 2 条红，验过。
 **第四把尺子问的是"定义了有没有人调"**：`python scripts/check-widget-layout-applied.py`
 （组件自己那套 `ApplyCellSize` / `UpdateAdaptiveLayout` / `ApplyLayoutMetrics` / `ApplyResponsiveLayout` /
 `ApplyTypographyByBackground` / `ApplyChrome` 若没有任何调用点，组件就按 XAML 默认样式画出来、缩放应用不上，

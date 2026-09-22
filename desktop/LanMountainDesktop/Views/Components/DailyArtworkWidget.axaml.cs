@@ -156,9 +156,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        _isAttached = false;
-        _refreshTimer.Stop();
-        CancellationHelper.CancelAndDispose(ref _refreshCts);
+        ComponentRefreshLifetime.Detach(ref _isAttached, _refreshTimer, ref _refreshCts);
         DisposeArtworkBitmap();
     }
 

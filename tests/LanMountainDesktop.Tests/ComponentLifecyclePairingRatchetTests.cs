@@ -16,9 +16,15 @@ namespace LanMountainDesktop.Tests;
 /// 判据与 <c>scripts/check-component-pairs.py</c> 一致，但两处刻意收窄了脚本的粗判：
 /// ① 只查同时出现 <c>AttachedToVisualTree</c> 或 <c>DetachedFromVisualTree</c> 的文件（组件才有 detach 时机）；
 /// ② 监视租约<b>不在</b>这张表里：它走 <c>StudyMonitoringLease.Sync(ref …, 状态位)</c>，
-///    取/放由家按状态对账，按动词数只会得出假结论。
+///    取/放由家按状态对账，按动词数只会得出假结论；
+/// ③ "收"的一侧要认家：snapshot 族认 <c>StudyComponentLifecycle.Detach</c>、
+///    timer 族认 <c>ComponentRefreshLifetime.Detach</c>（表是它内部停的）。
+///    不认的话这条判据会反过来逼代码保留逐字复制——本末倒置。
 /// 每族的"起/收"条数还各钉一个下限：把 <c>Stop()</c> 删掉、或者把某一族的正则改窄，
 /// 都会让"未配对 0 处"照样成立，那种静默收窄比红灯贵。
+/// 两道哨兵各管一半：2026-09-23 实测摘掉一个组件的 <c>Detach(...)</c> 调用，
+/// "未配对"那条<b>没报</b>（该文件在别处还有一句 <c>_refreshTimer.Stop()</c>，按 key 配对确实成立），
+/// 是覆盖面下限先红的（收 58/59）——所以"整批收尾交给家"之后，族计数才是那条真正兜得住的哨兵。
 /// </summary>
 public sealed class ComponentLifecyclePairingRatchetTests
 {
@@ -37,7 +43,12 @@ public sealed class ComponentLifecyclePairingRatchetTests
     [
         new("timer",
             new Regex(@"\b(?<key>[\w]*[Tt]imer\w*)\s*\??\.\s*Start\s*\(", RegexOptions.Compiled),
-            new Regex(@"\b(?<key>[\w]*[Tt]imer\w*)\s*\??\.\s*Stop\s*\(", RegexOptions.Compiled),
+            // 收的一侧也算"整批交给家"的写法：组件 detach 三连（置标志 + 停表 + 取消并释放 CTS）
+            // 已收进 ComponentRefreshLifetime.Detach，表是它内部停的。判据不认这个家，
+            // 就会反过来逼代码保留逐字复制——那是本末倒置（snapshot 族同一个坑，见下）。
+            new Regex(@"\b(?<key>[\w]*[Tt]imer\w*)\s*\??\.\s*Stop\s*\(" +
+                      @"|ComponentRefreshLifetime\s*\.\s*Detach\s*\([^;]*?(?<key>[\w]*[Tt]imer\w*)",
+                  RegexOptions.Compiled),
             true, 35, 59),
         new("subscription",
             new Regex(@"\b(?<key>[\w.]*[Ss]ervice\w*)\s*\??\.\s*(?<h>\w+)\s*\+=\s*\w+", RegexOptions.Compiled),
