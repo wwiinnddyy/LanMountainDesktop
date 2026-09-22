@@ -381,24 +381,7 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
 
         _autoRefreshEnabled = enabled;
         _channelType = channelType;
-        _refreshTimer.Interval = TimeSpan.FromMinutes(intervalMinutes);
-
-        if (!_isAttached)
-        {
-            return;
-        }
-
-        if (_autoRefreshEnabled)
-        {
-            if (!_refreshTimer.IsEnabled)
-            {
-                _refreshTimer.Start();
-            }
-        }
-        else if (_refreshTimer.IsEnabled)
-        {
-            _refreshTimer.Stop();
-        }
+        ComponentRefreshLifetime.Reschedule(_refreshTimer, _isAttached, enabled, intervalMinutes);
     }
 
     private static async Task<Bitmap?> TryDownloadBitmapAsync(string? imageUrl, CancellationToken cancellationToken)

@@ -485,24 +485,7 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
         }
 
         _autoRefreshEnabled = enabled;
-        _refreshTimer.Interval = TimeSpan.FromMinutes(intervalMinutes);
-
-        if (!_isAttached)
-        {
-            return;
-        }
-
-        if (_autoRefreshEnabled)
-        {
-            if (!_refreshTimer.IsEnabled)
-            {
-                _refreshTimer.Start();
-            }
-        }
-        else if (_refreshTimer.IsEnabled)
-        {
-            _refreshTimer.Stop();
-        }
+        ComponentRefreshLifetime.Reschedule(_refreshTimer, _isAttached, enabled, intervalMinutes);
     }
 
     private void UpdateAdaptiveLayout()

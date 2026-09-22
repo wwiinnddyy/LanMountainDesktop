@@ -364,24 +364,7 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
         }
 
         _autoRefreshEnabled = enabled;
-        _refreshTimer.Interval = TimeSpan.FromMinutes(intervalMinutes);
-
-        if (!_isAttached)
-        {
-            return;
-        }
-
-        if (_autoRefreshEnabled)
-        {
-            if (!_refreshTimer.IsEnabled)
-            {
-                _refreshTimer.Start();
-            }
-        }
-        else if (_refreshTimer.IsEnabled)
-        {
-            _refreshTimer.Stop();
-        }
+        ComponentRefreshLifetime.Reschedule(_refreshTimer, _isAttached, enabled, intervalMinutes);
     }
 
     private double ResolveScale()

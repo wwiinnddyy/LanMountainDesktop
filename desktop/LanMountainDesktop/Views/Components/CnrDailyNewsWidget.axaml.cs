@@ -492,24 +492,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         }
 
         _autoRotateEnabled = enabled;
-        _refreshTimer.Interval = TimeSpan.FromMinutes(intervalMinutes);
-
-        if (!_isAttached)
-        {
-            return;
-        }
-
-        if (_autoRotateEnabled)
-        {
-            if (!_refreshTimer.IsEnabled)
-            {
-                _refreshTimer.Start();
-            }
-        }
-        else if (_refreshTimer.IsEnabled)
-        {
-            _refreshTimer.Stop();
-        }
+        ComponentRefreshLifetime.Reschedule(_refreshTimer, _isAttached, enabled, intervalMinutes);
     }
 
     private static int NormalizeAutoRotateIntervalMinutes(int minutes)

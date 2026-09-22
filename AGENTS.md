@@ -662,13 +662,21 @@ property-changed 1/1、snapshot 8/13、timezone 10/10）——删掉一批收尾
 还算 `StudyComponentLifecycle.Detach`（学习组件 detach 的四步已收进这个家，真 Unsubscribe 在家里）；
 timer 族同理算上 `ComponentRefreshLifetime.Detach`（2026-09-23：11 个组件各写一遍的
 "置标志 + 停表 + 取消并释放刷新 CTS" 收进这个家，表是它内部停的）。
+**"起"的一侧同样要认家**：同日把 7 个组件各抄一遍的那 14 行"写间隔 + 只有附着时才起停"
+收进 `ComponentRefreshLifetime.Reschedule`（6 个自动刷新 + CnrDailyNews 的自动轮播）。
+它一次调用既可能起也可能停，所以 timer 族的**起、收两侧都算上这个家**；改完覆盖面实测仍是 35/59
+（一处没掉），而普查的族数/站点数**一动不动**（192 族 / 1371 处 / 逐字 64 组）——
+这族抄本之间的差异全在"读哪条设置"，那本来就不是重复真源。也就是说这次收口的收益不在普查数上，
+在"起停规则只有一处能说"（删 126 行、增 40 行）。别把这类改动记成"普查又降了一档"。
 判据不认家就会反过来逼代码保留逐字复制——那是本末倒置；两向都验过（只有 Subscribe 没有收 → 红，
 只起一个计时器不配对 → 红，走家 detach → 绿）。
 **两道哨兵各管一半，别以为"未配对"那条什么都抓得住**：同日实测摘掉某个组件的 `Detach(...)` 调用，
 "未配对"**没报**（该文件在别处还留着一句 `_refreshTimer.Stop()`，按 key 配对确实成立），
 是覆盖面下限先红（收 58/59）。所以"整批收尾交给家"之后，真正兜得住的是族计数，
 配对检查只保证"这个 key 在本文件里被收过"。配套行为钉 `ComponentRefreshLifetimeTests`
-（停表 / 取消并释放 / 收尾回调 / 空 CTS 安全 / 字段必须被清空），家里删掉 `Stop()` → 2 条红，验过。
+（停表 / 取消并释放 / 收尾回调 / 空 CTS 安全 / 字段必须被清空；`Reschedule` 四格：附着+启用→起、
+附着+停用→停、不附着→只写间隔不起表、不附着+停用→**照旧不动**（钉的是现状，改成"一律停表"是行为变更，另拍）），
+家里删掉 `Stop()` → 2 条红，验过。
 **第四把尺子问的是"定义了有没有人调"**：`python scripts/check-widget-layout-applied.py`
 （组件自己那套 `ApplyCellSize` / `UpdateAdaptiveLayout` / `ApplyLayoutMetrics` / `ApplyResponsiveLayout` /
 `ApplyTypographyByBackground` / `ApplyChrome` 若没有任何调用点，组件就按 XAML 默认样式画出来、缩放应用不上，
