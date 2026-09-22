@@ -1721,6 +1721,46 @@ public sealed class SourceIntegrityTests
             $"{offenders.Count} 处重复的天气 locale 真源：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
     }
 
+    /// <summary>
+    /// 短文本归一化只认 <c>desktop/LanMountainDesktop/Helpers/CompactText.cs</c> 一处。
+    /// 收口前 <c>NormalizeCompactText</c> 连同它专用的 <c>MultiWhitespaceRegex</c> 在 9 个组件里逐字抄了
+    /// 9 遍、23 个调用点。这份重复的代价很具体：同一个信息源的标题里带换行时，
+    /// 一张卡显示成两个空格、另一张显示成一个洞，而两张卡贴在同一个桌面上。
+    /// 方法名和那个正则字段名一起禁，防止有人再抄一份只抄一半（漏了 RegexOptions.Compiled 那种）。
+    /// </summary>
+    [Fact]
+    public void CompactTextNormalizer_LivesInExactlyOnePlace()
+    {
+        var allowedFile = @"desktop\LanMountainDesktop\Helpers\CompactText.cs";
+        var declRe = new Regex(@"(?:private|internal|public|protected)\s+(?:static\s+)?string\s+NormalizeCompactText\s*\(");
+        var fieldRe = new Regex(@"(?:private|internal|public|protected)\s+static\s+readonly\s+Regex\s+MultiWhitespace\w*");
+        var offenders = new List<string>();
+
+        foreach (var file in SourceFiles())
+        {
+            if (string.Equals(RelativeToRepo(file), allowedFile, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            foreach (var (line, number) in CodeLines(file))
+            {
+                if (declRe.IsMatch(line))
+                {
+                    offenders.Add($"{RelativeToRepo(file)}:{number} 又写了一份 NormalizeCompactText，请用 CompactText.Normalize");
+                }
+                else if (fieldRe.IsMatch(line))
+                {
+                    offenders.Add($"{RelativeToRepo(file)}:{number} 又抄了一份压空白的正则字段，请用 CompactText.Normalize");
+                }
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 处重复的短文本归一化：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
     private static IEnumerable<(string Line, int Number)> CodeLines(string file)
     {
         var all = File.ReadAllLines(file);

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -23,7 +22,6 @@ namespace LanMountainDesktop.Views.Components;
 
 public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget
 {
-    private static readonly Regex MultiWhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
     private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationDataService();
     private static readonly HttpClient ImageHttpClient = new()
     {
@@ -245,7 +243,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         var item2 = items.Length > 1 ? items[1] : null;
 
         UpdateHotHeadlineText(item1?.Title);
-        News2TitleTextBlock.Text = NormalizeCompactText(item2?.Title);
+        News2TitleTextBlock.Text = CompactText.Normalize(item2?.Title);
 
         _newsUrls.Clear();
         foreach (var item in items)
@@ -326,7 +324,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         }
 
         UpdateHotHeadlineText(_activeNewsItems[0].Title);
-        News2TitleTextBlock.Text = NormalizeCompactText(_activeNewsItems[1].Title);
+        News2TitleTextBlock.Text = CompactText.Normalize(_activeNewsItems[1].Title);
         StatusTextBlock.Text = string.Empty;
         StatusTextBlock.IsVisible = false;
 
@@ -345,7 +343,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
 
     private void UpdateHotHeadlineText(string? title)
     {
-        var normalizedTitle = NormalizeCompactText(title);
+        var normalizedTitle = CompactText.Normalize(title);
         var hotLabel = L("cnrnews.widget.hot_label", "Hot");
 
         if (News1TitleTextBlock.Inlines is null)
@@ -548,15 +546,5 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
     private string L(string key, string fallback)
     {
         return _localizationService.GetString(_languageCode, key, fallback);
-    }
-
-    private static string NormalizeCompactText(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return string.Empty;
-        }
-
-        return MultiWhitespaceRegex.Replace(text.Trim(), " ");
     }
 }

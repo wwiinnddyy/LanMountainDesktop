@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -23,7 +22,6 @@ namespace LanMountainDesktop.Views.Components;
 
 public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget
 {
-    private static readonly Regex MultiWhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
     private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationDataService();
     private static readonly HttpClient AvatarHttpClient = new()
     {
@@ -342,7 +340,7 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
             if (i < _activeItems.Count)
             {
                 var item = _activeItems[i];
-                visual.TitleTextBlock.Text = NormalizeCompactText(item.Title);
+                visual.TitleTextBlock.Text = CompactText.Normalize(item.Title);
                 visual.AvatarFallbackText.Text = ResolveAvatarFallbackText(item.AuthorDisplayName);
             }
             else
@@ -614,16 +612,6 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
         {
             _ = RefreshPostsAsync(forceRefresh: false);
         }
-    }
-
-    private static string NormalizeCompactText(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return string.Empty;
-        }
-
-        return MultiWhitespaceRegex.Replace(text.Trim(), " ");
     }
 
     private static string ResolveAvatarFallbackText(string? displayName)

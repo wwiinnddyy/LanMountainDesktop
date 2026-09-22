@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -19,7 +18,6 @@ namespace LanMountainDesktop.Views.Components;
 
 public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget
 {
-    private static readonly Regex MultiWhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
     private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationDataService();
     private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 2;
@@ -237,7 +235,7 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
             visual.Host.IsVisible = true;
             visual.IndexTextBlock.Text = (i + 1).ToString();
             visual.TitleTextBlock.Text = i < _activeItems.Count
-                ? NormalizeCompactText(_activeItems[i].Title)
+                ? CompactText.Normalize(_activeItems[i].Title)
                 : fallbackText;
         }
 
@@ -292,7 +290,7 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
 
     private string ResolveSearchEntryText(string? placeholder)
     {
-        var compact = NormalizeCompactText(placeholder);
+        var compact = CompactText.Normalize(placeholder);
         if (string.IsNullOrWhiteSpace(compact))
         {
             return L("bilihot.widget.search_entry", "搜索");
@@ -492,16 +490,6 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
         return SupportedAutoRefreshIntervalsMinutes
             .OrderBy(value => Math.Abs(value - minutes))
             .FirstOrDefault(15);
-    }
-
-    private static string NormalizeCompactText(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return string.Empty;
-        }
-
-        return MultiWhitespaceRegex.Replace(text.Trim(), " ");
     }
 
     private static string BuildDefaultSearchPageUrl()

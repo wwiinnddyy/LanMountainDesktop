@@ -418,8 +418,16 @@ helper 住在 Core 是因为写同一批磁盘文件的是三个进程（宿主�
 
 **一个数只有一个家**：组件自缩放基准 `ComponentDesignMetrics.BaseCellSize`（此前 12 个组件各写一份
 `private const double BaseCellSize = 48d`），网格密度/边缘留白的量程与默认值 `DesktopEditing/DesktopGridLimits`
-（此前在 `MainWindow` 及其 partial 分片、`FusedDesktopEditGridAdapter`、`AppSettingsSnapshot` 默认值里各一份）。
-守卫 `ComponentBaseCellSize_LivesInExactlyOnePlace`、`DesktopGridLimits_LiveInExactlyOnePlace`。
+（此前在 `MainWindow` 及其 partial 分片、`FusedDesktopEditGridAdapter`、`AppSettingsSnapshot` 默认值里各一份），
+短文本归一化 `Helpers/CompactText.Normalize`（此前 `NormalizeCompactText` 连它专用的 `MultiWhitespaceRegex`
+在 9 个组件里逐字抄了 9 遍、23 个调用点）。守卫
+`ComponentBaseCellSize_LivesInExactlyOnePlace`、`DesktopGridLimits_LiveInExactlyOnePlace`、
+`CompactTextNormalizer_LivesInExactlyOnePlace`。
+找下一族的手段是量出来的，不是凭印象：`python scripts/dump-dup-methods.py`（不带参数扫全部二进制，
+按"方法名 + 归一化方法体"分组，报 `Nx 方法名 (行数, body#hash)` 加每个站点的 file:line；
+传目录只扫那些文件，`NAMES=A,B` 换要查的方法名）。**这条探针必须先拿已知样本验过再用**：
+用 `ce8ed29^` 那三份逐字相同的 `NormalizeWeatherLocale` 做对照能报 3x，才算它有效——
+同一轮里更早一版按 K&R 大括号写的探针在真树上报"0 组"，而本仓是 Allman 风格，那条 0 是假的。
 **滑杆的 `Minimum`/`Maximum` 不许写死数字**，要绑视图模型上从 `DesktopGridLimits` 读的那四个量程属性——
 设置页量程是这套数的第四份副本，漂了的症状不是崩，而是"拖到尽头网格不动"或"存进去被运行期悄悄钳掉"。
 

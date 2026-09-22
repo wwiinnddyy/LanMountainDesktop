@@ -1,0 +1,80 @@
+"""列出全仓"逐字相同的方法体"，给重复真源收口排队用。
+
+用法：
+    python scripts/dump-dup-methods.py                       # 扫全部二进制
+    python scripts/dump-dup-methods.py desktop/LanMountainDesktop/Services   # 只扫给定目录
+    NAMES=Foo,Bar python scripts/dump-dup-methods.py         # 只查这两个方法名
+
+**这条探针必须先拿已知样本验过再用**（同一个坑这一轮踩过两次）：先从某个历史提交里
+把已知有逐字重复的那几个文件取到临时目录，带上 NAMES 扫它，必须报出 Nx 才算有效；
+再拿它扫真树。按名字数一遍不等于逐字相同，所以每个候选都要打开两三份看一眼再动手。
+本仓是 Allman 大括号（签名一行、`{` 单独一行）：按 K&R 写的解析器一条都匹配不上，
+会在真树上报"0 组"——那种 0 是假的，别当结论。
+"""
+
+import hashlib
+import io
+import os
+import re
+import sys
+from collections import defaultdict
+
+DEFAULT_ROOTS = ["core", "desktop", "airapp", "install", "platform", "mobile"]
+NAMES = os.environ.get("NAMES")
+NAMES = [n.strip() for n in NAMES.split(",") if n.strip()] if NAMES else None
+SKIP_DIRS = {"obj", "bin", "node_modules"}
+
+name_alt = "|".join(re.escape(n) for n in NAMES) if NAMES else r"[A-Za-z_]\w*"
+SIG = re.compile(
+    r"^\s*(private|internal|public)\s+(static\s+)?(?:async\s+)?"
+    r"[\w<>?\[\],\. ]+?\b(" + name_alt + r")\s*\(([^)]*)\)\s*$"
+)
+BRACE = re.compile(r"^\s*\{\s*$")
+
+files = []
+for root in (sys.argv[1:] or DEFAULT_ROOTS):
+    if not os.path.exists(root):
+        continue
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
+        files.extend(os.path.join(dirpath, f) for f in filenames if f.endswith(".cs"))
+
+groups = defaultdict(list)
+for path in files:
+    lines = io.open(path, encoding="utf-8", errors="replace").read().split("\n")
+    i = 0
+    while i < len(lines) - 1:
+        m = SIG.match(lines[i])
+        if not m or not BRACE.match(lines[i + 1]):
+            i += 1
+            continue
+        depth, seen, end, j = 0, False, -1, i + 1
+        while j < len(lines):
+            for ch in lines[j]:
+                if ch == "{":
+                    depth += 1
+                    seen = True
+                elif ch == "}":
+                    depth -= 1
+            if seen and depth == 0:
+                end = j
+                break
+            j += 1
+        if end < 0:
+            i += 1
+            continue
+        body = [l.strip() for l in lines[i + 2:end] if l.strip() and not l.strip().startswith("//")]
+        if len(body) >= 2:
+            digest = hashlib.sha1("\n".join(body).encode("utf-8")).hexdigest()[:8]
+            groups[(m.group(3), digest, len(body))].append((path, i + 1, m.group(1), bool(m.group(2))))
+        i = end + 1
+
+rows = [(key, sites) for key, sites in groups.items() if len(sites) >= 2]
+rows.sort(key=lambda kv: (-len(kv[1]), kv[0][0]))
+print("== 逐字相同的方法体（份数 >= 2）==")
+for (name, digest, nlines), sites in rows:
+    touched = len({s[0] for s in sites})
+    print(f"{len(sites)}x in {touched} files  {name}  ({nlines} 行, body#{digest})")
+    for path, line, access, is_static in sites:
+        print(f"      {path}:{line}  [{access}{' static' if is_static else ''}]")
+print(f"\n扫了 {len(files)} 个 .cs，命中 {len(rows)} 组")

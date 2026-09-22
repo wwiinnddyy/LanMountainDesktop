@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -14,12 +13,12 @@ using Avalonia.Threading;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
+using LanMountainDesktop.Helpers;
 
 namespace LanMountainDesktop.Views.Components;
 
 public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget
 {
-    private static readonly Regex MultiWhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
     private static readonly char[] NaturalBreakChars =
     [
         '\uFF0C',
@@ -523,7 +522,7 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
 
     private static string PrepareAuthorText(string? rawText, int targetUnits, int maxLines)
     {
-        var normalized = NormalizeCompactText(rawText);
+        var normalized = CompactText.Normalize(rawText);
         if (string.IsNullOrWhiteSpace(normalized))
         {
             return string.Empty;
@@ -825,16 +824,6 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
         var measured = ComponentTypography.MeasureTextSize(text, fontSize, fontWeight, maxWidth, lineHeight);
         var lineCount = Math.Max(1, (int)Math.Ceiling(measured.Height / Math.Max(1, lineHeight)));
         return measured.Height <= maxHeight + 0.6 && lineCount <= Math.Max(1, maxLines);
-    }
-
-    private static string NormalizeCompactText(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return string.Empty;
-        }
-
-        return MultiWhitespaceRegex.Replace(text.Trim(), " ");
     }
 
     private static string RemoveLineBreaks(string? text)

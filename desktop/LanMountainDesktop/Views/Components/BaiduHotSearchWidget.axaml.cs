@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -22,7 +21,6 @@ namespace LanMountainDesktop.Views.Components;
 
 public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget
 {
-    private static readonly Regex MultiWhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
     private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationDataService();
     private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 2;
@@ -258,7 +256,7 @@ public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget
             visual.Host.IsVisible = true;
             visual.IndexTextBlock.Text = (i + 1).ToString();
             visual.TitleTextBlock.Text = i < _activeItems.Count
-                ? NormalizeCompactText(_activeItems[i].Title)
+                ? CompactText.Normalize(_activeItems[i].Title)
                 : fallbackText;
         }
 
@@ -484,16 +482,6 @@ public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget
         return SupportedAutoRefreshIntervalsMinutes
             .OrderBy(value => Math.Abs(value - minutes))
             .FirstOrDefault(15);
-    }
-
-    private static string NormalizeCompactText(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return string.Empty;
-        }
-
-        return MultiWhitespaceRegex.Replace(text.Trim(), " ");
     }
 
     private double ResolveScale()

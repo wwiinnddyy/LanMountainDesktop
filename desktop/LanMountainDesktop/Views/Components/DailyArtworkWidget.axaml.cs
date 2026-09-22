@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Net.Http;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -35,7 +34,6 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
             [DayOfWeek.Sunday] = "星期日"
         };
 
-    private static readonly Regex MultiWhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
     private static readonly FontWeight[] TitleWeightCandidates = new[] { FontWeight.Bold, FontWeight.SemiBold, FontWeight.Medium, FontWeight.Normal };
     private static readonly FontWeight[] ArtistWeightCandidates = new[] { FontWeight.SemiBold, FontWeight.Medium, FontWeight.Normal };
     private static readonly FontWeight[] SecondaryWeightCandidates = new[] { FontWeight.Medium, FontWeight.Normal, FontWeight.Light };
@@ -271,7 +269,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         var artist = string.IsNullOrWhiteSpace(snapshot.Artist)
             ? L("artwork.widget.unknown_artist", "Unknown artist")
             : snapshot.Artist.Trim();
-        ArtistTextBlock.Text = NormalizeCompactText(artist);
+        ArtistTextBlock.Text = CompactText.Normalize(artist);
 
         YearTextBlock.Text = ResolveYearText(snapshot);
         _currentArtworkSourceUrl = snapshot.ArtworkUrl;
@@ -450,7 +448,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         DateTextBlock.Text = "03/22";
         WeekdayTextBlock.Text = "Sunday";
         PaintingTitleTextBlock.Text = BuildQuotedTitle("The Starry Night");
-        ArtistTextBlock.Text = NormalizeCompactText("Vincent van Gogh");
+        ArtistTextBlock.Text = CompactText.Normalize("Vincent van Gogh");
         YearTextBlock.Text = "1889 | MoMA";
         StatusTextBlock.IsVisible = false;
         StatusTextBlock.Text = string.Empty;
@@ -515,9 +513,9 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         var artistMin = Math.Max(8.4, artistBase * 0.50);
         var yearMin = Math.Max(8.0, yearBase * 0.54);
 
-        var titleDemand = Math.Clamp(NormalizeCompactText(PaintingTitleTextBlock.Text).Length, 6, 96);
-        var artistDemand = Math.Clamp(NormalizeCompactText(ArtistTextBlock.Text).Length, 4, 72);
-        var yearDemand = Math.Clamp(NormalizeCompactText(YearTextBlock.Text).Length, 2, 48);
+        var titleDemand = Math.Clamp(CompactText.Normalize(PaintingTitleTextBlock.Text).Length, 6, 96);
+        var artistDemand = Math.Clamp(CompactText.Normalize(ArtistTextBlock.Text).Length, 4, 72);
+        var yearDemand = Math.Clamp(CompactText.Normalize(YearTextBlock.Text).Length, 2, 48);
 
         var minTitleHeight = Math.Max(10, titleMin * 1.10 * 2);
         var minArtistHeight = Math.Max(8, artistMin * 1.14);
@@ -694,7 +692,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
 
     private static string BuildQuotedTitle(string title)
     {
-        var normalized = NormalizeCompactText(title);
+        var normalized = CompactText.Normalize(title);
         if (string.IsNullOrWhiteSpace(normalized))
         {
             normalized = "Untitled";
@@ -748,16 +746,6 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
 
     private static double ResolveUnifiedMainRadiusValue() =>
         HostAppearanceThemeProvider.GetOrCreate().GetCurrent().CornerRadiusTokens.Lg.TopLeft;
-
-    private static string NormalizeCompactText(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return string.Empty;
-        }
-
-        return MultiWhitespaceRegex.Replace(text.Trim(), " ");
-    }
 
     private static double FitFontSize(
         string? text,

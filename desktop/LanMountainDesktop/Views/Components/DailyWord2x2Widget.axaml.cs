@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -15,12 +14,12 @@ using Avalonia.Threading;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
+using LanMountainDesktop.Helpers;
 
 namespace LanMountainDesktop.Views.Components;
 
 public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget
 {
-    private static readonly Regex MultiWhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
     private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationDataService();
     private const int BaseWidthCells = 2;
     private const int BaseHeightCells = 2;
@@ -231,7 +230,7 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
     private void ApplySnapshot(DailyWordSnapshot snapshot)
     {
         _latestSnapshot = snapshot;
-        WordTextBlock.Text = NormalizeCompactText(snapshot.Word);
+        WordTextBlock.Text = CompactText.Normalize(snapshot.Word);
         MeaningTextBlock.Text = BuildMeaningPreview(snapshot.Meaning);
         HiddenHintTextBlock.Text = L("dailyword2x2.widget.tap_to_show", "Tap to reveal meaning");
         StatusTextBlock.IsVisible = false;
@@ -442,7 +441,7 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
 
     private static string BuildMeaningPreview(string? rawMeaning)
     {
-        var normalized = NormalizeCompactText(rawMeaning);
+        var normalized = CompactText.Normalize(rawMeaning);
         if (string.IsNullOrWhiteSpace(normalized))
         {
             return "Meaning unavailable";
@@ -450,16 +449,6 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
 
         var compact = normalized.Replace("；", "; ", StringComparison.Ordinal);
         return compact.Length <= 160 ? compact : $"{compact[..160]}...";
-    }
-
-    private static string NormalizeCompactText(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return string.Empty;
-        }
-
-        return MultiWhitespaceRegex.Replace(text.Trim(), " ");
     }
 
     private static double FitFontSize(

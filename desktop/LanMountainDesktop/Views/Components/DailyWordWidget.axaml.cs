@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -13,12 +12,12 @@ using Avalonia.Threading;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
+using LanMountainDesktop.Helpers;
 
 namespace LanMountainDesktop.Views.Components;
 
 public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget
 {
-    private static readonly Regex MultiWhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
     private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationDataService();
     private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 2;
@@ -219,7 +218,7 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
 
     private void ApplySnapshot(DailyWordSnapshot snapshot)
     {
-        WordTextBlock.Text = NormalizeCompactText(snapshot.Word);
+        WordTextBlock.Text = CompactText.Normalize(snapshot.Word);
         PronunciationTextBlock.Text = BuildPronunciationText(snapshot);
         MeaningTextBlock.Text = BuildMeaningText(snapshot.Meaning);
         ExampleTextBlock.Text = BuildExampleText(snapshot.ExampleSentence);
@@ -513,8 +512,8 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
 
     private string BuildPronunciationText(DailyWordSnapshot snapshot)
     {
-        var uk = NormalizeCompactText(snapshot.UkPronunciation);
-        var us = NormalizeCompactText(snapshot.UsPronunciation);
+        var uk = CompactText.Normalize(snapshot.UkPronunciation);
+        var us = CompactText.Normalize(snapshot.UsPronunciation);
         var isZh = _localizationService.IsChineseLanguage(_languageCode);
 
         if (!string.IsNullOrWhiteSpace(uk) && !string.IsNullOrWhiteSpace(us))
@@ -539,7 +538,7 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
 
     private static string BuildMeaningText(string? rawMeaning)
     {
-        var normalized = NormalizeCompactText(rawMeaning);
+        var normalized = CompactText.Normalize(rawMeaning);
         return string.IsNullOrWhiteSpace(normalized)
             ? "Meaning unavailable"
             : normalized;
@@ -547,7 +546,7 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
 
     private static string BuildExampleText(string? sentence)
     {
-        var normalized = NormalizeCompactText(sentence);
+        var normalized = CompactText.Normalize(sentence);
         return string.IsNullOrWhiteSpace(normalized)
             ? "No example sentence."
             : normalized;
@@ -555,20 +554,10 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
 
     private static string BuildExampleTranslation(string? translation)
     {
-        var normalized = NormalizeCompactText(translation);
+        var normalized = CompactText.Normalize(translation);
         return string.IsNullOrWhiteSpace(normalized)
             ? string.Empty
             : normalized;
-    }
-
-    private static string NormalizeCompactText(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return string.Empty;
-        }
-
-        return MultiWhitespaceRegex.Replace(text.Trim(), " ");
     }
 
     private static double FitFontSize(

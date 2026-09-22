@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -23,7 +22,6 @@ namespace LanMountainDesktop.Views.Components;
 
 public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget
 {
-    private static readonly Regex MultiWhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
     private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationDataService();
     private static readonly HttpClient ImageHttpClient = new()
     {
@@ -491,16 +489,6 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
     private static double ResolveUnifiedMainRadiusValue() =>
         HostAppearanceThemeProvider.GetOrCreate().GetCurrent().CornerRadiusTokens.Lg.TopLeft;
 
-    private static string NormalizeCompactText(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return string.Empty;
-        }
-
-        return MultiWhitespaceRegex.Replace(text.Trim(), " ");
-    }
-
     private string L(string key, string fallback)
     {
         return _localizationService.GetString(_languageCode, key, fallback);
@@ -544,7 +532,7 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
 
             _titleTextBlock = new TextBlock
             {
-                Text = NormalizeCompactText(item.Title),
+                Text = CompactText.Normalize(item.Title),
                 Foreground = new SolidColorBrush(isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327")),
                 FontWeight = FontWeight.SemiBold,
                 TextWrapping = TextWrapping.Wrap,
