@@ -133,6 +133,25 @@ EXPLAINED = {
         "所属类型已在 ZeroUseTypeRatchetTests 名单里（考勤整模块含 AttendanceModels 无入口，等拍板）："
         "这两个是它的读/写侧，模块接不接一起定，不单独删",
     "AttendanceDataStore.UpsertSession": "同上，考勤模块无入口",
+    # —— 三条"能力实现完整、界面上没有任何入口"（待办 G1-BA）——
+    "DataStorageService.GetAvailableDiskSpaceAsync":
+        "全仓只有这一处算 AvailableFreeSpace（grep 实测），也就是说"
+        "\"还剩多少磁盘\"这件事在设置页/存储页上根本没有地方显示；删掉就是把能力抹掉，先登记",
+    "StudyDataStore.TryGetSessionReport":
+        "按 sessionId 读单份会话报告，生产零调用（同类其它读取路径是活的）："
+        "学习面板列得出历史、点不开单场报告，属能力没入口",
+    "TimeZoneService.GetCommonTimeZones":
+        "那张 7 个常用时区的表只有这里构造（活路径 TimeZoneService.cs:57 是按 id 解析单个时区）："
+        "没有\"从常用列表里挑\"的界面，用户只能填 id",
+    # —— 隐私同意（待办 G1-AY）：写侧活着、读侧整条没人接 ——
+    "PrivacyAgreementService.HasUserAgreed":
+        "SaveAgreement 是活的（OobeSessionCommitService.cs:67 会落盘），但没人回头查这个位："
+        "同意状态只写不读＝启动流程没有这道闸。它是唯一的读取实现，删了就再看不出这里缺什么",
+    "PrivacyAgreementService.GetCurrentAgreementVersion":
+        "同上家族：协议版本号只有这里给（返回常量 CurrentAgreementVersion），"
+        "\"版本变了要不要重新征同意\"没接，属产品决定",
+    "PrivacyAgreementService.ClearAgreement":
+        "重置同意状态（删文件）的能力，注释自己写着\"用于测试或重置\"，但既没挂设置页也没挂 dev 面板",
 }
 
 
@@ -276,7 +295,11 @@ def classify(path, number, owner, name, mods, ret, attributes, iface_names):
         return None
     if not ret:
         return None                      # 构造器：`public Foo(...)` 拿不到返回类型
-    if re.search(r"(class|struct|record|interface|enum)", ret):
+    if any(word in ret.split() for word in ('class','struct','record','interface','enum')):
+        return None                      # 主构造器类型的声明行不是方法：
+                                         # internal sealed class InstallProgressBridge(IProgress<...>? p)
+                                         # 会被 DECL 读成"返回类型是 class 的方法"，
+                                         # 实测报出一条根本不存在的 <top>.InstallProgressBridge。
         return None                      # 主构造器类型的声明行本身：
                                          # `internal sealed class InstallProgressBridge(IProgress<…>? p)`
                                          # 会被 DECL 读成"返回类型 class InstallProgressBridge 的方法"，
