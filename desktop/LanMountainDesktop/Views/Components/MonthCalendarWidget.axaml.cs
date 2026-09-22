@@ -41,21 +41,16 @@ public partial class MonthCalendarWidget : UserControl, IDesktopComponentWidget,
 
     public void SetTimeZoneService(TimeZoneService timeZoneService)
     {
-        ClearTimeZoneService();
-        _timeZoneService = timeZoneService;
-        _timeZoneService.TimeZoneChanged += OnTimeZoneChanged;
+        _timeZoneService = TimeZoneServiceBinding.Replace(
+            _timeZoneService,
+            timeZoneService,
+            OnTimeZoneChanged);
         UpdateCalendar();
     }
 
     public void ClearTimeZoneService()
     {
-        if (_timeZoneService is null)
-        {
-            return;
-        }
-
-        _timeZoneService.TimeZoneChanged -= OnTimeZoneChanged;
-        _timeZoneService = null;
+        _timeZoneService = TimeZoneServiceBinding.Clear(_timeZoneService, OnTimeZoneChanged);
     }
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)

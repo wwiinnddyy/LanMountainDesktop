@@ -1864,6 +1864,47 @@ public sealed class SourceIntegrityTests
             $"{offenders.Count} 处重复的取消/释放动作：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
     }
 
+    /// <summary>
+    /// 时区服务的订阅/退订只认 <c>desktop/LanMountainDesktop/Views/Components/TimeZoneServiceBinding.cs</c> 一处。
+    /// 收口前 10 个组件各抄了一份 Set 与一份 Clear（共 20 个方法体，实测差异只有一处把 4 行守卫压成 1 行），
+    /// 而 <c>TimeZoneService</c> 是应用级长命对象、事件没有任何退订兜底——抄漏 <c>-=</c> 那一边的话，
+    /// 服务就替一个已经从桌面上分离掉的控件一直持有整棵 visual tree。
+    /// 两条都拦：谁手写 <c>TimeZoneChanged += / -=</c>，以及谁声明了 Set/Clear 却没走 binding。
+    /// </summary>
+    [Fact]
+    public void TimeZoneServiceSubscription_LivesInExactlyOnePlace()
+    {
+        var homeFile = @"desktop\LanMountainDesktop\Views\Components\TimeZoneServiceBinding.cs";
+        var eventRe = new Regex(@"TimeZoneChanged\s*[-+]?=");
+        var bodyRe = new Regex(@"void (?:Set|Clear)TimeZoneService\s*\([^;]*\)\s*$");
+        var offenders = new List<string>();
+
+        foreach (var file in SourceFiles())
+        {
+            var relative = RelativeToRepo(file);
+            var isHome = string.Equals(relative, homeFile, StringComparison.OrdinalIgnoreCase);
+
+            foreach (var (line, number) in CodeLines(file))
+            {
+                if (eventRe.IsMatch(line) && !isHome)
+                {
+                    offenders.Add($"{relative}:{number} 自己订阅/退订 TimeZoneChanged，请用 TimeZoneServiceBinding");
+                }
+
+                if (bodyRe.IsMatch(line)
+                    && !isHome
+                    && !File.ReadAllLines(file).Any(l => l.Contains("TimeZoneServiceBinding.", StringComparison.Ordinal)))
+                {
+                    offenders.Add($"{relative}:{number} 这对方法没走 TimeZoneServiceBinding，退订漏一边就是泄漏");
+                }
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 处绕开 TimeZoneServiceBinding 的时区订阅：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
     private static IEnumerable<(string Line, int Number)> CodeLines(string file)
     {
         var all = File.ReadAllLines(file);
