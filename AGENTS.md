@@ -252,6 +252,11 @@ try/catch 读取、8 份手写的中文比较。`CultureInfo.GetCultureInfo("zh-
 （`WindowsStartMenuService` 拿的是中文排序规则，跟默认语言无关）。守卫只管宿主自己的二进制：
 AirApp 子进程的语言兜底在 `AirAppSdk` 的 `AirAppLocalizer` 里，它引用不到宿主，而 SDK 公开面动一次就要重发一次包。
 `SourceIntegrityTests.DefaultLanguagePolicy_LivesInExactlyOnePlace` 会拦第 42 处。
+2026-09-22 又收一族绕开家的抄法：7 个学习组件各写一遍
+`var snapshot = _settingsService.Load(); _languageCode = _localizationService.NormalizeLanguageCode(...); _studyEnabled = snapshot.StudyEnabled;`
+——逐字相同、且绕过 `ResolveLanguageCode`。现在收进 `Views/Components/StudyComponentSettings.Reload`：
+两个字段保证取自同一份快照（分两次读会出现"语言已新、开关还旧"），归一化口径回到一家。
+行为逐字不变：`settings.Load()` 仍留在家的 try 之外，读盘失败照旧冒到调用方。
 
 **学习监测租约只认一处**：组件该不该持有租约，走 `StudyMonitoringLease.Sync(ref _monitoringLease, 协调器, 开关, 已挂载, 在当前页)`，
 释放走 `StudyMonitoringLease.Release(ref ...)`（两者都在 `Services/StudyAnalyticsMonitoringLeaseCoordinator.cs`）。

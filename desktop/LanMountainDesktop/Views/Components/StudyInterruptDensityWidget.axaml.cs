@@ -495,9 +495,8 @@ public partial class StudyInterruptDensityWidget : UserControl, IDesktopComponen
 
     private void ReloadLanguageCode()
     {
-        var snapshot = _settingsService.Load();
-        _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
-        _studyEnabled = snapshot.StudyEnabled;
+        StudyComponentSettings.Reload(
+            ref _languageCode, ref _studyEnabled, _settingsService, _localizationService);
     }
 
     private void ApplyVariableWeights(double scale)
