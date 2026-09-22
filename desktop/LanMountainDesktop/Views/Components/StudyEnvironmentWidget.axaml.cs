@@ -88,7 +88,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
     {
         _isAttached = true;
         ReloadDisplaySettings();
-        StudySnapshotSubscription.Subscribe(ref _isSubscribed, _studyAnalyticsService, OnStudySnapshotUpdated);
+        StudySnapshotSubscription.Subscribe(ref _isSubscribed, _studyAnalyticsService, _renderGate.HandleSnapshotUpdated);
 
         UpdateMonitoringLeaseState();
         RefreshVisual();
@@ -100,7 +100,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
         StudyMonitoringLease.Release(ref _monitoringLease);
         _renderGate.Clear();
 
-        StudySnapshotSubscription.Unsubscribe(ref _isSubscribed, _studyAnalyticsService, OnStudySnapshotUpdated);
+        StudySnapshotSubscription.Unsubscribe(ref _isSubscribed, _studyAnalyticsService, _renderGate.HandleSnapshotUpdated);
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -112,16 +112,6 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
     private void OnActualThemeVariantChanged(object? sender, EventArgs e)
     {
         RefreshVisual();
-    }
-
-    private void OnStudySnapshotUpdated(object? sender, StudyAnalyticsSnapshotChangedEventArgs e)
-    {
-        if (!_isAttached || !_isOnActivePage)
-        {
-            return;
-        }
-
-        _renderGate.Queue(e.Snapshot);
     }
 
     private bool CanRenderSnapshot()
@@ -362,7 +352,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
         SizeChanged -= OnSizeChanged;
         ActualThemeVariantChanged -= OnActualThemeVariantChanged;
 
-        StudySnapshotSubscription.Unsubscribe(ref _isSubscribed, _studyAnalyticsService, OnStudySnapshotUpdated);
+        StudySnapshotSubscription.Unsubscribe(ref _isSubscribed, _studyAnalyticsService, _renderGate.HandleSnapshotUpdated);
 
         StudyMonitoringLease.Release(ref _monitoringLease);
     }

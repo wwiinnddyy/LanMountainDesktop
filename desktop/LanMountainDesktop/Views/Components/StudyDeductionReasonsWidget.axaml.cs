@@ -97,7 +97,7 @@ public partial class StudyDeductionReasonsWidget : UserControl, IDesktopComponen
     {
         _isAttached = true;
         ReloadLanguageCode();
-        StudySnapshotSubscription.Subscribe(ref _isSubscribed, _studyAnalyticsService, OnStudySnapshotUpdated);
+        StudySnapshotSubscription.Subscribe(ref _isSubscribed, _studyAnalyticsService, _renderGate.HandleSnapshotUpdated);
 
         UpdateMonitoringLeaseState();
         RefreshVisual();
@@ -109,7 +109,7 @@ public partial class StudyDeductionReasonsWidget : UserControl, IDesktopComponen
         StudyMonitoringLease.Release(ref _monitoringLease);
         _renderGate.Clear();
 
-        StudySnapshotSubscription.Unsubscribe(ref _isSubscribed, _studyAnalyticsService, OnStudySnapshotUpdated);
+        StudySnapshotSubscription.Unsubscribe(ref _isSubscribed, _studyAnalyticsService, _renderGate.HandleSnapshotUpdated);
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -121,16 +121,6 @@ public partial class StudyDeductionReasonsWidget : UserControl, IDesktopComponen
     private void OnActualThemeVariantChanged(object? sender, EventArgs e)
     {
         RefreshVisual();
-    }
-
-    private void OnStudySnapshotUpdated(object? sender, StudyAnalyticsSnapshotChangedEventArgs e)
-    {
-        if (!_isAttached || !_isOnActivePage)
-        {
-            return;
-        }
-
-        _renderGate.Queue(e.Snapshot);
     }
 
     private bool CanRenderSnapshot()

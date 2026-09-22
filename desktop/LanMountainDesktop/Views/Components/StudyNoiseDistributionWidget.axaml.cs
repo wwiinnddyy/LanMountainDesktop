@@ -102,7 +102,7 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
         _isAttached = true;
         ReloadLanguageCode();
 
-        StudySnapshotSubscription.Subscribe(ref _isSubscribed, _studyAnalyticsService, OnStudySnapshotUpdated);
+        StudySnapshotSubscription.Subscribe(ref _isSubscribed, _studyAnalyticsService, _renderGate.HandleSnapshotUpdated);
 
         UpdateMonitoringLeaseState();
         _renderGate.Queue(_studyAnalyticsService.GetSnapshot());
@@ -114,7 +114,7 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
         StudyMonitoringLease.Release(ref _monitoringLease);
         _renderGate.Clear();
 
-        StudySnapshotSubscription.Unsubscribe(ref _isSubscribed, _studyAnalyticsService, OnStudySnapshotUpdated);
+        StudySnapshotSubscription.Unsubscribe(ref _isSubscribed, _studyAnalyticsService, _renderGate.HandleSnapshotUpdated);
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -130,17 +130,6 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
 
     private void UpdateMonitoringLeaseState() =>
         StudyMonitoringLease.Sync(ref _monitoringLease, _monitoringLeaseCoordinator, _studyEnabled, _isAttached, _isOnActivePage);
-
-    private void OnStudySnapshotUpdated(object? sender, StudyAnalyticsSnapshotChangedEventArgs e)
-    {
-        _ = sender;
-        if (!_isAttached || !_isOnActivePage)
-        {
-            return;
-        }
-
-        _renderGate.Queue(e.Snapshot);
-    }
 
     private bool CanRenderSnapshot()
     {
@@ -467,7 +456,7 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
         ActualThemeVariantChanged -= OnActualThemeVariantChanged;
         _renderGate.Dispose();
 
-        StudySnapshotSubscription.Unsubscribe(ref _isSubscribed, _studyAnalyticsService, OnStudySnapshotUpdated);
+        StudySnapshotSubscription.Unsubscribe(ref _isSubscribed, _studyAnalyticsService, _renderGate.HandleSnapshotUpdated);
 
         StudyMonitoringLease.Release(ref _monitoringLease);
     }

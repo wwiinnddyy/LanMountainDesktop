@@ -1,6 +1,7 @@
 using System;
 using Avalonia.Threading;
 using LanMountainDesktop.Models;
+using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -57,6 +58,21 @@ internal sealed class StudySnapshotRenderGate : IDisposable
         }
 
         Dispatcher.UIThread.Post(() => ProcessPending(), DispatcherPriority.Background);
+    }
+
+    /// <summary>
+    /// 订阅 <c>StudyAnalyticsService</c> 时直接把这个方法当回调：不可见（组件已分离或不在当前页）时连排队都不做。
+    /// 这条判断原来在 8 个学习组件里各抄了一遍（每份 9 行、逐字相同，只有一份多一句 <c>_ = sender;</c> 压警告），
+    /// 而 <c>_canRender</c> 本来就是传进这里来的——回调 shape 该由门自己管。
+    /// </summary>
+    public void HandleSnapshotUpdated(object? sender, StudyAnalyticsSnapshotChangedEventArgs e)
+    {
+        if (!_canRender())
+        {
+            return;
+        }
+
+        Queue(e.Snapshot);
     }
 
     public bool ProcessPending()

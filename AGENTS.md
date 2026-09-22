@@ -239,10 +239,15 @@ AirApp 子进程的语言兜底在 `AirAppSdk` 的 `AirAppLocalizer` 里，它�
 阈值 0.58 这一档徽章和内嵌卡片共用，判档走 `IsBrightPanel(panelColor)`，不要再各写一遍。
 
 **快照事件的订/解只认一处**：学习组件订 `IStudyAnalyticsService.SnapshotUpdated` 走
-`Services/StudySnapshotSubscription.cs`（`Subscribe(ref _isSubscribed, service, OnStudySnapshotUpdated)` 与 `Unsubscribe`）。
+`Services/StudySnapshotSubscription.cs`（`Subscribe(ref _isSubscribed, service, _renderGate.HandleSnapshotUpdated)` 与 `Unsubscribe`）。
 "只订一次、卸载或销毁时必须解掉"这对判断此前被 8 个组件各抄两遍、一共 21 处；解订那一半漏抄就是
 一个组件已经从桌面上摘掉却还在被回调的事件泄漏。`_isSubscribed` 现在只由该助手读写，
 守卫 `StudySnapshotSubscription_LivesInExactlyOnePlace`。
+2026-09-22 同族再收一层：回调本身（"不可见就别排队"那 9 行）也在 8 个组件里各抄了一份（逐字相同，
+只有 `StudyNoiseDistributionWidget` 多一句 `_ = sender;`），现在归 `Views/Components/StudySnapshotRenderGate.cs`
+的 `HandleSnapshotUpdated` ——`canRender` 本来就是传进这个门的，回调 shape 没有理由留在组件里；
+同一条守卫现在禁组件再声明 `OnStudySnapshotUpdated`。行为由 `StudyComponentRenderingTests` 两条钉住
+（不可见时不排队、可见时排队；把 `_canRender()` 判断去掉后第一条立刻红）。
 
 **对比度取色只认一处**：在玻璃面板上从候选色里挑一个读得清的前景，一律
 `Theme/AdaptiveBrushFactory.cs`（`Create(...)` 出画刷、`Pick(...)` 只出颜色，后者可直接单测）。

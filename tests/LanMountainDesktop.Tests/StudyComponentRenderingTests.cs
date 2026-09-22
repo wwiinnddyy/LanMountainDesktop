@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Avalonia;
 using LanMountainDesktop.Models;
+using LanMountainDesktop.Services;
 using LanMountainDesktop.Views.Components;
 using Xunit;
 
@@ -38,6 +39,34 @@ public sealed class StudyComponentRenderingTests
         Assert.False(gate.ProcessPending());
         Assert.Equal(0, renderCount);
         Assert.False(gate.HasPendingSnapshot);
+    }
+
+    /// <summary>
+    /// 回调这一侧的口径：组件不可见时连"排一次队"都不该做。
+    /// 这句判断原来在 8 个学习组件里各抄了一遍（每份 9 行），现在归门自己管。
+    /// </summary>
+    [Fact]
+    public void RenderGate_IgnoresTheServiceCallback_WhenRenderIsBlocked()
+    {
+        using var gate = new StudySnapshotRenderGate(
+            canRender: () => false,
+            renderSnapshot: _ => Assert.Fail("不可见时不该渲染"));
+
+        gate.HandleSnapshotUpdated(this, new StudyAnalyticsSnapshotChangedEventArgs(CreateSnapshot("hidden")));
+
+        Assert.False(gate.HasPendingSnapshot);
+    }
+
+    [Fact]
+    public void RenderGate_QueuesTheServiceCallback_WhenRenderIsAllowed()
+    {
+        using var gate = new StudySnapshotRenderGate(
+            canRender: () => true,
+            renderSnapshot: _ => { });
+
+        gate.HandleSnapshotUpdated(this, new StudyAnalyticsSnapshotChangedEventArgs(CreateSnapshot("shown")));
+
+        Assert.True(gate.HasPendingSnapshot);
     }
 
     [Fact]

@@ -512,6 +512,8 @@ public sealed class SourceIntegrityTests
              "订/解快照事件请走 StudySnapshotSubscription.Subscribe / Unsubscribe"),
             (new Regex(@"_isSubscribed\s*=", RegexOptions.Compiled),
              "_isSubscribed 只由 StudySnapshotSubscription 维护"),
+            (new Regex(@"void\s+OnStudySnapshotUpdated\s*\(", RegexOptions.Compiled),
+             "快照回调的可见性判断在 StudySnapshotRenderGate.HandleSnapshotUpdated 里，别再抄一份"),
         };
 
         var offenders = new List<string>();

@@ -105,7 +105,7 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
         _isAttached = true;
         ReloadLanguageCode();
 
-        StudySnapshotSubscription.Subscribe(ref _isSubscribed, _studyAnalyticsService, OnStudySnapshotUpdated);
+        StudySnapshotSubscription.Subscribe(ref _isSubscribed, _studyAnalyticsService, _renderGate.HandleSnapshotUpdated);
 
         RefreshFromService();
     }
@@ -113,7 +113,7 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = false;
-        StudySnapshotSubscription.Unsubscribe(ref _isSubscribed, _studyAnalyticsService, OnStudySnapshotUpdated);
+        StudySnapshotSubscription.Unsubscribe(ref _isSubscribed, _studyAnalyticsService, _renderGate.HandleSnapshotUpdated);
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -131,16 +131,6 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
         {
             RenderSnapshot(_currentSnapshot);
         }
-    }
-
-    private void OnStudySnapshotUpdated(object? sender, StudyAnalyticsSnapshotChangedEventArgs e)
-    {
-        if (!_isAttached || !_isOnActivePage)
-        {
-            return;
-        }
-
-        _renderGate.Queue(e.Snapshot);
     }
 
     private bool CanRenderSnapshot()
@@ -707,6 +697,6 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
         DialogConfirmButton.Click -= (_, _) => ConfirmDialog();
         DialogRenameTextBox.KeyDown -= OnDialogRenameTextBoxKeyDown;
 
-        StudySnapshotSubscription.Unsubscribe(ref _isSubscribed, _studyAnalyticsService, OnStudySnapshotUpdated);
+        StudySnapshotSubscription.Unsubscribe(ref _isSubscribed, _studyAnalyticsService, _renderGate.HandleSnapshotUpdated);
     }
 }
