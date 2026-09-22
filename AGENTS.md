@@ -301,6 +301,16 @@ en/ja/ko 还缺 25/313/275 条，只许降不许升；补翻译就把数字改�
 同一个设置在界面上显示成一档、落盘被另一档覆盖，不报错。盘上有早期写的 `Dark`，
 所以"忽略大小写"这格漂不得（行为钉 `ThemeAppearanceValuesTests` 8 格，改成区分大小写恰好红 2 格）。
 
+**时区→城市名只认 `Services/ClockCityNames.cs` 一家**（`FallbackName` 兜底写法、`Lookup(表, 时区)` 查表、
+`ResolveForHostWidget(isChinese, 时区)` 宿主组件入口）。此前世界时钟与模拟时钟各抄一份逐字相同的 20 行
+`ResolveCityName`，Clock AirApp 的 `ClockAirAppTimeFormatter` 还有第三份同样的兜底写法；
+两张 12+12 条的表也是各抄一份——**一份写中文、一份写 `\uXXXX` 转义，逐字普查对这种数据抄本是瞎的**，
+只能靠人对内容（2026-09-23 逐键比过：两组件的表中英文内容完全相同）。
+两个入口的**表选择口径不统一**，是有意的：宿主组件"中文用中文表、其余一律英文表"，
+AirApp 按归一化语言取各自表（多 ja/ko，且 `LanguageCodes.Default` 是中文，所以法语在 AirApp 落中文、
+在宿主组件落英文）。中文表里 `UTC` / `Etc/UTC` 两边取值也不同（"协调世界时" vs 字面 `UTC`）。
+这些分歧挂 `G1-BL` 等拍板，行为钉 `ClockCityNamesTests` 里各有一格钉住，谁被顺手并掉就会红。
+
 **打开外部链接只认一处**：组件要点开一条网页链接，一律 `Helpers/ExternalLinkLauncher.cs`
 （`TryOpen(url)` 打开、`NormalizeHttpUrl(url)` 只做归一化）。此前 http/https 归一化被逐字抄了 6 份
 （含 `RecommendationDataService`），shell 打开又抄了 9 份，其中 3 份（`DailyNewsView`、`JuyaNewsWidget`、

@@ -19,40 +19,6 @@ namespace LanMountainDesktop.Views.Components;
 
 public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget, IComponentPlacementContextAware, IComponentRuntimeContextAware, ISettingsAwareComponentWidget
 {
-    private static readonly IReadOnlyDictionary<string, string> ZhCityNames =
-        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["China Standard Time"] = "\u5317\u4EAC",
-            ["Asia/Shanghai"] = "\u5317\u4EAC",
-            ["GMT Standard Time"] = "\u4F26\u6566",
-            ["Europe/London"] = "\u4F26\u6566",
-            ["AUS Eastern Standard Time"] = "\u6089\u5C3C",
-            ["Australia/Sydney"] = "\u6089\u5C3C",
-            ["Eastern Standard Time"] = "\u7EBD\u7EA6",
-            ["America/New_York"] = "\u7EBD\u7EA6",
-            ["Tokyo Standard Time"] = "\u4E1C\u4EAC",
-            ["Asia/Tokyo"] = "\u4E1C\u4EAC",
-            ["UTC"] = "\u534F\u8C03\u4E16\u754C\u65F6",
-            ["Etc/UTC"] = "\u534F\u8C03\u4E16\u754C\u65F6"
-        };
-
-    private static readonly IReadOnlyDictionary<string, string> EnCityNames =
-        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["China Standard Time"] = "Beijing",
-            ["Asia/Shanghai"] = "Beijing",
-            ["GMT Standard Time"] = "London",
-            ["Europe/London"] = "London",
-            ["AUS Eastern Standard Time"] = "Sydney",
-            ["Australia/Sydney"] = "Sydney",
-            ["Eastern Standard Time"] = "New York",
-            ["America/New_York"] = "New York",
-            ["Tokyo Standard Time"] = "Tokyo",
-            ["Asia/Tokyo"] = "Tokyo",
-            ["UTC"] = "UTC",
-            ["Etc/UTC"] = "UTC"
-        };
-
     private readonly DispatcherTimer _timer = new()
     {
         Interval = TimeSpan.FromSeconds(1)
@@ -293,7 +259,8 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
         SetHandGeometry(_minuteHandLine, minuteAngle, forwardLength: 76, backwardLength: 8);
         SetHandGeometry(_secondHandLine, secondAngle, forwardLength: 94, backwardLength: 18);
 
-        CityTextBlock.Text = ResolveCityName(_clockTimeZone);
+        CityTextBlock.Text = ClockCityNames.ResolveForHostWidget(
+            _localizationService.IsChineseLanguage(_languageCode), _clockTimeZone);
     }
 
     private void ApplyModeVisualIfNeeded()
@@ -392,33 +359,6 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
         _timer.Interval = ClockSecondHandMode.IsSweep(_secondHandMode)
             ? TimeSpan.FromMilliseconds(16)
             : TimeSpan.FromSeconds(1);
-    }
-
-    private string ResolveCityName(TimeZoneInfo timeZone)
-    {
-        var cityNames = _localizationService.IsChineseLanguage(_languageCode)
-            ? ZhCityNames
-            : EnCityNames;
-        if (cityNames.TryGetValue(timeZone.Id, out var cityName))
-        {
-            return cityName;
-        }
-
-        var normalized = timeZone.Id;
-        var slashIndex = normalized.LastIndexOf('/');
-        if (slashIndex >= 0 && slashIndex < normalized.Length - 1)
-        {
-            normalized = normalized[(slashIndex + 1)..];
-        }
-
-        normalized = normalized.Replace('_', ' ').Trim();
-        normalized = normalized
-            .Replace("Standard Time", string.Empty, StringComparison.OrdinalIgnoreCase)
-            .Replace("Daylight Time", string.Empty, StringComparison.OrdinalIgnoreCase)
-            .Replace("Time", string.Empty, StringComparison.OrdinalIgnoreCase)
-            .Trim();
-
-        return string.IsNullOrWhiteSpace(normalized) ? timeZone.Id : normalized;
     }
 
 }

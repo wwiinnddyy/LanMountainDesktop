@@ -107,27 +107,9 @@ public static class ClockAirAppTimeFormatter
     public static string ResolveCityName(TimeZoneInfo timeZone, string languageCode)
     {
         var normalizedLanguage = LanguageCodes.Normalize(languageCode);
-        if (CityNames.TryGetValue(normalizedLanguage, out var cityNames) &&
-            cityNames.TryGetValue(timeZone.Id, out var cityName))
-        {
-            return cityName;
-        }
-
-        var normalized = timeZone.Id;
-        var slashIndex = normalized.LastIndexOf('/');
-        if (slashIndex >= 0 && slashIndex < normalized.Length - 1)
-        {
-            normalized = normalized[(slashIndex + 1)..];
-        }
-
-        normalized = normalized.Replace('_', ' ').Trim();
-        normalized = normalized
-            .Replace("Standard Time", string.Empty, StringComparison.OrdinalIgnoreCase)
-            .Replace("Daylight Time", string.Empty, StringComparison.OrdinalIgnoreCase)
-            .Replace("Time", string.Empty, StringComparison.OrdinalIgnoreCase)
-            .Trim();
-
-        return string.IsNullOrWhiteSpace(normalized) ? timeZone.Id : normalized;
+        return CityNames.TryGetValue(normalizedLanguage, out var table)
+            ? ClockCityNames.Lookup(table, timeZone)
+            : ClockCityNames.FallbackName(timeZone);
     }
 
     public static bool UseTwentyFourHourClock(string? timeFormatMode, CultureInfo culture)

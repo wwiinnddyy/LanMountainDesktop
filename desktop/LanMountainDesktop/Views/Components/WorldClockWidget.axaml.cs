@@ -27,40 +27,6 @@ public partial class WorldClockWidget : UserControl,
     private const double DialDesignSize = 100;
     private const double DialCenter = DialDesignSize / 2d;
 
-    private static readonly IReadOnlyDictionary<string, string> ZhCityNames =
-        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["China Standard Time"] = "北京",
-            ["Asia/Shanghai"] = "北京",
-            ["GMT Standard Time"] = "伦敦",
-            ["Europe/London"] = "伦敦",
-            ["AUS Eastern Standard Time"] = "悉尼",
-            ["Australia/Sydney"] = "悉尼",
-            ["Eastern Standard Time"] = "纽约",
-            ["America/New_York"] = "纽约",
-            ["Tokyo Standard Time"] = "东京",
-            ["Asia/Tokyo"] = "东京",
-            ["UTC"] = "协调世界时",
-            ["Etc/UTC"] = "协调世界时"
-        };
-
-    private static readonly IReadOnlyDictionary<string, string> EnCityNames =
-        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["China Standard Time"] = "Beijing",
-            ["Asia/Shanghai"] = "Beijing",
-            ["GMT Standard Time"] = "London",
-            ["Europe/London"] = "London",
-            ["AUS Eastern Standard Time"] = "Sydney",
-            ["Australia/Sydney"] = "Sydney",
-            ["Eastern Standard Time"] = "New York",
-            ["America/New_York"] = "New York",
-            ["Tokyo Standard Time"] = "Tokyo",
-            ["Asia/Tokyo"] = "Tokyo",
-            ["UTC"] = "UTC",
-            ["Etc/UTC"] = "UTC"
-        };
-
     private sealed class ClockEntryVisual
     {
         public required StackPanel Host { get; init; }
@@ -575,7 +541,8 @@ public partial class WorldClockWidget : UserControl,
             SetHandGeometry(entry.MinuteHand, minuteAngle, forwardLength: 33, backwardLength: 6);
             SetHandGeometry(entry.SecondHand, secondAngle, forwardLength: 37, backwardLength: 8.5);
 
-            entry.CityTextBlock.Text = ResolveCityName(zone);
+            entry.CityTextBlock.Text = ClockCityNames.ResolveForHostWidget(
+            _localizationService.IsChineseLanguage(_languageCode), zone);
             entry.DayTextBlock.Text = ResolveRelativeDayLabel((zonedNow.Date - baseNow.Date).Days);
 
             var offsetDelta = zone.GetUtcOffset(utcNow) - baseOffset;
@@ -611,33 +578,6 @@ public partial class WorldClockWidget : UserControl,
 
         _nextLanguageProbeUtc = utcNow.AddSeconds(25);
         _languageCode = _localizationService.ResolveLanguageCode(() => _appSettingsService.Load().LanguageCode);
-    }
-
-    private string ResolveCityName(TimeZoneInfo timeZone)
-    {
-        var cityNames = _localizationService.IsChineseLanguage(_languageCode)
-            ? ZhCityNames
-            : EnCityNames;
-        if (cityNames.TryGetValue(timeZone.Id, out var cityName))
-        {
-            return cityName;
-        }
-
-        var normalized = timeZone.Id;
-        var slashIndex = normalized.LastIndexOf('/');
-        if (slashIndex >= 0 && slashIndex < normalized.Length - 1)
-        {
-            normalized = normalized[(slashIndex + 1)..];
-        }
-
-        normalized = normalized.Replace('_', ' ').Trim();
-        normalized = normalized
-            .Replace("Standard Time", string.Empty, StringComparison.OrdinalIgnoreCase)
-            .Replace("Daylight Time", string.Empty, StringComparison.OrdinalIgnoreCase)
-            .Replace("Time", string.Empty, StringComparison.OrdinalIgnoreCase)
-            .Trim();
-
-        return string.IsNullOrWhiteSpace(normalized) ? timeZone.Id : normalized;
     }
 
     private string ResolveRelativeDayLabel(int dayDelta)

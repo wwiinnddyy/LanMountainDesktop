@@ -97,7 +97,14 @@ public sealed class DuplicateImplementationRatchetTests
     /// "忽略大小写"这一格不能漂——盘上有早期写的 <c>Dark</c>。
     /// 行为钉 <c>ThemeAppearanceValuesTests.NormalizeThemeMode_ReturnsKnownValue</c> 8 格：
     /// 注入"改成区分大小写"恰好红 2 格（<c>DARK</c> 与 <c>Follow_System</c>），另 6 格不动，验过。）
-    private const int IdenticalBodyFamilyCeiling = 50;
+    /// 50 → 49 收一族（世界时钟的城市名：两个组件各一份逐字相同的 20 行 ResolveCityName，
+    /// Clock AirApp 的 ClockAirAppTimeFormatter 还有第三份同样的兜底写法——三份都进
+    /// Services/ClockCityNames（FallbackName + Lookup + ResolveForHostWidget）。
+    /// 顺带把两组件各抄一份的 12+12 条表并成一份（一份写中文、一份写 Unicode 转义，
+    /// 逐字普查对这种数据抄本是瞎的，只能靠人对内容）。表选择口径两端本来就不同，
+    /// 没替它们统一（挂 G1-BL）。行为钉 ClockCityNamesTests 14 格：删掉裸 Time 那一步只红
+    /// "Samoa Time" 一格、把英文字表的 OrdinalIgnoreCase 去掉只红 "asia/shanghai" 一格，验过。）
+    private const int IdenticalBodyFamilyCeiling = 49;
 
     /// <summary>
     /// 今天实测：191 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
@@ -125,10 +132,14 @@ public sealed class DuplicateImplementationRatchetTests
     /// 但 <c>L</c> 的 50 处里 44 处是**单条语句的转手**（<c>return _localizationService.GetString(...)</c>），
     /// 按这把尺子的口径（单语句转手不算复制了一份逻辑）它不构成收口目标，别再为凑族数去动它。
     /// </summary>
-    private const int DriftFamilyCeiling = 191;
+    /// 191 → 190 是真收口（与上面 50 → 49 同一笔）：ResolveCityName 三处抄本改调家之后
+    /// 只剩 AirApp 一个入口，这一族连同它的 2 种体一起消失；族内站点 1368 → 1363
+    /// （ResolveCityName 少 3 处，被普查算成方法的 new Dictionary 少 2 处——两张表并成两张、
+    /// 声明处从 4 个文件位降到 2 个）。
+    private const int DriftFamilyCeiling = 190;
 
     /// <summary>
-    /// 漂移普查认领的声明处数下限（今天实测 5439：从 5456 起，收口真删 27 条私有声明、家新增 10 条入口）。
+    /// 漂移普查认领的声明处数下限（今天实测 5438：从 5456 起，收口真删 28 条私有声明、家新增 15 条入口（5439→5438 这一格＝少 6 条 / 多 5 条，逐条点名核过：两个组件的 ResolveCityName 与四张表里的两处 new Dictionary 没了，家里多了 3 个方法 + 2 处 new Dictionary））。
     /// 钉这个不是为了查新增，是为了查**判据自己塌掉**：
     /// 上面那两处 bug 都是"少认声明"，族数看着像收口（193→189），实际是普查瞎了。
     /// 只冻族数会被这种错法骗过去，冻住认领量就不会。
@@ -306,7 +317,7 @@ public sealed class DuplicateImplementationRatchetTests
         var censusSites = bodiesByName.Values.Sum(tally => tally.Sites);
         Assert.True(
             censusSites >= DriftCensusSiteFloor,
-            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5439）。" +
+            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5438）。" +
             "族数没变也说明判据在丢声明：查 NormalizeBody 又漏掉了哪种成员写法（历史上漏过 Allman 箭头体与插值字符串的大括号）");
 
         var driftFamilies = bodiesByName.Count(pair => pair.Value.VariantCount >= 2 &&
