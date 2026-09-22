@@ -561,6 +561,12 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 这一条的关键判据是**`override`/`abstract` 要豁免**：`WeatherWidgetBase.cs:86` 会在基类里调子类的
 `ApplyResponsiveLayout`，第一版没豁免时 5 个天气组件全被报成缺陷（全是假阳性）。
 正对照：临时放一个只定义 `private void UpdateAdaptiveLayout() {}` 的文件必须被报出来，报完删掉。
+**这条已经进闸门**：`tests/.../WidgetLayoutAppliedRatchetTests.cs`（脚本仍是报告面，判据一样）。
+2026-09-22 移植时踩到两个坑，都记在测试的注释里：① 把"调用点扫描"跟在"本行有声明"后面 `continue`，
+同文件的真调用全被吞掉、一次报出整片假阳性；② 跨文件调用点按**名字**认（`ApplyCellSize` 实测 22 处
+由运行期注册表统一推），所以同名成员只要任意一处有 `.Name(`，别的文件里没人调的定义也会被算成已调用——
+这是漏报方向。两向变异验过：探针文件里未调用的 `ApplyChrome` 被点名，同文件有调用的
+`ApplyTypographyByBackground` 不报。
 **第五把尺子管"谁 new 了要释放的东西、却既不释放也不交接"**：`python scripts/check-resource-ownership.py`
 （范围是 Services / ViewModels / Core / 安装器 / Platform，组件目录由第三把尺子管）。
 2026-09-22 首跑 543 个文件：1 处线索、**未解释 0 处**——那 1 处是 `PlondsHttpClientFactory.Create()`，
