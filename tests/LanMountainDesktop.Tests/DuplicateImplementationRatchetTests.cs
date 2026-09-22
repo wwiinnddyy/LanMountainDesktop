@@ -44,8 +44,11 @@ public sealed class DuplicateImplementationRatchetTests
     ///    这一笔对族数<b>没有净影响</b>：收口前那 13 个组件是一族逐字相同的两行体，
     ///    收口后如果还按行数算，18 处转手调用又是新的一族同文——行数骗人的地方就在这。
     ///    它真正的收益是"钳到最少 1 格再重排"这段逻辑从各写一遍变成只有一处（18 个调用点）。
+    /// 64 → 63 收一族（5 个组件各抄的"只在黑夜档真的翻了才重画"进
+    /// <c>ComponentThemeMode.RefreshNightVisualIfChanged</c>：原本 3 处逐字 7 行 + 2 处带 <c>force</c> 的漂移体，
+    /// 收完 5 个调用点都是单语句转手，按本判据口径不再算"复制了一份逻辑"）。
     /// </summary>
-    private const int IdenticalBodyFamilyCeiling = 64;
+    private const int IdenticalBodyFamilyCeiling = 63;
 
     /// <summary>
     /// 今天实测：192 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。

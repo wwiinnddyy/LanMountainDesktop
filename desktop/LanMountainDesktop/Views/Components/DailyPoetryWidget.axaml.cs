@@ -303,14 +303,7 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
 
     private void ApplyModeVisualIfNeeded(bool force = false)
     {
-        var isNightMode = ComponentThemeMode.ResolveIsNight(this, fallbackToNightWhenSurfaceUnknown: false);
-        if (!force && _isNightModeApplied.HasValue && _isNightModeApplied.Value == isNightMode)
-        {
-            return;
-        }
-
-        _isNightModeApplied = isNightMode;
-        ApplyModeVisual(isNightMode);
+        ComponentThemeMode.RefreshNightVisualIfChanged(this, ref _isNightModeApplied, ApplyModeVisual, force);
     }
 
     private void ApplyModeVisual(bool isNightMode)

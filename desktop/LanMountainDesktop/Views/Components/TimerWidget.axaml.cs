@@ -151,14 +151,7 @@ public partial class TimerWidget : UserControl, IDesktopComponentWidget
 
     private void ApplyModeVisualIfNeeded()
     {
-        var isNightMode = ComponentThemeMode.ResolveIsNight(this, fallbackToNightWhenSurfaceUnknown: false);
-        if (_isNightModeApplied.HasValue && _isNightModeApplied.Value == isNightMode)
-        {
-            return;
-        }
-
-        _isNightModeApplied = isNightMode;
-        ApplyModeVisual(isNightMode);
+        ComponentThemeMode.RefreshNightVisualIfChanged(this, ref _isNightModeApplied, ApplyModeVisual);
     }
 
     private void ApplyModeVisual(bool isNightMode)

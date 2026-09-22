@@ -33,6 +33,31 @@ public static class ComponentThemeMode
         reflow();
     }
 
+    /// <summary>
+    /// <see cref="RefreshNightVisual"/> 的"省着用"版本：<b>只在档位真的翻了时</b>才重画。
+    /// 用哪个看代价——时钟/日历/计时器这类组件每次重画要重新分配渐变画刷并刷整块面板，
+    /// 而尺寸变化、悬停、主题事件都会路过一遍。
+    /// 判据本身不难写难对：<c>HasValue &amp;&amp;</c> 少了，第一次进来就会被判成"没变"而不画；
+    /// 写成 <c>!=</c> 反了，则是每次路过都重画。此前这 7 行在 6 个组件里各抄一份
+    /// （4 份逐字相同、DailyPoetry/Whiteboard 多一个 <c>force</c> 口子），谁抄歪都不报错。
+    /// </summary>
+    public static void RefreshNightVisualIfChanged(
+        Control control,
+        ref bool? isNightModeApplied,
+        Action<bool> applyModeVisual,
+        bool force = false,
+        bool fallbackToNightWhenSurfaceUnknown = false)
+    {
+        var isNightMode = ResolveIsNight(control, fallbackToNightWhenSurfaceUnknown);
+        if (!force && isNightModeApplied.HasValue && isNightModeApplied.Value == isNightMode)
+        {
+            return;
+        }
+
+        isNightModeApplied = isNightMode;
+        applyModeVisual(isNightMode);
+    }
+
     public static bool ResolveIsNight(
         Control control,
         bool fallbackToNightWhenSurfaceUnknown = false)

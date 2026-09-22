@@ -57,6 +57,13 @@ AirApp 本地包生成：
 改动后：
 
 - 至少检查构建和与改动相关的测试
+- 做过变异实验（`cp` 备份 → 改坏 → 跑断言 → 还原）之后，**第一件事是重建**：
+  `--no-build` 会拿改动前那份 dll，把已经改回好代码的仓库测出真缺陷（2026-09-23 自己踩的，
+  表现为 `Collection: [True, True]`，正是那条变异该产出的形状）
+- 怀疑撞上 headless 偶发红灯时，用快速复现而不是两分钟全量：把 filter 拼成
+  `--filter "FullyQualifiedName~<每个含 [AvaloniaFact] 的类>"`，约 15 秒一趟，实测 3 趟 2 红；
+  要证明"不是本次改动引入的"，用**排除法 + 这个快速子集**（把新写的类整个排除也照样红，只是受害者换人），
+  别用"全量重跑一次没红"当结论（见 G1-I）
 - 如果行为、流程、边界或命令变化，更新对应文档
 - 如果是新功能或行为调整，补齐或更新 `.trae/specs/<feature>/`
 
@@ -251,6 +258,10 @@ en/ja/ko 还缺 25/313/275 条，只许降不许升；补翻译就把数字改�
 且兜底互相矛盾（11 个当"夜"、7 个当"昼"、MusicControlWidget 回退应用级主题档），同一个异常状态不同组件会选反。
 兜底不同的确是既有事实，所以参数化保留而不是统一改死；唯一的例外白名单是 `MusicControlWidget`，
 `SourceIntegrityTests.NightModeResolution_LivesInExactlyOnePlace` 会拦新抄，多一个例外就得先改那张名单。
+判出来之后怎么落地也只有两个家：每次都要重排的用 `RefreshNightVisual`，重画代价大的（时钟/日历/计时器要重建渐变画刷、
+刷整块面板）用 `RefreshNightVisualIfChanged`——后者把"只在档位真的翻了才画"这条判据收在一处（2026-09-23 之前它被
+逐字抄在 4 个组件里、另 2 个各带一个 `force` 口子），判据写歪的两种后果都不报错：少了 `HasValue` 那步就是第一次进来不画，
+比较反了就是每次路过都重画。两边都有行为钉 `ComponentThemeModeTests`。
 
 **亮度/对比度算式只认一处**：WCAG 相对亮度、α 合成、最低对比度一律走 `Theme/ColorMath.cs`
 （`RelativeLuminance` / `ToOpaqueAgainst` / `MinContrastRatio` / `ContrastRatio`）。此前 15 个组件各自复制了
