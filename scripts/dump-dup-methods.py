@@ -19,7 +19,8 @@ import re
 import sys
 from collections import defaultdict
 
-DEFAULT_ROOTS = ["core", "desktop", "airapp", "install", "platform", "mobile"]
+DEFAULT_ROOTS = ["core", "desktop", "airapp", "install", "platform", "mobile", "packaging"]
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
 NAMES = os.environ.get("NAMES")
 NAMES = [n.strip() for n in NAMES.split(",") if n.strip()] if NAMES else None
 SKIP_DIRS = {"obj", "bin", "node_modules"}
@@ -58,12 +59,20 @@ def count_statements(body):
 
 
 files = []
-for root in (sys.argv[1:] or DEFAULT_ROOTS):
-    if not os.path.exists(root):
+explicit = sys.argv[1:]
+for root in (explicit or DEFAULT_ROOTS):
+    # 位置参数写错（比如把 NAMES= 当参数传进来——这份工具的 NAMES 是环境变量）
+    # 以前会被静默忽略，扫 0 个文件、报"0 组"——一个假的干净结果。宁可当场退出。
+    target = root if os.path.isabs(root) else os.path.join(ROOT, root)
+    if not os.path.exists(target):
+        if explicit:
+            sys.exit(f"给定的路径不存在：{root}（仓库根 {ROOT}）——宁可不报，也不报假的 0")
         continue
-    for dirpath, dirnames, filenames in os.walk(root):
+    for dirpath, dirnames, filenames in os.walk(target):
         dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
         files.extend(os.path.join(dirpath, f) for f in filenames if f.endswith(".cs"))
+if not files:
+    sys.exit("一个 .cs 都没扫到：目录参数或 NAMES 写错了，这次的 0 不可信")
 
 groups = defaultdict(list)
 for path in files:

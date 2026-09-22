@@ -37,12 +37,28 @@ public sealed class DuplicateImplementationRatchetTests
     private const int IdenticalBodyFamilyCeiling = 71;
 
     /// <summary>
-    /// 今天实测：193 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
-    /// 同一棵树上 <c>dump-drift-methods.py</c> 报的是 196，差的 3 族**没有逐条对过**；
-    /// 最可能的来源是脚本把"没有方法体的声明"（接口方法、抽象方法）也当成一种体，而这里跳过空体
-    /// （见 NormalizeBody 返回空串时的 continue）。这条差异记在这里，不当结论用。
+    /// 今天实测：192 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
+    /// 193 → 192 这一档是**改判据**，不是收口（一处代码都没删）：
+    /// <c>NormalizeBody</c> 过去只认"签名行尾的 <c>=></c>"，两种真实写法被它整条丢掉——
+    /// ① Allman 箭头体（<c>private void UpdateLanguageCode()</c> 换行 <c>=></c> 表达式）；
+    /// ② 插值字符串里的 <c>{message}</c> 被当成方法体的开括号，一路扫到类末尾
+    ///    （实测 AirAppRuntimeLogger.cs:7 的 <c>Info</c>、PlondsApplyPaths.cs:39 的 <c>GetSnapshotPath</c>）。
+    /// 修完后与 <c>dump-drift-methods.py</c> **逐处对齐**：两边同为 192 族、5449 处声明，
+    /// 站点清单（文件+行号）完全相同——这条口径差异（以前是 196 对 193、差 3 族没对过）就此结清。
+    /// 组成变化：<c>nameof</c>／<c>VALUES</c>／<c>SelectionOption</c>／<c>UpdateMonitoringLeaseState</c> 掉出
+    /// （它们的"多种体"是吞出来的假体）；<c>GetSessionsAsync</c>／<c>GetThemeBrush</c>／<c>SetValue</c> 新进来
+    /// （接口默认实现真的有多种写法，这是以前被假体挤掉的漏报）。
+    /// 被这条修反转量的是最大的两族：<c>L</c> 50 处但只有 7 种体（旧数 43 处 / 18 种体），
+    /// <c>UpdateLanguageCode</c> 11 处 / 3 种体（旧数 11 处 / 10 种体）——仍是待收口的最大两族。
     /// </summary>
-    private const int DriftFamilyCeiling = 193;
+    private const int DriftFamilyCeiling = 192;
+
+    /// <summary>
+    /// 漂移普查认领的声明处数下限（今天实测 5449）。钉这个不是为了查新增，是为了查**判据自己塌掉**：
+    /// 上面那两处 bug 都是"少认声明"，族数看着像收口（193→189），实际是普查瞎了。
+    /// 只冻族数会被这种错法骗过去，冻住认领量就不会。
+    /// </summary>
+    private const int DriftCensusSiteFloor = 5400;
 
     private static readonly string[] ScanDirectories =
         ["core", "desktop", "airapp", "install", "platform", "packaging", "mobile"];
@@ -187,6 +203,13 @@ public sealed class DuplicateImplementationRatchetTests
         }
 
         // 与脚本同门槛：≥3 处声明、≥2 种体、且横跨 ≥3 个文件，才算"同名不同体"要收口的族。
+        // 认领量下限先查：判据瞎了会让族数"假收口"，那时候比族数没意义。
+        var censusSites = bodiesByName.Values.Sum(tally => tally.Sites);
+        Assert.True(
+            censusSites >= DriftCensusSiteFloor,
+            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5449）。" +
+            "族数没变也说明判据在丢声明：查 NormalizeBody 又漏掉了哪种成员写法（历史上漏过 Allman 箭头体与插值字符串的大括号）");
+
         var driftFamilies = bodiesByName.Count(pair => pair.Value.VariantCount >= 2 &&
                                                       pair.Value.Sites >= 3 &&
                                                       pair.Value.Files >= 3);
@@ -197,9 +220,37 @@ public sealed class DuplicateImplementationRatchetTests
             "先收口或写理由改上限）；变少是好事，把常量改成新的数就是收口的记账");
     }
 
-    /// <summary>与脚本一致：折叠空白、字符串字面量换成占位符，所以"只差一句文案"不算第二种体。</summary>
+    /// <summary>
+    /// 与脚本一致：折叠空白、字符串字面量换成占位符，所以"只差一句文案"不算第二种体。
+    /// 三种成员形态分开处理，因为本仓**同时**用它们（Allman 大括号、行尾 <c>=></c>、另起一行的 <c>=></c>）：
+    /// 只认其中一种就会把别的形态的声明整条丢掉或整段吞掉——2026-09-22 实测这样丢了 53 处声明、5 个整文件。
+    /// </summary>
     private static string NormalizeBody(string[] lines, int signatureIndex)
     {
+        var signatureLine = lines[signatureIndex].TrimEnd();
+        var trimmed = signatureLine.Trim();
+        var ahead = NextNonEmptyLine(lines, signatureIndex + 1);
+        var arrow = signatureLine.IndexOf("=>", StringComparison.Ordinal);
+        var allmanBrace = !signatureLine.Contains('{') && ahead.StartsWith('{');
+        // 表达式体优先，且**先于**"本行有没有大括号"的判断：插值字符串里的 `{message}` 也是大括号，
+        // 把它当方法体的开括号会一路扫到类末尾（实测 AirAppRuntimeLogger.cs:7 的 `Info`）。
+        // 认"这一行以 `;` 或 `=>` 收尾 + 括号配平"，才不会把 K&R 写的 `{ …() => …; }` 误当成表达式体。
+        if (arrow >= 0 && !allmanBrace &&
+            (trimmed.EndsWith(";", StringComparison.Ordinal) || trimmed.EndsWith("=>", StringComparison.Ordinal)) &&
+            signatureLine.Split('{').Length == signatureLine.Split('}').Length)
+        {
+            return Normalise(ArrowTail(lines, signatureIndex + 1, signatureLine[(arrow + 2)..]));
+        }
+
+        if (!signatureLine.Contains('{') && !allmanBrace)
+        {
+            // 没有大括号、下一行也不是 `{`：要么 `=>` 另起一行，要么是无体的声明
+            // （接口方法、abstract）——后者不算一种体，返回空串由调用方丢掉。
+            return ahead.StartsWith("=>", StringComparison.Ordinal)
+                ? Normalise(ArrowTail(lines, signatureIndex + 2, ahead[2..]))
+                : string.Empty;
+        }
+
         var depth = 0;
         var started = false;
         var body = new List<string>();
@@ -224,21 +275,64 @@ public sealed class DuplicateImplementationRatchetTests
             }
         }
 
-        if (!started)
-        {
-            var signature = lines[signatureIndex].TrimEnd();
-            if (!signature.EndsWith(";", StringComparison.Ordinal))
-            {
-                return string.Empty;
-            }
+        return Normalise(string.Join(" ", body));
+    }
 
-            var arrow = signature.IndexOf("=>", StringComparison.Ordinal);
-            body = arrow < 0 ? [] : [signature[(arrow + 2)..].Trim()];
+    /// <summary>把 <c>=></c> 之后的表达式收成一条语句：吃到下一个深度 0 的 <c>;</c> 为止，绝不越过别的成员。</summary>
+    private static string ArrowTail(string[] lines, int start, string head)
+    {
+        var parts = new List<string>();
+        if (head.Trim().Length > 0)
+        {
+            parts.Add(head.Trim());
         }
 
-        var normalized = Whitespace.Replace(string.Join(" ", body), " ");
-        return StringLiteral.Replace(normalized, "\"S\"").Trim();
+        var depth = parts.Sum(part => part.Split('{').Length - part.Split('}').Length - 1);
+        if (depth <= 0 && parts.Count > 0 && parts[^1].EndsWith(";", StringComparison.Ordinal))
+        {
+            return string.Join(" ", parts).TrimEnd(';').Trim();
+        }
+
+        for (var cursor = start; cursor < lines.Length; cursor++)
+        {
+            var text = lines[cursor].Trim();
+            if (text.Length == 0)
+            {
+                continue;
+            }
+
+            if (depth <= 0 && (text.StartsWith('}') || text.StartsWith("//", StringComparison.Ordinal)
+                    || text.StartsWith("/*", StringComparison.Ordinal) || text.StartsWith('*')))
+            {
+                break;
+            }
+
+            parts.Add(text);
+            depth += text.Split('{').Length - text.Split('}').Length - 1;
+            if (depth <= 0 && text.EndsWith(";", StringComparison.Ordinal))
+            {
+                break;
+            }
+        }
+
+        return string.Join(" ", parts).TrimEnd(';').Trim();
     }
+
+    private static string NextNonEmptyLine(string[] lines, int start)
+    {
+        for (var cursor = start; cursor < lines.Length; cursor++)
+        {
+            if (lines[cursor].Trim().Length > 0)
+            {
+                return lines[cursor].Trim();
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static string Normalise(string text) =>
+        StringLiteral.Replace(Whitespace.Replace(text, " "), "\"S\"").Trim();
 
     private static int FindBodyEnd(string[] lines, int openingIndex)
     {

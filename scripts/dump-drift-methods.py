@@ -28,11 +28,51 @@ KEYWORDS = {
 }
 
 
+def next_non_empty(lines, start):
+    for cursor in range(start, len(lines)):
+        if lines[cursor].strip():
+            return lines[cursor].strip()
+    return ""
+
+
+def arrow_tail(lines, start, head):
+    """把表达式体（`=> …`）收成一条语句。
+
+    两头都收：`=>` 可能写在签名行尾，也可能另起一行（本仓 Allman 风格就这么写：
+    MusicControlViewModel.cs:277 的 `private string L(...)`，下一行才是 `=> _localization…;`）。
+    只认一行会把这两种成员判成"没有体"，往下扫又会把后面成员的体甚至整个类尾巴吞进来——
+    实测两种错法各错掉 53 处声明 / 5 个整文件（账见 AGENTS.md 尺子 2）。
+    """
+    parts = [head.strip()] if head.strip() else []
+    depth = sum(part.count("{") - part.count("}") for part in parts)
+    if depth <= 0 and parts and parts[-1].endswith(";"):
+        return " ".join(parts).rstrip(";").strip()
+    cursor = start
+    while cursor < len(lines):
+        text = lines[cursor].strip()
+        cursor += 1
+        if not text:
+            continue
+        if depth <= 0 and text.startswith(("}", "//", "/*", "*")):
+            # 没等到 `;` 就撞到别的成员或文档注释：到此为止，绝不继续往下吞。
+            break
+        parts.append(text)
+        depth += text.count("{") - text.count("}")
+        if depth <= 0 and text.endswith(";"):
+            break
+    return " ".join(parts).rstrip(";").strip()
+
+
 def method_bodies(path):
+    """返回该文件里每个"有体的成员"：(方法名, 签名行号, 归一化后的体)。
+
+    没有体的声明（接口方法、abstract）不计——它不是"另一种实现"。
+    """
     try:
         lines = open(path, encoding="utf-8-sig", errors="replace").read().splitlines()
     except OSError:
-        return
+        return []
+    collected = []
     for index, raw in enumerate(lines):
         line = raw.strip()
         if not line or line.startswith(("//", "/*", "*")):
@@ -42,6 +82,24 @@ def method_bodies(path):
             continue
         name = match.group("name")
         if name in KEYWORDS:
+            continue
+        ahead = next_non_empty(lines, index + 1)
+        arrow = raw.find("=>")
+        allman_brace = "{" not in raw and ahead.startswith("{")
+        # 表达式体优先，且**先于**"本行有没有大括号"的判断：插值字符串里的 `{message}` 也是大括号，
+        # 拿它当方法体的开括号会一路扫到类的末尾（实测 AirAppRuntimeLogger.cs:7 的 `Info`）。
+        # 认"这一行以 `;` 或 `=>` 收尾 + 括号配平"，才不会把 K&R 写的 `{ …() => …; }` 误当成表达式体。
+        if arrow >= 0 and not allman_brace and line.endswith((";", "=>")) \
+                and raw.count("{") == raw.count("}"):
+            emit(collected, name, index + 1,
+                 normalise(arrow_tail(lines, index + 1, raw[arrow + 2:])))
+            continue
+        if "{" not in raw and not allman_brace:
+            # 没有大括号、下一行也不是 `{`：要么 `=>` 另起一行，要么是无体的声明
+            # （接口方法、abstract）——后者不算一种实现，不计。
+            if ahead.startswith("=>"):
+                emit(collected, name, index + 1,
+                     normalise(arrow_tail(lines, index + 2, ahead[2:])))
             continue
         depth = 0
         started = False
@@ -57,11 +115,17 @@ def method_bodies(path):
             if started and depth <= 0:
                 break
             cursor += 1
-        if not started and raw.rstrip().endswith(";"):
-            body = [raw.split("=>")[1].strip()] if "=>" in raw else []
-        normalized = re.sub(r"\s+", " ", " ".join(body))
-        normalized = re.sub(r'"[^"]*"', '"S"', normalized)
-        yield name, index + 1, normalized
+        emit(collected, name, index + 1, normalise(" ".join(body)))
+    return collected
+
+
+def emit(collected, name, line, body):
+    if body:
+        collected.append((name, line, body))
+
+
+def normalise(text):
+    return re.sub(r'"[^"]*"', '"S"', re.sub(r"\s+", " ", text)).strip()
 
 
 def main():
@@ -82,6 +146,9 @@ def main():
     for directory in directories:
         base = os.path.join(ROOT, directory)
         if not os.path.isdir(base):
+            # 目录写错就静默扫 0 个文件，会报出一个假的"0 族"——宁可不报。
+            if positional:
+                sys.exit(f"给定的目录不存在：{directory}（仓库根 {ROOT}）")
             continue
         for dirpath, _, filenames in os.walk(base):
             if any(token in dirpath + os.sep for token in SKIP):
