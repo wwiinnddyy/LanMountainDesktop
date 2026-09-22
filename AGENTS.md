@@ -862,8 +862,15 @@ Sharp 与 Fluent 才相同。也就是说默认风格下桌面组件面板本来
 先按"名字出现在全文里"数清再动；
 ② 想给这条判据补"只丢弃参数"那一格时，行扫描器不够用了——两版尝试分别误报 49 与 47 处
 （`return x switch {…};`、无括号 `if (…) return;`、体首行是注释的正常方法全被判成"什么都没做"），
-闸门当场作废只能回退。要补就得复用 `SourceTextScanning` 那套**会剥字符串、按括号深度收尾**的扫描器，
-并且先"只报数不判红"量一轮误报面再收紧。
+闸门当场作废只能回退。**同日傍晚补上了这一格**，根因不在"行扫描器不够用"，而在两处具体的错：
+把整段体拼成一条字符串后再按换行切语句（于是"体首行是注释"的正常方法被切成 0 条语句＝空体），
+以及数大括号时没先剥字符串里的 `{`/`}`。改成**行列表 + 按大括号深度收尾 + 数括号前先过
+`SourceTextScanning.WithoutStringLiteralText`**，误报清零。收紧之前先跑了一轮"只报数不判红"拿到真值：
+丢弃式 1 处（`CnrDailyNewsWidget.ApplyCellSize`，已挂 G1-BJ），
+顺带露出 2 处旧的"体里只剩注释"（`AirAppBase.Initialize` 的 SDK 默认实现、
+`App.axaml.cs` 那个 Avalonia 12 之后的验证插件墓碑）。判据**只数不带括号的丢弃**——
+`_ = Foo()` 里那件事真的发生，全仓 4 处那样的正当写法混进来这条尺子就没人信了；
+两个方向都种样本验过：种一个 `_ = value;` 的缝必红且只红它，种一个 `_ = self.ToString();` 不许红。
 `ApplyDesktopEditOverlayPreviewImage` **故意留着**：它也丢了 4 个参数，但体里还有
 `EnsureDesktopEditOverlayPresenter()` + `SetPreviewImage(null)` 这个真副作用——名字说"apply"实际只会"clear"，
 那是改名/收参的可读性活，不是死码。
