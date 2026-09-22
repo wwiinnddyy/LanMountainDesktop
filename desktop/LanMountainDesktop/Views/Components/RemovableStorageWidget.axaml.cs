@@ -80,8 +80,8 @@ public partial class RemovableStorageWidget : UserControl, IDesktopComponentWidg
 
     public void ApplyCellSize(double cellSize)
     {
-        _currentCellSize = Math.Max(1, cellSize);
-        ApplyLayoutMetrics();
+        ComponentDesignMetrics.ApplyCellSize(
+            ref _currentCellSize, cellSize, ApplyLayoutMetrics);
     }
 
     public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)

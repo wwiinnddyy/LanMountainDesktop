@@ -23,8 +23,16 @@ namespace LanMountainDesktop.Tests;
 /// </summary>
 public sealed class DuplicateImplementationRatchetTests
 {
-    /// <summary>今天实测：86 组逐字相同的方法体。只能降，要升必须在这里写清理由。</summary>
-    private const int IdenticalBodyFamilyCeiling = 86;
+    /// <summary>
+    /// 实测：74 组逐字相同、且**至少两条语句**的方法体。只能降，要升必须在这里写清理由。
+    /// 从 86 降到 74 有两笔，别记成一笔：
+    /// ① 判据修正（按语句数而不是按行数）去掉 12 族单语句转手——它们本来就不是"复制了一份逻辑"；
+    /// ② 18 个组件的 ApplyCellSize 收进 <c>ComponentDesignMetrics.ApplyCellSize</c>。
+    ///    这一笔对族数<b>没有净影响</b>：收口前那 13 个组件是一族逐字相同的两行体，
+    ///    收口后如果还按行数算，18 处转手调用又是新的一族同文——行数骗人的地方就在这。
+    ///    它真正的收益是"钳到最少 1 格再重排"这段逻辑从各写一遍变成只有一处（18 个调用点）。
+    /// </summary>
+    private const int IdenticalBodyFamilyCeiling = 74;
 
     /// <summary>
     /// 今天实测：193 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
@@ -94,7 +102,13 @@ public sealed class DuplicateImplementationRatchetTests
                     .Select(line => line.Trim())
                     .Where(line => line.Length > 0 && !line.StartsWith("//", StringComparison.Ordinal))
                     .ToList();
-                if (body.Count < 2)
+                // 判的是"复制了一份逻辑"，不是"占了两行"：按深度 0 的分号数语句数，
+                // 单条语句（哪怕写成两行）就是转手/委托，不是重复真源。
+                // 实测样本：18 个组件的 ApplyCellSize 收口成
+                //     ComponentDesignMetrics.ApplyCellSize(
+                //         ref _currentCellSize, cellSize, UpdateAdaptiveLayout);
+                // 之后仍是一族"逐字相同的两行体"——按行数它会一直算成重复，那是指标在骗人。
+                if (CountStatements(body) < 2)
                 {
                     index = end + 1;
                     continue;
@@ -293,6 +307,38 @@ public sealed class DuplicateImplementationRatchetTests
         }
 
         throw new InvalidOperationException("Unable to locate repository root.");
+    }
+
+    /// <summary>数深度为 0 的分号：一条语句可能跨多行，字符串里的分号不算。</summary>
+    private static int CountStatements(IEnumerable<string> body)
+    {
+        var statements = 0;
+        foreach (var line in body)
+        {
+            var depth = 0;
+            var inString = false;
+            foreach (var character in line)
+            {
+                if (character == '"')
+                {
+                    inString = !inString;
+                }
+                else if (!inString && (character == '{' || character == '(' || character == '['))
+                {
+                    depth++;
+                }
+                else if (!inString && (character == '}' || character == ')' || character == ']'))
+                {
+                    depth--;
+                }
+                else if (!inString && character == ';' && depth == 0)
+                {
+                    statements++;
+                }
+            }
+        }
+
+        return statements;
     }
 
     private sealed class NameTally

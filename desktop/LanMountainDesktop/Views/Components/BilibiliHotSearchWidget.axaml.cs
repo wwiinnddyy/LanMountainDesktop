@@ -75,8 +75,8 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
 
     public void ApplyCellSize(double cellSize)
     {
-        _currentCellSize = Math.Max(1, cellSize);
-        UpdateAdaptiveLayout();
+        ComponentDesignMetrics.ApplyCellSize(
+            ref _currentCellSize, cellSize, UpdateAdaptiveLayout);
     }
 
     public void SetRecommendationInfoService(IRecommendationInfoService recommendationInfoService)

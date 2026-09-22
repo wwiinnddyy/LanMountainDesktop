@@ -59,8 +59,8 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
 
     public void ApplyCellSize(double cellSize)
     {
-        _currentCellSize = Math.Max(1, cellSize);
-        UpdateAdaptiveLayout();
+        ComponentDesignMetrics.ApplyCellSize(
+            ref _currentCellSize, cellSize, UpdateAdaptiveLayout);
     }
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)

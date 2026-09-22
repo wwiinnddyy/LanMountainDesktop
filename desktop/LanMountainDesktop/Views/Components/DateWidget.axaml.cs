@@ -309,8 +309,8 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
 
     public void ApplyCellSize(double cellSize)
     {
-        _currentCellSize = Math.Max(1, cellSize);
-        UpdateDate();
+        ComponentDesignMetrics.ApplyCellSize(
+            ref _currentCellSize, cellSize, UpdateDate);
     }
 
     private void ApplyAdaptiveTypography()

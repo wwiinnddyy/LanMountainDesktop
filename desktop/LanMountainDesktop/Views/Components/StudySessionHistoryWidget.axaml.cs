@@ -82,8 +82,8 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
 
     public void ApplyCellSize(double cellSize)
     {
-        _currentCellSize = Math.Max(1, cellSize);
-        UpdateAdaptiveLayout();
+        ComponentDesignMetrics.ApplyCellSize(
+            ref _currentCellSize, cellSize, UpdateAdaptiveLayout);
         if (_currentSnapshot is not null)
         {
             RenderSnapshot(_currentSnapshot);

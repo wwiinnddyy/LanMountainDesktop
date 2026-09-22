@@ -201,8 +201,8 @@ public partial class MonthCalendarWidget : UserControl, IDesktopComponentWidget,
 
     public void ApplyCellSize(double cellSize)
     {
-        _currentCellSize = Math.Max(1, cellSize);
-        UpdateCalendar();
+        ComponentDesignMetrics.ApplyCellSize(
+            ref _currentCellSize, cellSize, UpdateCalendar);
     }
 
     private void ApplyAdaptiveTypography()

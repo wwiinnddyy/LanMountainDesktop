@@ -31,6 +31,32 @@ SIG = re.compile(
 )
 BRACE = re.compile(r"^\s*\{\s*$")
 
+def count_statements(body):
+    """数深度 0 的分号：一条语句可能写成两行，那不算"复制了一份逻辑"。
+
+    2026-09-22 踩出来的：18 个组件的 ApplyCellSize 收口成
+    `ComponentDesignMetrics.ApplyCellSize(ref _currentCellSize, cellSize, UpdateAdaptiveLayout);`
+    之后仍是一族"逐字相同的两行体"，按行数它会一直算重复——那是指标在骗人。
+    同一棵树上按行数 86 族、按语句数 74 族，差的 12 族全是这种单语句转手。
+    """
+    statements = 0
+    for line in body:
+        depth = 0
+        in_string = False
+        for ch in line:
+            if ch == '"':
+                in_string = not in_string
+            elif in_string:
+                continue
+            elif ch in "{([":
+                depth += 1
+            elif ch in "})]":
+                depth -= 1
+            elif ch == ";" and depth == 0:
+                statements += 1
+    return statements
+
+
 files = []
 for root in (sys.argv[1:] or DEFAULT_ROOTS):
     if not os.path.exists(root):
@@ -64,7 +90,7 @@ for path in files:
             i += 1
             continue
         body = [l.strip() for l in lines[i + 2:end] if l.strip() and not l.strip().startswith("//")]
-        if len(body) >= 2:
+        if count_statements(body) >= 2:
             digest = hashlib.sha1("\n".join(body).encode("utf-8")).hexdigest()[:8]
             groups[(m.group(3), digest, len(body))].append((path, i + 1, m.group(1), bool(m.group(2))))
         i = end + 1

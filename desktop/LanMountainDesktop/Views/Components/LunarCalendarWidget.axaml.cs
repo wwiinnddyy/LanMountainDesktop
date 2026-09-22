@@ -169,8 +169,8 @@ public partial class LunarCalendarWidget : UserControl, IDesktopComponentWidget,
 
     public void ApplyCellSize(double cellSize)
     {
-        _currentCellSize = Math.Max(1, cellSize);
-        UpdateContent();
+        ComponentDesignMetrics.ApplyCellSize(
+            ref _currentCellSize, cellSize, UpdateContent);
     }
 
     private void ApplyAdaptiveTypography()

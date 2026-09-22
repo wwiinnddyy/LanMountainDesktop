@@ -70,8 +70,8 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
 
     public void ApplyCellSize(double cellSize)
     {
-        _currentCellSize = Math.Max(1, cellSize);
-        UpdateAdaptiveLayout();
+        ComponentDesignMetrics.ApplyCellSize(
+            ref _currentCellSize, cellSize, UpdateAdaptiveLayout);
     }
 
     public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)
