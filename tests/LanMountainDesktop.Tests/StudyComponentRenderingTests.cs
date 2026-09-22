@@ -75,7 +75,7 @@ public sealed class StudyComponentRenderingTests
         var points = CreateRealtimePoints(count: 10, step: TimeSpan.FromSeconds(1));
         var counts = StudyNoiseCurveChartControl.ResolveLayerSourceCounts(points, TimeSpan.FromSeconds(4));
 
-        Assert.Equal(5, StudyNoiseCurveChartControl.ResolveFirstTailIndex(points, TimeSpan.FromSeconds(4)));
+        Assert.Equal(5, StudyNoiseSeriesRules.FirstTailIndex(points, TimeSpan.FromSeconds(4)));
         Assert.Equal(5, counts.StaticSourceCount);
         Assert.Equal(6, counts.DynamicSourceCount);
     }
@@ -191,10 +191,10 @@ public sealed class StudyComponentRenderingTests
     [Fact]
     public void DistributionAreaChart_ResolvesLevelsFromBaseline()
     {
-        Assert.Equal(NoiseDistributionLevel.Quiet, StudyNoiseDistributionAreaChartControl.ResolveLevel(44.9, 45));
-        Assert.Equal(NoiseDistributionLevel.Normal, StudyNoiseDistributionAreaChartControl.ResolveLevel(45, 45));
-        Assert.Equal(NoiseDistributionLevel.Noisy, StudyNoiseDistributionAreaChartControl.ResolveLevel(55, 45));
-        Assert.Equal(NoiseDistributionLevel.Extreme, StudyNoiseDistributionAreaChartControl.ResolveLevel(65, 45));
+        Assert.Equal(NoiseDistributionLevel.Quiet, StudyNoiseSeriesRules.LevelOf(44.9, 45));
+        Assert.Equal(NoiseDistributionLevel.Normal, StudyNoiseSeriesRules.LevelOf(45, 45));
+        Assert.Equal(NoiseDistributionLevel.Noisy, StudyNoiseSeriesRules.LevelOf(55, 45));
+        Assert.Equal(NoiseDistributionLevel.Extreme, StudyNoiseSeriesRules.LevelOf(65, 45));
     }
 
     private static IReadOnlyList<NoiseRealtimePoint> CreateRealtimePoints(int count, TimeSpan step)

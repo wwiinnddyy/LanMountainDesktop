@@ -102,25 +102,6 @@ public sealed class StudyNoiseCurveChartControl : Control
         return Math.Clamp(duration, 4, 60);
     }
 
-    internal static int ResolveFirstTailIndex(IReadOnlyList<NoiseRealtimePoint> points, TimeSpan tailDuration)
-    {
-        if (points.Count <= 1)
-        {
-            return 0;
-        }
-
-        var cutoff = points[^1].Timestamp - tailDuration;
-        for (var i = 0; i < points.Count; i++)
-        {
-            if (points[i].Timestamp >= cutoff)
-            {
-                return i;
-            }
-        }
-
-        return points.Count - 1;
-    }
-
     internal static (int StaticSourceCount, int DynamicSourceCount) ResolveLayerSourceCounts(
         IReadOnlyList<NoiseRealtimePoint> points,
         TimeSpan tailDuration)
@@ -130,7 +111,7 @@ public sealed class StudyNoiseCurveChartControl : Control
             return (0, 0);
         }
 
-        var firstTailIndex = ResolveFirstTailIndex(points, tailDuration);
+        var firstTailIndex = StudyNoiseSeriesRules.FirstTailIndex(points, tailDuration);
         var dynamicStartIndex = Math.Max(0, firstTailIndex - 1);
         var staticCount = firstTailIndex >= 2 ? firstTailIndex : 0;
         var dynamicCount = points.Count - dynamicStartIndex >= 2 ? points.Count - dynamicStartIndex : 0;
@@ -317,7 +298,7 @@ public sealed class StudyNoiseCurveChartControl : Control
         _staticSourceCount = 0;
         _dynamicSourceCount = 0;
 
-        var firstTailIndex = ResolveFirstTailIndex(_points, TimeSpan.FromSeconds(DynamicTailSeconds));
+        var firstTailIndex = StudyNoiseSeriesRules.FirstTailIndex(_points, TimeSpan.FromSeconds(DynamicTailSeconds));
         var dynamicStartIndex = Math.Max(0, firstTailIndex - 1);
         var staticEndExclusive = firstTailIndex;
 

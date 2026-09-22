@@ -78,8 +78,18 @@ public sealed class DuplicateImplementationRatchetTests
     /// 这个不一致是既有行为，收口只保证"算法只有一份"，改口径要拍板。
     /// 行为钉 <c>StudyStatisticsTests</c>：注入"去掉钳位"红 2 条（-3 与 5 两行）、
     /// "插值系数取反"红 2 条（0.5 与 0.95 两行）、"哨兵写死成 0"红 1 条，各自只红该红的，验过。）
+    /// 53 → 51 一笔收两族（噪声折线的两条判据各 2 份逐字抄本：ResolveFirstTailIndex 13 行×2
+    /// （噪声曲线控件 + 噪声分布面积图控件）、ResolveLevel 16 行×2（面积图控件 + 噪声分布组件），
+    /// 进 Views/Components/StudyNoiseSeriesRules 的 FirstTailIndex / LevelOf，7 个调用点改走家。
+    /// 这两族的错法都不报错：尾窗起点差一格＝动态段多一格或少一格；档线差一格＝同一个 dB 值
+    /// 在面板与图表里被涂成两种颜色。它两旁边的 ResolveLayerSourceCounts 已经漂开（面积图那份多一个
+    /// isStaticSeries 分支），不在这一笔之内。行为钉 StudyNoiseSeriesRulesTests：注入"截止点不算进
+    /// 尾窗"（>= 改成 >）红 3 条——家自己的边界那条，加两个各自消费它的图表渲染钉；
+    /// 注入"档线改成右闭"（< 改成 <=）红 2 条，各自只红该红的，验过。）
+    /// 这一笔对**漂移族数无影响**（191 族不动、族内站点 1368 不动）：两族各是"2 处 1 种体"，
+    /// 按定义不构成漂移族，所以收益是"这两段逻辑从 2 处变成 1 处"，别把它记成族数下降。）
     /// </summary>
-    private const int IdenticalBodyFamilyCeiling = 53;
+    private const int IdenticalBodyFamilyCeiling = 51;
 
     /// <summary>
     /// 今天实测：191 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
@@ -110,7 +120,7 @@ public sealed class DuplicateImplementationRatchetTests
     private const int DriftFamilyCeiling = 191;
 
     /// <summary>
-    /// 漂移普查认领的声明处数下限（今天实测 5442）。
+    /// 漂移普查认领的声明处数下限（今天实测 5440：5442 − 4 份被收掉的抄本 + 2 个家的入口）。
     /// 钉这个不是为了查新增，是为了查**判据自己塌掉**：
     /// 上面那两处 bug 都是"少认声明"，族数看着像收口（193→189），实际是普查瞎了。
     /// 只冻族数会被这种错法骗过去，冻住认领量就不会。
@@ -288,7 +298,7 @@ public sealed class DuplicateImplementationRatchetTests
         var censusSites = bodiesByName.Values.Sum(tally => tally.Sites);
         Assert.True(
             censusSites >= DriftCensusSiteFloor,
-            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5442）。" +
+            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5440）。" +
             "族数没变也说明判据在丢声明：查 NormalizeBody 又漏掉了哪种成员写法（历史上漏过 Allman 箭头体与插值字符串的大括号）");
 
         var driftFamilies = bodiesByName.Count(pair => pair.Value.VariantCount >= 2 &&

@@ -170,25 +170,6 @@ public sealed class StudyNoiseDistributionAreaChartControl : Control
         return Math.Clamp(duration, 4, 60);
     }
 
-    internal static int ResolveFirstTailIndex(IReadOnlyList<NoiseRealtimePoint> points, TimeSpan tailDuration)
-    {
-        if (points.Count <= 1)
-        {
-            return 0;
-        }
-
-        var cutoff = points[^1].Timestamp - tailDuration;
-        for (var i = 0; i < points.Count; i++)
-        {
-            if (points[i].Timestamp >= cutoff)
-            {
-                return i;
-            }
-        }
-
-        return points.Count - 1;
-    }
-
     internal static (int StaticSourceCount, int DynamicSourceCount) ResolveLayerSourceCounts(
         IReadOnlyList<NoiseRealtimePoint> points,
         TimeSpan tailDuration,
@@ -204,7 +185,7 @@ public sealed class StudyNoiseDistributionAreaChartControl : Control
             return (points.Count, 0);
         }
 
-        var firstTailIndex = ResolveFirstTailIndex(points, tailDuration);
+        var firstTailIndex = StudyNoiseSeriesRules.FirstTailIndex(points, tailDuration);
         var dynamicStartIndex = Math.Max(0, firstTailIndex - 1);
         var staticCount = firstTailIndex >= 2 ? firstTailIndex : 0;
         var dynamicCount = points.Count - dynamicStartIndex >= 2 ? points.Count - dynamicStartIndex : 0;
@@ -214,30 +195,6 @@ public sealed class StudyNoiseDistributionAreaChartControl : Control
     internal static double MapTimestampToLogicalX(DateTimeOffset timestamp, DateTimeOffset origin, double pixelsPerSecond)
     {
         return Math.Max(0, (timestamp - origin).TotalSeconds * pixelsPerSecond);
-    }
-
-    internal static NoiseDistributionLevel ResolveLevel(double displayDb, double baselineDb)
-    {
-        var quietUpper = baselineDb;
-        var normalUpper = baselineDb + 10d;
-        var noisyUpper = baselineDb + 20d;
-
-        if (displayDb < quietUpper)
-        {
-            return NoiseDistributionLevel.Quiet;
-        }
-
-        if (displayDb < normalUpper)
-        {
-            return NoiseDistributionLevel.Normal;
-        }
-
-        if (displayDb < noisyUpper)
-        {
-            return NoiseDistributionLevel.Noisy;
-        }
-
-        return NoiseDistributionLevel.Extreme;
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
@@ -447,7 +404,7 @@ public sealed class StudyNoiseDistributionAreaChartControl : Control
 
         var firstTailIndex = _isStaticSeries
             ? _points.Count
-            : ResolveFirstTailIndex(_points, TimeSpan.FromSeconds(DynamicTailSeconds));
+            : StudyNoiseSeriesRules.FirstTailIndex(_points, TimeSpan.FromSeconds(DynamicTailSeconds));
         var dynamicStartIndex = _isStaticSeries ? _points.Count : Math.Max(0, firstTailIndex - 1);
         var staticEndExclusive = firstTailIndex;
 
@@ -495,7 +452,7 @@ public sealed class StudyNoiseDistributionAreaChartControl : Control
 
         var firstTailIndex = _isStaticSeries
             ? _points.Count
-            : ResolveFirstTailIndex(_points, TimeSpan.FromSeconds(DynamicTailSeconds));
+            : StudyNoiseSeriesRules.FirstTailIndex(_points, TimeSpan.FromSeconds(DynamicTailSeconds));
         var dynamicStartIndex = _isStaticSeries ? _points.Count : Math.Max(0, firstTailIndex - 1);
         var staticEndExclusive = firstTailIndex;
 
@@ -788,7 +745,7 @@ public sealed class StudyNoiseDistributionAreaChartControl : Control
 
         var latest = _points[^1];
         var center = MapToPlot(plot, latest, _cachedPixelsPerSecond);
-        var level = ResolveLevel(latest.DisplayDb, _baselineDb);
+        var level = StudyNoiseSeriesRules.LevelOf(latest.DisplayDb, _baselineDb);
         var levelBrush = GetLevelBrush(level);
         var radius = Math.Clamp(Math.Min(plot.Width, plot.Height) / 34d, 3.5, 8);
 

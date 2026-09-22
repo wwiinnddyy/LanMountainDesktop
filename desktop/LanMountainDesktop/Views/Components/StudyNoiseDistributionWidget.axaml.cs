@@ -208,7 +208,7 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
 
         for (var i = 0; i < points.Count; i++)
         {
-            switch (ResolveLevel(points[i].DisplayDb, baselineDb))
+            switch (StudyNoiseSeriesRules.LevelOf(points[i].DisplayDb, baselineDb))
             {
                 case NoiseDistributionLevel.Quiet:
                     quiet++;
@@ -244,7 +244,7 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
             dominantLevel = NoiseDistributionLevel.Extreme;
         }
 
-        var latestLevel = ResolveLevel(points[^1].DisplayDb, baselineDb);
+        var latestLevel = StudyNoiseSeriesRules.LevelOf(points[^1].DisplayDb, baselineDb);
         return new DistributionStats(
             LatestLevel: latestLevel,
             DominantLevel: dominantLevel,
@@ -253,30 +253,6 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
             NormalCount: normal,
             NoisyCount: noisy,
             ExtremeCount: extreme);
-    }
-
-    private static NoiseDistributionLevel ResolveLevel(double displayDb, double baselineDb)
-    {
-        var quietUpper = baselineDb;
-        var normalUpper = baselineDb + 10d;
-        var noisyUpper = baselineDb + 20d;
-
-        if (displayDb < quietUpper)
-        {
-            return NoiseDistributionLevel.Quiet;
-        }
-
-        if (displayDb < normalUpper)
-        {
-            return NoiseDistributionLevel.Normal;
-        }
-
-        if (displayDb < noisyUpper)
-        {
-            return NoiseDistributionLevel.Noisy;
-        }
-
-        return NoiseDistributionLevel.Extreme;
     }
 
     private void UpdateAdaptiveLayout()

@@ -285,6 +285,14 @@ en/ja/ko 还缺 25/313/275 条，只许降不许升；补翻译就把数字改�
 `PercentileCallSites_KeepTheirOwnSentinel` 钉"哪个调用方用哪个哨兵"——收口之后这条分歧只剩一个字面量的距离，
 把某个调用点的 `-100` 顺手改成 `0` 时算法测试照样全绿，而且它还钉住站点数（少一条断言就是判据静默变窄）。
 
+**噪声折线的两条判据只认 `Views/Components/StudyNoiseSeriesRules.cs` 一家**
+（`FirstTailIndex(点列, 尾窗时长)` 取尾窗起点、`LevelOf(dB, 基准 dB)` 判档位）。
+此前各抄 2 份逐字相同：两个自绘图表控件各一份 13 行的尾窗起点，面积图控件与噪声分布组件各一份 16 行的档位判定。
+两处错法都不报错——尾窗起点差一格＝动态段多一格或少一格，档线差一格＝同一个 dB 值在面板与图表里两种颜色。
+档位是"左闭右开"（正好等于基准算 Normal），档宽 10 dB 且**从基准线量起**（基准为负的相对 dB 也照走）。
+旁边那个 `ResolveLayerSourceCounts` 两份已经漂开（面积图多一个 `isStaticSeries` 分支），不算同一族，没并。
+行为钉 `StudyNoiseSeriesRulesTests`（`>=`→`>` 红 3 条：家自己 + 两个消费它的渲染钉；`<`→`<=` 红 2 条，验过）。
+
 **打开外部链接只认一处**：组件要点开一条网页链接，一律 `Helpers/ExternalLinkLauncher.cs`
 （`TryOpen(url)` 打开、`NormalizeHttpUrl(url)` 只做归一化）。此前 http/https 归一化被逐字抄了 6 份
 （含 `RecommendationDataService`），shell 打开又抄了 9 份，其中 3 份（`DailyNewsView`、`JuyaNewsWidget`、
