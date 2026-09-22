@@ -555,6 +555,16 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 这一条的关键判据是**`override`/`abstract` 要豁免**：`WeatherWidgetBase.cs:86` 会在基类里调子类的
 `ApplyResponsiveLayout`，第一版没豁免时 5 个天气组件全被报成缺陷（全是假阳性）。
 正对照：临时放一个只定义 `private void UpdateAdaptiveLayout() {}` 的文件必须被报出来，报完删掉。
+**第五把尺子管"谁 new 了要释放的东西、却既不释放也不交接"**：`python scripts/check-resource-ownership.py`
+（范围是 Services / ViewModels / Core / 安装器 / Platform，组件目录由第三把尺子管）。
+2026-09-22 首跑 543 个文件：1 处线索、**未解释 0 处**——那 1 处是 `PlondsHttpClientFactory.Create()`，
+逐处读后确认是**交接**：client 交给 `PlondsClientServiceFactory.CreateDefault` 塞进
+`PlondsManifestClient` / `PlondsHttpPackageDownloader`，而 `CreateDefault` 只在
+`SettingsDomainServices.cs:2070` 构造 `UpdateSettingsService`（应用级容器里的单例）时调一次
+→ 一次进程一个 client，`PlondsService` 不实现 `IDisposable` 是有意的。这类结论登记在脚本的 `EXPLAINED` 里，
+交接方式若改掉（例如变成每请求建一个 client）就会重新变成未解释线索。
+两个**实测到的假阳性来源**别忘：释放常写成 `CancellationHelper.CancelAndDispose(...)`（判据里 `Dispose` 前不能加词边界，
+否则两处正常站点会被报成缺陷，本轮就踩了）；工厂方法 `Create()` 本身就是交接。
 **滑杆的 `Minimum`/`Maximum` 不许写死数字**，要绑视图模型上从 `DesktopGridLimits` 读的那四个量程属性——
 设置页量程是这套数的第四份副本，漂了的症状不是崩，而是"拖到尽头网格不动"或"存进去被运行期悄悄钳掉"。
 
