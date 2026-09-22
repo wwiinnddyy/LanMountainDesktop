@@ -181,6 +181,12 @@ platform/packaging/scripts）加 `tests/.../ApprovalFiles`（已发布 SDK 公�
 反向判据同一条测试里也有：名单中的条目若被真引用了（假欠账）同样红；把语料放回旧口径，
 红名恰好就是这两个校验器（变异验过）。名单文件自己不算使用者（`*RatchetTests.cs` 已从语料排除）。
 名单**只许缩短**：新引入一个零使用类型直接红；条目对应的类型没了也会红（防名单烂掉）。
+**"名字只出现在字符串字面量里"不算使用**（2026-09-22 补进 `IsSelfText` 的规则，名单 15 → **16**）：
+`LoadingTimeoutHandler` 整个类没有任何构造点，却因为自家 6 处 `AppLogger.Info("LoadingTimeoutHandler", …)`
+把日志分类名写成同名而躲过了这条棘轮——一个写完从没被 new 的类（超时监控 + 重试计数）就是这么藏住的，
+现登记在名单里等拍板（待办 G1-AZ）。补这条规则后**新报出来的只有它一个**，另两个方向都做了变异验证：
+同名只出现在字符串里的临时类型必须报，同文件里真 `new` 出来的不许报。
+按行剥字符串字面量，跨行的 raw/verbatim 串剥不干净，方向是漏报不是误报。
 2026-09-20 基线：17 → **13**，删掉的 4 个是 `ShutdownCoordinator` / `SettingsWindowHost` /
 `DesktopStartupCoordinator`（三个纯穿透壳，被包的动作早已由真实路径直接调用）和 `ObservableHelper<T>`；
 2026-09-22 换口径后 13 → **15**（新增的两个就是那两个校验器），同批清掉一个真死码
@@ -576,8 +582,12 @@ IDE0051（未使用私有成员）在构建里一条都不出（2026-09-22 实�
 要按实测进 `EXTERNAL_INTERFACE_MEMBERS`（`IValueConverter.ConvertBack`、`IHostApplicationLifetime.StopApplication`
 就是首轮抓到的两条假阳性）。正对照已做：临时文件的零调用 `private` 方法必须报出来，而接口实现、
 `virtual`、同类内部被调的三种形状必须都不报。
-2026-09-22 首跑真值：**A 级（生产语料里除声明本身零出现）44 处、T 级（只有测试在调）6 处**，
-已判 8 条（拖拽手势一套 4 条、`RelayCommand.RaiseCanExecuteChanged`、Core 公开面 3 条），其余按族待判。
+2026-09-22 首跑真值：**A 级（生产语料里除声明本身零出现）44 处、T 级（只有测试在调）6 处**；
+同日下午的存量：删掉 9 条纯遗留（99 行）后 **A 级 36 / T 级 6**，其中 18 条已逐条判完挂名
+（分类条手势 4 条＝G1-AW，`RelayCommand.RaiseCanExecuteChanged`，Core 公开面 2 条＝G1-U，
+Loading 那条链 8 条＝G1-AZ，考勤模块 2 条＝已在类型名单），未解释剩 19 条。
+判据本身也被修过两次：跨工程同名声明行会把调用点喂饱（Plonds 自带 `GetCatalogAsync`），
+C# 主构造器会被当成方法声明（`class X(IProgress<…>? p)` 报成一条不存在的方法）。
 终判永远是删除法：A 级只是线索，删掉重建看编译红不红。
 **滑杆的 `Minimum`/`Maximum` 不许写死数字**，要绑视图模型上从 `DesktopGridLimits` 读的那四个量程属性——
 设置页量程是这套数的第四份副本，漂了的症状不是崩，而是"拖到尽头网格不动"或"存进去被运行期悄悄钳掉"。

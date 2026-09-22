@@ -47,6 +47,10 @@ public sealed class ZeroUseTypeRatchetTests
             "且内置公钥是空串（IsConfigured=false 时 Verify 直接返回 true）——接线与内置公钥都要用户拍板",
         ["AuthenticodeVerifier"] = "实现了但安装流程没调用：WinVerifyTrust 校验没接进落盘前那道关，" +
             "EnforcementEnabled 读环境变量也没人问——接线与否要用户拍板",
+        ["LoadingTimeoutHandler"] = "整个类没被 new 过（全仓只有自家文件里的 8 处出现，6 处还是 AppLogger 的日志分类名字符串）：" +
+            "超时监控 + 重试计数这套能力从没跑过。它是本次给 IsSelfText 补「名字只在字符串里出现也算自述」" +
+            "这条规则后新报出来的唯一一个类型（另两个方向都做了变异验证），属实现了没入口，" +
+            "与启动进度那条链一起等拍板：待办 G1-AZ",
     };
 
     private static readonly string[] ProductionDirectories =
@@ -81,6 +85,14 @@ public sealed class ZeroUseTypeRatchetTests
         RegexOptions.Compiled | RegexOptions.Multiline);
 
     private static readonly Regex Identifier = new("[A-Za-z_][A-Za-z0-9_]*", RegexOptions.Compiled);
+
+    /// <summary>
+    /// 逐行剥字符串字面量用的。按行处理，所以跨行的 raw/verbatim 串剥不干净——
+    /// 那种情况只会"少剥"（名字被当成代码引用），方向是漏报不是误报，可接受。
+    /// </summary>
+    private static readonly Regex StringLiterals = new(
+        @"""""[\s\S]*?""""|@""(?:[^""]|"""")*""|\$?""(?:\\.|[^""\\])*""",
+        RegexOptions.Compiled);
 
     [Fact]
     public void ZeroUseTypes_MatchTheAcceptedList()
@@ -168,14 +180,24 @@ public sealed class ZeroUseTypeRatchetTests
     }
 
     /// <summary>
-    /// 自身文本 = 这个类型自己的声明行、自己的构造/方法签名、把它列进基列表的行、以及任何注释行。
+    /// 自身文本 = 这个类型自己的声明行、自己的构造/方法签名、把它列进基列表的行、任何注释行，
+    /// 以及**只在字符串字面量里出现**的行（日志分类名不是代码引用）。
     /// 同文件里 <c>AddSingleton&lt;X&gt;()</c> 这类真使用不会被吞掉。
+    /// 字符串字面量这条是 2026-09-22 补的：`LoadingTimeoutHandler` 整个类没有任何构造点，
+    /// 却因为在自家 <c>AppLogger.Info("LoadingTimeoutHandler", …)</c> 里出现 6 次而躲过本棘轮——
+    /// 一个"写完但从没被 new 过"的类，正是这条轴该抓的东西。
     /// </summary>
     private static bool IsSelfText(string line, string name)
     {
         var text = line.TrimStart();
         if (text.StartsWith("//", StringComparison.Ordinal) || text.StartsWith("/*", StringComparison.Ordinal) ||
             text.StartsWith("*", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        // 把字符串字面量整段拿掉还看得见这个名字，那才是代码引用。
+        if (!Identifier.Matches(StringLiterals.Replace(text, "«»")).Any(match => match.Value == name))
         {
             return true;
         }

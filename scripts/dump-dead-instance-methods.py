@@ -114,6 +114,25 @@ EXPLAINED = {
     "PublicIpcHostService.PublishLoadingStateAsync":
         "Core 是已发布包：删公开成员属跨二进制破坏性变更，跟 SDK 版本号一起定：待办 G1-U",
     "LanMountainDesktopIpcClient.GetSessionInfoAsync": "同上，Core 公开面：待办 G1-U",
+    # —— 启动进度那条链（族①，8 条一次判完，全部挂 G1-AZ）——
+    "LoadingTimeoutHandler.SetItemTimeout":
+        "所属类型 LoadingTimeoutHandler 整个类没被 new 过（已在 ZeroUseTypeRatchetTests 名单里）："
+        "超时监控 + 重试计数这套能力从来没跑过",
+    "LoadingTimeoutHandler.ResetRetryCount": "同上，没被构造的类型里的方法",
+    "LoadingStateManager.UpdateProgress":
+        "manager 本身是活的（App.axaml.cs:235 new、239 RegisterItem、240 StartItem），"
+        "但这个'推进度'的入口没人调——全仓只注册了 system.init 一个条目，进度基本是静态的",
+    "LoadingStateManager.SetStage": "同上：阶段切换的入口没人调，CurrentStage 一直停在初始值",
+    "LoadingStateManager.CheckTimeouts": "同上：这是超时监控的心跳，配合从没被 new 的 LoadingTimeoutHandler 用",
+    "LoadingStateReporter.ReportItemProgressAsync":
+        "上报链的活路径是事件驱动（Start() 里订阅 StateChanged/OverallProgressChanged），"
+        "这三个 Report*Async 是'显式调用'版备用 API，零调用点",
+    "LoadingStateReporter.ReportStageChangeAsync": "同上，事件路径已覆盖",
+    "LoadingStateReporter.ReportErrorAsync": "同上，事件路径已覆盖（错误态另有 AppLogger）",
+    "AttendanceDataStore.LoadSessions":
+        "所属类型已在 ZeroUseTypeRatchetTests 名单里（考勤整模块含 AttendanceModels 无入口，等拍板）："
+        "这两个是它的读/写侧，模块接不接一起定，不单独删",
+    "AttendanceDataStore.UpsertSession": "同上，考勤模块无入口",
 }
 
 
