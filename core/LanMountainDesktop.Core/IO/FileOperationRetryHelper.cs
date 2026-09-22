@@ -70,6 +70,61 @@ public static class FileOperationRetryHelper
             $"Delete directory '{directoryPath}'");
     }
 
+    /// <summary>
+    /// "尽力删掉，删不掉也不影响主流程"的删除只认这一处（不重试，与上面那组带重试的区别开）。
+    /// 收口前 <c>TryDeleteFile</c> 有 7 份、<c>TryDeleteDirectory</c> 有 6 份，散在宿主、启动器与安装器
+    /// 三个二进制里，而且已经各自漂了：
+    /// 7 份文件删除里只有 2 份会先把只读属性清掉——另 5 份删只读文件会静默失败，
+    /// 症状就是卸载/清理跑完但 AppData 里还留着文件；
+    /// 13 份里只有 1 份把失败报进日志，其余全是空的 <c>catch</c>，所以这类残留从来查不到原因。
+    /// 这里取两边并集的口径：先清属性再删，失败走 <see cref="FailureNotice"/>。
+    /// </summary>
+    /// <returns>真的删掉了返回 true；路径不存在或删不动返回 false（不抛）。</returns>
+    public static bool TryDeleteFile(string? filePath, string category)
+    {
+        if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+        {
+            return false;
+        }
+
+        try
+        {
+            File.SetAttributes(filePath, FileAttributes.Normal);
+            File.Delete(filePath);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            NotifyFailure(category, $"Failed to delete file '{filePath}'.", ex);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 尽力删除目录。<paramref name="recursive"/> 保留各调用点原有语义：
+    /// <c>DataStorageService</c> 那处要的就是"只删空目录"，改成递归会连带删掉用户数据。
+    /// 这里不清属性（13 份原稿没有一份清目录属性，清了就是把"删不动"变成"改了目录属性还是删不动"的另一种口径），
+    /// 非空 + <c>recursive: false</c> 会失败并回报，这是原行为。
+    /// </summary>
+    public static bool TryDeleteDirectory(string? directoryPath, bool recursive, string category)
+    {
+        if (string.IsNullOrWhiteSpace(directoryPath) || !Directory.Exists(directoryPath))
+        {
+            return false;
+        }
+
+        try
+        {
+            Directory.Delete(directoryPath, recursive);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            NotifyFailure(category, $"Failed to delete directory '{directoryPath}'.", ex);
+            return false;
+        }
+    }
+
     /// <summary>把一条 IO 告警送给接上的日志器；没人接就当没发生。</summary>
     public static void NotifyFailure(string category, string message, Exception exception)
     {

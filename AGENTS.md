@@ -322,6 +322,17 @@ helper 住在 Core 是因为写同一批磁盘文件的是三个进程（宿主�
 `.write-test-` 开头的文件名）。"把用户选中的图片原子搬成受管文件名"走 `PlaceFile`（换壁纸已经用上），
 要写内容用 `WriteText` / `WriteStreamAsync`。
 
+**"尽力删掉，删不掉要出声"只认一处**：清理缓存、卸载残留、删安装包这类"删不动也不该让主流程崩"的删除，
+一律走 `core/LanMountainDesktop.Core/IO/FileOperationRetryHelper.cs` 的 `TryDeleteFile` / `TryDeleteDirectory`
+（守卫 `SourceIntegrityTests.BestEffortFileDeletion_LivesInExactlyOnePlace`，只禁声明、调用点各带自己的 category）。
+收口前这两个方法在宿主/启动器/安装器三个二进制里抄了 13 份，而且已经漂开：7 份文件删除里只有 2 份会先
+`File.SetAttributes(Normal)`，缺这一步的那 5 份删只读文件会**静默失败**（2026-09-22 实测：把清属性那行删掉，
+`BestEffortDeletionTests.ReadOnlyFile_IsDeletedAfterClearingAttributes` 立刻红，返回 false 而不抛），
+症状就是"跑完卸载/AppData 里还留着文件"；13 份里只有 1 份记日志，其余全是空的 `catch`，所以这类残留从来查不到原因。
+现在口径取两边并集：先清属性再删，失败送 `FailureNotice`（宿主与启动器已接日志器，安装器没接＝行为不变）。
+`recursive` 参数保留各调用点原语义——`DataStorageService` 那处要的就是"只删空目录"，改成递归会连带删掉用户数据，
+`BestEffortDeletionTests.NonEmptyDirectory_WithRecursiveFalse_IsKeptAndReported` 钉住它。
+
 **安装根目录下那个 `.Launcher` 数据目录名只认一处**：一律用 `core/LanMountainDesktop.Core/Deployment/DeploymentLayout.cs`
 的 `LauncherStateDirectoryName`，不要在 Core / 宿主 / 启动器里再抄字面量（该类注释本来就写着"禁止在任何一侧硬编码"，
 2026-09-21 实测仍有 4 处各抄一份；安装器倒是用了常量）。同族另一个坑：启动器把启动诊断写进

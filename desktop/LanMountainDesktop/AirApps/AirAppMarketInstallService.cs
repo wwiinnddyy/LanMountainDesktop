@@ -135,7 +135,7 @@ internal sealed class AirAppMarketInstallService : IDisposable
             }
             catch (Exception ex)
             {
-                TryDeleteFile(downloadResult.PackagePath);
+                FileOperationRetryHelper.TryDeleteFile(downloadResult.PackagePath, "AirAppMarket");
                 sourceErrors.Add($"{source.SourceKind}: {ex.Message}");
             }
         }
@@ -241,21 +241,6 @@ internal sealed class AirAppMarketInstallService : IDisposable
         return new AirAppMarketVerificationResult(true, null);
     }
 
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-        }
-        catch
-        {
-            // Ignore cleanup failures for temporary install artifacts.
-        }
-    }
-
     private static string ResolveDownloadsDirectory(string dataDirectory)
     {
         var preferred = Path.Combine(dataDirectory, "downloads");
@@ -290,14 +275,14 @@ internal sealed class AirAppMarketInstallService : IDisposable
             var acquireResult = await AcquirePackageAsync(airApp, source, resolvedDownloadUrl, packagePath, cancellationToken).ConfigureAwait(false);
             if (!acquireResult.Success)
             {
-                TryDeleteFile(packagePath);
+                FileOperationRetryHelper.TryDeleteFile(packagePath, "AirAppMarket");
                 return new DownloadPackageResult(false, null, acquireResult.ErrorMessage);
             }
 
             var verificationResult = await VerifyPackageAsync(airApp, packagePath, cancellationToken).ConfigureAwait(false);
             if (!verificationResult.Success)
             {
-                TryDeleteFile(packagePath);
+                FileOperationRetryHelper.TryDeleteFile(packagePath, "AirAppMarket");
                 return new DownloadPackageResult(false, null, verificationResult.ErrorMessage);
             }
 
@@ -305,12 +290,12 @@ internal sealed class AirAppMarketInstallService : IDisposable
         }
         catch (OperationCanceledException)
         {
-            TryDeleteFile(packagePath);
+            FileOperationRetryHelper.TryDeleteFile(packagePath, "AirAppMarket");
             throw;
         }
         catch (Exception ex)
         {
-            TryDeleteFile(packagePath);
+            FileOperationRetryHelper.TryDeleteFile(packagePath, "AirAppMarket");
             return new DownloadPackageResult(false, null, ex.Message);
         }
     }

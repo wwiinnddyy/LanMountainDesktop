@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using LanDesktopPLONDS.Installer.Models;
 using LanMountainDesktop.Shared.Contracts.Deployment;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanDesktopPLONDS.Installer.Services;
 
@@ -330,7 +331,7 @@ internal sealed class FilesPackageInstaller
         finally
         {
             // 清理临时目录
-            TryDeleteDirectory(tempSibling);
+            FileOperationRetryHelper.TryDeleteDirectory(tempSibling, true, "Installer");
         }
     }
 
@@ -556,21 +557,6 @@ internal sealed class FilesPackageInstaller
         catch
         {
             // 快捷方式创建是尽力而为；部署本身必须在没有 shell 集成的情况下可用。
-        }
-    }
-
-    private static void TryDeleteDirectory(string path)
-    {
-        try
-        {
-            if (Directory.Exists(path))
-            {
-                Directory.Delete(path, recursive: true);
-            }
-        }
-        catch
-        {
-            // 临时目录清理失败时忽略
         }
     }
 }

@@ -367,22 +367,7 @@ internal static class LauncherBackgroundService
                 continue;
             }
 
-            TryDeleteFile(file);
-        }
-    }
-
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Warn($"[LauncherBackground] Failed to delete '{path}': {ex.Message}");
+            FileOperationRetryHelper.TryDeleteFile(file, "LauncherBackground");
         }
     }
 

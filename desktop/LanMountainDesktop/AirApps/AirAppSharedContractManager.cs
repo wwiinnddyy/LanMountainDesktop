@@ -10,6 +10,7 @@ using System.Threading;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.AirAppMarket;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanMountainDesktop.AirApps;
 
@@ -159,7 +160,7 @@ internal sealed class AirAppSharedContractManager : IDisposable
         }
         finally
         {
-            TryDeleteFile(temporaryPath);
+            FileOperationRetryHelper.TryDeleteFile(temporaryPath, "AirAppSharedContracts");
         }
     }
 
@@ -260,21 +261,6 @@ internal sealed class AirAppSharedContractManager : IDisposable
     {
         var invalidChars = Path.GetInvalidFileNameChars();
         return new string(value.Select(ch => invalidChars.Contains(ch) ? '_' : ch).ToArray());
-    }
-
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-        }
-        catch
-        {
-            // Ignore cleanup failures.
-        }
     }
 
     private sealed record LoadedSharedContract(

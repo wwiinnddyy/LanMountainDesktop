@@ -1,3 +1,4 @@
+using LanMountainDesktop.Shared.IO;
 namespace LanMountainDesktop.Services.Update;
 
 internal sealed class IncomingArtifactsCleaner(PlondsApplyPaths paths)
@@ -16,37 +17,9 @@ internal sealed class IncomingArtifactsCleaner(PlondsApplyPaths paths)
                      paths.DownloadMarkerPath
                  })
         {
-            TryDeleteFile(path);
+            FileOperationRetryHelper.TryDeleteFile(path, "Update");
         }
 
-        TryDeleteDirectory(paths.PlondsObjectsRoot);
-    }
-
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-        }
-        catch
-        {
-        }
-    }
-
-    private static void TryDeleteDirectory(string path)
-    {
-        try
-        {
-            if (Directory.Exists(path))
-            {
-                Directory.Delete(path, true);
-            }
-        }
-        catch
-        {
-        }
+        FileOperationRetryHelper.TryDeleteDirectory(paths.PlondsObjectsRoot, true, "Update");
     }
 }

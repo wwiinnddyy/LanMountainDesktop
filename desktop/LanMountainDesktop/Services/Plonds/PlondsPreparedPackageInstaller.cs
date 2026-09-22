@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using LanMountainDesktop.Shared.Contracts.Update;
 using LanMountainDesktop.Shared.Contracts.Deployment;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanMountainDesktop.Services.Plonds;
 
@@ -344,12 +345,12 @@ internal sealed class PlondsPreparedPackageInstaller
     private static void ActivateDeployment(string? currentDeployment, string targetDeployment)
     {
         File.WriteAllText(Path.Combine(targetDeployment, DeploymentLayout.CurrentMarkerFileName), string.Empty);
-        TryDeleteFile(Path.Combine(targetDeployment, DeploymentLayout.PartialMarkerFileName));
-        TryDeleteFile(Path.Combine(targetDeployment, DeploymentLayout.DestroyMarkerFileName));
+        FileOperationRetryHelper.TryDeleteFile(Path.Combine(targetDeployment, DeploymentLayout.PartialMarkerFileName), "PlondsInstall");
+        FileOperationRetryHelper.TryDeleteFile(Path.Combine(targetDeployment, DeploymentLayout.DestroyMarkerFileName), "PlondsInstall");
 
         if (!string.IsNullOrWhiteSpace(currentDeployment) && Directory.Exists(currentDeployment))
         {
-            TryDeleteFile(Path.Combine(currentDeployment, DeploymentLayout.CurrentMarkerFileName));
+            FileOperationRetryHelper.TryDeleteFile(Path.Combine(currentDeployment, DeploymentLayout.CurrentMarkerFileName), "PlondsInstall");
             File.WriteAllText(Path.Combine(currentDeployment, DeploymentLayout.DestroyMarkerFileName), string.Empty);
         }
     }
@@ -400,19 +401,5 @@ internal sealed class PlondsPreparedPackageInstaller
         var invalid = Path.GetInvalidFileNameChars();
         var sanitized = new string(value.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray()).Trim();
         return string.IsNullOrWhiteSpace(sanitized) ? "0.0.0" : sanitized;
-    }
-
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-        }
-        catch
-        {
-        }
     }
 }

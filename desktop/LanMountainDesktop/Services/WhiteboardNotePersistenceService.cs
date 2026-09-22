@@ -64,7 +64,7 @@ public sealed class WhiteboardNotePersistenceService : IWhiteboardNotePersistenc
                 var snapshot = ReadSnapshot(notePath);
                 if (IsExpired(snapshot, normalizedRetentionDays))
                 {
-                    TryDeleteFile(notePath);
+                    FileOperationRetryHelper.TryDeleteFile(notePath, Category);
                     return new WhiteboardNoteSnapshot();
                 }
 
@@ -142,7 +142,9 @@ public sealed class WhiteboardNotePersistenceService : IWhiteboardNotePersistenc
             return false;
         }
 
-        var deleted = TryDeleteFile(GetNoteFilePath(normalizedComponentId, normalizedPlacementId));
+        var deleted = FileOperationRetryHelper.TryDeleteFile(
+            GetNoteFilePath(normalizedComponentId, normalizedPlacementId),
+            Category);
         deleted |= TryDeleteLegacyNote(normalizedComponentId, normalizedPlacementId);
         return deleted;
     }
@@ -162,7 +164,7 @@ public sealed class WhiteboardNotePersistenceService : IWhiteboardNotePersistenc
                 var snapshot = ReadSnapshot(notePath);
                 if (IsExpired(snapshot, retentionDays))
                 {
-                    return TryDeleteFile(notePath);
+                    return FileOperationRetryHelper.TryDeleteFile(notePath, Category);
                 }
 
                 return false;
@@ -201,7 +203,7 @@ public sealed class WhiteboardNotePersistenceService : IWhiteboardNotePersistenc
                     {
                         var snapshot = ReadSnapshot(notePath);
                         if (IsExpired(snapshot, WhiteboardNoteRetentionPolicy.DefaultDays, nowUtc) &&
-                            TryDeleteFile(notePath))
+                            FileOperationRetryHelper.TryDeleteFile(notePath, Category))
                         {
                             deletedCount++;
                         }
@@ -522,25 +524,6 @@ public sealed class WhiteboardNotePersistenceService : IWhiteboardNotePersistenc
 
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(safe)))[..12].ToLowerInvariant();
         return $"{safe[..100]}-{hash}";
-    }
-
-    private static bool TryDeleteFile(string path)
-    {
-        try
-        {
-            if (!string.IsNullOrWhiteSpace(path) && File.Exists(path))
-            {
-                File.SetAttributes(path, FileAttributes.Normal);
-                File.Delete(path);
-                return true;
-            }
-        }
-        catch (Exception ex)
-        {
-            AppLogger.Warn(Category, $"Failed to delete whiteboard note file '{path}'.", ex);
-        }
-
-        return false;
     }
 
     private static int NormalizeBatchSize(int batchSize)

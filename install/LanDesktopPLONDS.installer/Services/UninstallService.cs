@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using LanMountainDesktop.Shared.Contracts.Deployment;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanDesktopPLONDS.Installer.Services;
 
@@ -75,17 +76,17 @@ public sealed class UninstallService
             }
 
             // 删除 .url 快捷方式
-            TryDeleteFile(Path.Combine(location, "LanMountainDesktop.url"));
+            FileOperationRetryHelper.TryDeleteFile(Path.Combine(location, "LanMountainDesktop.url"), "Uninstaller");
 
             // 删除 .lnk 快捷方式（如果有的话）
-            TryDeleteFile(Path.Combine(location, "LanMountainDesktop.lnk"));
+            FileOperationRetryHelper.TryDeleteFile(Path.Combine(location, "LanMountainDesktop.lnk"), "Uninstaller");
 
             // 也检查 Programs 子目录
             var programsDir = Path.Combine(location, "Programs");
             if (Directory.Exists(programsDir))
             {
-                TryDeleteFile(Path.Combine(programsDir, "LanMountainDesktop.url"));
-                TryDeleteFile(Path.Combine(programsDir, "LanMountainDesktop.lnk"));
+                FileOperationRetryHelper.TryDeleteFile(Path.Combine(programsDir, "LanMountainDesktop.url"), "Uninstaller");
+                FileOperationRetryHelper.TryDeleteFile(Path.Combine(programsDir, "LanMountainDesktop.lnk"), "Uninstaller");
             }
         }
     }
@@ -114,7 +115,7 @@ public sealed class UninstallService
         }
 
         // 非自身 exe 所在目录，直接删除
-        TryDeleteDirectory(_installPath);
+        FileOperationRetryHelper.TryDeleteDirectory(_installPath, true, "Uninstaller");
     }
 
     /// <summary>
@@ -157,35 +158,5 @@ public sealed class UninstallService
         }
 
         return Path.Combine(path, "Programs");
-    }
-
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-        }
-        catch
-        {
-            // 快捷方式删除失败时忽略
-        }
-    }
-
-    private static void TryDeleteDirectory(string path)
-    {
-        try
-        {
-            if (Directory.Exists(path))
-            {
-                Directory.Delete(path, recursive: true);
-            }
-        }
-        catch
-        {
-            // 目录删除失败时忽略
-        }
     }
 }

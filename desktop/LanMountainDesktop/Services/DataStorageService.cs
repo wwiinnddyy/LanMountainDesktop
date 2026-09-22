@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanMountainDesktop.Services;
 
@@ -162,7 +163,7 @@ public sealed class DataStorageService
                     foreach (var file in Directory.GetFiles(path, "*.log"))
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        TryDeleteFile(file);
+                        FileOperationRetryHelper.TryDeleteFile(file, "DataStorage");
                     }
                 }
                 else
@@ -170,14 +171,14 @@ public sealed class DataStorageService
                     foreach (var file in Directory.GetFiles(path, "*", SearchOption.AllDirectories))
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        TryDeleteFile(file);
+                        FileOperationRetryHelper.TryDeleteFile(file, "DataStorage");
                     }
 
                     foreach (var dir in Directory.GetDirectories(path, "*", SearchOption.AllDirectories)
                         .OrderByDescending(d => d.Length))
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        TryDeleteDirectory(dir);
+                        FileOperationRetryHelper.TryDeleteDirectory(dir, false, "DataStorage");
                     }
                 }
 
@@ -314,31 +315,6 @@ public sealed class DataStorageService
         }
 
         return size;
-    }
-
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            File.SetAttributes(path, FileAttributes.Normal);
-            File.Delete(path);
-        }
-        catch
-        {
-            // Ignore deletion failures
-        }
-    }
-
-    private static void TryDeleteDirectory(string path)
-    {
-        try
-        {
-            Directory.Delete(path, false);
-        }
-        catch
-        {
-            // Ignore deletion failures
-        }
     }
 
     public static string FormatBytes(long bytes)

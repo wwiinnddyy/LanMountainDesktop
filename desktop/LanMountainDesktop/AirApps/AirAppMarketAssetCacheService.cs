@@ -121,8 +121,8 @@ public sealed class AirAppMarketAssetCacheService : IDisposable
             _manifest = new AssetCacheManifest();
         }
 
-        TryDeleteDirectory(_readmeDirectory);
-        TryDeleteDirectory(_iconsDirectory);
+        FileOperationRetryHelper.TryDeleteDirectory(_readmeDirectory, true, "AirAppMarket");
+        FileOperationRetryHelper.TryDeleteDirectory(_iconsDirectory, true, "AirAppMarket");
         SaveManifest();
     }
 
@@ -254,21 +254,6 @@ public sealed class AirAppMarketAssetCacheService : IDisposable
             if (File.Exists(path))
             {
                 File.Delete(path);
-            }
-        }
-        catch
-        {
-            // Best-effort cleanup.
-        }
-    }
-
-    private static void TryDeleteDirectory(string path)
-    {
-        try
-        {
-            if (Directory.Exists(path))
-            {
-                Directory.Delete(path, recursive: true);
             }
         }
         catch

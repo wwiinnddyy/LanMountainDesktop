@@ -1761,6 +1761,44 @@ public sealed class SourceIntegrityTests
             $"{offenders.Count} 处重复的短文本归一化：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
     }
 
+    /// <summary>
+    /// "尽力删掉，删不掉别静默"只认 <c>core/LanMountainDesktop.Core/IO/FileOperationRetryHelper.cs</c> 一处。
+    /// 收口前 <c>TryDeleteFile</c> 有 7 份、<c>TryDeleteDirectory</c> 有 6 份，散在宿主、启动器、安装器三个二进制里，
+    /// 而且已经各自漂开：只有 2 份删前清只读属性（另 5 份删只读文件是静默失败，症状＝卸载后 AppData 里还留着东西），
+    /// 只有 1 份把失败记进日志（其余是空的 catch，所以这类残留从来查不到原因）。
+    /// 只禁声明不禁调用：调用点要带上自己那条流水线的 category，那是各处的差异，不是第二真源。
+    /// </summary>
+    [Fact]
+    public void BestEffortFileDeletion_LivesInExactlyOnePlace()
+    {
+        var homeFile = @"core\LanMountainDesktop.Core\IO\FileOperationRetryHelper.cs";
+        var declRe = new Regex(
+            @"(?:private|internal|public|protected)\s+(?:static\s+)?bool\s+TryDelete(?:File|Directory)\s*\(");
+        var offenders = new List<string>();
+
+        foreach (var file in SourceFiles())
+        {
+            if (string.Equals(RelativeToRepo(file), homeFile, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            foreach (var (line, number) in CodeLines(file))
+            {
+                if (declRe.IsMatch(line))
+                {
+                    offenders.Add(
+                        $"{RelativeToRepo(file)}:{number} 又写了一份尽力删除，" +
+                        "请用 FileOperationRetryHelper.TryDeleteFile 或 TryDeleteDirectory");
+                }
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 处重复的尽力删除实现：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
     private static IEnumerable<(string Line, int Number)> CodeLines(string file)
     {
         var all = File.ReadAllLines(file);

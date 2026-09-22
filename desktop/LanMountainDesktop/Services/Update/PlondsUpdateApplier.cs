@@ -2,6 +2,7 @@ using System.Text.Json;
 using LanMountainDesktop.Shared.Contracts.Update;
 using LanMountainDesktop.Services.Plonds;
 using LanMountainDesktop.Shared.Contracts.Deployment;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanMountainDesktop.Services.Update;
 
@@ -240,7 +241,7 @@ internal sealed class PlondsUpdateApplier(
     {
         if (isInitialDeployment)
         {
-            TryDeleteDirectory(targetDeployment);
+            FileOperationRetryHelper.TryDeleteDirectory(targetDeployment, true, "PlondsUpdate");
             snapshot.Status = "failed";
             snapshotStore.Save(snapshotPath, snapshot);
             progressReporter.ReportComplete(new InstallCompleteReport(false, "0.0.0", targetVersion, ex.Message, false));
@@ -305,17 +306,6 @@ internal sealed class PlondsUpdateApplier(
         {
             var modeValue = Convert.ToInt32(rawMode.Trim(), 8);
             File.SetUnixFileMode(targetPath, (UnixFileMode)modeValue);
-        }
-        catch
-        {
-        }
-    }
-
-    private static void TryDeleteDirectory(string path)
-    {
-        try
-        {
-            if (Directory.Exists(path)) Directory.Delete(path, true);
         }
         catch
         {
