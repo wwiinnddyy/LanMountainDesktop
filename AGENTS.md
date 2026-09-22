@@ -158,11 +158,23 @@ Sdk/Runtime/Host/DevServer/Template + 安装器 + Platform + Mobile，逐个量�
 先确认该接口是否只有这一个消费者，是的话连同接口实现一起摘掉，别只留一个空方法。
 
 **零使用类型棘轮**：`tests/.../ZeroUseTypeRatchetTests.cs` 把探针固化成测试——扫全仓声明的类型名（约 1200 个），
-在整仓语料（含 `.axaml`/`.json`/`.iss`/同级 AirApp/tests）里数出现次数并减掉"自身文本"，为 0 即零使用。
+数出现次数并减掉"自身文本"，为 0 即零使用。
+2026-09-22 把口径从"名字在仓库里出现过"改成**"产品可达"**：用量只算生产目录（core/desktop/airapp/install/mobile/
+platform/packaging/scripts）加 `tests/.../ApprovalFiles`（已发布 SDK 公共面的契约快照）；
+`tests` 与 `docs` 不再算使用者——**只有测试在调 = 没接线，历史计划文档提过一句 = 更不是使用**。
+这条改动直接挖出了两个安全能力：`ManifestSignatureVerifier`（清单 RSA-PSS 校验，内置公钥还是空串）与
+`AuthenticodeVerifier`（WinVerifyTrust + 环境变量开关）在生产里**零调用点**，只有 `InstallerSecurityTests` 在用——
+已按"等用户拍板"记进名单，别当死码删，也别擅自接线（改的是安装流程的安全语义）。
+反向判据同一条测试里也有：名单中的条目若被真引用了（假欠账）同样红；把语料放回旧口径，
+红名恰好就是这两个校验器（变异验过）。名单文件自己不算使用者（`*RatchetTests.cs` 已从语料排除）。
 名单**只许缩短**：新引入一个零使用类型直接红；条目对应的类型没了也会红（防名单烂掉）。
 2026-09-20 基线：17 → **13**，删掉的 4 个是 `ShutdownCoordinator` / `SettingsWindowHost` /
-`DesktopStartupCoordinator`（三个纯穿透壳，被包的动作早已由真实路径直接调用）和 `ObservableHelper<T>`。
+`DesktopStartupCoordinator`（三个纯穿透壳，被包的动作早已由真实路径直接调用）和 `ObservableHelper<T>`；
+2026-09-22 换口径后 13 → **15**（新增的两个就是那两个校验器），同批清掉一个真死码
+`PlondsManifestSelector.SelectHighestVersion`（单数包装只有测试在用，生产走 `SelectHighestVersionCandidates`）。
 名单里三类要分清：扩展方法宿主与 Harmony/COM/Android 反射入口是**探针假阳性**（调用点不出现类型名），
+泛型实参/属性类型也算同一种假阳性（`PlondsClientChangedFileEntry`、`InstallerPlondsChangedFileEntry`
+被 `TryGetValue` 摸到，名字不出现在调用点——"基列表"自述规则已改成只认行首分隔符，否则这类会被误判成死码），
 其余标着"等用户拍板"的是**已实现但没入口**的能力（分离式组件库窗口、考勤整模块、
 主备双清单组合器、Core 的第二套 IPC 装配入口），删它们等于删产品决定，必须先问。
 按文件删时要先确认该文件只声明这一个类型——`ObservableHelper.cs` 里还住着一个在用的 `ActionObserver<T>`。
@@ -281,7 +293,10 @@ AirApp 子进程的语言兜底在 `AirAppSdk` 的 `AirAppLocalizer` 里，它�
 其中 `Mini` 与 `Micro` 同体、`Scale` 与 `SafeValue` 同体、`SafeRadius` 与 `ScaleRadius` 同体），已删。
 量这类成员要靠引用计数（`ComponentChromeCornerRadiusHelper\.成员\(` 全仓搜），别指望 IDE。
 这条轴已经做成棘轮：`tests/.../ZeroUseMemberRatchetTests.cs` 扫宿主工程所有静态类上的 public/internal 静态方法，
-在整仓语料里数方法名出现次数（减掉声明行与注释），为 0 即零引用；名单只许缩短、每条必须写理由。
+数方法名出现次数（减掉声明行与注释），为 0 即零引用；名单只许缩短、每条必须写理由。
+2026-09-22 与类型棘轮同步换口径：只算生产目录 + `ApprovalFiles`（一份 `docs/archive/` 的历史计划里抄过
+`GetScreenInfo()` 的代码块，旧口径把它算成了使用者），`*ForTests` 结尾的测试专用入口按约定豁免，
+并加了"名单条目若已被真引用就算假欠账"的反向判据。
 基线：宿主首量 15 个零引用静态成员 → 已删 8 个 → 名单剩 7 条。删掉的是 `AppRestartService` 的
 legacy 转发壳、一条**会绕过关机闸门直接重启**的第二真源、两个纯别名，
 以及三个几何包装（`ComponentPlacementRules.ClampToGrid`、`DesktopPlacementMath.GetGridBounds`/`GetSnappedCellRect`，

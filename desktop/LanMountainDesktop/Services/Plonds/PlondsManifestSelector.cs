@@ -2,11 +2,6 @@ namespace LanMountainDesktop.Services.Plonds;
 
 internal static class PlondsManifestSelector
 {
-    public static PlondsManifestCandidate? SelectHighestVersion(IEnumerable<PlondsManifestCandidate> candidates)
-    {
-        return SelectHighestVersionCandidates(candidates).FirstOrDefault();
-    }
-
     public static IReadOnlyList<PlondsManifestCandidate> SelectHighestVersionCandidates(IEnumerable<PlondsManifestCandidate> candidates)
     {
         var usableCandidates = candidates

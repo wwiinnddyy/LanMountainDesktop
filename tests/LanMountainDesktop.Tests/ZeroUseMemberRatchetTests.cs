@@ -80,7 +80,10 @@ public sealed class ZeroUseMemberRatchetTests
                 if (match.Success &&
                     !line.Contains("partial ", StringComparison.Ordinal) &&
                     !match.Groups["name"].Value.StartsWith("op_", StringComparison.Ordinal) &&
-                    !IgnoredNames.Contains(match.Groups["name"].Value))
+                    !IgnoredNames.Contains(match.Groups["name"].Value)
+                    // `*ForTests` 是约定的"只给测试用的重置入口"（如 AppDataPathProvider.ResetForTests）：
+                    // 生产不该调它，把语料收窄到产品可达之后就别再把它当死码报出来。
+                    && !match.Groups["name"].Value.EndsWith("ForTests", StringComparison.Ordinal))
                 {
                     var owner = classSpans.Where(span => span.Index < offset).LastOrDefault();
                     if (owner.ClassName is not null)
@@ -93,14 +96,20 @@ public sealed class ZeroUseMemberRatchetTests
             }
         }
 
+        // 与 ZeroUseTypeRatchetTests 同口径：只认生产目录的真调用（docs 里一份历史计划文档
+        // 抄过 `GetScreenInfo()` 的代码块，曾把它算成"有人用"）。
         var corpusDirectories = HostDirectories
-            .Concat(["core", "airapp", "install", "mobile", "platform", "packaging", "scripts", "tests", "docs", "sample-data"]);
+            .Concat(["core", "airapp", "install", "mobile", "platform", "packaging", "scripts",
+                "tests/LanMountainDesktop.Tests/ApprovalFiles"]);
         var corpus = EnumerateFiles(repoRoot, corpusDirectories)
             .Where(path => CorpusExtensions.Any(ext => path.EndsWith(ext, StringComparison.OrdinalIgnoreCase)))
+            // 名单文件自己不算使用者：Accepted 里写的就是这些成员名，否则每条登记都自证"有人用"。
+            .Where(path => !path.EndsWith("RatchetTests.cs", StringComparison.OrdinalIgnoreCase))
             .Select(path => (Relative: Relative(repoRoot, path), Lines: File.ReadAllLines(path)))
             .ToList();
 
         var unexpected = new List<string>();
+        var noLongerZeroUse = new List<string>();
         var foundKeys = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var (key, file, _) in declared)
@@ -139,14 +148,21 @@ public sealed class ZeroUseMemberRatchetTests
             {
                 unexpected.Add(key);
             }
+
+            if (references > 0 && Accepted.ContainsKey(key))
+            {
+                noLongerZeroUse.Add(key);
+            }
         }
 
         var stale = Accepted.Keys.Where(key => !foundKeys.Contains(key)).ToList();
 
+        // 反向：登记项若已经被人真引用了，它就是假欠账——留着会让下次复查以为"这条已经查过"。
         Assert.True(
-            unexpected.Count == 0 && stale.Count == 0,
+            unexpected.Count == 0 && stale.Count == 0 && noLongerZeroUse.Count == 0,
             $"新增零引用静态成员 {unexpected.Count} 个：{string.Join(", ", unexpected.Order(StringComparer.Ordinal))}" +
-            $"{Environment.NewLine}名单里已不存在的条目 {stale.Count} 个（删掉方法后请把条目一起删）：{string.Join(", ", stale.Order(StringComparer.Ordinal))}");
+            $"{Environment.NewLine}名单里已不存在的条目 {stale.Count} 个（删掉方法后请把条目一起删）：{string.Join(", ", stale.Order(StringComparer.Ordinal))}" +
+            $"{Environment.NewLine}名单里已成假欠账的条目 {noLongerZeroUse.Count} 个（现在有人引用了，请删掉这条登记）：{string.Join(", ", noLongerZeroUse.Order(StringComparer.Ordinal))}");
     }
 
     private static IEnumerable<string> EnumerateFiles(string root, IEnumerable<string> topDirs)

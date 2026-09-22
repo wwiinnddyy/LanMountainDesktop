@@ -46,12 +46,12 @@ public sealed class PlondsClientServiceTests : IDisposable
     [Fact]
     public void ManifestSelector_WhenVersionsDiffer_SelectsHighestVersion()
     {
-        var selected = PlondsManifestSelector.SelectHighestVersion(
+        var selected = PlondsManifestSelector.SelectHighestVersionCandidates(
         [
             new(new("s3", "s3", "https://s3.test/PLONDS.json", 100), CreateManifest("1.2.0")),
             new(new("github", "github", "https://github.test/PLONDS.json", 50), CreateManifest("1.3.0")),
             new(new("mirror", "http", "https://mirror.test/PLONDS.json", 500), CreateManifest("1.1.9"))
-        ]);
+        ]).FirstOrDefault();
 
         Assert.NotNull(selected);
         Assert.Equal("1.3.0", selected.Manifest.CurrentVersion);
