@@ -51,7 +51,11 @@ public sealed class ComponentLifecyclePairingRatchetTests
             true, 1, 1),
         new("snapshot",
             new Regex(@"StudySnapshotSubscription\s*\.\s*Subscribe", RegexOptions.Compiled),
-            new Regex(@"StudySnapshotSubscription\s*\.\s*Unsubscribe", RegexOptions.Compiled),
+            // 收的一侧也算上"整批交给家"的写法：学习组件的 detach 四步已收进
+            // StudyComponentLifecycle.Detach（里面才是真 Unsubscribe）。
+            // 判据必须认这个家，否则它会反过来逼代码保留逐字复制——那是本末倒置。
+            new Regex(@"StudySnapshotSubscription\s*\.\s*Unsubscribe|StudyComponentLifecycle\s*\.\s*Detach",
+                RegexOptions.Compiled),
             false, 8, 13),
         new("timezone",
             new Regex(@"\bSet\s*TimeZoneService\s*\(", RegexOptions.Compiled),

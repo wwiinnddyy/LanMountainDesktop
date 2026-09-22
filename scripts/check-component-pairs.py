@@ -37,7 +37,7 @@ FAMILIES = [
      True),
     ("snapshot",
      re.compile(r"StudySnapshotSubscription\s*\.\s*Subscribe"),
-     re.compile(r"StudySnapshotSubscription\s*\.\s*Unsubscribe"),
+     re.compile(r"StudySnapshotSubscription\s*\.\s*Unsubscribe|StudyComponentLifecycle\s*\.\s*Detach"),
      False),
     ("timezone",
      re.compile(r"\bSet\s*TimeZoneService\s*\("),

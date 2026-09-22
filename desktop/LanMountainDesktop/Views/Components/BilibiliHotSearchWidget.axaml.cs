@@ -119,8 +119,8 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
 
     private void OnActualThemeVariantChanged(object? sender, EventArgs e)
     {
-        _isNightVisual = ComponentThemeMode.ResolveIsNight(this, fallbackToNightWhenSurfaceUnknown: true);
-        UpdateAdaptiveLayout();
+        ComponentThemeMode.RefreshNightVisual(
+            this, ref _isNightVisual, UpdateAdaptiveLayout, fallbackToNightWhenSurfaceUnknown: true);
     }
 
     private void ApplyNightModeVisual()

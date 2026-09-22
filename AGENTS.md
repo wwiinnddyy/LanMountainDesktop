@@ -552,8 +552,12 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 `ResolveUnifiedMainRadiusValue`（13 个组件各抄一份，家早已存在）。已知样本：`ApplyCellSize` 应报 44 处 / 32 种体 /
 最大同体组 13；`L`（组件的本地化小助手）50 处 / 21 种体。
 **这两把普查尺子的结果已经冻成上限**：`tests/.../DuplicateImplementationRatchetTests.cs`，
-只许降不许升——今天实测 **74 组逐字相同的方法体、193 个同名不同体的漂移族**。
+只许降不许升——当前 **71 组逐字相同的方法体、193 个同名不同体的漂移族**。
 新抄一份就是红灯；收口一族就必须把常量改小（那条红是给你记账的，不是故障）。
+降的三笔分开记：**86 → 74** 是判据从"行数 ≥2"改成"语句数 ≥2"（去掉 12 族单语句转手，不是收口成果）；
+**74 → 73** 收 `ReloadLanguageCode`（7 处）；**73 → 71** 收两族——6 处"判黑夜 + `UpdateAdaptiveLayout`"
+进 `ComponentThemeMode.RefreshNightVisual`、6 处学习组件 detach 四步进 `StudyComponentLifecycle.Detach`。
+"钳到最少 1 格再重排"那次收口（18 处）对族数无净影响，它的收益是逻辑只有一处实现。
 "逐字相同"那一族数按**语句数 ≥2** 算，不是按行数：一条语句写成两行不算复制了一份逻辑。
 这条是 2026-09-22 收 18 处 `ApplyCellSize` 时逼出来的——收口后各组件只剩
 `ComponentDesignMetrics.ApplyCellSize(ref _currentCellSize, cellSize, UpdateAdaptiveLayout);`
@@ -580,6 +584,10 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 除配对外还钉了覆盖面下限：46 个组件文件、以及每族"起/收"条数（timer 35/59、subscription 5/5、
 property-changed 1/1、snapshot 8/13、timezone 10/10）——删掉一批收尾或改窄正则都会当场红。
 变异验证过：只 `_forgottenTimer?.Start()` 不 Stop 的被点名，配对的 `_runningTimer` 不报。
+**"收"的一侧要认家**：快照订阅的 stop 模式除 `StudySnapshotSubscription.Unsubscribe` 外，
+还算 `StudyComponentLifecycle.Detach`（学习组件 detach 的四步已收进这个家，真 Unsubscribe 在家里）。
+判据不认家就会反过来逼代码保留逐字复制——那是本末倒置；两向都验过（只有 Subscribe 没有收 → 红，
+只起一个计时器不配对 → 红，走家 detach → 绿）。
 **第四把尺子问的是"定义了有没有人调"**：`python scripts/check-widget-layout-applied.py`
 （组件自己那套 `ApplyCellSize` / `UpdateAdaptiveLayout` / `ApplyLayoutMetrics` / `ApplyResponsiveLayout` /
 `ApplyTypographyByBackground` / `ApplyChrome` 若没有任何调用点，组件就按 XAML 默认样式画出来、缩放应用不上，

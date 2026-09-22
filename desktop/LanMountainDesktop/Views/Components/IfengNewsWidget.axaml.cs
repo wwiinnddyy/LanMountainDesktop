@@ -123,8 +123,8 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
 
     private void OnActualThemeVariantChanged(object? sender, EventArgs e)
     {
-        _isNightVisual = ComponentThemeMode.ResolveIsNight(this, fallbackToNightWhenSurfaceUnknown: true);
-        UpdateAdaptiveLayout();
+        ComponentThemeMode.RefreshNightVisual(
+            this, ref _isNightVisual, UpdateAdaptiveLayout, fallbackToNightWhenSurfaceUnknown: true);
     }
 
     private void ApplyNightModeVisual()

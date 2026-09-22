@@ -1,3 +1,4 @@
+using System;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Styling;
@@ -16,6 +17,21 @@ public static class ComponentThemeMode
 {
     private const string SurfaceBaseBrushKey = ThemeResourceKeys.SurfaceBaseBrush;
     private const double NightSurfaceLuminanceThreshold = 0.45;
+
+    /// <summary>
+    /// 重判黑夜档，并紧接着重排一次。这两步是配对的：只改字段不重排，组件会按旧档继续画，
+    /// 症状是"主题已经翻成夜间、面板还是白天色"，且不报错。
+    /// 此前这一步在 6 个组件里逐字各抄一份（判黑夜 + UpdateAdaptiveLayout）。
+    /// </summary>
+    public static void RefreshNightVisual(
+        Control control,
+        ref bool isNightVisual,
+        Action reflow,
+        bool fallbackToNightWhenSurfaceUnknown = false)
+    {
+        isNightVisual = ResolveIsNight(control, fallbackToNightWhenSurfaceUnknown);
+        reflow();
+    }
 
     public static bool ResolveIsNight(
         Control control,

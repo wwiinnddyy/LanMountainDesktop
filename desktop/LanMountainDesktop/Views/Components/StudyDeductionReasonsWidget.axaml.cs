@@ -105,11 +105,8 @@ public partial class StudyDeductionReasonsWidget : UserControl, IDesktopComponen
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        _isAttached = false;
-        StudyMonitoringLease.Release(ref _monitoringLease);
-        _renderGate.Clear();
-
-        StudySnapshotSubscription.Unsubscribe(ref _isSubscribed, _studyAnalyticsService, _renderGate.HandleSnapshotUpdated);
+        StudyComponentLifecycle.Detach(
+            ref _isAttached, ref _monitoringLease, ref _isSubscribed, _studyAnalyticsService, _renderGate);
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)

@@ -24,7 +24,7 @@ namespace LanMountainDesktop.Tests;
 public sealed class DuplicateImplementationRatchetTests
 {
     /// <summary>
-    /// 实测：73 组逐字相同、且**至少两条语句**的方法体。只能降，要升必须在这里写清理由。
+    /// 实测：71 组逐字相同、且**至少两条语句**的方法体（73 → 71 又收两族：6 处"判黑夜 + 重排"收进 ComponentThemeMode.RefreshNightVisual、6 处学习组件 detach 四步收进 StudyComponentLifecycle.Detach）。只能降，要升必须在这里写清理由。
     /// 74 → 73 这一档是真收口：7 个学习组件各抄一份的
     /// "读快照 → 归一语言 → 取学习监测开关"收进 <c>StudyComponentSettings.Reload</c>。
     /// 从 86 降到 74 有两笔，别记成一笔：
@@ -34,7 +34,7 @@ public sealed class DuplicateImplementationRatchetTests
     ///    收口后如果还按行数算，18 处转手调用又是新的一族同文——行数骗人的地方就在这。
     ///    它真正的收益是"钳到最少 1 格再重排"这段逻辑从各写一遍变成只有一处（18 个调用点）。
     /// </summary>
-    private const int IdenticalBodyFamilyCeiling = 73;
+    private const int IdenticalBodyFamilyCeiling = 71;
 
     /// <summary>
     /// 今天实测：193 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
