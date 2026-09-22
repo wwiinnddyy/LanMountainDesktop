@@ -1,5 +1,6 @@
 using System.IO;
 using System.Reflection;
+using System.Text;
 using System.Text.Json;
 
 using LanMountainDesktop.AirApps;
@@ -195,9 +196,27 @@ public sealed class ExternalAirAppLoadProbeTests : IDisposable
         // 要么该仓库需要用当前 SDK 重新构建，要么 SDK 在同一个版本号下改了公开签名。
         MissingMethodException or MissingMemberException or TypeLoadException =>
             $"{error.GetType().Name}: {error.Message} —— 该产物编译时用的 SDK 表面与本仓库当前源码不一致，"
-            + "需要重新构建该 AirApp，或 SDK 必须递增版本号（同版本号改公开签名就是二进制破坏）",
-        _ => $"{error.GetType().Name}: {error.Message}"
+            + "需要重新构建该 AirApp，或 SDK 必须递增版本号（同版本号改公开签名就是二进制破坏）"
+            + InnerChain(error),
+        _ => $"{error.GetType().Name}: {error.Message}{InnerChain(error)}"
     };
+
+    /// <summary>
+    /// 宿主把真实原因包在 InnerException 里（<c>AirAppLoader.cs:246-253</c> 那句"原始错误见内部异常"），
+    /// 探针不展开就只剩一句结论、说不出**是哪个成员**断了——而要判"能不能不改版本号就修好"，
+    /// 需要的正是那个成员签名。所以这里把整条内部链都打出来。
+    /// </summary>
+    private static string InnerChain(Exception error)
+    {
+        var builder = new StringBuilder();
+        for (var inner = error.InnerException; inner is not null; inner = inner.InnerException)
+        {
+            builder.Append(Environment.NewLine)
+                .Append("  ← ").Append(inner.GetType().Name).Append(": ").Append(inner.Message);
+        }
+
+        return builder.ToString();
+    }
 
     /// <summary>
     /// 复刻宿主加载前的准备：AirAppRuntimeService 先用 AirAppSharedContractManager 把

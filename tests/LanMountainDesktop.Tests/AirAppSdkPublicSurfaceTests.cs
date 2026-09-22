@@ -20,6 +20,10 @@ namespace LanMountainDesktop.Tests;
 /// 这条测试把整个 SDK 的公开签名钉成一份文本基线：删成员、改名、换类型、init/set 互换，
 /// 都会让基线出现 diff。改基线必须与版本号递增一起提交。
 /// 已知它测不到的是：行为变更、以及仅靠签名无法区分的重载语义。
+/// 还有一个更阴的测不到：基线是在那次破坏之后重新生成的，所以"相对已发布包变了"这件事它看不见
+/// （061e405 一次改到 11 个属性 init→set 并删掉 IAirAppWorker/IAirAppWorkerContext 整族成员，
+/// 包号仍是 1.0.0；基线是其后才录的，于是守卫一路绿，只有外部现成产物绑不上）。
+/// 这一条目前只能靠 EcosystemProbe 那 8 行真加载兜住——它跑的就是外部仓库的现成二进制。
 /// </summary>
 public sealed class AirAppSdkPublicSurfaceTests
 {
