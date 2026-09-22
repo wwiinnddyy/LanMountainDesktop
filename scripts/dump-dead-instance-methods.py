@@ -82,6 +82,10 @@ INTERFACE_HEAD = re.compile(
 IDENTIFIER = re.compile(r"[A-Za-z_]\w*")
 
 GENERATED_ATTRIBUTES = ("RelayCommand", "ObservableProperty", "JsonConstructor", "MessagePackObject")
+# 约定的"只给测试用的入口"后缀。静态棘轮只认 ForTests，本轴实测还有 2 处写成 ForTesting
+# （StudyNoiseCurveChartControl / StudyNoiseDistributionAreaChartControl 的 RebuildCacheForTesting），
+# 两种拼法都算约定内，不再各报一遍。
+TEST_ONLY_SUFFIXES = ("ForTests", "ForTesting")
 # 实现"本仓之外的接口"（Avalonia / Microsoft.Extensions / BCL）时，接口成员名不在本仓，
 # iface_names 收不到 → 会被误报成死码。这里只列**实测命中的**，不做先验清单：
 # HexToBrushConverter/HexToColorConverter.ConvertBack（IValueConverter，双向绑定由框架回调）、
@@ -152,6 +156,24 @@ EXPLAINED = {
         "\"版本变了要不要重新征同意\"没接，属产品决定",
     "PrivacyAgreementService.ClearAgreement":
         "重置同意状态（删文件）的能力，注释自己写着\"用于测试或重置\"，但既没挂设置页也没挂 dev 面板",
+    # —— AirApp 包管理侧的三条断头路（待办 G1-BB）——
+    "AirAppRuntimeService.RegisterInstalledAirAppPackageCore":
+        "把\"外部已经放进包目录的包\"登记进目录的唯一实现（ReadManifest → EnsureInstalled → 更新目录 → "
+        "标 PendingRestart）。它的两个公开入口（InstallAirAppPackage / RegisterInstalledAirAppPackage）"
+        "本轮实测零调用已删，于是这条能力整体不可达；活的安装路径走 facade 的 InstallPackage → "
+        "InstallAirAppPackageCore(375)。留作\"支持手工放包/修复目录\"这条能力的证据，删了就没人在重做时知道它有过",
+    "AirAppMarketAssetCacheService.Invalidate":
+        "注释写着\"卸载后清缓存\"，但**宿主根本没有 AirApp 卸载路径**（全仓 grep Uninstall 只有遥测事件名、"
+        "启动器的旧版本迁移与文案，没有一处是轻应用卸载）：所以这条不是漏调，是整条能力没入口",
+    "AirAppMarketAirAppEntry.GetVersionSummary":
+        "\"v版本 | API x | Host >= y\" 这行摘要只有这里构造，市场页/详情面板都没地方显示它",
+    "AirAppLoader.LoadAll":
+        "一次装载全部已装包的入口，生产走的是别的加载路径（按安装/启动时机增量装），"
+        "只有 AirAppLoaderTests 在调 → 属\"能用但没人用\"，接不接是设计决定",
+    "CompositionVisualAnimationService.TrySetOpacity":
+        "与活的 SetOffset 同族（都走 TryApply + StopAnimation），但这两个\"停掉动画后直接落值\"的"
+        "入口只有 CompositionVisualAnimationServiceTests 在调 → 组件淡入淡出/缩放目前没走这里",
+    "CompositionVisualAnimationService.TrySetUniformScale": "同上，另一条轴",
 }
 
 
@@ -305,7 +327,7 @@ def classify(path, number, owner, name, mods, ret, attributes, iface_names):
                                          # 会被 DECL 读成"返回类型 class InstallProgressBridge 的方法"，
                                          # 实测报出一条根本不存在的 A 级条目 <top>.InstallProgressBridge。
     if name in CONVENTION_NAMES or name in EXTERNAL_INTERFACE_MEMBERS \
-            or name.endswith("ForTests") or name == owner.split(".")[-1]:
+            or name.endswith(TEST_ONLY_SUFFIXES) or name == owner.split(".")[-1]:
         return None
     if name in iface_names:
         return None

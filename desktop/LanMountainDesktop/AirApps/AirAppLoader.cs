@@ -1095,13 +1095,6 @@ public sealed class AirAppLoader
             Services = services ?? throw new ArgumentNullException(nameof(services));
         }
 
-        /// <summary>
-        /// 更新外观快照并通知插件。
-        /// </summary>
-        internal void UpdateAppearanceSnapshot(AirAppAppearanceSnapshot newSnapshot, IReadOnlyCollection<AppearanceProperty> changedProperties)
-        {
-            _appearanceContext.UpdateSnapshot(newSnapshot, changedProperties);
-        }
     }
 
     private sealed class AirAppRuntimeLogger : IAirAppLogger

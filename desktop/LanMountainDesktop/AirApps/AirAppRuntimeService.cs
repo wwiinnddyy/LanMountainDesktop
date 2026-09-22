@@ -303,22 +303,6 @@ public sealed class AirAppRuntimeService : IDisposable
         return true;
     }
 
-    public AirAppManifest InstallAirAppPackage(string packagePath)
-    {
-        lock (_packageMutationGate)
-        {
-            return InstallAirAppPackageCore(packagePath).Manifest;
-        }
-    }
-
-    public AirAppManifest RegisterInstalledAirAppPackage(string packagePath)
-    {
-        lock (_packageMutationGate)
-        {
-            return RegisterInstalledAirAppPackageCore(packagePath);
-        }
-    }
-
     public bool DeleteInstalledAirApp(string airAppId)
     {
         lock (_packageMutationGate)
