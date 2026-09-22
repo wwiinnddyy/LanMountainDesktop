@@ -108,7 +108,7 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
     {
         _isAttached = false;
         _refreshTimer.Stop();
-        CancelRefreshRequest();
+        CancellationHelper.CancelAndDispose(ref _refreshCts);
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -160,8 +160,7 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
 
         var cts = new CancellationTokenSource();
         var previous = Interlocked.Exchange(ref _refreshCts, cts);
-        previous?.Cancel();
-        previous?.Dispose();
+        CancellationHelper.CancelAndDispose(previous);
 
         try
         {
@@ -521,17 +520,5 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
     private string L(string key, string fallback)
     {
         return _localizationService.GetString(_languageCode, key, fallback);
-    }
-
-    private void CancelRefreshRequest()
-    {
-        var cts = Interlocked.Exchange(ref _refreshCts, null);
-        if (cts is null)
-        {
-            return;
-        }
-
-        cts.Cancel();
-        cts.Dispose();
     }
 }

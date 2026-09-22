@@ -178,7 +178,7 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
     {
         _isAttached = false;
         _refreshTimer.Stop();
-        CancelRefreshRequest();
+        CancellationHelper.CancelAndDispose(ref _refreshCts);
         DisposeAvatarBitmaps();
     }
 
@@ -260,8 +260,7 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
 
         var cts = new CancellationTokenSource();
         var previous = Interlocked.Exchange(ref _refreshCts, cts);
-        previous?.Cancel();
-        previous?.Dispose();
+        CancellationHelper.CancelAndDispose(previous);
 
         try
         {
@@ -717,17 +716,5 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
     private string L(string key, string fallback)
     {
         return _localizationService.GetString(_languageCode, key, fallback);
-    }
-
-    private void CancelRefreshRequest()
-    {
-        var cts = Interlocked.Exchange(ref _refreshCts, null);
-        if (cts is null)
-        {
-            return;
-        }
-
-        cts.Cancel();
-        cts.Dispose();
     }
 }

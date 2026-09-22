@@ -7,6 +7,7 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Helpers;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -65,9 +66,7 @@ public partial class HolidayCalendarWidget : UserControl, IDesktopComponentWidge
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _timer.Stop();
-        _refreshCts?.Cancel();
-        _refreshCts?.Dispose();
-        _refreshCts = null;
+        CancellationHelper.CancelAndDispose(ref _refreshCts);
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -87,8 +86,7 @@ public partial class HolidayCalendarWidget : UserControl, IDesktopComponentWidge
 
     private void TriggerContentRefresh()
     {
-        _refreshCts?.Cancel();
-        _refreshCts?.Dispose();
+        CancellationHelper.CancelAndDispose(ref _refreshCts);
         _refreshCts = new CancellationTokenSource();
 
         var now = _timeZoneService?.GetCurrentTime() ?? DateTime.Now;

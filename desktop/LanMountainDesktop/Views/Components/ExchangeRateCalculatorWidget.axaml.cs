@@ -10,6 +10,7 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Threading;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Helpers;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -99,7 +100,7 @@ public partial class ExchangeRateCalculatorWidget : UserControl, IDesktopCompone
     {
         _isAttached = false;
         _refreshTimer.Stop();
-        CancelRefreshRequest();
+        CancellationHelper.CancelAndDispose(ref _refreshCts);
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -175,8 +176,7 @@ public partial class ExchangeRateCalculatorWidget : UserControl, IDesktopCompone
 
         var cts = new CancellationTokenSource();
         var previous = Interlocked.Exchange(ref _refreshCts, cts);
-        previous?.Cancel();
-        previous?.Dispose();
+        CancellationHelper.CancelAndDispose(previous);
 
         try
         {
@@ -310,17 +310,5 @@ public partial class ExchangeRateCalculatorWidget : UserControl, IDesktopCompone
         var widthScale = Bounds.Width > 1 ? Math.Clamp(Bounds.Width / 304d, 0.72, 2.0) : 1;
         var heightScale = Bounds.Height > 1 ? Math.Clamp(Bounds.Height / 304d, 0.72, 2.0) : 1;
         return Math.Clamp(Math.Min(cellScale, Math.Min(widthScale, heightScale)), 0.72, 1.95);
-    }
-
-    private void CancelRefreshRequest()
-    {
-        var cts = Interlocked.Exchange(ref _refreshCts, null);
-        if (cts is null)
-        {
-            return;
-        }
-
-        cts.Cancel();
-        cts.Dispose();
     }
 }

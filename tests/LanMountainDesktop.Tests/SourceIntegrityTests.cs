@@ -1799,6 +1799,69 @@ public sealed class SourceIntegrityTests
             $"{offenders.Count} 处重复的尽力删除实现：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
     }
 
+    /// <summary>
+    /// "取消 + 释放一个一次性 CTS"这套动作只认 <c>desktop/LanMountainDesktop/Helpers/CancellationHelper.cs</c> 一处。
+    /// 收口前它有两条复制路径：10 个组件各有一份逐字相同的 <c>CancelRefreshRequest()</c>（实测 10 份、每份 7 行），
+    /// 以及 12 处 <c>X?.Cancel(); X?.Dispose();</c> 的相邻两行。守卫两条都拦：
+    /// 声明拦"再抄一份方法"，相邻两行拦"把三步拆回两步"——漂掉的正是 <c>Dispose()</c> 那一步
+    /// （同族实测另有 22 处 <c>Cancel();</c> 后面根本不跟释放，那是下一个待办项，不在这里放行）。
+    /// </summary>
+    [Fact]
+    public void CancelAndDisposeRitual_LivesInExactlyOnePlace()
+    {
+        var homeFile = @"desktop\LanMountainDesktop\Helpers\CancellationHelper.cs";
+        var declarationRe = new Regex(@"\bvoid\s+CancelRefreshRequest\s*\(");
+        var stepRe = new Regex(@"^\s*(?<expr>[A-Za-z_][\w\(\)\[\]\.]*)\??\.(?<op>Cancel|Dispose)\(\);$");
+        var offenders = new List<string>();
+
+        foreach (var file in SourceFiles())
+        {
+            var relative = RelativeToRepo(file);
+            if (string.Equals(relative, homeFile, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var lines = File.ReadAllLines(file);
+            for (var index = 0; index < lines.Length; index++)
+            {
+                var trimmed = lines[index].AsSpan().TrimStart();
+                if (trimmed.StartsWith("//") || trimmed.StartsWith('*'))
+                {
+                    continue;
+                }
+
+                if (declarationRe.IsMatch(lines[index]))
+                {
+                    offenders.Add($"{relative}:{index + 1} 又抄了一份 CancelRefreshRequest，请用 CancellationHelper.CancelAndDispose");
+                    continue;
+                }
+
+                if (index + 1 >= lines.Length)
+                {
+                    continue;
+                }
+
+                var current = stepRe.Match(lines[index]);
+                var next = stepRe.Match(lines[index + 1]);
+                if (current.Success
+                    && next.Success
+                    && current.Groups["expr"].Value == next.Groups["expr"].Value
+                    && current.Groups["op"].Value == "Cancel"
+                    && next.Groups["op"].Value == "Dispose")
+                {
+                    offenders.Add(
+                        $"{relative}:{index + 1} 手写 Cancel+Dispose 这一步，" +
+                        "请用 CancellationHelper.CancelAndDispose");
+                }
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 处重复的取消/释放动作：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
     private static IEnumerable<(string Line, int Number)> CodeLines(string file)
     {
         var all = File.ReadAllLines(file);

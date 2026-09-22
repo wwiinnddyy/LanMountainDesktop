@@ -104,7 +104,7 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
     {
         _isAttached = false;
         _refreshTimer.Stop();
-        CancelRefreshRequest();
+        CancellationHelper.CancelAndDispose(ref _refreshCts);
         UpdateRefreshButtonState();
     }
 
@@ -170,8 +170,7 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
 
         var cts = new CancellationTokenSource();
         var previous = Interlocked.Exchange(ref _refreshCts, cts);
-        previous?.Cancel();
-        previous?.Dispose();
+        CancellationHelper.CancelAndDispose(previous);
 
         try
         {
@@ -459,18 +458,6 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
         return SupportedAutoRefreshIntervalsMinutes
             .OrderBy(value => Math.Abs(value - minutes))
             .FirstOrDefault(360);
-    }
-
-    private void CancelRefreshRequest()
-    {
-        var cts = Interlocked.Exchange(ref _refreshCts, null);
-        if (cts is null)
-        {
-            return;
-        }
-
-        cts.Cancel();
-        cts.Dispose();
     }
 
     private string L(string key, string fallback)

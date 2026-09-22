@@ -111,7 +111,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
     {
         _isAttached = false;
         _refreshTimer.Stop();
-        CancelRefreshRequest();
+        CancellationHelper.CancelAndDispose(ref _refreshCts);
         DisposeNewsBitmaps();
         UpdateRefreshButtonState();
     }
@@ -185,8 +185,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
 
         var cts = new CancellationTokenSource();
         var previous = Interlocked.Exchange(ref _refreshCts, cts);
-        previous?.Cancel();
-        previous?.Dispose();
+        CancellationHelper.CancelAndDispose(previous);
 
         try
         {
@@ -529,18 +528,6 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         return SupportedAutoRotateIntervalsMinutes
             .OrderBy(value => Math.Abs(value - minutes))
             .FirstOrDefault(60);
-    }
-
-    private void CancelRefreshRequest()
-    {
-        var cts = Interlocked.Exchange(ref _refreshCts, null);
-        if (cts is null)
-        {
-            return;
-        }
-
-        cts.Cancel();
-        cts.Dispose();
     }
 
     private string L(string key, string fallback)

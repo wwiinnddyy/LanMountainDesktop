@@ -333,6 +333,16 @@ helper 住在 Core 是因为写同一批磁盘文件的是三个进程（宿主�
 `recursive` 参数保留各调用点原语义——`DataStorageService` 那处要的就是"只删空目录"，改成递归会连带删掉用户数据，
 `BestEffortDeletionTests.NonEmptyDirectory_WithRecursiveFalse_IsKeptAndReported` 钉住它。
 
+**取消并释放一次性 CTS 只认一处**：`Cancel()` + `Dispose()` 这套收尾动作走 `desktop/LanMountainDesktop/Helpers/CancellationHelper.cs`
+（字段版 `CancelAndDispose(ref _cts)` 会顺手把字段置空，已摘下来的源用实例版），不要再手写相邻两行。
+收口前它有 22 份复制：10 个组件各抄了一份逐字相同的 `CancelRefreshRequest()`（各 7 行），另有 12 处把两行写在调用点。
+守卫 `SourceIntegrityTests.CancelAndDisposeRitual_LivesInExactlyOnePlace` 两种形态都拦（声明 + 相邻 Cancel/Dispose 对），
+顺序之所以是"先摘字段再取消"：对已 Dispose 的源再 `Cancel()` 会抛 `ObjectDisposedException`。
+**同一把尺子量出来的欠账（还没修）**：全仓 22 处 `X?.Cancel();` 后面根本不跟 `Dispose()`，其中 12 处是对字段做的，
+`ZhiJiaoHubWidget` 一个组件就占 6 处（每次刷新换一个新源，旧的只 Cancel 不释放）。
+这些不能无脑补 `Dispose`：调用点如果之后还拿那个 token 去 `Task.Delay(..., ct)` 或 `Register(...)` 就会抛，
+得逐处读到底才敢动，已登记为待办。
+
 **安装根目录下那个 `.Launcher` 数据目录名只认一处**：一律用 `core/LanMountainDesktop.Core/Deployment/DeploymentLayout.cs`
 的 `LauncherStateDirectoryName`，不要在 Core / 宿主 / 启动器里再抄字面量（该类注释本来就写着"禁止在任何一侧硬编码"，
 2026-09-21 实测仍有 4 处各抄一份；安装器倒是用了常量）。同族另一个坑：启动器把启动诊断写进

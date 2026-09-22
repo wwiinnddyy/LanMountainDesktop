@@ -12,6 +12,7 @@ using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.Helpers;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -211,8 +212,7 @@ public partial class StickyNoteWidget : UserControl,
                 return;
             }
 
-            _renderDebounceCts?.Cancel();
-            _renderDebounceCts?.Dispose();
+            CancellationHelper.CancelAndDispose(ref _renderDebounceCts);
             _renderDebounceCts = new CancellationTokenSource();
             var token = _renderDebounceCts.Token;
 
@@ -350,8 +350,7 @@ public partial class StickyNoteWidget : UserControl,
 
         _disposed = true;
         _autoSaveTimer.Stop();
-        _renderDebounceCts?.Cancel();
-        _renderDebounceCts?.Dispose();
+        CancellationHelper.CancelAndDispose(ref _renderDebounceCts);
 
         if (_isDirty)
         {

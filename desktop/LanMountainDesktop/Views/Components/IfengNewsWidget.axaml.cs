@@ -110,7 +110,7 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
     {
         _isAttached = false;
         _refreshTimer.Stop();
-        CancelRefreshRequest();
+        CancellationHelper.CancelAndDispose(ref _refreshCts);
         DisposeImageCache();
         UpdateRefreshButtonState();
     }
@@ -171,8 +171,7 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
 
         var cts = new CancellationTokenSource();
         var previous = Interlocked.Exchange(ref _refreshCts, cts);
-        previous?.Cancel();
-        previous?.Dispose();
+        CancellationHelper.CancelAndDispose(previous);
 
         try
         {
@@ -492,18 +491,6 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
     private string L(string key, string fallback)
     {
         return _localizationService.GetString(_languageCode, key, fallback);
-    }
-
-    private void CancelRefreshRequest()
-    {
-        var cts = Interlocked.Exchange(ref _refreshCts, null);
-        if (cts is null)
-        {
-            return;
-        }
-
-        cts.Cancel();
-        cts.Dispose();
     }
 
     private sealed class NewsItemControl : Border

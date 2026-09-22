@@ -6,6 +6,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using LanMountainDesktop.Services;
 using Markdown.Avalonia;
+using LanMountainDesktop.Helpers;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -66,8 +67,7 @@ public partial class TextCapsuleWidget : UserControl, IDesktopComponentWidget
     private void DebouncedUpdateDisplay()
     {
         // 取消之前的延迟任务
-        _debounceCts?.Cancel();
-        _debounceCts?.Dispose();
+        CancellationHelper.CancelAndDispose(ref _debounceCts);
         _debounceCts = new CancellationTokenSource();
 
         var token = _debounceCts.Token;

@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.Helpers;
 
 namespace LanMountainDesktop.ViewModels;
 
@@ -65,8 +66,7 @@ public sealed partial class MusicControlViewModel : ViewModelBase, IDisposable
         UpdateLanguageCode();
         var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         var previous = Interlocked.Exchange(ref _refreshCts, cts);
-        previous?.Cancel();
-        previous?.Dispose();
+        CancellationHelper.CancelAndDispose(previous);
 
         try
         {
@@ -112,8 +112,7 @@ public sealed partial class MusicControlViewModel : ViewModelBase, IDisposable
     public void Dispose()
     {
         var cts = Interlocked.Exchange(ref _refreshCts, null);
-        cts?.Cancel();
-        cts?.Dispose();
+        CancellationHelper.CancelAndDispose(cts);
         _musicControlService.StateChanged -= OnServiceStateChanged;
         if (_musicControlService is IDisposable disposable)
         {
