@@ -552,6 +552,24 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 唯一挂名的欠账是 `Assets/endfiled`：24 张表情图 / 1.27MB 全仓零引用，也没有代码按目录枚举它们——
 删掉整套是产品决定，先用配额冻住（24 张 / 1303 KiB），不许再扩大。
 
+**同一条轴在 XAML 资源键上还没有过基线，2026-09-23 补上了**：`x:Key` 也是一种符号——
+它不在 C# 侧任何棘轮的视野里，也不会因缺失而报错。守卫
+`tests/LanMountainDesktop.Tests/UnreferencedXamlResourceKeyRatchetTests.cs`，
+实测 **104 个键 / 183 个定义点（同一键常有明暗两份）/ 7 个无人引用**。
+7 个先按理由登记，不删：`AppFontFamilyJP`／`AppFontFamilyKR`（中日韩字体覆盖，接不接与 G1-K 同一个决定）、
+`AirAppWindowBorderBrush`（AirAppHost 自己声明的边框画刷，全仓零取用），
+以及 4 个"照着 WinUI 的名字猜写的"死覆盖——
+`NavigationViewPaneBackground`／`NavigationViewMinimalPaneBackground`／`NavigationViewItemIconBoxHeight`／
+`PaneToggleButtonHeightGridLength`：**仓库里搜不到取用点，`avalonia.themes.fluent`、`avalonia`、
+`fluentavaloniaui` 三个包里也 grep 不到这些名字**（同一文件里的 `PaneToggleButtonWidth`／
+`PaneToggleButtonHeight` 却在 FluentAvalonia 里命中 8 / 4 个文件，所以它们是库按名取用的真覆盖，
+另立 `LibraryOwnedKeys` 豁免——这类键的引用在编译好的样式里，文本口径看不见，只能显式登记）。
+两处当场纠正的错法，别再犯：① 第一版探针把"带 `x:Key` 的那一行"整行跳过，于是同一行里的
+`{StaticResource X}` 不算引用，把 5 个真在用的 AirApp 颜色键报成孤儿——只能抠掉 `x:Key="…"` 的值本身；
+② 名单文件自己会被自己的语料喂饱（豁免条目里写的就是键名），所以引用语料要排除 `*RatchetTests.cs`；
+`docs/` 也不算引用（文档提一次不等于 UI 取用，这条与零使用棘轮同一个教训）。
+方向都验过：新增一个没人用的键 → 红并点名；让名单里的键真被引用 → 红（假欠账）；删掉临时文件 → 回绿。
+
 **一个数只有一个家**：组件自缩放基准 `ComponentDesignMetrics.BaseCellSize`（此前 12 个组件各写一份
 `private const double BaseCellSize = 48d`），网格密度/边缘留白的量程与默认值 `DesktopEditing/DesktopGridLimits`
 （此前在 `MainWindow` 及其 partial 分片、`FusedDesktopEditGridAdapter`、`AppSettingsSnapshot` 默认值里各一份），
