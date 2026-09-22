@@ -90,6 +90,19 @@ AirApp 本地包生成：
   "有人要某个 `Adaptive*` 键、没人注册"归 `CapabilityEntryPointTests` 的键覆盖探针管。
   普查锚点是"设过 Background"，删 setter 会让类从普查里静默消失，所以另配一条覆盖面下限守卫兜住
   （实测删掉一个 setter：它红并点名少了哪个类）。
+- **另一半在文件作用域**：`<Window.Styles>` / `<UserControl.Styles>` 里设过 Background 的 Border 类
+  App 级普查根本看不见（2026-09-22 数出来：App 字典 5 个、文件级 9 个）。
+  `tests/.../Visual/FileScopedBorderClassPixelTests.cs` 按**真实例**判其中 4 个
+  （`music-progress-track` / `music-progress-fill` / `notification-card` / `about-hero-card`）：
+  造出拥有者、贴主题、走一次布局，要求带这个类的 `Border` 解析出的 `Background` 非空、非 Transparent、不透明度 > 0。
+  **这里不比两帧像素**——真实例的几何取决于数据（进度条宽度、列表有没有项），像素判据会造出偶发红灯。
+  剩下 5 个（编辑器 3 个 + 主窗体弹层 2 个）在同一个文件的 `NotCoveredYet` 里各带**实测到的拦路原因**
+  （把 `ComponentEditorThemeResources.axaml` 单独 StyleInclude 进裸窗口会抛
+  `KeyNotFoundException: Static resource 'MaterialRadioButton' not found`——它依赖 Material 主题），
+  账本测试保证"类改名/删掉/悄悄从名单里掉出去"都是红灯（变异验过：改一个类名 → 同时报"没登记的新类"
+  与"已判名单里磁盘上没有的"，并且那行 theory 报"找不到带该类的元素"）。
+  另记一条实测：给这个测试**故意不贴窗口级主题资源**照样全绿——画刷在底座注册的应用级资源表里就找得到，
+  所以它声称的是"样式落得上 + 应用级注册在"，别当成"窗口级注册也验证了"。
 
 ### AirApp
 

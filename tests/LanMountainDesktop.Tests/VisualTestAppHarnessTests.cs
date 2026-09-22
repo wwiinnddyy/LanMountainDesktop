@@ -24,11 +24,15 @@ namespace LanMountainDesktop.Tests;
 /// 目前是 <c>settings-section-card</c> / <c>settings-option-card</c> / <c>settings-list-item</c>。
 /// 另外 14 个 Border 类（<c>glass-panel</c>、<c>surface-*</c>、<c>component-editor-*</c>、
 /// <c>notification-card</c>、<c>about-hero-card</c>、<c>taskbar-profile-popup-*</c>、<c>music-progress-*</c>）
-/// 引用的是 <c>{{DynamicResource Adaptive*}}</c>，而那些画刷是主题服务在
-/// <c>OnFrameworkInitializationCompleted</c> 里注册的运行期资源（<c>Theme/ThemeResourceKeys.cs</c>
-/// 里只有键名，全仓找不到 <c>x:Key</c> 定义），本底座刻意不跑那段启动流程，于是贴类与不贴类同为空色。
-/// 想让普查覆盖这 14 个，得先让底座按生产方式注册 Adaptive 画刷；在那之前，
-/// "有人要、没人注册"这个症状由 <c>CapabilityEntryPointTests</c> 的键覆盖探针守着。
+/// 引用的是 <c>{{DynamicResource Adaptive*}}</c>，而那些画刷过去是运行期资源、底座不跑那段启动流程，
+/// 于是贴类与不贴类同为空色。
+/// 现状（2026-09-22 更新）：画刷注册已由 VisualTestApp 补上（G1-AG），
+/// App 级字典那 5 个类由 <c>Visual/BorderStyleClassPixelTests</c> 逐帧比对覆盖；
+/// 文件作用域（窗口/控件自己的 <c>&lt;*.Styles&gt;</c>）那 9 个里，
+/// <c>music-progress-*</c> / <c>notification-card</c> / <c>about-hero-card</c> 已由
+/// <c>Visual/FileScopedBorderClassPixelTests</c> 按真实例覆盖，剩下 5 个（编辑器 3 个 + 主窗体弹层 2 个）
+/// 挂在同一文件的 NotCoveredYet 里，每条写着实测到的拦路原因（样式字典依赖 Material 主题 / 需要整窗服务图）。
+/// "有人要、没人注册"这个症状仍由 <c>CapabilityEntryPointTests</c> 的键覆盖探针守着。
 ///
 /// 曾经的第二个堵点"取像素"已经打通，条件是两件事同时做到（缺一件就退回原症状）：
 /// <c>UseHeadlessDrawing = false</c>（默认 true 时 Avalonia 只挂桩绘制，Save 写 0 字节、
