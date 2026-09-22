@@ -349,22 +349,7 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
 
     private void ApplyAutoRefreshSettings()
     {
-        var enabled = true;
-        var intervalMinutes = 360;
-
-        try
-        {
-            var snapshot = _componentSettingsService.Load();
-            enabled = snapshot.DailyWordAutoRefreshEnabled;
-            intervalMinutes = RefreshIntervalCatalog.Normalize(snapshot.DailyWordAutoRefreshIntervalMinutes, 360);
-        }
-        catch
-        {
-            // Keep fallback defaults.
-        }
-
-        _autoRefreshEnabled = enabled;
-        ComponentRefreshLifetime.Reschedule(_refreshTimer, _isAttached, enabled, intervalMinutes);
+        _autoRefreshEnabled = DailyWordAutoRefresh.Apply(_componentSettingsService, _refreshTimer, _isAttached);
     }
 
     private double ResolveScale()

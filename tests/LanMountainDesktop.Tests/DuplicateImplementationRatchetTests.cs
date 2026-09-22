@@ -47,8 +47,10 @@ public sealed class DuplicateImplementationRatchetTests
     /// 64 → 63 收一族（5 个组件各抄的"只在黑夜档真的翻了才重画"进
     /// <c>ComponentThemeMode.RefreshNightVisualIfChanged</c>：原本 3 处逐字 7 行 + 2 处带 <c>force</c> 的漂移体，
     /// 收完 5 个调用点都是单语句转手，按本判据口径不再算"复制了一份逻辑"）。
+    /// 63 → 62 收一族（每日一词 1x1 与 2x2 读的是<b>同一对设置键</b>，所以那 13 行是逐字相同的两份，
+    /// 进 <c>DailyWordAutoRefresh.Apply</c>；顺带把编辑器注册表里第三份 <c>360</c> 也指回这个常量）。
     /// </summary>
-    private const int IdenticalBodyFamilyCeiling = 63;
+    private const int IdenticalBodyFamilyCeiling = 62;
 
     /// <summary>
     /// 今天实测：192 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。

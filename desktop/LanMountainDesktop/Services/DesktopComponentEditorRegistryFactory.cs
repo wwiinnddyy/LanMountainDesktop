@@ -8,6 +8,7 @@ using LanMountainDesktop.Models;
 using LanMountainDesktop.AirApps;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Views.ComponentEditors;
+using LanMountainDesktop.Views.Components;
 
 namespace LanMountainDesktop.Services;
 
@@ -357,7 +358,7 @@ public static class DesktopComponentEditorRegistryFactory
                     ToggleDescriptionFallback = "Changes are stored per component instance.",
                     IntervalLabelKey = "dailyword.settings.frequency_label",
                     IntervalLabelFallback = "Refresh interval",
-                    DefaultInterval = 360,
+                    DefaultInterval = DailyWordAutoRefresh.DefaultIntervalMinutes,
                     GetEnabled = snapshot => snapshot.DailyWordAutoRefreshEnabled,
                     SetEnabled = (snapshot, value) => snapshot.DailyWordAutoRefreshEnabled = value,
                     GetInterval = snapshot => snapshot.DailyWordAutoRefreshIntervalMinutes,

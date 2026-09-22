@@ -688,6 +688,14 @@ timer 族同理算上 `ComponentRefreshLifetime.Detach`（2026-09-23：11 个组
 （停表 / 取消并释放 / 收尾回调 / 空 CTS 安全 / 字段必须被清空；`Reschedule` 四格：附着+启用→起、
 附着+停用→停、不附着→只写间隔不起表、不附着+停用→**照旧不动**（钉的是现状，改成"一律停表"是行为变更，另拍）），
 家里删掉 `Stop()` → 2 条红，验过。
+**家可以再分层，但"认家"的名字表要一处加、两侧分开加**：2026-09-23 每日一词那块面板把
+"读哪对设置键 + 默认档"收进 `DailyWordAutoRefresh.Apply`（1x1 与 2x2 读的是同一对键，
+那 13 行是逐字相同的两份；顺带把编辑器注册表里第三份 `360` 指回 `DefaultIntervalMinutes`），
+它再把表转交给 `ComponentRefreshLifetime.Reschedule`。这一收当场把 timer 族判红（组件里既没有 `.Start()`
+也没有走认家的调用，覆盖面掉到下限以下）——**是覆盖面下限先红，这正是它存在的意义**；
+把新家加进认家列表后实测回到 35/59（起 35、收 59，与收口前逐格相等）。
+加的时候踩到一处：`Detach` 只停不起，把它一并写进"起"的一侧会把 11 处 detach 虚报成起点（实测 35→46），
+所以认家列表**两侧的方法名不一样**（起：`Reschedule|Apply`；收：`Detach|Reschedule|Apply`）。
 **第四把尺子问的是"定义了有没有人调"**：`python scripts/check-widget-layout-applied.py`
 （组件自己那套 `ApplyCellSize` / `UpdateAdaptiveLayout` / `ApplyLayoutMetrics` / `ApplyResponsiveLayout` /
 `ApplyTypographyByBackground` / `ApplyChrome` 若没有任何调用点，组件就按 XAML 默认样式画出来、缩放应用不上，

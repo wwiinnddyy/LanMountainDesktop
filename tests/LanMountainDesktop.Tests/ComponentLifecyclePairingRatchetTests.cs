@@ -42,17 +42,14 @@ public sealed class ComponentLifecyclePairingRatchetTests
     private static readonly Family[] Families =
     [
         new("timer",
-            // 起的一侧也认家：`Reschedule` 按设置决定起还是停（7 个组件那 14 行判据已收进它），
-            // 所以一次调用同时算"起"和"收"——判据要是不认，收口反而会被迫把同文抄回 7 个文件。
+            // 起与收都认"把表整个交给生命周期家"这种写法（新增一个家只往这个名字列表里加一条，别复制正则）。
+            // 两侧认的方法**不一样**，这是刻意的：Reschedule / Apply 按设置既可能起也可能停，
+            // Detach 只停不起——把它算进"起"的一侧会把 11 处 detach 虚报成 11 个起点（实测 35 → 46）。
             new Regex(@"\b(?<key>[\w]*[Tt]imer\w*)\s*\??\.\s*Start\s*\(" +
-                      @"|ComponentRefreshLifetime\s*\.\s*Reschedule\s*\(\s*(?<key>[\w]*[Tt]imer\w*)",
+                      @"|\b(?:ComponentRefreshLifetime|DailyWordAutoRefresh)\s*\.\s*(?:Reschedule|Apply)\s*\([^;]*?(?<key>[\w]*[Tt]imer\w*)",
                   RegexOptions.Compiled),
-            // 收的一侧也算"整批交给家"的写法：组件 detach 三连（置标志 + 停表 + 取消并释放 CTS）
-            // 已收进 ComponentRefreshLifetime.Detach，表是它内部停的。判据不认这个家，
-            // 就会反过来逼代码保留逐字复制——那是本末倒置（snapshot 族同一个坑，见下）。
             new Regex(@"\b(?<key>[\w]*[Tt]imer\w*)\s*\??\.\s*Stop\s*\(" +
-                      @"|ComponentRefreshLifetime\s*\.\s*Detach\s*\([^;]*?(?<key>[\w]*[Tt]imer\w*)" +
-                      @"|ComponentRefreshLifetime\s*\.\s*Reschedule\s*\(\s*(?<key>[\w]*[Tt]imer\w*)",
+                      @"|\b(?:ComponentRefreshLifetime|DailyWordAutoRefresh)\s*\.\s*(?:Detach|Reschedule|Apply)\s*\([^;]*?(?<key>[\w]*[Tt]imer\w*)",
                   RegexOptions.Compiled),
             true, 35, 59),
         new("subscription",
