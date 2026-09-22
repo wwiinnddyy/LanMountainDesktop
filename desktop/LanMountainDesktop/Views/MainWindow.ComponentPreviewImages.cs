@@ -135,35 +135,6 @@ public partial class MainWindow : Window
         _desktopEditOverlayPresenter?.SetPreviewImage(null);
     }
 
-    private void PrimeDesktopEditPreviewImage(
-        string componentId,
-        string? placementId,
-        int pageIndex,
-        int widthCells,
-        int heightCells)
-    {
-        _ = componentId;
-        _ = placementId;
-        _ = pageIndex;
-        _ = widthCells;
-        _ = heightCells;
-    }
-
-    private void QueuePlacementPreviewRefresh(DesktopComponentPlacementSnapshot? placement)
-    {
-        _ = placement;
-    }
-
-    private void RemovePlacementPreviewImage(string? placementId)
-    {
-        _ = placementId;
-    }
-
-    private void RemovePlacementPreviewImages(IEnumerable<DesktopComponentPlacementSnapshot> placements)
-    {
-        _ = placements;
-    }
-
     public void RegisterFusedLibraryWindow(FusedDesktopComponentLibraryWindow window)
     {
         _fusedLibraryWindow = window;

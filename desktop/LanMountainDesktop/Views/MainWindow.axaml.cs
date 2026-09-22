@@ -581,7 +581,6 @@ public partial class MainWindow : Window
         ApplyWidgetSizing(gridMetrics.CellSize);
         ApplyDesktopStatusBarComponentSpacing();
         UpdateDesktopSurfaceLayout(gridMetrics);
-        UpdateSettingsViewportInsets(gridMetrics.CellSize);
     }
 
     private void ApplyDesktopStatusBarComponentSpacing()
@@ -915,11 +914,6 @@ public partial class MainWindow : Window
         ComponentLibraryWindow.CornerRadius = new CornerRadius(Math.Clamp(cellSize * 0.45, 24, 44));
         ComponentLibraryWindow.Height = Math.Clamp(cellSize * 4.8, 220, 360);
         ComponentLibraryWindow.Width = Math.Clamp(cellSize * 9.2, 360, 760);
-    }
-
-    private void UpdateSettingsViewportInsets(double cellSize)
-    {
-        _ = cellSize;
     }
 
     private void OnMinimizeClick(object? sender, RoutedEventArgs e)

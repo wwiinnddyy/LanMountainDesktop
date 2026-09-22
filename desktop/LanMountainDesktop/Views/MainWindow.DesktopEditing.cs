@@ -708,7 +708,6 @@ public partial class MainWindow : Window
             return;
         }
 
-        QueuePlacementPreviewRefresh(placement);
         PersistSettings();
         TelemetryServices.Usage?.TrackDesktopComponentResized(before, ClonePlacementSnapshot(placement), "component.resize");
     }

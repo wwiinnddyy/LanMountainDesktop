@@ -1799,7 +1799,6 @@ public partial class MainWindow : Window
 
         _desktopComponentPlacements.Remove(placement);
         _componentSettingsStore.DeleteForComponent(placement.ComponentId, placement.PlacementId);
-        RemovePlacementPreviewImage(placement.PlacementId);
 
         ClearDesktopComponentSelection();
 
@@ -1868,7 +1867,6 @@ public partial class MainWindow : Window
         {
             RestoreDesktopPageComponents(placement.PageIndex);
             ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
-            QueuePlacementPreviewRefresh(placement);
             return;
         }
 
@@ -1896,7 +1894,6 @@ public partial class MainWindow : Window
             ApplySelectionStateToHost(host, true);
         }
 
-        QueuePlacementPreviewRefresh(placement);
     }
 
     private static void DisposeComponentIfNeeded(Border host)
@@ -1953,7 +1950,6 @@ public partial class MainWindow : Window
             _desktopComponentPlacements.Remove(placement);
             _componentSettingsStore.DeleteForComponent(placement.ComponentId, placement.PlacementId);
         }
-        RemovePlacementPreviewImages(placementsToRemove);
 
         _desktopPageCount = Math.Clamp(_desktopPageCount - 1, MinDesktopPageCount, MaxDesktopPageCount);
         
@@ -2134,7 +2130,6 @@ public partial class MainWindow : Window
         pageGrid.Children.Add(host);
 
         _desktopComponentPlacements.Add(placement);
-        QueuePlacementPreviewRefresh(placement);
         InvalidateDesktopPageAwareComponentContextCache();
         UpdateDesktopPageAwareComponentContext();
         PersistSettings();
@@ -2965,12 +2960,6 @@ public partial class MainWindow : Window
         EnsureDesktopEditOverlayPresenter();
         UpdateDesktopEditOverlayMetadata(placement.ComponentId, widthCells, heightCells, L("component.move", "Move"));
         ApplyDesktopEditOverlayPreviewImage(placement.ComponentId, placement.PlacementId, widthCells, heightCells);
-        PrimeDesktopEditPreviewImage(
-            placement.ComponentId,
-            placement.PlacementId,
-            placement.PageIndex,
-            widthCells,
-            heightCells);
         _desktopEditOverlayPresenter?.SetPreviewRect(_desktopEditOriginalRect);
         _desktopEditOverlayPresenter?.SetCandidateRect(_desktopEditOriginalRect);
         _desktopEditOverlayPresenter?.SetInvalid(false);
@@ -3018,12 +3007,6 @@ public partial class MainWindow : Window
         EnsureDesktopEditOverlayPresenter();
         UpdateDesktopEditOverlayMetadata(componentId, widthCells, heightCells, L("component_library.drag_hint", "Drag to place"));
         ApplyDesktopEditOverlayPreviewImage(componentId, placementId: null, widthCells, heightCells);
-        PrimeDesktopEditPreviewImage(
-            componentId,
-            placementId: null,
-            _currentDesktopSurfaceIndex,
-            widthCells,
-            heightCells);
         _desktopEditOverlayPresenter?.SetPreviewRect(_desktopEditOriginalRect);
         _desktopEditOverlayPresenter?.SetCandidateRect(null);
         _desktopEditOverlayPresenter?.SetInvalid(false);
@@ -3132,12 +3115,6 @@ public partial class MainWindow : Window
         EnsureDesktopEditOverlayPresenter();
         UpdateDesktopEditOverlayMetadata(placement.ComponentId, startSpan.WidthCells, startSpan.HeightCells, L("component.resize", "Resize"));
         ApplyDesktopEditOverlayPreviewImage(placement.ComponentId, placement.PlacementId, startSpan.WidthCells, startSpan.HeightCells);
-        PrimeDesktopEditPreviewImage(
-            placement.ComponentId,
-            placement.PlacementId,
-            placement.PageIndex,
-            startSpan.WidthCells,
-            startSpan.HeightCells);
         _desktopEditOverlayPresenter?.SetPreviewRect(_desktopEditOriginalRect);
         _desktopEditOverlayPresenter?.SetCandidateRect(_desktopEditOriginalRect);
         _desktopEditOverlayPresenter?.SetInvalid(false);

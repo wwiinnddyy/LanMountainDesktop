@@ -852,6 +852,21 @@ Sharp 与 Fluent 才相同。也就是说默认风格下桌面组件面板本来
 `EnsureComponentLibraryPreviewWarmup`——`git log -S` 查到实现 `WarmComponentLibraryPreviewsSeriallyAsync`
 是在 `eb066b5`（改成渲染期静态预览）里整块撤掉的，只剩下缝和它的调用点。**两处都是空体，删除不可能改变行为**，
 而"当年为什么砍掉"有提交号可查，所以这是死代码清理，不是产品决定。
+同一天傍晚又清掉**同一批剩下的 5 个空壳**——它们躲过了这条判据：
+体内不是"一个字都没有"，而是**只剩 `_ = 参数;`**：`PrimeDesktopEditPreviewImage`（5 个参数全丢）、
+`QueuePlacementPreviewRefresh`、`RemovePlacementPreviewImage`、`RemovePlacementPreviewImages`
+（实现在 `c8c3f51` 里是 `RefreshPlacementPreviewImageAsync` / `_componentPreviewImageService.RemovePlacementPreviews`，
+同样死于 `eb066b5`），加上 `UpdateSettingsViewportInsets`（死于设置页硬切 `3b3f060`，全仓再无 ViewportInsets 痕迹）。
+**10 个调用点一起删，删 59 行、增 0 行。**两个坑记在这里：
+① 其中 3 个调用点是**跨行写法的**（`PrimeDesktopEditPreviewImage(` 换行传参），按行 grep 数调用点会漏，
+先按"名字出现在全文里"数清再动；
+② 想给这条判据补"只丢弃参数"那一格时，行扫描器不够用了——两版尝试分别误报 49 与 47 处
+（`return x switch {…};`、无括号 `if (…) return;`、体首行是注释的正常方法全被判成"什么都没做"），
+闸门当场作废只能回退。要补就得复用 `SourceTextScanning` 那套**会剥字符串、按括号深度收尾**的扫描器，
+并且先"只报数不判红"量一轮误报面再收紧。
+`ApplyDesktopEditOverlayPreviewImage` **故意留着**：它也丢了 4 个参数，但体里还有
+`EnsureDesktopEditOverlayPresenter()` + `SetPreviewImage(null)` 这个真副作用——名字说"apply"实际只会"clear"，
+那是改名/收参的可读性活，不是死码。
 
 判据本身被自己的探针骗过一次：初版只认同行 `{ }`，Allman 三行整条看不见——20 处里有 11 处是补完才露出来的，
 差点把 9 当成基线。调用点那条判据初版**两个方向都是错的**：`(?<![A-Za-z0-9_.])` 把 `x.Foo()` 这种成员访问
