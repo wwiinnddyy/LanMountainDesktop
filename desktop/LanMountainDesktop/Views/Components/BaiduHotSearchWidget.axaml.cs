@@ -20,7 +20,7 @@ using LanMountainDesktop.Shared.Threading;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget
+public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget, ISettingsAwareComponentWidget
 {
     private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationDataService();
     private const int BaseWidthCells = 4;

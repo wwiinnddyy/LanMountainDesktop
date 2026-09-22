@@ -515,6 +515,7 @@ public partial class MainWindow : Window
         var layoutSnapshot = _componentLayoutStore.LoadLayout();
         var launcherSnapshot = _settingsService.LoadSnapshot<LauncherSettingsSnapshot>(AirAppSettingsScope.Launcher);
         _suppressSettingsPersistence = true;
+        var languageCodeBeforeReload = _languageCode;
         try
         {
             InitializeLocalization(snapshot.LanguageCode);
@@ -565,6 +566,17 @@ public partial class MainWindow : Window
             InitializeTimeZoneSettings();
             ApplyLocalization();
             RebuildDesktopGrid();
+            // 语言真的换了才把"重读设置"下推给已附着的组件：这条路径不重建控件，
+            // 少了这一步桌面上的组件会一直留着旧语言的文案。
+            // 故意**不**挂在"任何设置变更"上——实测 15 个实现里有 9 个带
+            // `Refresh…Async(forceRefresh: true)`（Baidu/Bilibili/Cnr/DailyArtwork/
+            // DailyWord×2/Ifeng/Stcn24/ZhiJiao），挂宽了＝每改一次设置就打一轮第三方接口。
+            // 组件自己的档位变更走 ComponentInstance 作用域（这条路会提前 return），
+            // 时区变更另有 SetTimeZoneService 的下推机制。
+            if (!string.Equals(languageCodeBeforeReload, _languageCode, StringComparison.Ordinal))
+            {
+                RefreshAttachedComponentWidgetsFromSettings();
+            }
         }
         finally
         {

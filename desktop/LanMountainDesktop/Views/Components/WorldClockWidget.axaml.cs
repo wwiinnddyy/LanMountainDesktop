@@ -19,7 +19,8 @@ public partial class WorldClockWidget : UserControl,
     IDesktopComponentWidget,
     ITimeZoneAwareComponentWidget,
     IComponentPlacementContextAware,
-    IComponentRuntimeContextAware
+    IComponentRuntimeContextAware,
+    ISettingsAwareComponentWidget
 {
     private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 2;

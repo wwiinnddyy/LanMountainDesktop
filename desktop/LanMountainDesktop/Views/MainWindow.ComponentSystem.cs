@@ -2631,6 +2631,30 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// 设置落盘后（语言、时区口径、组件档位）把已经放在桌面上的组件拉回自己的设置。
+    /// 宿主这条重载路径**不重建控件实例**（实测 <c>ReloadFromPersistedSettings</c> 只做
+    /// <c>ApplyLocalization</c> + <c>RebuildDesktopGrid</c>，后者只算几何），
+    /// 所以少了这一步，已附着的组件会一直用旧语言的文案，直到被重新添加或重启——
+    /// 15 个组件自己写了 <c>RefreshFromSettings()</c>，收口前全仓没有任何宿主调用点。
+    /// </summary>
+    private void RefreshAttachedComponentWidgetsFromSettings()
+    {
+        foreach (var pageGrid in _desktopPageComponentGrids.Values)
+        {
+            foreach (var host in pageGrid.Children.OfType<Border>())
+            {
+                if (!host.Classes.Contains(DesktopComponentHostClass) ||
+                    TryGetContentHost(host)?.Child is not Control componentRoot)
+                {
+                    continue;
+                }
+
+                ComponentSettingsRefresh.RefreshAll(componentRoot);
+            }
+        }
+    }
+
     private static Border? TryGetResizeHandle(Border host)
     {
         if (host.Child is Grid hostChrome)

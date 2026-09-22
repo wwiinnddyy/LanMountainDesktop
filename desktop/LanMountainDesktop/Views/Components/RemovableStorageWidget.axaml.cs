@@ -18,7 +18,7 @@ using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class RemovableStorageWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget, IComponentPlacementContextAware, IDisposable
+public partial class RemovableStorageWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget, IComponentPlacementContextAware, IDisposable, ISettingsAwareComponentWidget
 {
     private readonly record struct RemovableStoragePalette(
         Color BackgroundFrom,

@@ -10,7 +10,7 @@ using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget, IDisposable
+public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget, IDisposable, ISettingsAwareComponentWidget
 {
     private readonly IStudyAnalyticsService _studyAnalyticsService = StudyAnalyticsServiceFactory.CreateDefault();
     private readonly StudyAnalyticsMonitoringLeaseCoordinator _monitoringLeaseCoordinator = StudyAnalyticsMonitoringLeaseCoordinatorFactory.CreateDefault();

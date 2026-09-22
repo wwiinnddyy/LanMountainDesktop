@@ -21,7 +21,7 @@ using LanMountainDesktop.Shared.Threading;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget
+public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget, ISettingsAwareComponentWidget
 {
     private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationDataService();
     private static readonly HttpClient ImageHttpClient = new()

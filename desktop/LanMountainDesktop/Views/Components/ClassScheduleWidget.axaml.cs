@@ -17,7 +17,7 @@ using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget, IComponentPlacementContextAware
+public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget, IComponentPlacementContextAware, ISettingsAwareComponentWidget
 {
     private sealed record CourseItemViewModel(
         string Name,

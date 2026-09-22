@@ -17,7 +17,7 @@ using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget, IComponentPlacementContextAware, IComponentRuntimeContextAware
+public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget, IComponentPlacementContextAware, IComponentRuntimeContextAware, ISettingsAwareComponentWidget
 {
     private static readonly IReadOnlyDictionary<string, string> ZhCityNames =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)

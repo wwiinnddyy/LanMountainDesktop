@@ -21,7 +21,7 @@ using LanMountainDesktop.Shared.Threading;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget, IComponentPlacementContextAware
+public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget, IComponentPlacementContextAware, ISettingsAwareComponentWidget
 {
     private static readonly IReadOnlyDictionary<DayOfWeek, string> ZhWeekdays =
         new Dictionary<DayOfWeek, string>

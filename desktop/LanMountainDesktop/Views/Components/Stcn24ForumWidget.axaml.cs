@@ -21,7 +21,7 @@ using LanMountainDesktop.Shared.Threading;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget
+public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget, ISettingsAwareComponentWidget
 {
     private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationDataService();
     private static readonly HttpClient AvatarHttpClient = new()

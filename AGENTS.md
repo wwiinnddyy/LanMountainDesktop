@@ -170,6 +170,21 @@ Sdk/Runtime/Host/DevServer/Template + 安装器 + Platform + Mobile，逐个量�
 删这类字段时注意：赋值常发生在接口实现里（`SetComponentPlacementContext`、`SetDesktopPageContext`），
 先确认该接口是否只有这一个消费者，是的话连同接口实现一起摘掉，别只留一个空方法。
 
+**宿主给组件下推能力一律走"每能力一个小接口 + 走子树的家"**（`ITimeZoneAwareComponentWidget`、
+`IWeatherInfoAwareComponentWidget`、`IDesktopPageVisibilityAwareComponentWidget`……），
+组件外面还包着 chrome（外层 Border + 内容宿主），所以只查直接子控件会漏。
+2026-09-23 就是按这个形状补上了一条断掉的入口：**15 个组件写了 `RefreshFromSettings()` 却没有任何宿主调用点**
+（也不在任何接口上），而设置重载走的是"就地刷新"——`ReloadFromPersistedSettings` 只做
+`ApplyLocalization()` + `RebuildDesktopGrid()`，后者只算几何、不重建控件，
+所以切语言后已放在桌面上的组件一直留着旧语言的文案，要等重新添加或重启。
+现在契约是 `ISettingsAwareComponentWidget`、家是 `ComponentSettingsRefresh.RefreshAll`，
+宿主在 `ApplyLocalization()` 之后下推，**且只在语言码真的变了时下推**：
+15 个实现里 9 个带 `Refresh…Async(forceRefresh: true)` 的第三方拉取
+（Baidu/Bilibili/Cnr/DailyArtwork/DailyWord×2/Ifeng/Stcn24/ZhiJiao），
+挂在"任何设置变更"上＝每改一次设置打一轮网络。这条边界由
+`ComponentSettingsRefreshTests` 钉住（把闸门改成恒真就红）。
+还没定的产品口径是"除了语言，还有哪些设置变更该下推到组件"——别顺手扩大触发面。
+
 **零使用类型棘轮**：`tests/.../ZeroUseTypeRatchetTests.cs` 把探针固化成测试——扫全仓声明的类型名（约 1200 个），
 数出现次数并减掉"自身文本"，为 0 即零使用。
 2026-09-22 把口径从"名字在仓库里出现过"改成**"产品可达"**：用量只算生产目录（core/desktop/airapp/install/mobile/

@@ -34,7 +34,7 @@ public enum WhiteboardWidgetSurfaceMode
 
 internal readonly record struct WhiteboardViewportSizeResolution(Size Size, string Source, bool IsFallback);
 
-public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IComponentPlacementContextAware, IDisposable
+public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IComponentPlacementContextAware, IDisposable, ISettingsAwareComponentWidget
 {
     private enum WhiteboardToolMode
     {

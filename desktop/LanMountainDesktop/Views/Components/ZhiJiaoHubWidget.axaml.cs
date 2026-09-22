@@ -24,7 +24,7 @@ namespace LanMountainDesktop.Views.Components;
 public partial class ZhiJiaoHubWidget : UserControl,
     IDesktopComponentWidget,
     IRecommendationInfoAwareComponentWidget,
-    IComponentSettingsContextAware
+    IComponentSettingsContextAware, ISettingsAwareComponentWidget
 {
     private const double SwipeThreshold = 50;
 
