@@ -269,22 +269,9 @@ internal sealed class ThemeAppearanceService : IThemeAppearanceService
             ThemeAppearanceValues.NormalizeThemeColorMode(snapshot.ThemeColorMode, snapshot.ThemeColor),
             ThemeAppearanceValues.NormalizeSystemMaterialMode(snapshot.SystemMaterialMode),
             snapshot.SelectedWallpaperSeed,
-            NormalizeThemeMode(snapshot.ThemeMode),
+            ThemeAppearanceValues.NormalizeThemeMode(snapshot.ThemeMode),
             ThemeAppearanceValues.NormalizeWallpaperColorSource(snapshot.ThemeWallpaperColorSource),
             snapshot.UseNativeWallpaperChangeEvents);
-    }
-
-    private static string NormalizeThemeMode(string? value)
-    {
-        if (string.Equals(value, ThemeAppearanceValues.ThemeModeDark, StringComparison.OrdinalIgnoreCase))
-        {
-            return ThemeAppearanceValues.ThemeModeDark;
-        }
-        if (string.Equals(value, ThemeAppearanceValues.ThemeModeFollowSystem, StringComparison.OrdinalIgnoreCase))
-        {
-            return ThemeAppearanceValues.ThemeModeFollowSystem;
-        }
-        return ThemeAppearanceValues.ThemeModeLight;
     }
 
     public void Save(ThemeAppearanceSettingsState state)
@@ -358,7 +345,7 @@ internal sealed class ThemeAppearanceService : IThemeAppearanceService
             changedKeys.Add(nameof(AppSettingsSnapshot.UseNativeWallpaperChangeEvents));
         }
 
-        var normalizedThemeMode = NormalizeThemeMode(state.ThemeMode);
+        var normalizedThemeMode = ThemeAppearanceValues.NormalizeThemeMode(state.ThemeMode);
         if (!string.Equals(snapshot.ThemeMode, normalizedThemeMode, StringComparison.OrdinalIgnoreCase))
         {
             snapshot.ThemeMode = normalizedThemeMode;

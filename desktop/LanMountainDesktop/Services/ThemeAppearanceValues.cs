@@ -105,6 +105,27 @@ public static class ThemeAppearanceValues
         return WallpaperColorSourceAuto;
     }
 
+    /// <summary>
+    /// 明暗档取值的口径：只认 <c>dark</c> / <c>follow_system</c>，其余（含 null、旧值、手改坏的串）一律 <c>light</c>。
+    /// 比较忽略大小写，因为盘上可能有早期写入的 <c>Dark</c>。
+    /// 此前这条判据在设置页 view model 与主题设置领域服务里各抄一份：读的一侧和写的一侧
+    /// 各按各的理解归一化，症状是同一个设置在界面上显示成一档、落盘后被另一档覆盖。
+    /// </summary>
+    public static string NormalizeThemeMode(string? value)
+    {
+        if (string.Equals(value, ThemeModeDark, StringComparison.OrdinalIgnoreCase))
+        {
+            return ThemeModeDark;
+        }
+
+        if (string.Equals(value, ThemeModeFollowSystem, StringComparison.OrdinalIgnoreCase))
+        {
+            return ThemeModeFollowSystem;
+        }
+
+        return ThemeModeLight;
+    }
+
     public static string ResolveEffectiveSystemMaterialMode(string? value)
     {
         var normalized = NormalizeSystemMaterialMode(value);

@@ -89,7 +89,15 @@ public sealed class DuplicateImplementationRatchetTests
     /// 这一笔对**漂移族数无影响**（191 族不动、族内站点 1368 不动）：两族各是"2 处 1 种体"，
     /// 按定义不构成漂移族，所以收益是"这两段逻辑从 2 处变成 1 处"，别把它记成族数下降。）
     /// </summary>
-    private const int IdenticalBodyFamilyCeiling = 51;
+    /// 51 → 50 收一族（明暗档取值口径 <c>NormalizeThemeMode</c> 两份逐字 9 行：设置页 view model
+    /// <c>SettingsViewModels</c> 与主题领域服务 <c>SettingsDomainServices</c> 各一份，进早就存在的家
+    /// <c>Services/ThemeAppearanceValues</c>（它旁边就是 <c>NormalizeThemeColorMode</c>／
+    /// <c>NormalizeSystemMaterialMode</c>／<c>NormalizeWallpaperColorSource</c> 三兄弟），3 个调用点改走家。
+    /// 读的一侧和写的一侧各按各的理解归一化，症状是同一个设置在界面上显示成一档、落盘被另一档覆盖；
+    /// "忽略大小写"这一格不能漂——盘上有早期写的 <c>Dark</c>。
+    /// 行为钉 <c>ThemeAppearanceValuesTests.NormalizeThemeMode_ReturnsKnownValue</c> 8 格：
+    /// 注入"改成区分大小写"恰好红 2 格（<c>DARK</c> 与 <c>Follow_System</c>），另 6 格不动，验过。）
+    private const int IdenticalBodyFamilyCeiling = 50;
 
     /// <summary>
     /// 今天实测：191 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
@@ -120,7 +128,7 @@ public sealed class DuplicateImplementationRatchetTests
     private const int DriftFamilyCeiling = 191;
 
     /// <summary>
-    /// 漂移普查认领的声明处数下限（今天实测 5440：5442 − 4 份被收掉的抄本 + 2 个家的入口）。
+    /// 漂移普查认领的声明处数下限（今天实测 5439：从 5456 起，收口真删 27 条私有声明、家新增 10 条入口）。
     /// 钉这个不是为了查新增，是为了查**判据自己塌掉**：
     /// 上面那两处 bug 都是"少认声明"，族数看着像收口（193→189），实际是普查瞎了。
     /// 只冻族数会被这种错法骗过去，冻住认领量就不会。
@@ -298,7 +306,7 @@ public sealed class DuplicateImplementationRatchetTests
         var censusSites = bodiesByName.Values.Sum(tally => tally.Sites);
         Assert.True(
             censusSites >= DriftCensusSiteFloor,
-            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5440）。" +
+            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5439）。" +
             "族数没变也说明判据在丢声明：查 NormalizeBody 又漏掉了哪种成员写法（历史上漏过 Allman 箭头体与插值字符串的大括号）");
 
         var driftFamilies = bodiesByName.Count(pair => pair.Value.VariantCount >= 2 &&

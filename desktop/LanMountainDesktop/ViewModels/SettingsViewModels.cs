@@ -1105,26 +1105,11 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
         IsNightMode = theme.IsNightMode;
         UseSystemChrome = theme.UseSystemChrome;
 
-        var savedThemeMode = NormalizeThemeMode(theme.ThemeMode);
+        var savedThemeMode = ThemeAppearanceValues.NormalizeThemeMode(theme.ThemeMode);
         SelectedThemeMode = ThemeModeOptions.FirstOrDefault(option =>
             string.Equals(option.Value, savedThemeMode, StringComparison.OrdinalIgnoreCase))
             ?? ThemeModeOptions.FirstOrDefault(o => o.Value == ThemeAppearanceValues.ThemeModeLight)
             ?? new SelectionOption(ThemeAppearanceValues.ThemeModeLight, ThemeModeLightText);
-    }
-
-    private static string NormalizeThemeMode(string? value)
-    {
-        if (string.Equals(value, ThemeAppearanceValues.ThemeModeDark, StringComparison.OrdinalIgnoreCase))
-        {
-            return ThemeAppearanceValues.ThemeModeDark;
-        }
-
-        if (string.Equals(value, ThemeAppearanceValues.ThemeModeFollowSystem, StringComparison.OrdinalIgnoreCase))
-        {
-            return ThemeAppearanceValues.ThemeModeFollowSystem;
-        }
-
-        return ThemeAppearanceValues.ThemeModeLight;
     }
 
     private void PersistCurrentState(bool restartRequired)

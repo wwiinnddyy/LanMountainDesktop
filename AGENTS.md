@@ -293,6 +293,14 @@ en/ja/ko 还缺 25/313/275 条，只许降不许升；补翻译就把数字改�
 旁边那个 `ResolveLayerSourceCounts` 两份已经漂开（面积图多一个 `isStaticSeries` 分支），不算同一族，没并。
 行为钉 `StudyNoiseSeriesRulesTests`（`>=`→`>` 红 3 条：家自己 + 两个消费它的渲染钉；`<`→`<=` 红 2 条，验过）。
 
+**外观取值口径只认 `Services/ThemeAppearanceValues.cs` 一家**：色档 `NormalizeThemeColorMode`、
+材质档 `NormalizeSystemMaterialMode`（`ResolveEffectiveSystemMaterialMode` 才做"auto 落到本机哪种材质"）、
+取色源 `NormalizeWallpaperColorSource`、明暗档 `NormalizeThemeMode`。四者一律**忽略大小写**、
+认不出的串（含 null 与旧值）退回各自默认档。明暗档此前有两份逐字 9 行的抄本
+（设置页 view model 与主题领域服务各一份）——读的一侧与写的一侧各有口径时，
+同一个设置在界面上显示成一档、落盘被另一档覆盖，不报错。盘上有早期写的 `Dark`，
+所以"忽略大小写"这格漂不得（行为钉 `ThemeAppearanceValuesTests` 8 格，改成区分大小写恰好红 2 格）。
+
 **打开外部链接只认一处**：组件要点开一条网页链接，一律 `Helpers/ExternalLinkLauncher.cs`
 （`TryOpen(url)` 打开、`NormalizeHttpUrl(url)` 只做归一化）。此前 http/https 归一化被逐字抄了 6 份
 （含 `RecommendationDataService`），shell 打开又抄了 9 份，其中 3 份（`DailyNewsView`、`JuyaNewsWidget`、
