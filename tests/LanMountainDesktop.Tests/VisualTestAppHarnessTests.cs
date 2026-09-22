@@ -20,6 +20,16 @@ namespace LanMountainDesktop.Tests;
 /// 于是读到 Bold 被当成"样式没落"。换成本地不可能有值的判据（全局样式要求 FontFeatures=tnum，
 /// TextBlock 默认是 null）后，样式确实落到了控件上——下面的卡片背景断言就是据此写的真视觉回归。
 ///
+/// 像素判据的覆盖边界（实测出来的）：能做"贴类 vs 不贴类"比对的是画刷在 App 级字典里静态定义的那几个类，
+/// 目前是 <c>settings-section-card</c> / <c>settings-option-card</c> / <c>settings-list-item</c>。
+/// 另外 14 个 Border 类（<c>glass-panel</c>、<c>surface-*</c>、<c>component-editor-*</c>、
+/// <c>notification-card</c>、<c>about-hero-card</c>、<c>taskbar-profile-popup-*</c>、<c>music-progress-*</c>）
+/// 引用的是 <c>{{DynamicResource Adaptive*}}</c>，而那些画刷是主题服务在
+/// <c>OnFrameworkInitializationCompleted</c> 里注册的运行期资源（<c>Theme/ThemeResourceKeys.cs</c>
+/// 里只有键名，全仓找不到 <c>x:Key</c> 定义），本底座刻意不跑那段启动流程，于是贴类与不贴类同为空色。
+/// 想让普查覆盖这 14 个，得先让底座按生产方式注册 Adaptive 画刷；在那之前，
+/// "有人要、没人注册"这个症状由 <c>CapabilityEntryPointTests</c> 的键覆盖探针守着。
+///
 /// 曾经的第二个堵点"取像素"已经打通，条件是两件事同时做到（缺一件就退回原症状）：
 /// <c>UseHeadlessDrawing = false</c>（默认 true 时 Avalonia 只挂桩绘制，Save 写 0 字节、
 /// CaptureRenderedFrame 返回 null）+ <c>UseSkia()</c>（关掉桩绘制后 Skia 后端不会自动注册，
