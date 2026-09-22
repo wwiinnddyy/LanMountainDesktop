@@ -1801,10 +1801,11 @@ public sealed class SourceIntegrityTests
 
     /// <summary>
     /// "取消 + 释放一个一次性 CTS"这套动作只认 <c>desktop/LanMountainDesktop/Helpers/CancellationHelper.cs</c> 一处。
-    /// 收口前它有两条复制路径：10 个组件各有一份逐字相同的 <c>CancelRefreshRequest()</c>（实测 10 份、每份 7 行），
-    /// 以及 12 处 <c>X?.Cancel(); X?.Dispose();</c> 的相邻两行。守卫两条都拦：
-    /// 声明拦"再抄一份方法"，相邻两行拦"把三步拆回两步"——漂掉的正是 <c>Dispose()</c> 那一步
-    /// （同族实测另有 22 处 <c>Cancel();</c> 后面根本不跟释放，那是下一个待办项，不在这里放行）。
+    /// 收口前它有两条复制路径：10 个组件各有一份逐字相同的 <c>CancelRefreshRequest()</c>（实测 10 份、每份 7 行正文），
+    /// 以及 17 处 <c>X?.Cancel(); X?.Dispose();</c> 的相邻两行。守卫两条都拦：
+    /// 声明拦"再抄一份方法"，相邻两行拦"把三步拆回两步"。
+    /// 同一把尺子放宽到"Cancel 后 5 行内没有 Dispose"还量出 22 处只取消不释放的字段级调用点
+    /// （已修掉宿主高频刷新的 10 处，余 12 处的清单与"为什么不能无脑补 Dispose"记在 AGENTS.md）。
     /// </summary>
     [Fact]
     public void CancelAndDisposeRitual_LivesInExactlyOnePlace()

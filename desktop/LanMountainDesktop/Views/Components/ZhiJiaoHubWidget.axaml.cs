@@ -13,6 +13,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using LanMountainDesktop.ComponentSystem;
+using LanMountainDesktop.Helpers;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
@@ -103,8 +104,8 @@ public partial class ZhiJiaoHubWidget : UserControl,
     {
         _isAttached = false;
         _refreshTimer.Stop();
-        _refreshCts?.Cancel();
-        _backgroundDownloadCts?.Cancel();
+        CancellationHelper.CancelAndDispose(ref _refreshCts);
+        CancellationHelper.CancelAndDispose(ref _backgroundDownloadCts);
 
         lock (_cacheLock)
         {
@@ -283,8 +284,8 @@ public partial class ZhiJiaoHubWidget : UserControl,
         }
 
         _isInitializing = true;
-        _refreshCts?.Cancel();
-        _backgroundDownloadCts?.Cancel();
+        CancellationHelper.CancelAndDispose(ref _refreshCts);
+        CancellationHelper.CancelAndDispose(ref _backgroundDownloadCts);
         _refreshCts = new CancellationTokenSource();
         var ct = _refreshCts.Token;
 
@@ -352,7 +353,7 @@ public partial class ZhiJiaoHubWidget : UserControl,
 
     private async Task StartBackgroundDownloadAsync()
     {
-        _backgroundDownloadCts?.Cancel();
+        CancellationHelper.CancelAndDispose(ref _backgroundDownloadCts);
         _backgroundDownloadCts = new CancellationTokenSource();
         var ct = _backgroundDownloadCts.Token;
 
@@ -977,8 +978,8 @@ public partial class ZhiJiaoHubWidget : UserControl,
             return;
         }
 
-        _refreshCts?.Cancel();
-        _backgroundDownloadCts?.Cancel();
+        CancellationHelper.CancelAndDispose(ref _refreshCts);
+        CancellationHelper.CancelAndDispose(ref _backgroundDownloadCts);
         _refreshCts = new CancellationTokenSource();
 
         lock (_cacheLock)

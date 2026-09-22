@@ -8,10 +8,10 @@ namespace LanMountainDesktop.Helpers;
 /// <remarks>
 /// 顺序是有讲究的：先从字段上摘下来再 Cancel/Dispose，别人才拿不到同一个源去二次取消
 /// （对一个已 Dispose 的源再 Cancel 会抛 <c>ObjectDisposedException</c>）。
-/// 收口前宿主里两种写法各抄了一遍：10 个组件各自有一份逐字相同的 <c>CancelRefreshRequest</c>，
-/// 另有 12 处 <c>?.Cancel()</c> 后面根本不跟 <c>Dispose()</c>，前者漂了没人知道，
-/// 后者每刷新一次就留一个没释放的源。
-/// 这里只保证"该做的三步都在"，不接管"这个源还该不该被复用"——那是调用点的语义。
+/// 收口前这套动作在宿主里抄了 27 份：10 个组件各有一份逐字相同的 <c>CancelRefreshRequest()</c>，
+/// 另有 17 处把 <c>Cancel(); Dispose();</c> 两行写在调用点。
+/// 这里只保证"该做的三步都在"，不接管"这个源此刻该不该被释放"——
+/// 取消一个仍在飞的操作由它的持有者负责释放，那种地方别用这个 helper（欠账与豁免清单见 AGENTS.md）。
 /// </remarks>
 public static class CancellationHelper
 {

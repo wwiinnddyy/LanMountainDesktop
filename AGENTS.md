@@ -335,13 +335,21 @@ helper 住在 Core 是因为写同一批磁盘文件的是三个进程（宿主�
 
 **取消并释放一次性 CTS 只认一处**：`Cancel()` + `Dispose()` 这套收尾动作走 `desktop/LanMountainDesktop/Helpers/CancellationHelper.cs`
 （字段版 `CancelAndDispose(ref _cts)` 会顺手把字段置空，已摘下来的源用实例版），不要再手写相邻两行。
-收口前它有 22 份复制：10 个组件各抄了一份逐字相同的 `CancelRefreshRequest()`（各 7 行），另有 12 处把两行写在调用点。
+收口前这套动作在宿主里有 27 份复制：10 个组件各抄了一份逐字相同的 `CancelRefreshRequest()`（各 7 行正文），
+另有 17 处把 `X?.Cancel(); X?.Dispose();` 两行写在调用点（10 处刷新路径、`HolidayCalendar` 2、`StickyNote` 2、
+`TextCapsule` 1、`MusicControlViewModel` 2）。
 守卫 `SourceIntegrityTests.CancelAndDisposeRitual_LivesInExactlyOnePlace` 两种形态都拦（声明 + 相邻 Cancel/Dispose 对），
 顺序之所以是"先摘字段再取消"：对已 Dispose 的源再 `Cancel()` 会抛 `ObjectDisposedException`。
-**同一把尺子量出来的欠账（还没修）**：全仓 22 处 `X?.Cancel();` 后面根本不跟 `Dispose()`，其中 12 处是对字段做的，
-`ZhiJiaoHubWidget` 一个组件就占 6 处（每次刷新换一个新源，旧的只 Cancel 不释放）。
-这些不能无脑补 `Dispose`：调用点如果之后还拿那个 token 去 `Task.Delay(..., ct)` 或 `Register(...)` 就会抛，
-得逐处读到底才敢动，已登记为待办。
+**同一把尺子量出来的欠账（还剩 12 处）**：把窗口放宽到"Cancel 后 5 行内没有 Dispose"再扫一遍，
+收口前有 22 处字段级取消不释放，修掉宿主那 10 处后仍剩 12 处，散在 3 个二进制里
+（`LinuxMprisMusicSessionProvider`、`LinuxNotificationListener`、`LoadingStateManager`、`NotificationListenerService`、
+`PostHogUsageTelemetryService`、`WindowsNotificationListener`、`UpdateProgressViewModel`、启动器的 `LauncherCoordinatorIpcServer`、
+安装器的 `MainWindowViewModel`；`UpdateOrchestrator` 那两处是"取消一个仍在跑的源"，由 `RegisterOperationCancellation` 负责释放，属正当用法）。
+已修的是宿主里 3 个高频刷新的点（`WeatherWidgetBase` 2 处——那里的源带 12 秒超时，不释放等于每次刷新留一个定时器；
+`ZhiJiaoHubWidget` 7 处；`DataSettingsPageViewModel` 1 处）。
+剩下的不能无脑补 `Dispose`：调用点如果之后还拿那个 token 去 `Task.Delay(..., ct)`、`token.Register(...)` 或
+`CreateLinkedTokenSource(ct)` 就会抛 `ObjectDisposedException`，得逐处读到底才敢动。
+`CancellationHelper` 目前住在宿主，启动器与安装器要用得先搬到 Core（与 `AtomicFileWriter` 同一先例）。
 
 **安装根目录下那个 `.Launcher` 数据目录名只认一处**：一律用 `core/LanMountainDesktop.Core/Deployment/DeploymentLayout.cs`
 的 `LauncherStateDirectoryName`，不要在 Core / 宿主 / 启动器里再抄字面量（该类注释本来就写着"禁止在任何一侧硬编码"，

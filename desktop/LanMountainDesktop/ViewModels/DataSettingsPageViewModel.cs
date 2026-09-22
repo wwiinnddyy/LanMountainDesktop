@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LanMountainDesktop.Helpers;
 using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.ViewModels;
@@ -83,7 +84,7 @@ public sealed partial class DataSettingsPageViewModel : ViewModelBase
     [RelayCommand]
     private async Task ScanAsync()
     {
-        _scanCts?.Cancel();
+        CancellationHelper.CancelAndDispose(ref _scanCts);
         _scanCts = new CancellationTokenSource();
         var token = _scanCts.Token;
 

@@ -10,6 +10,7 @@ using Avalonia.Threading;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Models;
+using LanMountainDesktop.Helpers;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Shared.Contracts.Localization;
@@ -221,7 +222,7 @@ public abstract class WeatherWidgetBase : UserControl,
     {
         _isAttached = false;
         _refreshTimer.Stop();
-        _refreshCancellation?.Cancel();
+        CancellationHelper.CancelAndDispose(ref _refreshCancellation);
         UnsubscribeSettings();
         UpdateAnimationState();
     }
@@ -276,7 +277,7 @@ public abstract class WeatherWidgetBase : UserControl,
 
         ApplySnapshot(Snapshot, Snapshot is null ? WeatherWidgetState.Loading : WeatherWidgetState.Ready, config.LocationName, "Loading");
 
-        _refreshCancellation?.Cancel();
+        CancellationHelper.CancelAndDispose(ref _refreshCancellation);
         var cts = new CancellationTokenSource(TimeSpan.FromSeconds(12));
         _refreshCancellation = cts;
 
