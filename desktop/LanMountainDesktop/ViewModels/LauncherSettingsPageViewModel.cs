@@ -223,7 +223,7 @@ public sealed partial class LauncherSettingsPageViewModel : ViewModelBase, IDisp
             items.Add(CreateHiddenItem(
                 LauncherHiddenItemKind.Folder,
                 normalizedKey,
-                BuildLauncherHiddenFallbackDisplayName(normalizedKey)));
+                LauncherHiddenItemNames.FallbackDisplayName(normalizedKey)));
         }
 
         foreach (var key in snapshot.HiddenLauncherAppPaths.OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
@@ -237,7 +237,7 @@ public sealed partial class LauncherSettingsPageViewModel : ViewModelBase, IDisp
             items.Add(CreateHiddenItem(
                 LauncherHiddenItemKind.Shortcut,
                 normalizedKey,
-                BuildLauncherHiddenFallbackDisplayName(normalizedKey)));
+                LauncherHiddenItemNames.FallbackDisplayName(normalizedKey)));
         }
 
         return items
@@ -372,20 +372,6 @@ public sealed partial class LauncherSettingsPageViewModel : ViewModelBase, IDisp
 
     private static string NormalizeLauncherHiddenKey(string? key)
         => string.IsNullOrWhiteSpace(key) ? string.Empty : key.Trim();
-
-    private static string BuildLauncherHiddenFallbackDisplayName(string key)
-    {
-        if (string.IsNullOrWhiteSpace(key))
-        {
-            return "Unknown";
-        }
-
-        var normalized = key.Replace('\\', '/');
-        var fileName = Path.GetFileNameWithoutExtension(normalized);
-        return string.IsNullOrWhiteSpace(fileName)
-            ? key
-            : fileName;
-    }
 
     private static bool RemoveKey(ICollection<string> values, string key)
     {

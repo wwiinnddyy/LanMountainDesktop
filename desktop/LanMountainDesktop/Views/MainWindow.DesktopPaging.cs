@@ -1336,7 +1336,7 @@ public partial class MainWindow : Window
                 items.Add(new LauncherHiddenItemView(
                     LauncherEntryKind.Folder,
                     key,
-                    BuildLauncherHiddenFallbackDisplayName(key),
+                    LauncherHiddenItemNames.FallbackDisplayName(key),
                     "DIR",
                     GetLauncherFolderIconBitmap()));
             }
@@ -1346,7 +1346,7 @@ public partial class MainWindow : Window
         {
             if (!seenApps.Contains(key))
             {
-                var fallbackName = BuildLauncherHiddenFallbackDisplayName(key);
+                var fallbackName = LauncherHiddenItemNames.FallbackDisplayName(key);
                 items.Add(new LauncherHiddenItemView(
                     LauncherEntryKind.Shortcut,
                     key,
@@ -1403,20 +1403,6 @@ public partial class MainWindow : Window
                 Monogram.From(app.DisplayName),
                 GetLauncherIconBitmap(app)));
         }
-    }
-
-    private static string BuildLauncherHiddenFallbackDisplayName(string key)
-    {
-        if (string.IsNullOrWhiteSpace(key))
-        {
-            return "Unknown";
-        }
-
-        var normalized = key.Replace('\\', '/');
-        var fileName = Path.GetFileNameWithoutExtension(normalized);
-        return string.IsNullOrWhiteSpace(fileName)
-            ? key
-            : fileName;
     }
 
     private FASettingsExpanderItem CreateLauncherHiddenItemRow(LauncherHiddenItemView hiddenItem)

@@ -63,8 +63,12 @@ public sealed class DuplicateImplementationRatchetTests
     /// 目录只在需要时被重建，没有任何一侧依赖它一直存在（这条差异本身写在家的注释里）。
     /// 家新方法刻意取名 <c>PathFor</c>/<c>CleanupAfterInstall</c>：先用了 <c>Resolve</c>/<c>Cleanup</c>，
     /// 漂移普查当场从 192 涨到 194——不是多了重复，是**通用名把无关实现并进同一族**，上限红得对。）
+    /// 58 → 57 收一族（启动台隐藏项的兜底显示名 9 行逐字两份：设置页 LauncherSettingsPageViewModel
+    /// 与桌面叠加层 MainWindow.DesktopPaging 各一份，进 <c>Services/LauncherHiddenItemNames</c>，
+    /// 6 个调用点改走家——只改一份的旧症状是同一个隐藏项在两处显示成两个名字。<c>G1-BH</c> 里
+    /// "两份列表构建要不要合成一份"仍是未决项，这一笔只收那条规则，没替你决定 view model 的事。）
     /// </summary>
-    private const int IdenticalBodyFamilyCeiling = 58;
+    private const int IdenticalBodyFamilyCeiling = 57;
 
     /// <summary>
     /// 今天实测：192 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
