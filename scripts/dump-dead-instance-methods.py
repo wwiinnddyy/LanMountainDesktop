@@ -24,8 +24,12 @@
 ⑥ BCL/框架约定名（ToString/Equals/Dispose/OnNext/…）列在 CONVENTION_NAMES，
    每条都是"框架会调、源码里数不到"。
 
-漏报方向（已知、可接受）：只被另一个死方法调用的方法进不了 A 级；名字同时是类型名/属性名时
-会被无关出现喂饱。所以 A 级是线索不是终判——终判是删除法（删掉后重建，编译红不红）。
+漏报方向（已知、可接受）：① 只被另一个死方法调用的方法进不了 A 级；② 名字同时是类型名/属性名时
+会被无关出现喂饱；③ **跨二进制同名**：裸名计数会把别的工程里同名方法的调用点当成本条的调用点——
+实测样本 `LanMountainDesktopIpcClient.GetCatalogAsync`（Core 公开面，本仓只有测试在调）被 Plonds 树里
+`IPlondsManifestStore.GetCatalogAsync` 的自有调用喂成"活的"，因此它现在既进不了 A 级、也不该挂名单。
+要彻底分开得靠类型解析，文本尺子不做；这类条目靠"Core / SDK 公开面"这条人工口径单独盯。
+所以 A 级是线索不是终判——终判是删除法（删掉后重建，编译红不红）。
 
 用法：
     python scripts/dump-dead-instance-methods.py            # 报未解释的 A/T 级 + 汇总，未解释>0 时退出码 1
@@ -109,7 +113,6 @@ EXPLAINED = {
         "与 G1-AU（RefreshFromSettings 从不被推）同族：这是缺口不是死码，接线与否等拍板",
     "PublicIpcHostService.PublishLoadingStateAsync":
         "Core 是已发布包：删公开成员属跨二进制破坏性变更，跟 SDK 版本号一起定：待办 G1-U",
-    "LanMountainDesktopIpcClient.GetCatalogAsync": "同上，Core 公开面：待办 G1-U",
     "LanMountainDesktopIpcClient.GetSessionInfoAsync": "同上，Core 公开面：待办 G1-U",
 }
 
@@ -187,8 +190,12 @@ def interface_member_names(root):
 
 def collect_declarations(root, iface_names):
     declarations = defaultdict(list)
+    # 每个名字在**全语料**里有几条声明行。裸名计数要把它整条减掉：
+    # 实测漏报样本——Plonds 树自带 IPlondsManifestStore.GetCatalogAsync（三处声明行），
+    # 只减宿主这条声明时那三处会把 Core 的 LanMountainDesktopIpcClient.GetCatalogAsync 喂成"活的"。
+    decl_lines = Counter()
     scanned = 0
-    for directory in PROD_DIRS:
+    for directory in REACH_DIRS:
         for path in sorted(corpus_files(root, directory)):
             if not path.endswith(".cs"):
                 continue
@@ -223,9 +230,13 @@ def collect_declarations(root, iface_names):
                 match = DECL.match(line)
                 if match:
                     name = match.group("name")
+                    decl_lines[name] += 1
                     mods = match.group("mods")
                     ret = (match.group("ret") or "").strip()
                     owner = ".".join(stack) if stack else "<top>"
+                    if directory not in PROD_DIRS:
+                        depth += opened - closed
+                        continue
                     entry = classify(relative, number + 1, owner, name, mods, ret,
                                      preceding_attributes(lines, number), iface_names)
                     if entry:
@@ -235,7 +246,7 @@ def collect_declarations(root, iface_names):
                 while stack and depth < markers[-1]:
                     stack.pop()
                     markers.pop()
-    return declarations, scanned
+    return declarations, decl_lines, scanned
 
 
 def classify(path, number, owner, name, mods, ret, attributes, iface_names):
@@ -246,6 +257,11 @@ def classify(path, number, owner, name, mods, ret, attributes, iface_names):
         return None
     if not ret:
         return None                      # 构造器：`public Foo(...)` 拿不到返回类型
+    if re.search(r"(class|struct|record|interface|enum)", ret):
+        return None                      # 主构造器类型的声明行本身：
+                                         # `internal sealed class InstallProgressBridge(IProgress<…>? p)`
+                                         # 会被 DECL 读成"返回类型 class InstallProgressBridge 的方法"，
+                                         # 实测报出一条根本不存在的 A 级条目 <top>.InstallProgressBridge。
     if name in CONVENTION_NAMES or name in EXTERNAL_INTERFACE_MEMBERS \
             or name.endswith("ForTests") or name == owner.split(".")[-1]:
         return None
@@ -271,14 +287,14 @@ def main():
     root = ROOT
 
     iface_names = interface_member_names(root)
-    declarations, scanned = collect_declarations(root, iface_names)
+    declarations, decl_lines, scanned = collect_declarations(root, iface_names)
     reach_count = sum((count_identifiers(root, d) for d in REACH_DIRS), Counter())
     test_count = count_identifiers(root, TEST_DIR)
 
     tier_a = []
     tier_tests_only = []
     for name, entries in declarations.items():
-        if reach_count[name] - len(entries) > 0:
+        if reach_count[name] - decl_lines[name] > 0:
             continue                     # 除声明外还有出现：调用点存在（漏报方向，可接受）
         for entry in entries:
             (tier_tests_only if test_count.get(name, 0) else tier_a).append(entry)
