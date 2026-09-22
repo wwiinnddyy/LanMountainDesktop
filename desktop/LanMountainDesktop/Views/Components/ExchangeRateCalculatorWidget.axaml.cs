@@ -10,7 +10,7 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Threading;
 using LanMountainDesktop.Services;
-using LanMountainDesktop.Helpers;
+using LanMountainDesktop.Shared.Threading;
 
 namespace LanMountainDesktop.Views.Components;
 

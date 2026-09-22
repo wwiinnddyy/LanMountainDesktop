@@ -6,7 +6,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using LanMountainDesktop.Services;
 using Markdown.Avalonia;
-using LanMountainDesktop.Helpers;
+using LanMountainDesktop.Shared.Threading;
 
 namespace LanMountainDesktop.Views.Components;
 

@@ -1800,7 +1800,7 @@ public sealed class SourceIntegrityTests
     }
 
     /// <summary>
-    /// "取消 + 释放一个一次性 CTS"这套动作只认 <c>desktop/LanMountainDesktop/Helpers/CancellationHelper.cs</c> 一处。
+    /// "取消 + 释放一个一次性 CTS"这套动作只认 <c>core/LanMountainDesktop.Core/Threading/CancellationHelper.cs</c> 一处。
     /// 收口前它有两条复制路径：10 个组件各有一份逐字相同的 <c>CancelRefreshRequest()</c>（实测 10 份、每份 7 行正文），
     /// 以及 17 处 <c>X?.Cancel(); X?.Dispose();</c> 的相邻两行。守卫两条都拦：
     /// 声明拦"再抄一份方法"，相邻两行拦"把三步拆回两步"。
@@ -1810,7 +1810,7 @@ public sealed class SourceIntegrityTests
     [Fact]
     public void CancelAndDisposeRitual_LivesInExactlyOnePlace()
     {
-        var homeFile = @"desktop\LanMountainDesktop\Helpers\CancellationHelper.cs";
+        var homeFile = @"core\LanMountainDesktop.Core\Threading\CancellationHelper.cs";
         var declarationRe = new Regex(@"\bvoid\s+CancelRefreshRequest\s*\(");
         var stepRe = new Regex(@"^\s*(?<expr>[A-Za-z_][\w\(\)\[\]\.]*)\??\.(?<op>Cancel|Dispose)\(\);$");
         var offenders = new List<string>();

@@ -13,7 +13,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using LanMountainDesktop.ComponentSystem;
-using LanMountainDesktop.Helpers;
+using LanMountainDesktop.Shared.Threading;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;

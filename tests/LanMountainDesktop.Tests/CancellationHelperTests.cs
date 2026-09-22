@@ -1,4 +1,4 @@
-using LanMountainDesktop.Helpers;
+using LanMountainDesktop.Shared.Threading;
 using Xunit;
 
 namespace LanMountainDesktop.Tests;

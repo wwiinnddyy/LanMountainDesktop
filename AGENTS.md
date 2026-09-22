@@ -333,7 +333,7 @@ helper 住在 Core 是因为写同一批磁盘文件的是三个进程（宿主�
 `recursive` 参数保留各调用点原语义——`DataStorageService` 那处要的就是"只删空目录"，改成递归会连带删掉用户数据，
 `BestEffortDeletionTests.NonEmptyDirectory_WithRecursiveFalse_IsKeptAndReported` 钉住它。
 
-**取消并释放一次性 CTS 只认一处**：`Cancel()` + `Dispose()` 这套收尾动作走 `desktop/LanMountainDesktop/Helpers/CancellationHelper.cs`
+**取消并释放一次性 CTS 只认一处**：`Cancel()` + `Dispose()` 这套收尾动作走 `core/LanMountainDesktop.Core/Threading/CancellationHelper.cs`
 （字段版 `CancelAndDispose(ref _cts)` 会顺手把字段置空，已摘下来的源用实例版），不要再手写相邻两行。
 收口前这套动作在宿主里有 27 份复制：10 个组件各抄了一份逐字相同的 `CancelRefreshRequest()`（各 7 行正文），
 另有 17 处把 `X?.Cancel(); X?.Dispose();` 两行写在调用点（10 处刷新路径、`HolidayCalendar` 2、`StickyNote` 2、
@@ -349,7 +349,8 @@ helper 住在 Core 是因为写同一批磁盘文件的是三个进程（宿主�
 `ZhiJiaoHubWidget` 7 处；`DataSettingsPageViewModel` 1 处）。
 剩下的不能无脑补 `Dispose`：调用点如果之后还拿那个 token 去 `Task.Delay(..., ct)`、`token.Register(...)` 或
 `CreateLinkedTokenSource(ct)` 就会抛 `ObjectDisposedException`，得逐处读到底才敢动。
-`CancellationHelper` 目前住在宿主，启动器与安装器要用得先搬到 Core（与 `AtomicFileWriter` 同一先例）。
+`CancellationHelper` 已搬到 Core（与 `AtomicFileWriter`、`FileOperationRetryHelper` 同一先例：同一动作散在多个二进制里就住 Core），
+启动器与安装器现在够得到它，守卫也据此覆盖全部二进制。
 
 **安装根目录下那个 `.Launcher` 数据目录名只认一处**：一律用 `core/LanMountainDesktop.Core/Deployment/DeploymentLayout.cs`
 的 `LauncherStateDirectoryName`，不要在 Core / 宿主 / 启动器里再抄字面量（该类注释本来就写着"禁止在任何一侧硬编码"，

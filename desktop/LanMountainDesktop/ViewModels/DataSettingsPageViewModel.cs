@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using LanMountainDesktop.Helpers;
+using LanMountainDesktop.Shared.Threading;
 using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.ViewModels;

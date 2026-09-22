@@ -9,7 +9,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
-using LanMountainDesktop.Helpers;
+using LanMountainDesktop.Shared.Threading;
 
 namespace LanMountainDesktop.ViewModels;
 

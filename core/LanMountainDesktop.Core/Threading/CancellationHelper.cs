@@ -1,6 +1,6 @@
 using System.Threading;
 
-namespace LanMountainDesktop.Helpers;
+namespace LanMountainDesktop.Shared.Threading;
 
 /// <summary>
 /// "取消并释放一个一次性 <see cref="CancellationTokenSource"/>"这件事只认这一处。
