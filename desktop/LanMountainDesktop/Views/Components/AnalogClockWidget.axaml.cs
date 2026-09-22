@@ -67,7 +67,7 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
     private ISettingsService _settingsService = HostSettingsFacadeProvider.GetOrCreate().Settings;
     private readonly LocalizationService _localizationService = new();
     private TimeZoneService? _timeZoneService;
-    private double _currentCellSize = 48;
+    private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private bool _dialInitialized;
     private bool _handsInitialized;
     private bool? _isNightModeApplied;

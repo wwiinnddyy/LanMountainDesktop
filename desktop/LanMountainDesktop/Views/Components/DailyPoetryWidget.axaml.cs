@@ -58,7 +58,7 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
     private IRecommendationInfoService _recommendationService = DefaultRecommendationService;
     private CancellationTokenSource? _refreshCts;
     private string _languageCode = LocalizationService.DefaultLanguageCode;
-    private double _currentCellSize = 48;
+    private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private bool _isAttached;
     private bool _isRefreshing;
     private bool? _isNightModeApplied;

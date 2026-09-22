@@ -64,7 +64,7 @@ public partial class StickyNoteWidget : UserControl,
 
     public void ApplyCellSize(double cellSize)
     {
-        var scale = Math.Clamp(cellSize / 48d, 0.82, 2.2);
+        var scale = Math.Clamp(cellSize / ComponentDesignMetrics.BaseCellSize, 0.82, 2.2);
 
         RootBorder.CornerRadius = new CornerRadius(
             ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadiusValue(

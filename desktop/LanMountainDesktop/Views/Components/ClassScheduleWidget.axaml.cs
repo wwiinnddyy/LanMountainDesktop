@@ -46,7 +46,7 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
     private readonly IClassIslandScheduleDataService _scheduleService = new ClassIslandScheduleDataService();
 
     private TimeZoneService? _timeZoneService;
-    private double _currentCellSize = 48;
+    private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private IReadOnlyList<CourseItemViewModel> _courseItems = Array.Empty<CourseItemViewModel>();
     private bool _isNightVisual = true;
     private string _languageCode = LocalizationService.DefaultLanguageCode;

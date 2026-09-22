@@ -58,7 +58,7 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
     private readonly Dictionary<int, Point> _panZoomPointers = [];
     private readonly ScaleTransform _viewportScaleTransform = new();
     private readonly TranslateTransform _viewportTranslateTransform = new();
-    private double _currentCellSize = 48;
+    private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private WhiteboardToolMode _toolMode = WhiteboardToolMode.Pen;
     private Size _logicalCanvasSize = new(1, 1);
     private WhiteboardViewportState _viewportState = new(WhiteboardViewportHelper.DefaultZoom, default);

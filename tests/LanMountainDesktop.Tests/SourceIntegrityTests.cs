@@ -1332,11 +1332,17 @@ public sealed class SourceIntegrityTests
     /// 收口前 12 个组件各自写了 <c>private const double BaseCellSize = 48d;</c>：改一处基准，
     /// 其余 11 个组件在同一个网格里按旧基准缩放，症状是"某个卡片比别的胖一圈"，
     /// 而且没人会想到去数 12 份。
+    /// 2026-09-22 补第二半：那次的收口只删了重复的常量声明，调用点里把 48 当基准的字面量还有 39 处
+    /// （16 处 <c>_currentCellSize / 48d</c> 一类换算、23 处 <c>double _currentCellSize = 48;</c> 默认值），
+    /// 它们同样在绕过这个家——把基准从 48 改到别处时，这 39 处不会跟着动，症状正是"一半组件缩放不对"。
+    /// 现在三种形态（声明、除法基准字面量、字段默认值）一起拦。
     /// </summary>
     [Fact]
     public void ComponentBaseCellSize_LivesInExactlyOnePlace()
     {
         var declRe = new Regex(@"(?:private|internal|public|protected)\s+(?:static\s+)?const\s+double\s+BaseCellSize\b");
+        var divisionRe = new Regex(@"\b(?:_?currentCellSize|_lastAppliedCellSize|cellSize|CellSize)\w*\s*/\s*48(?:\.0+)?d?\b");
+        var initRe = new Regex(@"double\s+_\w*[Cc]ellSize\s*=\s*48;");
         var allowedFile = @"desktop\LanMountainDesktop\Views\Components\ComponentDesignMetrics.cs";
 
         var offenders = new List<string>();
@@ -1353,12 +1359,20 @@ public sealed class SourceIntegrityTests
                 {
                     offenders.Add($"{RelativeToRepo(file)}:{number} 自己声明了 BaseCellSize，请用 ComponentDesignMetrics.BaseCellSize");
                 }
+                else if (divisionRe.IsMatch(line))
+                {
+                    offenders.Add($"{RelativeToRepo(file)}:{number} 拿字面量 48 当缩放基准，请用 ComponentDesignMetrics.BaseCellSize");
+                }
+                else if (initRe.IsMatch(line))
+                {
+                    offenders.Add($"{RelativeToRepo(file)}:{number} 格子边长字段默认值写了字面量 48，请用 ComponentDesignMetrics.BaseCellSize");
+                }
             }
         }
 
         Assert.True(
             offenders.Count == 0,
-            $"{offenders.Count} 处重复声明的组件设计基准：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+            $"{offenders.Count} 处重复/绕过家的组件设计基准：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
     }
 
     /// <summary>

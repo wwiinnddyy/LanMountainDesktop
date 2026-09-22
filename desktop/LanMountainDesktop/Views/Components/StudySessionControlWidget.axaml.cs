@@ -55,7 +55,7 @@ public partial class StudySessionControlWidget : UserControl, IDesktopComponentW
         Interval = TimeSpan.FromSeconds(1)
     };
 
-    private double _currentCellSize = 48;
+    private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private string _languageCode = LocalizationService.DefaultLanguageCode;
     private bool _isAttached;
     private bool _isOnActivePage = true;
@@ -256,7 +256,7 @@ public partial class StudySessionControlWidget : UserControl, IDesktopComponentW
 
     private void UpdateAdaptiveLayout()
     {
-        var cellScale = Math.Clamp(_currentCellSize / 48d, 0.78, 2.4);
+        var cellScale = Math.Clamp(_currentCellSize / ComponentDesignMetrics.BaseCellSize, 0.78, 2.4);
         var widthScale = Bounds.Width > 1 ? Bounds.Width / 280d : cellScale;
         var heightScale = Bounds.Height > 1 ? Bounds.Height / 140d : cellScale;
         var boundsScale = Math.Clamp(Math.Min(widthScale, heightScale), 0.56, 2.2);

@@ -57,7 +57,7 @@ public partial class RemovableStorageWidget : UserControl, IDesktopComponentWidg
     private string? _componentColorScheme;
     private string _selectedDriveRootPath = string.Empty;
     private string? _statusOverrideText;
-    private double _currentCellSize = 48;
+    private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private bool _isAttached;
     private bool _isOnActivePage = true;
     private bool _isRefreshing;
@@ -508,7 +508,7 @@ public partial class RemovableStorageWidget : UserControl, IDesktopComponentWidg
 
     private double ResolveScale()
     {
-        var cellScale = Math.Clamp(_currentCellSize / 48d, 0.72, 2.2);
+        var cellScale = Math.Clamp(_currentCellSize / ComponentDesignMetrics.BaseCellSize, 0.72, 2.2);
         var widthScale = Bounds.Width > 1 ? Math.Clamp(Bounds.Width / 220d, 0.72, 2.4) : 1;
         var heightScale = Bounds.Height > 1 ? Math.Clamp(Bounds.Height / 220d, 0.72, 2.4) : 1;
         return Math.Clamp(Math.Min(cellScale, Math.Min(widthScale, heightScale)), 0.72, 2.2);

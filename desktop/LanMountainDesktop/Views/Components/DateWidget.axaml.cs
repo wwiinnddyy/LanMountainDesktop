@@ -435,7 +435,7 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
 
     private double ResolveScale()
     {
-        var cellScale = Math.Clamp(_currentCellSize / 48d, 0.62, 1.8);
+        var cellScale = Math.Clamp(_currentCellSize / ComponentDesignMetrics.BaseCellSize, 0.62, 1.8);
         var heightScale = Bounds.Height > 1 ? Math.Clamp(Bounds.Height / 220d, 0.62, 1.85) : 1;
         var widthScale = Bounds.Width > 1 ? Math.Clamp(Bounds.Width / 460d, 0.62, 1.85) : 1;
         return Math.Clamp(Math.Min(cellScale, Math.Min(heightScale, widthScale) * 1.08), 0.62, 1.8);

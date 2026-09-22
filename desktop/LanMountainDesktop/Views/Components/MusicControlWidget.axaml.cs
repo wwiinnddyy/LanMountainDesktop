@@ -25,7 +25,7 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
     private readonly MusicControlViewModel _viewModel = new();
     private readonly MonetColorService _monetColorService = new();
 
-    private double _currentCellSize = 48;
+    private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private bool _isAttached;
     private bool _isOnActivePage = true;
     private bool _isDisposed;
@@ -305,7 +305,7 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
 
     private double ResolveScale()
     {
-        var cellScale = Math.Clamp(_currentCellSize / 48d, 0.62, 2.1);
+        var cellScale = Math.Clamp(_currentCellSize / ComponentDesignMetrics.BaseCellSize, 0.62, 2.1);
         var widthScale = Bounds.Width > 1
             ? Math.Clamp(Bounds.Width / Math.Max(1, _currentCellSize * 4), 0.58, 1.9)
             : 1;

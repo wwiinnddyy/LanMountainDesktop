@@ -54,7 +54,7 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
     private readonly LocalizationService _localizationService = new();
     private readonly StudySnapshotRenderGate _renderGate;
 
-    private double _currentCellSize = 48;
+    private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private string _languageCode = LocalizationService.DefaultLanguageCode;
     private bool _isAttached;
     private bool _isOnActivePage = true;
@@ -94,7 +94,7 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
     public void ApplyCellSize(double cellSize)
     {
         _currentCellSize = Math.Max(1, cellSize);
-        var scale = Math.Clamp(_currentCellSize / 48d, 0.78, 2.4);
+        var scale = Math.Clamp(_currentCellSize / ComponentDesignMetrics.BaseCellSize, 0.78, 2.4);
 
         RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadius();
         RootBorder.Padding = new Thickness(

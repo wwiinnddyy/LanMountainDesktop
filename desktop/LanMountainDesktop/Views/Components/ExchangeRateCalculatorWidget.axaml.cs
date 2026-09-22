@@ -306,7 +306,7 @@ public partial class ExchangeRateCalculatorWidget : UserControl, IDesktopCompone
 
     private double ResolveScale()
     {
-        var cellScale = Math.Clamp(_currentCellSize / 48d, 0.72, 1.8);
+        var cellScale = Math.Clamp(_currentCellSize / ComponentDesignMetrics.BaseCellSize, 0.72, 1.8);
         var widthScale = Bounds.Width > 1 ? Math.Clamp(Bounds.Width / 304d, 0.72, 2.0) : 1;
         var heightScale = Bounds.Height > 1 ? Math.Clamp(Bounds.Height / 304d, 0.72, 2.0) : 1;
         return Math.Clamp(Math.Min(cellScale, Math.Min(widthScale, heightScale)), 0.72, 1.95);

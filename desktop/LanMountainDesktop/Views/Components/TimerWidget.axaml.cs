@@ -22,7 +22,7 @@ public partial class TimerWidget : UserControl, IDesktopComponentWidget
         Interval = TimeSpan.FromSeconds(1)
     };
 
-    private double _currentCellSize = 48;
+    private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private bool _isRunning;
     private int _remainingSeconds;
     private bool? _isNightModeApplied;

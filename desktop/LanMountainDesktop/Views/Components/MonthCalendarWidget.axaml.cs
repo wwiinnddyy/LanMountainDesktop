@@ -21,7 +21,7 @@ public partial class MonthCalendarWidget : UserControl, IDesktopComponentWidget,
     private static readonly string[] EnWeekdayHeaders = ["S", "M", "T", "W", "T", "F", "S"];
 
     private TimeZoneService? _timeZoneService;
-    private double _currentCellSize = 48;
+    private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private double _weekdayFontSize = 20;
     private FontWeight _weekdayFontWeight = FontWeight.SemiBold;
     private double _calendarDayFontSize = 22;

@@ -41,7 +41,7 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
     private readonly LocalizationService _localizationService = new();
     private readonly StudySnapshotRenderGate _renderGate;
 
-    private double _currentCellSize = 48;
+    private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private string _languageCode = LocalizationService.DefaultLanguageCode;
     private bool _isAttached;
     private bool _isOnActivePage = true;
@@ -290,7 +290,7 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
 
     private void UpdateAdaptiveLayout()
     {
-        var cellScale = Math.Clamp(_currentCellSize / 48d, 0.76, 2.4);
+        var cellScale = Math.Clamp(_currentCellSize / ComponentDesignMetrics.BaseCellSize, 0.76, 2.4);
         var widthScale = Bounds.Width > 1 ? Bounds.Width / 520d : cellScale;
         var heightScale = Bounds.Height > 1 ? Bounds.Height / 240d : cellScale;
         var boundsScale = Math.Clamp(Math.Min(widthScale, heightScale), 0.52, 2.3);

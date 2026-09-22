@@ -481,6 +481,10 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 在 9 个组件里逐字抄了 9 遍、23 个调用点）。守卫
 `ComponentBaseCellSize_LivesInExactlyOnePlace`、`DesktopGridLimits_LiveInExactlyOnePlace`、
 `CompactTextNormalizer_LivesInExactlyOnePlace`。
+**立了家不等于收了口**：`BaseCellSize` 那次只删掉 12 份重复声明，2026-09-22 复查时组件里还有 39 处把 48
+当基准的字面量（16 处 `_currentCellSize / 48d` 一类缩放换算、23 处 `double _currentCellSize = 48;` 字段默认值），
+改基准时它们不会跟着动，症状就是"一半组件缩放不对"。现已全部指向 `ComponentDesignMetrics.BaseCellSize`，
+同一条守卫把三种形态（重复声明 / 除法基准字面量 / 字段默认值）一起拦——每立一个家，都要单独数一遍调用点。
 找下一族的手段是量出来的，不是凭印象：`python scripts/dump-dup-methods.py`（不带参数扫全部二进制，
 按"方法名 + 归一化方法体"分组，报 `Nx 方法名 (行数, body#hash)` 加每个站点的 file:line；
 传目录只扫那些文件，`NAMES=A,B` 换要查的方法名）。**这条探针必须先拿已知样本验过再用**：

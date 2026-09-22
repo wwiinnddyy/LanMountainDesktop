@@ -34,7 +34,7 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget, IDe
 
     private string _languageCode = LocalizationService.DefaultLanguageCode;
     private string _lastSavedFilePath = string.Empty;
-    private double _currentCellSize = 48;
+    private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private bool _isAttached;
     private bool _isOnActivePage = true;
     private bool _pausedStudyMonitoringForRecording;

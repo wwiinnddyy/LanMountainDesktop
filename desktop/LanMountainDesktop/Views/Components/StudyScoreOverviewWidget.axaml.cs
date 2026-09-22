@@ -43,7 +43,7 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
 
     private readonly Queue<(DateTimeOffset Timestamp, double Score)> _realtimeHistory = new();
 
-    private double _currentCellSize = 48;
+    private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private bool _isAttached;
     private bool _isOnActivePage = true;
     private bool _isSubscribed;
@@ -233,7 +233,7 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
 
     private void UpdateAdaptiveLayout()
     {
-        var cellScale = Math.Clamp(_currentCellSize / 48d, 0.76, 2.4);
+        var cellScale = Math.Clamp(_currentCellSize / ComponentDesignMetrics.BaseCellSize, 0.76, 2.4);
         var widthScale = Bounds.Width > 1 ? Bounds.Width / 360d : cellScale;
         var heightScale = Bounds.Height > 1 ? Bounds.Height / 360d : cellScale;
         var boundsScale = Math.Clamp(Math.Min(widthScale, heightScale), 0.52, 2.4);

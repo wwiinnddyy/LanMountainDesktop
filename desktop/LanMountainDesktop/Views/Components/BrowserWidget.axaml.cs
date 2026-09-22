@@ -18,7 +18,7 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
     private static readonly Uri DefaultHomeUri = new("https://www.bing.com");
 
     private readonly bool _isDesignModePreview = Design.IsDesignMode;
-    private double _currentCellSize = 48;
+    private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private string _componentId = BuiltInComponentIds.DesktopBrowser;
     private string _placementId = string.Empty;
     private bool? _isNightModeApplied;

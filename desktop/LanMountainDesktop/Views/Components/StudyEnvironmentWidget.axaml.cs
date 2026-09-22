@@ -19,7 +19,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
     private readonly LocalizationService _localizationService = new();
     private readonly StudySnapshotRenderGate _renderGate;
 
-    private double _currentCellSize = 48;
+    private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private bool _showDisplayDb = true;
     private bool _showDbfs;
     private string? _componentColorScheme;
@@ -49,7 +49,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
     public void ApplyCellSize(double cellSize)
     {
         _currentCellSize = Math.Max(1, cellSize);
-        var scale = Math.Clamp(_currentCellSize / 48d, 0.82, 2.2);
+        var scale = Math.Clamp(_currentCellSize / ComponentDesignMetrics.BaseCellSize, 0.82, 2.2);
 
         RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadius();
         RootBorder.Padding = new Thickness(
@@ -230,7 +230,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
 
     private void UpdateAdaptiveLayout()
     {
-        var scale = Math.Clamp(_currentCellSize / 48d, 0.82, 2.2);
+        var scale = Math.Clamp(_currentCellSize / ComponentDesignMetrics.BaseCellSize, 0.82, 2.2);
         var width = Bounds.Width;
         var height = Bounds.Height;
         var showingDualNoiseLines = _showDisplayDb && _showDbfs;

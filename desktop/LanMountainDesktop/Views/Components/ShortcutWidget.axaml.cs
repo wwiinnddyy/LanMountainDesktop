@@ -24,7 +24,7 @@ public partial class ShortcutWidget : UserControl, IDesktopComponentWidget, ICom
     private string? _targetPath;
     private string _clickMode = "Double";
     private bool _showBackground = true;
-    private double _currentCellSize = 48;
+    private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private bool _isDisposed;
     private bool _chromeApplied;
 

@@ -21,7 +21,7 @@ public partial class HolidayCalendarWidget : UserControl, IDesktopComponentWidge
     private static readonly HolidayCalendarService HolidayService = new();
 
     private TimeZoneService? _timeZoneService;
-    private double _currentCellSize = 48;
+    private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private CancellationTokenSource? _refreshCts;
     private long _refreshVersion;
 

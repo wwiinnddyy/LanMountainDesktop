@@ -79,7 +79,7 @@ public partial class LunarCalendarWidget : UserControl, IDesktopComponentWidget,
     ];
 
     private TimeZoneService? _timeZoneService;
-    private double _currentCellSize = 48;
+    private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private FontWeight _gregorianLineWeight = FontWeight.SemiBold;
     private FontWeight _lunarDateWeight = FontWeight.Bold;
     private FontWeight _labelWeight = FontWeight.Bold;

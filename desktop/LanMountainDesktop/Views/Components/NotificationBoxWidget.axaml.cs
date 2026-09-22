@@ -302,7 +302,7 @@ public partial class NotificationBoxWidget : UserControl,
 
     private void UpdateAdaptiveLayout()
     {
-        var scale = Math.Clamp(_currentCellSize / 48.0, 0.7, 1.8);
+        var scale = Math.Clamp(_currentCellSize / ComponentDesignMetrics.BaseCellSize, 0.7, 1.8);
         var fontScale = Math.Clamp(scale, 0.8, 1.4);
 
         var cornerRadius = ResolveUnifiedMainRadiusValue();

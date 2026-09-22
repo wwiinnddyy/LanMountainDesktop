@@ -47,7 +47,7 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
     private readonly LocalizationService _localizationService = new();
     private readonly StudySnapshotRenderGate _renderGate;
 
-    private double _currentCellSize = 48;
+    private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private string _languageCode = LocalizationService.DefaultLanguageCode;
     private bool _isAttached;
     private bool _isOnActivePage = true;
@@ -599,7 +599,7 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
 
     private void UpdateAdaptiveLayout()
     {
-        var cellScale = Math.Clamp(_currentCellSize / 48d, 0.76, 2.2);
+        var cellScale = Math.Clamp(_currentCellSize / ComponentDesignMetrics.BaseCellSize, 0.76, 2.2);
         var widthScale = Bounds.Width > 1 ? Bounds.Width / 360d : cellScale;
         var heightScale = Bounds.Height > 1 ? Bounds.Height / 180d : cellScale;
         var scale = Math.Clamp(Math.Min(cellScale, Math.Min(widthScale, heightScale) * 1.05), 0.68, 2.2);
