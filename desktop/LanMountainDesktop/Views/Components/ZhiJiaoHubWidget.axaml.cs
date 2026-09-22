@@ -140,6 +140,9 @@ public partial class ZhiJiaoHubWidget : UserControl,
 
     public void SetRecommendationInfoService(IRecommendationInfoService recommendationInfoService)
     {
+        // 宿主在 DesktopComponentRuntimeRegistry 里推进来的是应用级那一份。
+        // 这里以前是空的：组件一直用自己 new 的那个，宿主配的东西（镜像、缓存目录）对它无效。
+        _recommendationService = recommendationInfoService;
     }
 
     public void SetComponentSettingsContext(DesktopComponentSettingsContext context)

@@ -1,4 +1,4 @@
-"""按"同名不同体"找重复真源漂移族。
+﻿"""按"同名不同体"找重复真源漂移族。
 
 与 dump-dup-methods.py 的分工：那份只报"逐字相同的方法体"（N 份复制），
 这一份报"同一个方法名有几种实现"——家被人绕开、各组件各写一份的漂移族只有这里能看见。
@@ -21,7 +21,7 @@ SKIP = ("\\obj\\", "\\bin\\", "\\artifacts\\", "\\node_modules\\")
 SIGNATURE = re.compile(
     r"^\s*(?:public|private|protected|internal)?\s*"
     r"(?:static\s+|sealed\s+|override\s+|virtual\s+|async\s+|partial\s+|new\s+)*"
-    r"(?:[A-Za-z_][\w<>\[\]?,\. ]*?\s+)?(?P<name>[A-Za-z_]\w*)\s*(?:<[^>]*>)?\s*\((?P<args>[^)]*)\)\s*(?:=>.*)?\{?\s*$")
+    r"(?:[A-Za-z_][\w<>\[\]?,\. ]*?\s+)?(?P<name>[A-Za-z_]\w*)\s*(?:<[^>]*>)?\s*\((?P<args>[^)]*)\)\s*(?:=>.*)?\{?\s*\}?\s*$")
 KEYWORDS = {
     "if", "for", "foreach", "while", "switch", "catch", "using", "lock", "return",
     "get", "set", "add", "remove", "init", "when", "where", "select", "from",
@@ -64,9 +64,13 @@ def arrow_tail(lines, start, head):
 
 
 def method_bodies(path):
-    """返回该文件里每个"有体的成员"：(方法名, 签名行号, 归一化后的体)。
+    """返回该文件里每个"有实现的成员"：(方法名, 签名行号, 归一化后的体)。
 
-    没有体的声明（接口方法、abstract）不计——它不是"另一种实现"。
+    两种"看起来没有体"必须分开，混起来就会把**空实现**当成不存在（第一版就这么瞎过一次，
+    把 `public void ApplyCellSize(double cellSize) { }` 报成"没有这个方法"）：
+    ① 接口方法 / abstract 的声明——压根没有实现，不算一种体；
+    ② `void Foo() { }` 这种**有实现、但什么都不做**——它是站点，体记成空串。
+       "声明了契约却不执行"正是这条尺子要抓的东西。
     """
     try:
         lines = open(path, encoding="utf-8-sig", errors="replace").read().splitlines()
@@ -92,14 +96,14 @@ def method_bodies(path):
         if arrow >= 0 and not allman_brace and line.endswith((";", "=>")) \
                 and raw.count("{") == raw.count("}"):
             emit(collected, name, index + 1,
-                 normalise(arrow_tail(lines, index + 1, raw[arrow + 2:])))
+                 normalise(arrow_tail(lines, index + 1, raw[arrow + 2:])), implementation=True)
             continue
         if "{" not in raw and not allman_brace:
             # 没有大括号、下一行也不是 `{`：要么 `=>` 另起一行，要么是无体的声明
             # （接口方法、abstract）——后者不算一种实现，不计。
             if ahead.startswith("=>"):
                 emit(collected, name, index + 1,
-                     normalise(arrow_tail(lines, index + 2, ahead[2:])))
+                     normalise(arrow_tail(lines, index + 2, ahead[2:])), implementation=True)
             continue
         depth = 0
         started = False
@@ -115,13 +119,23 @@ def method_bodies(path):
             if started and depth <= 0:
                 break
             cursor += 1
-        emit(collected, name, index + 1, normalise(" ".join(body)))
+        # 走到这里说明本行或下一行有 `{`：这是一个实现，哪怕它是 `{ }`。
+        emit(collected, name, index + 1, normalise(" ".join(body)), implementation=True)
     return collected
 
 
-def emit(collected, name, line, body):
-    if body:
+def emit(collected, name, line, body, implementation=False):
+    if empty_body(body):
+        body = ""
+    # implementation=False 且体是空串＝没有实现的声明（接口方法、abstract），不算站点。
+    if implementation or body:
         collected.append((name, line, body))
+
+
+def empty_body(text):
+    """`{ }` 与 `{}` 统一成空串：空实现要有**一个**规范形状，否则同一种写法会被数成两种体。"""
+    collapsed = re.sub(r"\s+", "", text)
+    return collapsed in ("", "{}")
 
 
 def normalise(text):

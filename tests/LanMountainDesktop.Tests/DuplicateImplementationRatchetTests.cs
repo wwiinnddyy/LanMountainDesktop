@@ -48,7 +48,11 @@ public sealed class DuplicateImplementationRatchetTests
     private const int IdenticalBodyFamilyCeiling = 64;
 
     /// <summary>
-    /// 今天实测：191 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
+    /// 今天实测：192 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
+    /// 191 → 192 是**改判据**（又一处"判据瞎了"，与下面 193 → 192 同一类）：
+    /// <c>void Foo() { }</c> 这种"有实现、但什么都不做"以前与接口方法的声明一起被当成"没有体"跳过，
+    /// 于是全仓 28 处空实现全体隐身；现在空实现算一种体（规范成空串），有一族因此显形。
+    /// 这笔账要求同时钉住"空实现"本身：见下面 <c>emptySites</c> 的指名锚点。
     /// 192 → 191 是真收口（与上面 71 → 68 同一笔）：<c>NormalizeAutoRefreshIntervalMinutes</c>
     /// 的 6 处各抄本改调早就存在的 <c>RefreshIntervalCatalog.Normalize</c>，这个名字连同 3 种体一起消失。
     /// 再往前 193 → 192 是**改判据**，不是收口（一处代码都没删）：
@@ -66,7 +70,7 @@ public sealed class DuplicateImplementationRatchetTests
     /// 但 <c>L</c> 的 50 处里 44 处是**单条语句的转手**（<c>return _localizationService.GetString(...)</c>），
     /// 按这把尺子的口径（单语句转手不算复制了一份逻辑）它不构成收口目标，别再为凑族数去动它。
     /// </summary>
-    private const int DriftFamilyCeiling = 191;
+    private const int DriftFamilyCeiling = 192;
 
     /// <summary>
     /// 漂移普查认领的声明处数下限（今天实测 5443：改判据后 5449，收掉 6 处各抄本少 6）。
@@ -90,7 +94,7 @@ public sealed class DuplicateImplementationRatchetTests
     private static readonly Regex DriftSignature = new(
         @"^\s*(?:public|private|protected|internal)?\s*" +
         @"(?:static\s+|sealed\s+|override\s+|virtual\s+|async\s+|partial\s+|new\s+)*" +
-        @"(?:[A-Za-z_][\w<>\[\]?,\. ]*?\s+)?(?<name>[A-Za-z_]\w*)\s*(?:<[^>]*>)?\s*\([^)]*\)\s*(?:=>.*)?\{?\s*$",
+        @"(?:[A-Za-z_][\w<>\[\]?,\. ]*?\s+)?(?<name>[A-Za-z_]\w*)\s*(?:<[^>]*>)?\s*\([^)]*\)\s*(?:=>.*)?\{?\s*\}?\s*$",
         RegexOptions.Compiled);
 
     private static readonly string[] NonMethodNames =
@@ -173,6 +177,7 @@ public sealed class DuplicateImplementationRatchetTests
     {
         var repoRoot = RepoRoot();
         var bodiesByName = new Dictionary<string, NameTally>();
+        var emptySites = new List<string>();
 
         foreach (var path in EnumerateSources(repoRoot))
         {
@@ -203,7 +208,7 @@ public sealed class DuplicateImplementationRatchetTests
                 }
 
                 var normalized = NormalizeBody(lines, index);
-                if (normalized.Length == 0)
+                if (normalized is null)
                 {
                     continue;
                 }
@@ -214,16 +219,28 @@ public sealed class DuplicateImplementationRatchetTests
                     bodiesByName[name] = tally;
                 }
 
+                if (normalized.Length == 0)
+                {
+                    emptySites.Add($"{Path.GetFileName(relative)}|{name}");
+                }
+
                 tally.Record(relative, normalized);
             }
         }
+
+        // 空实现不能钉"数量下限"——修掉一个桩就会假红；钉**指名锚点**才是"这条区分还活着"的证据。
+        // `void Foo() { }` 曾经被当成"没有这个方法"整条跳过，于是 28 处空实现全体隐身。
+        Assert.Contains("RssReaderWidget.axaml.cs|ApplyCellSize", emptySites);
+        Assert.True(
+            emptySites.Count >= 1,
+            $"一处空实现都没数到（当前 {emptySites.Count} 处）：空实现与无实现声明的区分又被合并回去了");
 
         // 与脚本同门槛：≥3 处声明、≥2 种体、且横跨 ≥3 个文件，才算"同名不同体"要收口的族。
         // 认领量下限先查：判据瞎了会让族数"假收口"，那时候比族数没意义。
         var censusSites = bodiesByName.Values.Sum(tally => tally.Sites);
         Assert.True(
             censusSites >= DriftCensusSiteFloor,
-            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5443）。" +
+            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5456）。" +
             "族数没变也说明判据在丢声明：查 NormalizeBody 又漏掉了哪种成员写法（历史上漏过 Allman 箭头体与插值字符串的大括号）");
 
         var driftFamilies = bodiesByName.Count(pair => pair.Value.VariantCount >= 2 &&
@@ -241,7 +258,7 @@ public sealed class DuplicateImplementationRatchetTests
     /// 三种成员形态分开处理，因为本仓**同时**用它们（Allman 大括号、行尾 <c>=></c>、另起一行的 <c>=></c>）：
     /// 只认其中一种就会把别的形态的声明整条丢掉或整段吞掉——2026-09-22 实测这样丢了 53 处声明、5 个整文件。
     /// </summary>
-    private static string NormalizeBody(string[] lines, int signatureIndex)
+    private static string? NormalizeBody(string[] lines, int signatureIndex)
     {
         var signatureLine = lines[signatureIndex].TrimEnd();
         var trimmed = signatureLine.Trim();
@@ -260,11 +277,12 @@ public sealed class DuplicateImplementationRatchetTests
 
         if (!signatureLine.Contains('{') && !allmanBrace)
         {
-            // 没有大括号、下一行也不是 `{`：要么 `=>` 另起一行，要么是无体的声明
-            // （接口方法、abstract）——后者不算一种体，返回空串由调用方丢掉。
+            // 没有大括号、下一行也不是 `{`：要么 `=>` 另起一行（那是实现），要么是无实现的声明。
+            // 两者必须分开：null＝"这不是实现"（接口方法、abstract 声明），
+            // 空串＝"有实现但什么都不做"（`void Foo() { }`），后者是站点——"声明了契约却不执行"正是这条尺子要抓的。
             return ahead.StartsWith("=>", StringComparison.Ordinal)
                 ? Normalise(ArrowTail(lines, signatureIndex + 2, ahead[2..]))
-                : string.Empty;
+                : null;
         }
 
         var depth = 0;
@@ -348,7 +366,11 @@ public sealed class DuplicateImplementationRatchetTests
     }
 
     private static string Normalise(string text) =>
-        StringLiteral.Replace(Whitespace.Replace(text, " "), "\"S\"").Trim();
+        Canonical(StringLiteral.Replace(Whitespace.Replace(text, " "), "\"S\"").Trim());
+
+    /// <summary><c>{ }</c> 与 <c>{}</c> 统一成空串：空实现只许有一个规范形状，否则同一种写法会被数成两种体。</summary>
+    private static string Canonical(string text) =>
+        text.Length == 0 || Whitespace.Replace(text, string.Empty) == "{}" ? string.Empty : text;
 
     private static int FindBodyEnd(string[] lines, int openingIndex)
     {
