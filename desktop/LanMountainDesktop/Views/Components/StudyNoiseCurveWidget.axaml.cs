@@ -121,19 +121,13 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
         XRightTextBlock.FontSize = axisFontSize;
     }
 
-    public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)
-    {
-        _ = isEditMode;
-        var wasOnActivePage = _isOnActivePage;
-        _isOnActivePage = isOnActivePage;
-        
-        UpdateMonitoringLeaseState();
-        
-        if (isOnActivePage && !wasOnActivePage)
-        {
-            _renderGate.Queue(_studyAnalyticsService.GetSnapshot());
-        }
-    }
+    public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode) =>
+        StudyComponentLifecycle.ApplyPageContext(
+            ref _isOnActivePage,
+            isOnActivePage,
+            isEditMode,
+            UpdateMonitoringLeaseState,
+            () => _renderGate.Queue(_studyAnalyticsService.GetSnapshot()));
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {

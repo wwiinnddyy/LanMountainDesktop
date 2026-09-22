@@ -90,17 +90,13 @@ public partial class StudyInterruptDensityWidget : UserControl, IDesktopComponen
             ref _currentCellSize, cellSize, UpdateAdaptiveLayout);
     }
 
-    public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)
-    {
-        _ = isEditMode;
-        var wasOnActivePage = _isOnActivePage;
-        _isOnActivePage = isOnActivePage;
-        UpdateMonitoringLeaseState();
-        if (isOnActivePage && !wasOnActivePage)
-        {
-            RefreshVisual();
-        }
-    }
+    public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode) =>
+        StudyComponentLifecycle.ApplyPageContext(
+            ref _isOnActivePage,
+            isOnActivePage,
+            isEditMode,
+            UpdateMonitoringLeaseState,
+            RefreshVisual);
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {

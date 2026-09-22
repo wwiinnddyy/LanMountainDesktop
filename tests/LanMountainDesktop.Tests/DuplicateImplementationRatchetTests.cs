@@ -24,17 +24,15 @@ namespace LanMountainDesktop.Tests;
 public sealed class DuplicateImplementationRatchetTests
 {
     /// <summary>
-    /// 实测：66 组逐字相同、且**至少两条语句**的方法体。只能降，要升必须在这里写清理由。
-    /// 68 → 66 是真收口：11 个组件各写一遍的 detach 三连（<c>_isAttached=false</c> ＋
-    /// <c>_refreshTimer.Stop()</c> ＋ <c>CancellationHelper.CancelAndDispose(ref _refreshCts)</c>）
-    /// 收进 <c>ComponentRefreshLifetime.Detach</c>——其中 4 处整段逐字相同（含收尾的按钮态那句，
-    /// 折成 <c>afterDetach</c> 参数所以调用点仍是一条语句）、另 2 处三连本身逐字相同，
-    /// 剩下 5 处把各自的位图/缓存释放夹在后面（尺子 1 看不见它们，是"同名不同体"那把数出来的）。
-    /// 顺序是有意义的：先停表再取消释放，反了会让下一次 tick 拿到已 Dispose 的 token。
-    /// 这笔对漂移族数<b>没有净影响</b>（191 不变：11 处收成"带收尾参数"与"不带"两种新形状，
-    /// 加上各处自有的释放步骤，仍是每族多种体），
-    /// 收益是那三步的次序与"少一步就是泄漏"这件事从 11 处各记一遍变成只有一处。
-    /// 之前几笔：71 → 68（三族）收 <c>NormalizeAutoRefreshIntervalMinutes</c>（6 处各抄 11 行，
+    /// 实测：64 组逐字相同、且**至少两条语句**的方法体。只能降，要升必须在这里写清理由。
+    /// 66 → 64 是真收口：6 个学习组件各抄一遍的"活跃页上下文"三步
+    /// （<c>_isOnActivePage</c> 落位 → <c>UpdateMonitoringLeaseState()</c> → 只在"从不在到在"时补一次刷新）
+    /// 收进 <c>StudyComponentLifecycle.ApplyPageContext</c>；抄本之间只差最后那一下刷新
+    /// （4 个 <c>RefreshVisual()</c>、2 个 <c>_renderGate.Queue(…)</c>），
+    /// 所以这一笔把两族（4 份同文 + 2 份同文）一起消掉，并补上第一条行为钉
+    /// <c>StudyComponentLifecycleTests</c>（钉的就是那个"只首次刷新"的守卫）。
+    /// 之前几笔：68 → 66 收 11 个组件各写一遍的 detach 三连（进 <c>ComponentRefreshLifetime.Detach</c>）；
+    /// 71 → 68（三族）收 <c>NormalizeAutoRefreshIntervalMinutes</c>（6 处各抄 11 行，
     /// 绕开的正是 <c>RefreshIntervalCatalog.Normalize</c>，净 -108 行，并给家补第一条行为钉）；
     /// 73 → 71 收两族（6 处"判黑夜 + 重排"进 <c>ComponentThemeMode.RefreshNightVisual</c>、
     /// 6 处学习组件 detach 四步进 <c>StudyComponentLifecycle.Detach</c>）；
@@ -47,7 +45,7 @@ public sealed class DuplicateImplementationRatchetTests
     ///    收口后如果还按行数算，18 处转手调用又是新的一族同文——行数骗人的地方就在这。
     ///    它真正的收益是"钳到最少 1 格再重排"这段逻辑从各写一遍变成只有一处（18 个调用点）。
     /// </summary>
-    private const int IdenticalBodyFamilyCeiling = 66;
+    private const int IdenticalBodyFamilyCeiling = 64;
 
     /// <summary>
     /// 今天实测：191 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。

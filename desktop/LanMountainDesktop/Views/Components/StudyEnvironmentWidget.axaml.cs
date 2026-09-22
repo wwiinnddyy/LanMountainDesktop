@@ -63,19 +63,13 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
         UpdateAdaptiveLayout();
     }
 
-    public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)
-    {
-        _ = isEditMode;
-        var wasOnActivePage = _isOnActivePage;
-        _isOnActivePage = isOnActivePage;
-        
-        UpdateMonitoringLeaseState();
-        
-        if (isOnActivePage && !wasOnActivePage)
-        {
-            RefreshVisual();
-        }
-    }
+    public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode) =>
+        StudyComponentLifecycle.ApplyPageContext(
+            ref _isOnActivePage,
+            isOnActivePage,
+            isEditMode,
+            UpdateMonitoringLeaseState,
+            RefreshVisual);
 
     public void RefreshFromSettings()
     {

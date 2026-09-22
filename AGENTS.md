@@ -580,12 +580,15 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 剩下 4 处各有自己的语义——1 处现读快照设置、1 处走 `GetStringWithSourceFallback`（兜底口径不同）、
 2 处调静态 `LocalizationService.GetString`。真要动它得先定"兜底到底听谁的"，那是产品口径不是机械收口。
 **这两把普查尺子的结果已经冻成上限**：`tests/.../DuplicateImplementationRatchetTests.cs`，
-只许降不许升——当前 **66 组逐字相同的方法体（脚本同数）、191 个同名不同体的漂移族**，
+只许降不许升——当前 **64 组逐字相同的方法体（脚本同数）、191 个同名不同体的漂移族**，
 外加一条"漂移普查认领量 ≥5400 处声明"的下限（今天实测 5443）。
 新抄一份就是红灯；收口一族就必须把常量改小（那条红是给你记账的，不是故障）。
 降的几笔分开记：**86 → 74** 是判据从"行数 ≥2"改成"语句数 ≥2"（去掉 12 族单语句转手，不是收口成果）；
 **74 → 73** 收 `ReloadLanguageCode`（7 处）；**73 → 71** 收两族——6 处"判黑夜 + `UpdateAdaptiveLayout`"
 进 `ComponentThemeMode.RefreshNightVisual`、6 处学习组件 detach 四步进 `StudyComponentLifecycle.Detach`；
+**68 → 66** 收 11 个组件各写一遍的 detach 三连（进 `ComponentRefreshLifetime.Detach`，配对闸门 timer 族同时认这个家）；
+**66 → 64** 收 6 个学习组件各抄一遍的"活跃页上下文"三步（进早就存在的 `StudyComponentLifecycle`，与它的 Detach 同一个家；6 份抄本只差最后那一下刷新，所以一次消掉两族），并补第一条行为钉
+`StudyComponentLifecycleTests`（钉"只首次进入才补刷新"，写反守卫 → 3 条红，验过）。
 **71 → 68（同时漂移 192 → 191）** 收 `NormalizeAutoRefreshIntervalMinutes`——6 个组件各抄一份 11 行的
 "落到最近一档"，**绕开的就是早就存在的 `RefreshIntervalCatalog.Normalize`**（档位表 6 家全部共享同一份，
 没有一个组件自带表），改调家之后连带删掉只为它存在的 `SupportedAutoRefreshIntervalsMinutes` 字段
