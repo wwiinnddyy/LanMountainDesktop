@@ -513,13 +513,8 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
         MaximumCardBorder.BorderBrush = new SolidColorBrush(cardBorder);
     }
 
-    private void ApplyModeBadgeColor(Color panelColor, Color baseColor)
-    {
-        var badgeColor = StudyPanelPalette.ResolveBadgeColor(panelColor, baseColor);
-        ModeBadgeBorder.Background = new SolidColorBrush(badgeColor);
-        ModeBadgeBorder.BorderBrush = StudyPanelPalette.BadgeBorderBrush;
-        ModeTextBlock.Foreground = StudyPanelPalette.ResolveBadgeForeground(panelColor, badgeColor, ValueColorCandidates);
-    }
+    private void ApplyModeBadgeColor(Color panelColor, Color baseColor) =>
+        StudyPanelPalette.ApplyModeBadge(ModeBadgeBorder, ModeTextBlock, panelColor, baseColor, ValueColorCandidates);
 
     private void ReloadLanguageCode()
     {

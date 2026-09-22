@@ -67,8 +67,12 @@ public sealed class DuplicateImplementationRatchetTests
     /// 与桌面叠加层 MainWindow.DesktopPaging 各一份，进 <c>Services/LauncherHiddenItemNames</c>，
     /// 6 个调用点改走家——只改一份的旧症状是同一个隐藏项在两处显示成两个名字。<c>G1-BH</c> 里
     /// "两份列表构建要不要合成一份"仍是未决项，这一笔只收那条规则，没替你决定 view model 的事。）
+    /// 57 → 54 一笔收三族（学习面板"模式角标"三件套 4 个组件各抄 4 行、只差前景候选表用哪张，
+    /// 进 <c>StudyPanelPalette.ApplyModeBadge</c>，两族一次消掉；两张自绘图表控件各抄一份
+    /// 逐字相同的 <c>AddLine</c> 三步，进 <c>StudyChartGeometry</c>）。行为钉 <c>StudyPanelBadgeTests</c>：
+    /// 注入"少涂描边"与"线段画回起点"两处变异，恰好各红 1 条、另 2 条不动，验过。）
     /// </summary>
-    private const int IdenticalBodyFamilyCeiling = 57;
+    private const int IdenticalBodyFamilyCeiling = 54;
 
     /// <summary>
     /// 今天实测：192 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。

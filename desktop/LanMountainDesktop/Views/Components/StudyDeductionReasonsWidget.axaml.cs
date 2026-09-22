@@ -308,13 +308,8 @@ public partial class StudyDeductionReasonsWidget : UserControl, IDesktopComponen
         ScoreTextBlock.Foreground = primary;
     }
 
-    private void ApplyModeBadgeColor(Color panelColor, Color baseColor)
-    {
-        var badgeColor = StudyPanelPalette.ResolveBadgeColor(panelColor, baseColor);
-        ModeBadgeBorder.Background = new SolidColorBrush(badgeColor);
-        ModeBadgeBorder.BorderBrush = StudyPanelPalette.BadgeBorderBrush;
-        ModeTextBlock.Foreground = StudyPanelPalette.ResolveBadgeForeground(panelColor, badgeColor, PrimaryColorCandidates);
-    }
+    private void ApplyModeBadgeColor(Color panelColor, Color baseColor) =>
+        StudyPanelPalette.ApplyModeBadge(ModeBadgeBorder, ModeTextBlock, panelColor, baseColor, PrimaryColorCandidates);
 
     private static DeductionMetrics? ComputeRealtimeDeduction(StudyAnalyticsSnapshot snapshot)
     {

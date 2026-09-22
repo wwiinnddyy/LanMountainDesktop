@@ -320,13 +320,8 @@ public partial class StudyInterruptDensityWidget : UserControl, IDesktopComponen
         DurationValueTextBlock.Foreground = primary;
     }
 
-    private void ApplyModeBadgeColor(Color panelColor, Color baseColor)
-    {
-        var badgeColor = StudyPanelPalette.ResolveBadgeColor(panelColor, baseColor);
-        ModeBadgeBorder.Background = new SolidColorBrush(badgeColor);
-        ModeBadgeBorder.BorderBrush = StudyPanelPalette.BadgeBorderBrush;
-        ModeTextBlock.Foreground = StudyPanelPalette.ResolveBadgeForeground(panelColor, badgeColor, PrimaryColorCandidates);
-    }
+    private void ApplyModeBadgeColor(Color panelColor, Color baseColor) =>
+        StudyPanelPalette.ApplyModeBadge(ModeBadgeBorder, ModeTextBlock, panelColor, baseColor, PrimaryColorCandidates);
 
     private static InterruptDensityMetrics? ComputeRealtimeDensity(StudyAnalyticsSnapshot snapshot)
     {

@@ -122,4 +122,23 @@ public static class StudyPanelPalette
             ColorMath.Blend(ColorMath.ToOpaqueAgainst(panelColor, Light), White, 0.08),
         };
     }
+
+    /// <summary>
+    /// 模式角标的三件套一次涂完：底色、描边、前景字色。
+    /// 此前 4 个学习组件各抄一遍这 4 行（差别只在前景候选色用哪张表），
+    /// 改了描边常量而前景没跟着改是不报错的——症状是角标在浅面板上糊成一片。
+    /// </summary>
+    public static void ApplyModeBadge(
+        Border badgeBorder,
+        TextBlock badgeText,
+        Color panelColor,
+        Color baseColor,
+        Color[] foregroundCandidates)
+    {
+        var badgeColor = ResolveBadgeColor(panelColor, baseColor);
+        badgeBorder.Background = new SolidColorBrush(badgeColor);
+        badgeBorder.BorderBrush = BadgeBorderBrush;
+        badgeText.Foreground = ResolveBadgeForeground(panelColor, badgeColor, foregroundCandidates);
+    }
+
 }

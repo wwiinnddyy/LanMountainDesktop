@@ -274,31 +274,24 @@ public sealed class StudyNoiseCurveChartControl : Control
             for (var i = 0; i <= horizontalDivisions; i++)
             {
                 var y = plot.Top + plot.Height * (i / (double)horizontalDivisions);
-                AddLine(builder, new Point(plot.Left, y), new Point(plot.Right, y));
+                StudyChartGeometry.AddLine(builder, new Point(plot.Left, y), new Point(plot.Right, y));
             }
 
             for (var i = 0; i <= verticalDivisions; i++)
             {
                 var x = plot.Left + plot.Width * (i / (double)verticalDivisions);
-                AddLine(builder, new Point(x, plot.Top), new Point(x, plot.Bottom));
+                StudyChartGeometry.AddLine(builder, new Point(x, plot.Top), new Point(x, plot.Bottom));
             }
         }
 
         var axis = new StreamGeometry();
         using (var builder = axis.Open())
         {
-            AddLine(builder, new Point(plot.Left, plot.Top), new Point(plot.Left, plot.Bottom));
-            AddLine(builder, new Point(plot.Left, plot.Bottom), new Point(plot.Right, plot.Bottom));
+            StudyChartGeometry.AddLine(builder, new Point(plot.Left, plot.Top), new Point(plot.Left, plot.Bottom));
+            StudyChartGeometry.AddLine(builder, new Point(plot.Left, plot.Bottom), new Point(plot.Right, plot.Bottom));
         }
 
         return (grid, axis);
-    }
-
-    private static void AddLine(StreamGeometryContext builder, Point start, Point end)
-    {
-        builder.BeginFigure(start, isFilled: false);
-        builder.LineTo(end);
-        builder.EndFigure(isClosed: false);
     }
 
     private void EnsureGeometry(Rect plot)
