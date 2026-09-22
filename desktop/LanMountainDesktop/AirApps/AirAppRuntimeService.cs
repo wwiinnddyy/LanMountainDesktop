@@ -640,7 +640,7 @@ public sealed class AirAppRuntimeService : IDisposable
 
     private IEnumerable<string> EnumerateCandidatePaths(string searchPattern)
     {
-        var runtimeRootDirectory = EnsureTrailingSeparator(Path.Combine(Path.GetFullPath(AirAppsDirectory), AirAppSdkInfo.RuntimeDirectoryName));
+        var runtimeRootDirectory = PathSeparators.EnsureTrailingSeparator(Path.Combine(Path.GetFullPath(AirAppsDirectory), AirAppSdkInfo.RuntimeDirectoryName));
 
         return Directory
             .EnumerateFiles(AirAppsDirectory, searchPattern, SearchOption.AllDirectories)
@@ -712,13 +712,6 @@ public sealed class AirAppRuntimeService : IDisposable
         var invalidChars = Path.GetInvalidFileNameChars();
         var fileName = new string(airAppId.Select(ch => invalidChars.Contains(ch) ? '_' : ch).ToArray());
         return fileName + AirAppSdkInfo.PackageFileExtension;
-    }
-
-    private static string EnsureTrailingSeparator(string path)
-    {
-        return path.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal)
-            ? path
-            : path + Path.DirectorySeparatorChar;
     }
 
     private static AirAppLoaderOptions CreateOptions()

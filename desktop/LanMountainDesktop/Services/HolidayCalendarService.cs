@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using static LanMountainDesktop.Services.Json.JsonNodeReader;
+using LanMountainDesktop.Helpers;
 
 namespace LanMountainDesktop.Services;
 
@@ -457,7 +458,7 @@ public sealed class HolidayCalendarService : IDisposable
         var content = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            throw new HttpRequestException($"HTTP {(int)response.StatusCode}: {Truncate(content, 180)}");
+            throw new HttpRequestException($"HTTP {(int)response.StatusCode}: {CompactText.Truncate(content, 180)}");
         }
 
         return content;
@@ -540,18 +541,6 @@ public sealed class HolidayCalendarService : IDisposable
         }
 
         return null;
-    }
-
-    private static string Truncate(string? text, int maxLength)
-    {
-        if (string.IsNullOrEmpty(text))
-        {
-            return string.Empty;
-        }
-
-        return text.Length <= maxLength
-            ? text
-            : $"{text[..maxLength]}...";
     }
 
     public static string FormatDate(DateOnly date, bool isZh)

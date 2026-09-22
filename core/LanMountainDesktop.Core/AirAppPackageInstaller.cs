@@ -1,3 +1,4 @@
+using LanMountainDesktop.Shared.IO;
 namespace LanMountainDesktop.AirAppPackaging;
 
 public sealed class AirAppPackageInstaller
@@ -45,7 +46,7 @@ public sealed class AirAppPackageInstaller
         string stagingPath,
         AirAppPackageInstallOptions options)
     {
-        var runtimeRootDirectory = EnsureTrailingSeparator(
+        var runtimeRootDirectory = PathSeparators.EnsureTrailingSeparator(
             Path.Combine(Path.GetFullPath(airAppsDirectory), AirAppPackagingConstants.RuntimeDirectoryName));
         var pendingDeletionDir = Path.Combine(airAppsDirectory, AirAppPackagingConstants.PendingDeletionDirectoryName);
         Directory.CreateDirectory(pendingDeletionDir);
@@ -186,10 +187,4 @@ public sealed class AirAppPackageInstaller
         return fileName + AirAppPackagingConstants.PackageFileExtension;
     }
 
-    private static string EnsureTrailingSeparator(string path)
-    {
-        return path.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal)
-            ? path
-            : path + Path.DirectorySeparatorChar;
-    }
 }

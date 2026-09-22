@@ -1921,6 +1921,53 @@ public sealed class SourceIntegrityTests
             $"{offenders.Count} 处绕开 TimeZoneServiceBinding 的时区订阅：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
     }
 
+    /// <summary>
+    /// 两个纯函数各只有一个家：目录末尾分隔符 <c>core/.../IO/PathSeparators.cs</c>、
+    /// 文本裁断 <c>desktop/.../Helpers/CompactText.Truncate</c>。
+    /// 收口前它们分别是 4 份与 4 份逐字复制：分隔符那 4 份散在 Core/宿主/启动器三个二进制里，
+    /// 其中 <c>AirAppLoader</c> 那份还多做了一步 <c>Path.GetFullPath</c>（把"补个斜杠"变成"可能抛参数异常"）；
+    /// <c>Truncate</c> 那 4 份里 GitHub 更新服务那份不带省略号，同一份 HTTP 错误文本在它那里看着像完整回复。
+    /// 禁的是"再抄一份实现"，不禁调用。
+    /// </summary>
+    [Fact]
+    public void PathAndTextPureHelpers_LiveInExactlyOnePlace()
+    {
+        var homes = new (Regex Decl, string Home, string Why)[]
+        {
+            (new Regex(@"string\s+EnsureTrailingSeparator\s*\("),
+             @"core\LanMountainDesktop.Core\IO\PathSeparators.cs",
+             "又抄了一份目录分隔符补齐，请用 PathSeparators.EnsureTrailingSeparator"),
+            (new Regex(@"string\s+Truncate\s*\(\s*string\??\s*\w+,\s*int\s+\w+\s*\)"),
+             @"desktop\LanMountainDesktop\Helpers\CompactText.cs",
+             "又抄了一份文本裁断，请用 CompactText.Truncate"),
+        };
+
+        var offenders = new List<string>();
+        foreach (var file in SourceFiles())
+        {
+            var relative = RelativeToRepo(file);
+            foreach (var (decl, home, why) in homes)
+            {
+                if (string.Equals(relative, home, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                foreach (var (line, number) in CodeLines(file))
+                {
+                    if (decl.IsMatch(line))
+                    {
+                        offenders.Add($"{relative}:{number} {why}");
+                    }
+                }
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 处重复的纯函数实现：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
     private static IEnumerable<(string Line, int Number)> CodeLines(string file)
     {
         var all = File.ReadAllLines(file);

@@ -9,6 +9,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using LanMountainDesktop.Helpers;
 
 namespace LanMountainDesktop.Services;
 
@@ -469,7 +470,7 @@ public sealed class GitHubReleaseUpdateService : IDisposable
         if (!response.IsSuccessStatusCode)
         {
             throw new InvalidOperationException(
-                $"GitHub API request failed with HTTP {(int)response.StatusCode}: {Truncate(responseText, 180)}");
+                $"GitHub API request failed with HTTP {(int)response.StatusCode}: {CompactText.Truncate(responseText, 180)}");
         }
 
         return responseText;
@@ -862,16 +863,6 @@ public sealed class GitHubReleaseUpdateService : IDisposable
         return version.Revision > 0
             ? version.ToString(4)
             : version.ToString(3);
-    }
-
-    private static string Truncate(string value, int maxLength)
-    {
-        if (string.IsNullOrEmpty(value) || value.Length <= maxLength)
-        {
-            return value;
-        }
-
-        return value[..maxLength];
     }
 
     private static string ApplyDownloadSource(string browserDownloadUrl, string? downloadSource)

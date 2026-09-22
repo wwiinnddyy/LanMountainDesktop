@@ -166,7 +166,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
             {
                 return RecommendationQueryResult<DailyPoetrySnapshot>.Fail(
                     "upstream_http_error",
-                    $"HTTP {(int)response.StatusCode}: {Truncate(responseText, 180)}");
+                    $"HTTP {(int)response.StatusCode}: {CompactText.Truncate(responseText, 180)}");
             }
         }
         catch (OperationCanceledException)
@@ -667,7 +667,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
             {
                 return RecommendationQueryResult<DailyArtworkSnapshot>.Fail(
                     "upstream_http_error",
-                    $"HTTP {(int)response.StatusCode}: {Truncate(responseText, 180)}");
+                    $"HTTP {(int)response.StatusCode}: {CompactText.Truncate(responseText, 180)}");
             }
 
             using var document = JsonDocument.Parse(responseText);
@@ -1302,7 +1302,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         var responseText = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            throw new HttpRequestException($"HTTP {(int)response.StatusCode}: {Truncate(responseText, 180)}");
+            throw new HttpRequestException($"HTTP {(int)response.StatusCode}: {CompactText.Truncate(responseText, 180)}");
         }
 
         using var document = JsonDocument.Parse(responseText);
@@ -1431,7 +1431,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         var responseText = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            throw new HttpRequestException($"HTTP {(int)response.StatusCode}: {Truncate(responseText, 180)}");
+            throw new HttpRequestException($"HTTP {(int)response.StatusCode}: {CompactText.Truncate(responseText, 180)}");
         }
 
         using var document = JsonDocument.Parse(responseText);
@@ -1845,7 +1845,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         var responseText = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            throw new HttpRequestException($"HTTP {(int)response.StatusCode}: {Truncate(responseText, 180)}");
+            throw new HttpRequestException($"HTTP {(int)response.StatusCode}: {CompactText.Truncate(responseText, 180)}");
         }
 
         using var document = JsonDocument.Parse(responseText);
@@ -2029,7 +2029,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         var responseText = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            throw new HttpRequestException($"HTTP {(int)response.StatusCode}: {Truncate(responseText, 180)}");
+            throw new HttpRequestException($"HTTP {(int)response.StatusCode}: {CompactText.Truncate(responseText, 180)}");
         }
 
         using var document = JsonDocument.Parse(responseText);
@@ -2573,7 +2573,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         var decodedText = DecodeHttpPayload(payload, response.Content.Headers.ContentType?.CharSet);
         if (!response.IsSuccessStatusCode)
         {
-            throw new HttpRequestException($"HTTP {(int)response.StatusCode}: {Truncate(decodedText, 180)}");
+            throw new HttpRequestException($"HTTP {(int)response.StatusCode}: {CompactText.Truncate(decodedText, 180)}");
         }
 
         return decodedText;
@@ -3057,7 +3057,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         var responseText = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            throw new HttpRequestException($"HTTP {(int)response.StatusCode}: {Truncate(responseText, 180)}");
+            throw new HttpRequestException($"HTTP {(int)response.StatusCode}: {CompactText.Truncate(responseText, 180)}");
         }
 
         return responseText;
@@ -3139,18 +3139,6 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
     {
         var now = DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(8));
         return DateOnly.FromDateTime(now.Date);
-    }
-
-    private static string Truncate(string? text, int maxLength)
-    {
-        if (string.IsNullOrEmpty(text))
-        {
-            return string.Empty;
-        }
-
-        return text.Length <= maxLength
-            ? text
-            : $"{text[..maxLength]}...";
     }
 
     // 智教Hub相关方法
@@ -3272,7 +3260,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
             }
             
             throw new HttpRequestException(
-                $"从 {config.DisplayName} 获取数据失败: {(int)response.StatusCode} - {Truncate(errorText, 200)}");
+                $"从 {config.DisplayName} 获取数据失败: {(int)response.StatusCode} - {CompactText.Truncate(errorText, 200)}");
         }
 
         var responseText = await response.Content.ReadAsStringAsync(cancellationToken);

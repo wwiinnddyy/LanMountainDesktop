@@ -664,7 +664,7 @@ public sealed class AirAppLoader
 
     private IEnumerable<string> EnumerateCandidatePaths(string airAppsRootDirectory, string searchPattern)
     {
-        var runtimeRootDirectory = EnsureTrailingSeparator(GetRuntimeRootDirectory(airAppsRootDirectory));
+        var runtimeRootDirectory = PathSeparators.EnsureTrailingSeparator(Path.GetFullPath(GetRuntimeRootDirectory(airAppsRootDirectory)));
 
         return Directory
             .EnumerateFiles(airAppsRootDirectory, searchPattern, SearchOption.AllDirectories)
@@ -738,14 +738,6 @@ public sealed class AirAppLoader
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(extension);
         return extension.StartsWith(".", StringComparison.Ordinal) ? extension : "." + extension;
-    }
-
-    private static string EnsureTrailingSeparator(string path)
-    {
-        var fullPath = Path.GetFullPath(path);
-        return fullPath.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal)
-            ? fullPath
-            : fullPath + Path.DirectorySeparatorChar;
     }
 
     private static string SanitizeDirectoryName(string value)

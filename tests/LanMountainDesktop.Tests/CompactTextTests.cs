@@ -29,4 +29,30 @@ public sealed class CompactTextTests
         var oneLine = "东方财富 300059 涨 2.31%";
         Assert.Equal(oneLine, CompactText.Normalize(oneLine));
     }
+
+    /// <summary>
+    /// 收口前 <c>Truncate</c> 抄了 4 份，GitHub 更新服务那一份不带省略号——
+    /// 裁过的 HTTP 错误体和完整回复长得一样，排查时会误以为拿到了全部响应。这条钉住"裁过必须看得出来"。
+    /// </summary>
+    [Theory]
+    [InlineData(null, 10, "")]
+    [InlineData("", 10, "")]
+    [InlineData("short", 10, "short")]
+    [InlineData("exactly1", 8, "exactly1")]
+    [InlineData("0123456789abc", 8, "01234567...")]
+    public void Truncate_MarksWhereItCut(string? input, int maxLength, string expected)
+    {
+        Assert.Equal(expected, CompactText.Truncate(input, maxLength));
+    }
+
+    [Fact]
+    public void Truncate_KeepsTheHeadOfLongErrorBodies()
+    {
+        var body = new string('x', 400);
+
+        var truncated = CompactText.Truncate(body, 180);
+
+        Assert.StartsWith(new string('x', 180), truncated, StringComparison.Ordinal);
+        Assert.EndsWith("...", truncated, StringComparison.Ordinal);
+    }
 }

@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using LanMountainDesktop.Models;
 using static LanMountainDesktop.Services.Json.JsonNodeReader;
+using LanMountainDesktop.Helpers;
 
 namespace LanMountainDesktop.Services;
 
@@ -110,7 +111,7 @@ public sealed class XiaomiWeatherService : IWeatherDataService, IDisposable
             {
                 return WeatherQueryResult<IReadOnlyList<WeatherLocation>>.Fail(
                     "http_error",
-                    $"HTTP {(int)response.StatusCode}: {Truncate(responseText, 180)}");
+                    $"HTTP {(int)response.StatusCode}: {CompactText.Truncate(responseText, 180)}");
             }
         }
         catch (OperationCanceledException)
@@ -165,7 +166,7 @@ public sealed class XiaomiWeatherService : IWeatherDataService, IDisposable
             {
                 return WeatherQueryResult<WeatherLocation>.Fail(
                     "http_error",
-                    $"HTTP {(int)response.StatusCode}: {Truncate(responseText, 180)}");
+                    $"HTTP {(int)response.StatusCode}: {CompactText.Truncate(responseText, 180)}");
             }
         }
         catch (OperationCanceledException)
@@ -245,7 +246,7 @@ public sealed class XiaomiWeatherService : IWeatherDataService, IDisposable
             {
                 return WeatherQueryResult<WeatherSnapshot>.Fail(
                     "http_error",
-                    $"HTTP {(int)response.StatusCode}: {Truncate(responseText, 220)}");
+                    $"HTTP {(int)response.StatusCode}: {CompactText.Truncate(responseText, 220)}");
             }
         }
         catch (OperationCanceledException)
@@ -492,7 +493,7 @@ public sealed class XiaomiWeatherService : IWeatherDataService, IDisposable
         }
 
         alerts.Add(new WeatherAlert(
-            string.IsNullOrWhiteSpace(title) ? Truncate(detail, 60) : title.Trim(),
+            string.IsNullOrWhiteSpace(title) ? CompactText.Truncate(detail, 60) : title.Trim(),
             string.IsNullOrWhiteSpace(detail) ? null : detail.Trim(),
             NullIfWhiteSpace(ReadString(item, "type") ?? ReadString(item, "category")),
             NullIfWhiteSpace(ReadString(item, "level") ?? ReadString(item, "severity")),
@@ -913,18 +914,6 @@ public sealed class XiaomiWeatherService : IWeatherDataService, IDisposable
     private static string? ResolveWeatherDescription(int? code, string locale)
     {
         return XiaomiWeatherCodeMapper.ResolveDisplayText(code, locale);
-    }
-
-    private static string Truncate(string? text, int maxLength)
-    {
-        if (string.IsNullOrEmpty(text))
-        {
-            return string.Empty;
-        }
-
-        return text.Length <= maxLength
-            ? text
-            : $"{text[..maxLength]}...";
     }
 
     private static string? NullIfWhiteSpace(string? text)

@@ -3,6 +3,7 @@ using LanMountainDesktop.Shared.Data;
 using System.Text.Json;
 using LanMountainDesktop.AirAppPackaging;
 using LanMountainDesktop.Launcher.Models;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanMountainDesktop.Launcher.AirApps;
 
@@ -76,7 +77,7 @@ internal sealed class AirAppInstallerService
                 ? Path.GetFullPath(appRoot)
                 : Commands.ResolveAppRoot(CommandContext.FromArgs([]));
             var resolver = new DataLocationResolver(resolvedAppRoot);
-            allowedRoot = EnsureTrailingSeparator(resolver.ResolveDataRoot());
+            allowedRoot = PathSeparators.EnsureTrailingSeparator(resolver.ResolveDataRoot());
         }
         catch
         {
@@ -90,10 +91,10 @@ internal sealed class AirAppInstallerService
                 return null;
             }
 
-            allowedRoot = EnsureTrailingSeparator(Path.Combine(Path.GetFullPath(localAppData), UserDataRoot.FolderName));
+            allowedRoot = PathSeparators.EnsureTrailingSeparator(Path.Combine(Path.GetFullPath(localAppData), UserDataRoot.FolderName));
         }
 
-        var normalizedAirAppsDirectory = EnsureTrailingSeparator(Path.GetFullPath(airAppsDirectory));
+        var normalizedAirAppsDirectory = PathSeparators.EnsureTrailingSeparator(Path.GetFullPath(airAppsDirectory));
         if (normalizedAirAppsDirectory.StartsWith(allowedRoot, StringComparison.OrdinalIgnoreCase))
         {
             return null;
@@ -121,7 +122,7 @@ internal sealed class AirAppInstallerService
 
     private void RemoveExistingAirAppPackages(string airAppsDirectory, string airAppId, string destinationPath, string stagingPath)
     {
-        var runtimeRootDirectory = EnsureTrailingSeparator(Path.Combine(Path.GetFullPath(airAppsDirectory), RuntimeDirectoryName));
+        var runtimeRootDirectory = PathSeparators.EnsureTrailingSeparator(Path.Combine(Path.GetFullPath(airAppsDirectory), RuntimeDirectoryName));
         var pendingDeletionDir = Path.Combine(airAppsDirectory, AirAppPackagingConstants.PendingDeletionDirectoryName);
         Directory.CreateDirectory(pendingDeletionDir);
 
@@ -246,10 +247,4 @@ internal sealed class AirAppInstallerService
         return fileName + PackageFileExtension;
     }
 
-    private static string EnsureTrailingSeparator(string path)
-    {
-        return path.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal)
-            ? path
-            : path + Path.DirectorySeparatorChar;
-    }
 }

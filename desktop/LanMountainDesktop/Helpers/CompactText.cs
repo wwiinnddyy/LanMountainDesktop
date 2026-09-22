@@ -22,4 +22,21 @@ internal static class CompactText
 
         return MultiWhitespace.Replace(text.Trim(), " ");
     }
+
+    /// <summary>
+    /// 裁到 <paramref name="maxLength"/> 个字符，裁过就补省略号，让人看得出"这里断过"；空输入给空串。
+    /// 用于 HTTP 错误体这类要拼进异常/日志的长文本。收口前它抄了 4 份，其中 GitHub 更新服务那份
+    /// 不带省略号——同一份报错，那边看着像完整回复。
+    /// </summary>
+    public static string Truncate(string? text, int maxLength)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return string.Empty;
+        }
+
+        return text.Length <= maxLength
+            ? text
+            : $"{text[..maxLength]}...";
+    }
 }

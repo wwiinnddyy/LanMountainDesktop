@@ -395,6 +395,14 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 原本只退自己的事件、`Dispose` 子控件，现在顺手 `ClearTimeZoneService()`
 （`DesktopWidgetWindowTimeZoneReleaseTests` 数同一个订阅者计数，去掉那行立刻红）。
 
+**两个纯函数也只有家**：目录路径补末尾分隔符一律
+`core/LanMountainDesktop.Core/IO/PathSeparators.cs` 的 `EnsureTrailingSeparator`（收口前 Core/宿主/启动器
+三个二进制各抄一份、共 4 份，调用点 7 处；其中 `AirAppLoader` 那份多做了一步 `Path.GetFullPath`——
+绝对化是调用点语义，塞进 helper 会把"补个斜杠"变成"可能抛参数异常"，现在那一步显式写在调用点）；
+文本裁断（HTTP 错误体这类要拼进异常/日志的长文本）一律 `Helpers/CompactText.cs` 的 `Truncate`
+（收口前 4 份、调用点 19 处；其中 GitHub 更新服务那份不带省略号，同一份报错在它那里看着像完整回复，
+现已统一到"裁过必须看得出来"）。守卫 `PathAndTextPureHelpers_LiveInExactlyOnePlace` 禁再抄实现、不禁调用。
+
 **安装根目录下那个 `.Launcher` 数据目录名只认一处**：一律用 `core/LanMountainDesktop.Core/Deployment/DeploymentLayout.cs`
 的 `LauncherStateDirectoryName`，不要在 Core / 宿主 / 启动器里再抄字面量（该类注释本来就写着"禁止在任何一侧硬编码"，
 2026-09-21 实测仍有 4 处各抄一份；安装器倒是用了常量）。同族另一个坑：启动器把启动诊断写进
