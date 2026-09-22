@@ -554,6 +554,10 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 这一跑就是这么抓出判据自身的两个洞（`_timer?.Stop()` 的空条件形式漏认；把 `Set/ClearTimeZoneService` 按不同 key 配对，
 一度报出 39 个文件的假阳性）。**监视租约故意不数**：它走 `StudyMonitoringLease.Sync(ref …状态位)`，
 取放由家按状态对账，按动词数只会得出假结论。
+**这条已经进闸门**：`tests/.../ComponentLifecyclePairingRatchetTests.cs`（脚本仍是报告面）。
+除配对外还钉了覆盖面下限：46 个组件文件、以及每族"起/收"条数（timer 35/59、subscription 5/5、
+property-changed 1/1、snapshot 8/13、timezone 10/10）——删掉一批收尾或改窄正则都会当场红。
+变异验证过：只 `_forgottenTimer?.Start()` 不 Stop 的被点名，配对的 `_runningTimer` 不报。
 **第四把尺子问的是"定义了有没有人调"**：`python scripts/check-widget-layout-applied.py`
 （组件自己那套 `ApplyCellSize` / `UpdateAdaptiveLayout` / `ApplyLayoutMetrics` / `ApplyResponsiveLayout` /
 `ApplyTypographyByBackground` / `ApplyChrome` 若没有任何调用点，组件就按 XAML 默认样式画出来、缩放应用不上，
@@ -577,6 +581,12 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 交接方式若改掉（例如变成每请求建一个 client）就会重新变成未解释线索。
 两个**实测到的假阳性来源**别忘：释放常写成 `CancellationHelper.CancelAndDispose(...)`（判据里 `Dispose` 前不能加词边界，
 否则两处正常站点会被报成缺陷，本轮就踩了）；工厂方法 `Create()` 本身就是交接。
+**这条也已经进闸门**：`tests/.../ResourceOwnershipRatchetTests.cs`（脚本仍是报告面，名单只留一份）。
+移植时覆盖面下限当场抓出我自己的错：脚本的目录表里除了 Services/ViewModels/AirApps 还有**整个宿主工程目录**，
+我第一版漏了它，只扫到 329 / 543 个文件并直接红给我看——这条下限不是装饰。
+C# 版还改成**逐个类算作用域**（脚本每个文件只看第一个类，嵌套类与后面的类完全没被扫），
+实测放宽后没有新增线索。变异验证两向：`new CancellationTokenSource()` 且不释放的类被点名，
+同文件里带 `Dispose()` 的类不报。
 **第六把尺子数的是"实例方法定义了有没有人调"**：`python scripts/dump-dead-instance-methods.py`。
 开它的原因是另外两条路都量不到：`ZeroUseMemberRatchetTests` 的口径是 `static class` 上的静态方法，
 一条实例方法都不看；编译器也不管——`Directory.Build.props` 里 `EnforceCodeStyleInBuild=false`，
