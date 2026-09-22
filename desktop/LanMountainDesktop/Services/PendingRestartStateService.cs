@@ -26,14 +26,6 @@ public static class PendingRestartStateService
         }
     }
 
-    public static bool HasPendingReason(string reason)
-    {
-        lock (Gate)
-        {
-            return PendingReasons.Contains(reason);
-        }
-    }
-
     public static void SetPending(string reason, bool pending)
     {
         if (string.IsNullOrWhiteSpace(reason))

@@ -156,11 +156,6 @@ internal static class TelemetryEnvironmentInfo
         return Program.StartupRenderMode ?? "Unknown";
     }
 
-    public static string GetScreenInfo()
-    {
-        return "requires_ui_thread";
-    }
-
     public static string GetLocalDayPart(DateTimeOffset timestamp)
     {
         var hour = timestamp.ToLocalTime().Hour;

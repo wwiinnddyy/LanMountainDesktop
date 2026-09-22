@@ -23,22 +23,6 @@ internal static class AirAppMarketDefaults
     public const string DefaultIndexUrl =
         "https://raw.githubusercontent.com/wwiinnddyy/LanAirApp/main/airappmarket/index.json";
 
-    public static string BuildGitHubRawUrl(
-        string owner,
-        string repositoryName,
-        string branch,
-        string relativePath)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(owner);
-        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryName);
-        ArgumentException.ThrowIfNullOrWhiteSpace(branch);
-        ArgumentException.ThrowIfNullOrWhiteSpace(relativePath);
-
-        return string.Create(
-            CultureInfo.InvariantCulture,
-            $"https://raw.githubusercontent.com/{owner.Trim()}/{repositoryName.Trim()}/{branch.Trim().TrimStart('/')}/{relativePath.Trim().TrimStart('/').Replace(Path.DirectorySeparatorChar, '/').Replace(Path.AltDirectorySeparatorChar, '/')}");
-    }
-
     public static string BuildGitHubReleaseDownloadUrl(
         string owner,
         string repositoryName,

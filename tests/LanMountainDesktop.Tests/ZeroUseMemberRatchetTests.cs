@@ -17,18 +17,18 @@ namespace LanMountainDesktop.Tests;
 public sealed class ZeroUseMemberRatchetTests
 {
     /// <summary>
-    /// 每条都要写清"为什么还留着"。绝大多数是**已实现但没人调的规则/别名**：
-    /// 要么该接进 live 路径，要么该删，逐条判定前先用名单钉住，不许再多。
+    /// 每条都要写清"为什么还留着"。剩下的 3 条都是**要用户拍板的能力**，不是可以顺手删的死码：
+    /// 2026-09-22 把三条"待判"判完并删掉 4 个（见下），名单 7 → 3。
+    /// 删掉的：`AirAppMarketDefaults.BuildGitHubRawUrl`（市场 live 路径走索引里给的绝对 URL，这泛型拼法没人用）、
+    /// `PendingRestartStateService.HasPendingReason`（生产只问聚合的 HasPendingRestart）、
+    /// `SubjectColorService.ResolveColorBrush`（活的调用点直接用 ResolveColor 后自己加工，纯备胎）、
+    /// `TelemetryEnvironmentInfo.GetScreenInfo`（函数体是 return "requires_ui_thread" 的桩，不是能力）。
     /// </summary>
     private static readonly Dictionary<string, string> Accepted = new(StringComparer.Ordinal)
     {
-        ["AirAppMarketDefaults.BuildGitHubRawUrl"] = "市场原始文件 URL 拼法，live 路径另走下载基址：待判是否重复真源",
         ["ComponentPlacementRules.CanPlaceInStatusBar"] = "比 ComponentRegistry.AllowsStatusBarPlacement 多一条 height==1 约束，live 用的是注册表版："
             + "这条约束从来没生效过，但它是要不要限高这个设计意图的唯一证据，删之前先问",
-        ["PendingRestartStateService.HasPendingReason"] = "谓词无人问：待判接线或删除",
-        ["TelemetryEnvironmentInfo.GetScreenInfo"] = "屏幕信息未进遥测载荷：疑为缺功能，不是死码",
         ["WindowsNativeDialogService.ShowInformation"] = "原生提示框未被用（宿主用自己的对话框）：待决",
-        ["SubjectColorService.ResolveColorBrush"] = "与 ResolveBackgroundBrush 并存的画笔入口：待判",
         ["XiaomiWeatherCodeMapper.ResolveBucket"] = "WeatherConditionBucket 那 11 档在宿主内除本文件外零引用："
             + "整个按天气状况分档的维度没接进 UI，属实现了但没入口，接线与否是产品决定",
     };

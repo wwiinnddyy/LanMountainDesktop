@@ -69,11 +69,6 @@ internal static class SubjectColorService
         return baseColor;
     }
 
-    public static IBrush ResolveColorBrush(string subjectName)
-    {
-        return new SolidColorBrush(ResolveColor(subjectName));
-    }
-
     public static IBrush ResolveBackgroundBrush(string subjectName, bool isCurrent)
     {
         return new SolidColorBrush(ResolveBackgroundColor(subjectName, isCurrent));
