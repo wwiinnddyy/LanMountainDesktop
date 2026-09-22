@@ -185,6 +185,13 @@ Sdk/Runtime/Host/DevServer/Template + 安装器 + Platform + Mobile，逐个量�
 `ComponentSettingsRefreshTests` 钉住（把闸门改成恒真就红）。
 还没定的产品口径是"除了语言，还有哪些设置变更该下推到组件"——别顺手扩大触发面。
 
+启动器用的是自己那套 `RelayCommand`（`desktop/LanMountainDesktop.Launcher/ViewModels/RelayCommand.cs`，
+不是 CommunityToolkit 的），它多一个 `RaiseCanExecuteChanged()`——`ICommand` 没这个约定、Avalonia 也不会替你调。
+2026-09-23 实测：启动器 7 处构造**一处都没传 canExecute**，所以那个方法零调用今天没有症状
+（台账里那条理由从"是缺口"改成了这个查证结果）。**以后谁给它加了条件，就必须同时接上重算**——
+`LauncherCommandAvailabilityRatchetTests` 钉住这条，显式 `new RelayCommand(…)` 与目标类型 `= new(…)` 两种写法都验过会红
+（第一版只认显式写法，是变异测出来的洞）。
+
 **零使用类型棘轮**：`tests/.../ZeroUseTypeRatchetTests.cs` 把探针固化成测试——扫全仓声明的类型名（约 1200 个），
 数出现次数并减掉"自身文本"，为 0 即零使用。
 2026-09-22 把口径从"名字在仓库里出现过"改成**"产品可达"**：用量只算生产目录（core/desktop/airapp/install/mobile/

@@ -114,10 +114,12 @@ public sealed class ZeroUseInstanceMemberRatchetTests
         ["MainWindow.OnComponentLibraryCategoryViewportPointerMoved"] = "同上，一套手势",
         ["MainWindow.OnComponentLibraryCategoryViewportPointerReleased"] = "同上，一套手势",
         ["MainWindow.OnComponentLibraryCategoryViewportPointerCaptureLost"] = "同上，一套手势",
-        // —— 命令可用态从不重算 ——
+        // —— 命令可用态重算的钩子（今天没有可重算的东西）——
         ["RelayCommand.RaiseCanExecuteChanged"] =
-            "ICommand 不含这个方法，靠宿主在条件变化时主动调；全仓（含 .axaml）零调用＝按钮可用态从不重算。" +
-            "与 G1-AU（组件 RefreshFromSettings 从不被推）同族：是缺口不是死码",
+            "ICommand 不含这个方法，要靠宿主在条件变化时主动调；全仓（含 .axaml）零调用。" +
+            "2026-09-23 查证：启动器 7 处 new RelayCommand(…) **一处都没传 canExecute**（DevDebugWindowViewModel），" +
+            "所以今天没有症状——不是 G1-AU 那种缺口，也先不删（它是这个类的对称 API，删了以后想加条件就得重写）。" +
+            "以后谁传了条件就必须接上重算：LauncherCommandAvailabilityRatchetTests 钉住这条（两种 new 写法都验过会红）",
         // —— Core / SDK 公开面：删除属跨二进制破坏性变更 ——
         ["PublicIpcHostService.PublishLoadingStateAsync"] = "Core 是已发布包，删公开成员要与 SDK 版本号一起定：G1-U",
         ["LanMountainDesktopIpcClient.GetSessionInfoAsync"] = "同上，Core 公开面：G1-U",
