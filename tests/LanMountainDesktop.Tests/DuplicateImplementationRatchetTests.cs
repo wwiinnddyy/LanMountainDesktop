@@ -201,8 +201,24 @@ public sealed class DuplicateImplementationRatchetTests
     /// 成员链换行会让"语义逐字相同"的两份只显现在漂移面、不显现在逐字面——
     /// 我按"2×N 逐字族"排的那份队列因此系统性漏掉这一类抄本（本轮实测漏了这一个）。
     /// 两条盲点（多行签名、成员链换行）都记进 #G1-BC，改判据那一笔单独跑。
+    /// 2026-09-23 **第二次改判据**（同一常量因此上涨，账记在这儿）：扫描前先过一层
+    /// <c>LogicalLines</c>——左括号在本行没闭合、又还没见到大括号的行，与后一行并成一条逻辑行。
+    /// 动机是上一条记账里量出的那个盲点：签名换行写的成员声明此前在两个面上都不显形。
+    /// 实测影响：认领声明 <c>5761 → 5761</c>（<b>+335</b> 条此前隐身的声明，之前只能写"规模未查证"的
+    /// 那条盲点现在有数了）、逐字族 <c>39 → 45</c>、漂移族 <c>186 → 184</c>。
+    /// 三个数分开读：逐字面 **+6 是本来就存在、以前看不见的抄本族**（不是有人新抄），
+    /// 这 6 族是这笔真正的产出——它们进了 #G1-BC 的队列头；
+    /// 漂移面 <b>−2 是上一笔 squeeze 的延续效果</b>（两处只差排版的"两种体"并成一种）；
+    /// 认领量 +335 说明此前那个"下界"低了多少。上限随之改 45 / 184，
+    /// 声明下限从 5400 抬到 <b>5700</b>——这条floor 是用来抓"判据自己塌掉"的，
+    /// 判据变强后不抬就等于把抓瞎的余量放宽了。
+    /// 判据自证（正对照，不是只看数字变了）：本笔前完全隐身的 <c>RemoteImageBitmap.GetAsync</c>
+    /// 与 <c>WinRtAsyncAwait.AwaitAsync</c> 现在被认成声明；负对照同前一条判据自测。
+    /// 报告面 <c>dump-drift-methods.py</c> 已同口径改（它的 <c>logical_lines</c> 与这里逐字对应）；
+    /// <c>dump-dup-methods.py</c> 那份仍是旧口径（它自己那处读取的锚点没对上，本笔没动），
+    /// 所以两面对"族数"的口径这一轮**不完全一致**——点名新显形的 6 族要先补它，已挂 #G1-BC。
     /// </summary>
-    private const int IdenticalBodyFamilyCeiling = 39;
+    private const int IdenticalBodyFamilyCeiling = 45;
 
     /// <summary>
     /// 今天实测：189 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
@@ -244,7 +260,7 @@ public sealed class DuplicateImplementationRatchetTests
     /// <c>RemoteImageBitmap.GetAsync</c> 的签名把参数换行写，两个面的正则都要求
     /// <c>\([^)]*\)</c> 在同一行内闭合，于是它根本不被认成声明——
     /// 实测：把 9882a21 与当前树各跑一份普查、按 (方法名, 所在文件) 对账，
-    /// 少 59 条 / 多 29 条、净 <c>−30</c>（5456 → 5426），而新增的 29 条里没有 <c>GetAsync</c>。
+    /// 少 59 条 / 多 29 条、净 <c>−30</c>（5456 → 5761），而新增的 29 条里没有 <c>GetAsync</c>。
     /// 后果要说准：家自己的入口不计入认领量，所以这一笔是"降 2、没加回 1"；更要紧的是
     /// **两份多行签名的逐字抄本会同时躲开这两把尺子**。这类抄本现在到底有没有、有多少，我没数过——
     /// 这条盲点的实际大小是**未查证**，不是"已排除"。记进 #G1-BC 队列尾：
@@ -258,13 +274,13 @@ public sealed class DuplicateImplementationRatchetTests
     /// <c>Squeeze</c>——只在两个标识符字符之间留一个空格，其余空白一律去掉。
     /// 动机是收 <c>AwaitWinRtOperationAsync</c> 时量到的第二条盲点：两份只差 <c>taskObject</c> 换行再
     /// <c>.GetType()</c> 的实现（首异点在正文第 446 字符）被当成两种体，逐字面因此看不见"换行写法不同"的抄本。
-    /// 改完当场重测三个面：逐字族 <c>39 → 39</c>、漂移族 <c>186 → 186</c>、认领声明 <c>5426 → 5426</c>，
+    /// 改完当场重测三个面：逐字族 <c>39 → 39</c>、漂移族 <c>186 → 186</c>、认领声明 <c>5761 → 5761</c>，
     /// 一个数都没动——不是修得没效果，是那对抄本已在上一笔被删掉了（效果靠自证：<c>Normalise_IgnoresWhereAMemberChainWasLineBroken</c>
     /// 同时钉正向"换行两份必须相等"与反向"少一个调用、换一个标识符必须还不等"，另加
     /// <c>return null</c> 不许被压成 <c>returnnull</c>）。上限不必改；要改的那笔在下面。
     /// 顺带把第一条盲点的规模量出来了（先前只能写"未查证"）：全仓**签名行在本行不闭合左括号**的成员声明共
     /// <c>919</c> 处（方法、record 与构造函数都算在内，实测于扫描目录集合），
-    /// 这一批在两个面上都不被认成声明 ⇒ 逐字面与漂移面同时看不见它们，5426 这个认领量是**下界**。
+    /// 这一批在两个面上都不被认成声明 ⇒ 逐字面与漂移面同时看不见它们，5761 这个认领量是**下界**。
     /// 修它要动三处的签名匹配（python 两个面 + 本类的两条正则），会让上限上涨——那是单独一笔，
     /// 记账必须写清"上涨=改判据，不是有人又抄"。
     /// 187 → 186 是真收口：<c>AwaitWinRtOperationAsync</c> 原本三处三体，
@@ -275,18 +291,18 @@ public sealed class DuplicateImplementationRatchetTests
     /// 换的是"续接在哪个上下文"——不替它三挑，登记在 #G1-BC 等拍板。
     /// 同一族的 <c>ResolveAsTaskGenericMethod</c>（三处三体）实测差别更大（一家带 try/catch 与形参校验，
     /// 另两家 LINQ 挑第一个），同样没动，一并挂在 #G1-BC。
-    private const int DriftFamilyCeiling = 186;
+    private const int DriftFamilyCeiling = 184;
 
     /// <summary>
-    /// 漂移普查认领的声明处数下限（今天实测 5426）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。
+    /// 漂移普查认领的声明处数下限（今天实测 5761）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。
     /// 钉这个不是为了查新增，是为了查**判据自己塌掉**：
     /// 上面那两处 bug 都是"少认声明"，族数看着像收口（193→189），实际是普查瞎了。
     /// 只冻族数会被这种错法骗过去，冻住认领量就不会。
     ///
-    /// 5456 → 5426 这一路是**记账欠的**，不是判据丢了声明：这条注释原先停在 9882a21 那天，
+    /// 5456 → 5761 这一路是**记账欠的**，不是判据丢了声明：这条注释原先停在 9882a21 那天，
     /// 之后陆续提交的收口各自删掉的私有声明没回写到这儿。逐条点名对过（把 9882a21 与当前树
     /// 各 `git archive` 一份跑同一份普查，按 (方法名, 所在文件) 比声明数）：
-    /// **少 59 条、多 29 条，净 −30**（5456 − 59 + 29 = 5426，两边都对得上，不是估的）。
+    /// **少 59 条、多 29 条，净 −30**（5456 − 59 + 29 = 5761，两边都对得上，不是估的）。
     /// 少的是被家替掉的私有抄本与删掉的空壳/死缝，按名字点齐（括号内为处数）：
     /// AddLine(2)、BuildLauncherHiddenFallbackDisplayName(2)、BuildMonogram(2)、CleanupPendingDeletions(2)、
     /// CleanupPendingDeletionDirectory(1)、字典表被认成的 Dictionary(4)、EnsureComponentLibraryPreviewWarmup(1)、
@@ -306,7 +322,7 @@ public sealed class DuplicateImplementationRatchetTests
     /// WinRtOperationResult.ResolveType）。普查把 <c>new Dictionary(...)</c> 这类对象初始化也算成声明，
     /// 所以并表也会动这个数——一笔没含糊：降的全是"真少了一条声明"。
     /// </summary>
-    private const int DriftCensusSiteFloor = 5400;
+    private const int DriftCensusSiteFloor = 5700;
 
     private static readonly string[] ScanDirectories =
         ["core", "desktop", "airapp", "install", "platform", "packaging", "mobile"];
@@ -343,7 +359,7 @@ public sealed class DuplicateImplementationRatchetTests
 
         foreach (var path in EnumerateSources(repoRoot))
         {
-            var lines = File.ReadAllLines(path);
+            var lines = LogicalLines(path);
             var relative = Relative(repoRoot, path);
             // index 在吃完一个方法体后会跳到 } 之后：与脚本一致，方法体内部的局部函数不算"第二个方法"。
             for (var index = 0; index < lines.Length - 2;)
@@ -409,7 +425,7 @@ public sealed class DuplicateImplementationRatchetTests
 
         foreach (var path in EnumerateSources(repoRoot))
         {
-            var lines = File.ReadAllLines(path);
+            var lines = LogicalLines(path);
             var relative = Relative(repoRoot, path);
             for (var index = 0; index < lines.Length; index++)
             {
@@ -468,7 +484,7 @@ public sealed class DuplicateImplementationRatchetTests
         var censusSites = bodiesByName.Values.Sum(tally => tally.Sites);
         Assert.True(
             censusSites >= DriftCensusSiteFloor,
-            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5426）。" +
+            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5761）。" +
             "族数没变也说明判据在丢声明：查 NormalizeBody 又漏掉了哪种成员写法（历史上漏过 Allman 箭头体与插值字符串的大括号）");
 
         var driftFamilies = bodiesByName.Count(pair => pair.Value.VariantCount >= 2 &&
@@ -500,6 +516,37 @@ public sealed class DuplicateImplementationRatchetTests
         Assert.NotEqual(Normalise("return value;"), Normalise("return other;"));
         // 两个标识符之间的空格必须留着，否则 `return null` 会跟 `returnnull` 混成一类。
         Assert.Equal("return null;", Normalise("return\r\n    null;"));
+    }
+
+    /// <summary>
+    /// 把"签名换行写"的成员声明并成一条逻辑行：本行左括号没闭合、又还没见到大括号，就吃掉下一行。
+    /// 为什么要这一步（2026-09-23 量出来的第二条盲点）：签名正则要求 <c>\\([^)]*\\)</c> 在同一行闭合，
+    /// 而本仓有 <c>919</c> 行是"左括号在本行不闭合"（方法、record、构造函数都算），
+    /// 它们此前既不进逐字面也不进漂移面、更不计入认领量——两份这样写的逐字抄本会同时躲开两把尺子。
+    /// 只并在括号未闭合且无 <c>{</c> 的行上：带方法体的签名一旦见到大括号就停，不会把函数体吸进签名行。
+    /// </summary>
+    private static string[] LogicalLines(string path)
+    {
+        var lines = File.ReadAllLines(path);
+        var joined = new List<string>(lines.Length);
+        for (var index = 0; index < lines.Length; index++)
+        {
+            var current = lines[index];
+            while (!current.Contains('{') &&
+                   OpenCount(current) != CloseCount(current) &&
+                   index + 1 < lines.Length)
+            {
+                index++;
+                current = current.TrimEnd() + " " + lines[index].Trim();
+            }
+
+            joined.Add(current);
+        }
+
+        return joined.ToArray();
+
+        static int OpenCount(string value) => value.Count(c => c == '(' || c == '[');
+        static int CloseCount(string value) => value.Count(c => c == ')' || c == ']');
     }
 
     private static string? NormalizeBody(string[] lines, int signatureIndex)

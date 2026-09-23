@@ -28,6 +28,26 @@ KEYWORDS = {
 }
 
 
+def logical_lines(lines):
+    """把"签名换行写"的成员声明并成一条逻辑行（与 C# 闸门里的 LogicalLines 同口径）。
+
+    实测本仓有 919 行左括号在本行不闭合；此前这些声明在两个面上都不被认出来。
+    """
+    out = []
+    i = 0
+    n = len(lines)
+    while i < n:
+        current = lines[i]
+        while ("{" not in current
+               and sum(c in "([" for c in current) != sum(c in ")]" for c in current)
+               and i + 1 < n):
+            i += 1
+            current = current.rstrip() + " " + lines[i].strip()
+        out.append(current)
+        i += 1
+    return out
+
+
 def next_non_empty(lines, start):
     for cursor in range(start, len(lines)):
         if lines[cursor].strip():
@@ -73,9 +93,10 @@ def method_bodies(path):
        "声明了契约却不执行"正是这条尺子要抓的东西。
     """
     try:
-        lines = open(path, encoding="utf-8-sig", errors="replace").read().splitlines()
+        raw = open(path, encoding="utf-8-sig", errors="replace").read().splitlines()
     except OSError:
         return []
+    lines = logical_lines(raw)
     collected = []
     for index, raw in enumerate(lines):
         line = raw.strip()
