@@ -39,7 +39,7 @@ public sealed class WindowsMainWindowDesktopLayerService : IMainWindowDesktopLay
     {
         ArgumentNullException.ThrowIfNull(window);
 
-        var handle = GetWindowHandle(window);
+        var handle = WindowHandles.OfWindow(window);
         if (handle == IntPtr.Zero)
         {
             window.Opened -= OnDeferredOpened;
@@ -55,7 +55,7 @@ public sealed class WindowsMainWindowDesktopLayerService : IMainWindowDesktopLay
         ArgumentNullException.ThrowIfNull(window);
         window.Opened -= OnDeferredOpened;
 
-        var handle = GetWindowHandle(window);
+        var handle = WindowHandles.OfWindow(window);
         if (handle == IntPtr.Zero)
         {
             return;
@@ -193,18 +193,6 @@ public sealed class WindowsMainWindowDesktopLayerService : IMainWindowDesktopLay
         }
 
         return IntPtr.Zero;
-    }
-
-    private static IntPtr GetWindowHandle(Window window)
-    {
-        try
-        {
-            return window.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
-        }
-        catch
-        {
-            return IntPtr.Zero;
-        }
     }
 
     private sealed record WindowRestoreState(IntPtr Parent, IntPtr Style, IntPtr ExStyle);

@@ -117,7 +117,16 @@ public sealed class DuplicateImplementationRatchetTests
     /// 一边把只含空格的串当有效值，标题就显示成空白、回退链断掉。
     /// 行为钉 <c>TextValueTests</c> 4 格：注入"空白串算有值"（<c>IsNullOrWhiteSpace</c> 改成
     /// <c>IsNullOrEmpty</c>）恰好红那 2 格敏感的、另 2 格不动，验过。）
-    private const int IdenticalBodyFamilyCeiling = 47;
+    /// 47 → 46 收一族（<c>GetWindowHandle</c> 8 行逐字两份，都在 Platform：
+    /// <c>WindowsMainWindowDesktopLayerService</c> 与 <c>WindowsWindowPassthroughServices</c>，
+    /// 7 个调用点）→ 进 <c>platform/.../WindowHandles.cs</c> 的 <c>OfWindow</c>。
+    /// 这条判据的要害是"没有可用句柄时给 0、不抛"：两家的调用方一律是"0 就跳过这次 Win32 调用"
+    /// （窗口还没实化、正在关闭都走到这里），在这里抛出去只会把一次装饰/穿透刷新变成崩溃。
+    /// 行为钉 <c>WindowHandlesTests</c> 2 格（headless 实测：未 Show 与已 Show 都是 0）。
+    /// 覆盖边界写死在测试注释里，并且是量过的：把 <c>?? IntPtr.Zero</c> 改成 <c>-1</c>、
+    /// 把 <c>?.</c> 改成 <c>!.</c> 都不红（headless 给的是"有平台句柄对象、Handle 值为 0"，那两条支路根本不走），
+    /// 而把返回值整体改成别的数两格立刻红——所以这两格钉的是能观察到的那半条契约，不是整段实现。）
+    private const int IdenticalBodyFamilyCeiling = 46;
 
     /// <summary>
     /// 今天实测：191 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
@@ -152,7 +161,7 @@ public sealed class DuplicateImplementationRatchetTests
     private const int DriftFamilyCeiling = 190;
 
     /// <summary>
-    /// 漂移普查认领的声明处数下限（今天实测 5437）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。
+    /// 漂移普查认领的声明处数下限（今天实测 5436）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。
     /// 钉这个不是为了查新增，是为了查**判据自己塌掉**：
     /// 上面那两处 bug 都是"少认声明"，族数看着像收口（193→189），实际是普查瞎了。
     /// 只冻族数会被这种错法骗过去，冻住认领量就不会。
@@ -331,7 +340,7 @@ public sealed class DuplicateImplementationRatchetTests
         var censusSites = bodiesByName.Values.Sum(tally => tally.Sites);
         Assert.True(
             censusSites >= DriftCensusSiteFloor,
-            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5437）。" +
+            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5436）。" +
             "族数没变也说明判据在丢声明：查 NormalizeBody 又漏掉了哪种成员写法（历史上漏过 Allman 箭头体与插值字符串的大括号）");
 
         var driftFamilies = bodiesByName.Count(pair => pair.Value.VariantCount >= 2 &&

@@ -81,7 +81,7 @@ public sealed class WindowsWindowBottomMostService : IWindowBottomMostService
 
         window.Closed += OnWindowClosed;
 
-        var handle = GetWindowHandle(window);
+        var handle = WindowHandles.OfWindow(window);
         if (handle == IntPtr.Zero)
         {
             window.Opened += OnWindowOpened;
@@ -102,7 +102,7 @@ public sealed class WindowsWindowBottomMostService : IWindowBottomMostService
 
         RunOnUiThread(() =>
         {
-            var handle = GetWindowHandle(window);
+            var handle = WindowHandles.OfWindow(window);
             if (handle == IntPtr.Zero || !IsWindow(handle))
             {
                 return;
@@ -151,7 +151,7 @@ public sealed class WindowsWindowBottomMostService : IWindowBottomMostService
     public PixelPoint GetScreenPosition(Window window)
     {
         ArgumentNullException.ThrowIfNull(window);
-        var handle = GetWindowHandle(window);
+        var handle = WindowHandles.OfWindow(window);
         return handle != IntPtr.Zero && GetWindowRect(handle, out var rect)
             ? new PixelPoint(rect.Left, rect.Top)
             : window.Position;
@@ -164,7 +164,7 @@ public sealed class WindowsWindowBottomMostService : IWindowBottomMostService
     {
         ArgumentNullException.ThrowIfNull(window);
         TryGetWindowState(window, out var state);
-        var handle = GetWindowHandle(window);
+        var handle = WindowHandles.OfWindow(window);
         if (handle == IntPtr.Zero || !IsWindow(handle))
         {
             window.Position = position;
@@ -393,7 +393,7 @@ public sealed class WindowsWindowBottomMostService : IWindowBottomMostService
         }
 
         window.Opened -= OnWindowOpened;
-        var handle = GetWindowHandle(window);
+        var handle = WindowHandles.OfWindow(window);
         if (handle != IntPtr.Zero)
         {
             RunOnUiThread(() => InitializeAndAttach(state, handle, logSuccess: true));
@@ -1166,18 +1166,6 @@ public sealed class WindowsWindowBottomMostService : IWindowBottomMostService
     private static void WriteWindowStyle(IntPtr handle, int index, uint value)
     {
         _ = SetWindowLongPtr(handle, index, new IntPtr(unchecked((int)value)));
-    }
-
-    private static IntPtr GetWindowHandle(Window window)
-    {
-        try
-        {
-            return window.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
-        }
-        catch
-        {
-            return IntPtr.Zero;
-        }
     }
 
     [StructLayout(LayoutKind.Sequential)]
