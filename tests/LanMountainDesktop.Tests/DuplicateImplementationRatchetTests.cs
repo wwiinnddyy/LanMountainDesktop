@@ -126,7 +126,18 @@ public sealed class DuplicateImplementationRatchetTests
     /// 覆盖边界写死在测试注释里，并且是量过的：把 <c>?? IntPtr.Zero</c> 改成 <c>-1</c>、
     /// 把 <c>?.</c> 改成 <c>!.</c> 都不红（headless 给的是"有平台句柄对象、Handle 值为 0"，那两条支路根本不走），
     /// 而把返回值整体改成别的数两格立刻红——所以这两格钉的是能观察到的那半条契约，不是整段实现。）
-    private const int IdenticalBodyFamilyCeiling = 46;
+    /// 46 → 44 一笔收两族（两块自绘图表控件把池化点缓冲各抄一份：
+    /// <c>EnsurePointBufferCapacity</c> 14 行×2、<c>ReleasePointBuffer</c> 6 行×2）→ 进
+    /// <c>Views/Components/PointBufferPool</c> 的 <c>RentPointsAtLeast(ref buffer, required)</c> 与
+    /// <c>ReturnPoints(ref buffer)</c>；缓冲仍归各控件自己的字段，家只接 <c>ref</c>，
+    /// 不为一小段共享逻辑多塞一层对象。曲线控件 <c>Dispose</c> 里那段"只把超大的缓冲还回去"
+    /// 的内联复制也改成走家（尺寸门槛留在调用方，那才是它的本意）。
+    /// 这一族的错法不是崩：还两次会污染池子（别处读到脏数组），该还时没还就是每帧漏一个数组——
+    /// 两块控件都是 60fps 重绘的。行为钉 <c>PointBufferPoolTests</c> 4 格，三条支路各有独立注入点，
+    /// 逐条量过：去掉"够长就不重租"只红 1 格、去掉"非正数请求不动它"只红另 1 格、
+    /// 去掉"还回池子前判空"只红第 3 格（那条会把 null 还进池子），各不影响其余格。）
+    /// </summary>
+    private const int IdenticalBodyFamilyCeiling = 44;
 
     /// <summary>
     /// 今天实测：191 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
@@ -161,15 +172,15 @@ public sealed class DuplicateImplementationRatchetTests
     private const int DriftFamilyCeiling = 190;
 
     /// <summary>
-    /// 漂移普查认领的声明处数下限（今天实测 5436）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。
+    /// 漂移普查认领的声明处数下限（今天实测 5434）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。
     /// 钉这个不是为了查新增，是为了查**判据自己塌掉**：
     /// 上面那两处 bug 都是"少认声明"，族数看着像收口（193→189），实际是普查瞎了。
     /// 只冻族数会被这种错法骗过去，冻住认领量就不会。
     ///
-    /// 5456 → 5439 这一路是**记账欠的**，不是判据丢了声明：这条注释原先停在 9882a21 那天，
+    /// 5456 → 5434 这一路是**记账欠的**，不是判据丢了声明：这条注释原先停在 9882a21 那天，
     /// 之后陆续提交的收口各自删掉的私有声明没回写到这儿。逐条点名对过（把 9882a21 与当前树
     /// 各 `git archive` 一份跑同一份普查，按 (方法名, 所在文件) 比声明数）：
-    /// **少 34 条、多 17 条，净 −17**——少的是被家替掉的私有抄本与删掉的空壳/死缝
+    /// **少 44 条、多 22 条，净 −22**——少的是被家替掉的私有抄本与删掉的空壳/死缝
     /// （CleanupPendingDeletions、NormalizeExistingDirectory、NormalizeExistingFile、BuildMonogram、
     /// BuildLauncherHiddenFallbackDisplayName、AddLine、Percentile、ResolveFirstTailIndex、ResolveLevel、
     /// ResolveCityName、NormalizeThemeMode 各若干处，加 InitializeSettingsIcons、
@@ -340,7 +351,7 @@ public sealed class DuplicateImplementationRatchetTests
         var censusSites = bodiesByName.Values.Sum(tally => tally.Sites);
         Assert.True(
             censusSites >= DriftCensusSiteFloor,
-            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5436）。" +
+            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5434）。" +
             "族数没变也说明判据在丢声明：查 NormalizeBody 又漏掉了哪种成员写法（历史上漏过 Allman 箭头体与插值字符串的大括号）");
 
         var driftFamilies = bodiesByName.Count(pair => pair.Value.VariantCount >= 2 &&

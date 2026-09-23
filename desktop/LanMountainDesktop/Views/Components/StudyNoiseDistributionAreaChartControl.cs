@@ -97,7 +97,7 @@ public sealed class StudyNoiseDistributionAreaChartControl : Control
 
     public void CompactCaches()
     {
-        ReleasePointBuffer();
+        PointBufferPool.ReturnPoints(ref _pointBuffer);
         _staticLineGeometry = null;
         _staticFillGeometry = null;
         _dynamicLineGeometry = null;
@@ -199,7 +199,7 @@ public sealed class StudyNoiseDistributionAreaChartControl : Control
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        ReleasePointBuffer();
+        PointBufferPool.ReturnPoints(ref _pointBuffer);
         _gridGeometry = null;
         _axisGeometry = null;
         _staticLineGeometry = null;
@@ -622,7 +622,7 @@ public sealed class StudyNoiseDistributionAreaChartControl : Control
 
         if (sourceCount <= maxSamples)
         {
-            EnsurePointBufferCapacity(sourceCount);
+            PointBufferPool.RentPointsAtLeast(ref _pointBuffer, sourceCount);
             if (_pointBuffer is null)
             {
                 return 0;
@@ -638,7 +638,7 @@ public sealed class StudyNoiseDistributionAreaChartControl : Control
 
         var bucketCount = Math.Max(1, (maxSamples - 2) / 2);
         var targetCapacity = 2 + bucketCount * 2;
-        EnsurePointBufferCapacity(targetCapacity);
+        PointBufferPool.RentPointsAtLeast(ref _pointBuffer, targetCapacity);
         if (_pointBuffer is null)
         {
             return 0;
@@ -764,38 +764,6 @@ public sealed class StudyNoiseDistributionAreaChartControl : Control
             NoiseDistributionLevel.Extreme => new SolidColorBrush(Color.Parse("#FFEF4444")),
             _ => new SolidColorBrush(Color.Parse("#FF60A5FA"))
         };
-    }
-
-    private void EnsurePointBufferCapacity(int required)
-    {
-        if (required <= 0)
-        {
-            return;
-        }
-
-        if (_pointBuffer is not null && _pointBuffer.Length >= required)
-        {
-            return;
-        }
-
-        var next = ArrayPool<Point>.Shared.Rent(required);
-        if (_pointBuffer is not null)
-        {
-            ArrayPool<Point>.Shared.Return(_pointBuffer, clearArray: false);
-        }
-
-        _pointBuffer = next;
-    }
-
-    private void ReleasePointBuffer()
-    {
-        if (_pointBuffer is null)
-        {
-            return;
-        }
-
-        ArrayPool<Point>.Shared.Return(_pointBuffer, clearArray: false);
-        _pointBuffer = null;
     }
 
     private static IBrush CreateAreaGradientBrush(byte alpha)

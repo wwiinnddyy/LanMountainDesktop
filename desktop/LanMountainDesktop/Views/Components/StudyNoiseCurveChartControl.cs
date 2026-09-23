@@ -63,8 +63,7 @@ public sealed class StudyNoiseCurveChartControl : Control
     {
         if (_pointBuffer is not null && _pointBuffer.Length > 2048)
         {
-            ArrayPool<Point>.Shared.Return(_pointBuffer, clearArray: false);
-            _pointBuffer = null;
+            PointBufferPool.ReturnPoints(ref _pointBuffer);
         }
 
         _staticLineGeometry = null;
@@ -125,7 +124,7 @@ public sealed class StudyNoiseCurveChartControl : Control
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        ReleasePointBuffer();
+        PointBufferPool.ReturnPoints(ref _pointBuffer);
         _gridGeometry = null;
         _axisGeometry = null;
         _staticLineGeometry = null;
@@ -388,7 +387,7 @@ public sealed class StudyNoiseCurveChartControl : Control
 
         if (sourceCount <= maxSamples)
         {
-            EnsurePointBufferCapacity(sourceCount);
+            PointBufferPool.RentPointsAtLeast(ref _pointBuffer, sourceCount);
             if (_pointBuffer is null)
             {
                 return 0;
@@ -404,7 +403,7 @@ public sealed class StudyNoiseCurveChartControl : Control
 
         var bucketCount = Math.Max(1, (maxSamples - 2) / 2);
         var targetCapacity = 2 + bucketCount * 2;
-        EnsurePointBufferCapacity(targetCapacity);
+        PointBufferPool.RentPointsAtLeast(ref _pointBuffer, targetCapacity);
         if (_pointBuffer is null)
         {
             return 0;
@@ -493,38 +492,6 @@ public sealed class StudyNoiseCurveChartControl : Control
         var normalized = (clampedDb - MinDisplayDb) / (MaxDisplayDb - MinDisplayDb);
         var y = plot.Bottom - normalized * plot.Height;
         return new Point(x, y);
-    }
-
-    private void EnsurePointBufferCapacity(int required)
-    {
-        if (required <= 0)
-        {
-            return;
-        }
-
-        if (_pointBuffer is not null && _pointBuffer.Length >= required)
-        {
-            return;
-        }
-
-        var next = ArrayPool<Point>.Shared.Rent(required);
-        if (_pointBuffer is not null)
-        {
-            ArrayPool<Point>.Shared.Return(_pointBuffer, clearArray: false);
-        }
-
-        _pointBuffer = next;
-    }
-
-    private void ReleasePointBuffer()
-    {
-        if (_pointBuffer is null)
-        {
-            return;
-        }
-
-        ArrayPool<Point>.Shared.Return(_pointBuffer, clearArray: false);
-        _pointBuffer = null;
     }
 
     private static int ComputeSeriesSignature(IReadOnlyList<NoiseRealtimePoint> points)
