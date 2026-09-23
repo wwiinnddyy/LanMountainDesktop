@@ -254,6 +254,19 @@ public sealed class DuplicateImplementationRatchetTests
     /// （两份逐字 + 一份等价换写法），三份一起改调家之后这个名字只剩家那一种实现，整族消失。
     /// 上一笔（<c>DesktopIconHost</c>）族数不动、这一笔动——区别在漂移面数的是"同名 ≥2 种体"：
     /// 两份**逐字相同**的抄本不进漂移面，而"行为相同、写法不同"的三份进。引用数字时别把两笔混着说。
+    /// 2026-09-23 **改判据**（不降反平的记账，读数字前先看这条）：<c>Normalise</c> 现在先过一层
+    /// <c>Squeeze</c>——只在两个标识符字符之间留一个空格，其余空白一律去掉。
+    /// 动机是收 <c>AwaitWinRtOperationAsync</c> 时量到的第二条盲点：两份只差 <c>taskObject</c> 换行再
+    /// <c>.GetType()</c> 的实现（首异点在正文第 446 字符）被当成两种体，逐字面因此看不见"换行写法不同"的抄本。
+    /// 改完当场重测三个面：逐字族 <c>39 → 39</c>、漂移族 <c>186 → 186</c>、认领声明 <c>5426 → 5426</c>，
+    /// 一个数都没动——不是修得没效果，是那对抄本已在上一笔被删掉了（效果靠自证：<c>Normalise_IgnoresWhereAMemberChainWasLineBroken</c>
+    /// 同时钉正向"换行两份必须相等"与反向"少一个调用、换一个标识符必须还不等"，另加
+    /// <c>return null</c> 不许被压成 <c>returnnull</c>）。上限不必改；要改的那笔在下面。
+    /// 顺带把第一条盲点的规模量出来了（先前只能写"未查证"）：全仓**签名行在本行不闭合左括号**的成员声明共
+    /// <c>919</c> 处（方法、record 与构造函数都算在内，实测于扫描目录集合），
+    /// 这一批在两个面上都不被认成声明 ⇒ 逐字面与漂移面同时看不见它们，5426 这个认领量是**下界**。
+    /// 修它要动三处的签名匹配（python 两个面 + 本类的两条正则），会让上限上涨——那是单独一笔，
+    /// 记账必须写清"上涨=改判据，不是有人又抄"。
     /// 187 → 186 是真收口：<c>AwaitWinRtOperationAsync</c> 原本三处三体，
     /// <c>LocationService</c> 与 <c>WindowsSmtcMusicControlService</c> 两份改调
     /// <c>Services/WinRtAsyncAwait.AwaitAsync(operation, AsTaskGenericMethodDefinition, ct)</c>
@@ -473,6 +486,22 @@ public sealed class DuplicateImplementationRatchetTests
     /// 三种成员形态分开处理，因为本仓**同时**用它们（Allman 大括号、行尾 <c>=></c>、另起一行的 <c>=></c>）：
     /// 只认其中一种就会把别的形态的声明整条丢掉或整段吞掉——2026-09-22 实测这样丢了 53 处声明、5 个整文件。
     /// </summary>
+    [Fact]
+    public void Normalise_IgnoresWhereAMemberChainWasLineBroken()
+    {
+        // 判据自身的正/负对照：改 Squeeze 之后必须同时成立这两条，否则"放松排版"会变成"放松语义"。
+        var wrapped = "return taskObject\n    .GetType()\n    .GetProperty(\"Result\")?\n    .GetValue(taskObject);";
+        var flat = "return taskObject.GetType().GetProperty(\"Result\")?.GetValue(taskObject);";
+
+        Assert.Equal(Normalise(flat), Normalise(wrapped));
+
+        // 反向：真正不同的两份不许被压成一样（少一个调用、换一个标识符都要还能区分）。
+        Assert.NotEqual(Normalise(flat), Normalise("return taskObject.GetType().GetProperty(\"Result\");"));
+        Assert.NotEqual(Normalise("return value;"), Normalise("return other;"));
+        // 两个标识符之间的空格必须留着，否则 `return null` 会跟 `returnnull` 混成一类。
+        Assert.Equal("return null;", Normalise("return\r\n    null;"));
+    }
+
     private static string? NormalizeBody(string[] lines, int signatureIndex)
     {
         var signatureLine = lines[signatureIndex].TrimEnd();
@@ -581,7 +610,46 @@ public sealed class DuplicateImplementationRatchetTests
     }
 
     private static string Normalise(string text) =>
-        Canonical(StringLiteral.Replace(Whitespace.Replace(text, " "), "\"S\"").Trim());
+        Canonical(StringLiteral.Replace(Squeeze(text), "\"S\"").Trim());
+
+    /// <summary>
+    /// 压掉排版，只留语义之间的分界：一段代码写成一行还是三行、成员链在哪换行，都不该影响
+    /// "这两份是不是同一份实现"的判定。此前 `taskObject` 换行写 <c>.GetType()</c> 的两份抄本
+    /// 被当成不同体（实测首异点在正文第 446 字符），于是逐字面看不见它、只有漂移面看得见——
+    /// 那条盲区是 2026-09-23 收 AwaitWinRtOperationAsync 时量出来的。
+    /// 只在两个标识符字符之间留一个空格，其余空白一律去掉；不折叠引号内的差异（字符串随后整体抹成 "S"）。
+    /// </summary>
+    private static string Squeeze(string text)
+    {
+        var chars = new List<char>();
+        for (var i = 0; i < text.Length; i++)
+        {
+            if (!char.IsWhiteSpace(text[i]))
+            {
+                chars.Add(text[i]);
+                continue;
+            }
+
+            var end = i;
+            while (end < text.Length && char.IsWhiteSpace(text[end]))
+            {
+                end++;
+            }
+
+            var left = chars.Count > 0 ? chars[chars.Count - 1] : '\0';
+            var right = end < text.Length ? text[end] : '\0';
+            if (IsWordChar(left) && IsWordChar(right))
+            {
+                chars.Add(' ');
+            }
+
+            i = end - 1;
+        }
+
+        return new string(chars.ToArray());
+
+        static bool IsWordChar(char value) => char.IsLetterOrDigit(value) || value == '_' || value == '$';
+    }
 
     /// <summary><c>{ }</c> 与 <c>{}</c> 统一成空串：空实现只许有一个规范形状，否则同一种写法会被数成两种体。</summary>
     private static string Canonical(string text) =>

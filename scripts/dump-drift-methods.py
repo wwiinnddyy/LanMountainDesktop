@@ -139,7 +139,37 @@ def empty_body(text):
 
 
 def normalise(text):
-    return re.sub(r'"[^"]*"', '"S"', re.sub(r"\s+", " ", text)).strip()
+    return re.sub(r'"[^"]*"', '"S"', squeeze(text)).strip()
+
+_WORD = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$")
+
+
+def squeeze(text):
+    """压掉排版：只在两个标识符字符之间留一个空格。
+
+    判据面不许因为"同一行代码换行写"就认成两份不同实现（2026-09-23 收 AwaitWinRtOperationAsync
+    时量到的盲区：`taskObject` 换行再 `.GetType()` 的两份抄本在逐字面不显形）。
+    """
+    out = []
+    i = 0
+    n = len(text)
+    while i < n:
+        ch = text[i]
+        if not ch.isspace():
+            out.append(ch)
+            i += 1
+            continue
+        j = i
+        while j < n and text[j].isspace():
+            j += 1
+        left = text[i - 1]
+        right = text[j] if j < n else ""
+        if left in _WORD and right in _WORD:
+            out.append(" ")
+        i = j
+    return "".join(out)
+
+
 
 
 def main():

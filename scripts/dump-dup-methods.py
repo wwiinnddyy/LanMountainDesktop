@@ -32,6 +32,35 @@ SIG = re.compile(
 )
 BRACE = re.compile(r"^\s*\{\s*$")
 
+_WORD = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$")
+
+
+def squeeze(text):
+    """压掉排版：只在两个标识符字符之间留一个空格。
+
+    判据面不许因为"同一行代码换行写"就认成两份不同实现（2026-09-23 收 AwaitWinRtOperationAsync
+    时量到的盲区：`taskObject` 换行再 `.GetType()` 的两份抄本在逐字面不显形）。
+    """
+    out = []
+    i = 0
+    n = len(text)
+    while i < n:
+        ch = text[i]
+        if not ch.isspace():
+            out.append(ch)
+            i += 1
+            continue
+        j = i
+        while j < n and text[j].isspace():
+            j += 1
+        left = text[i - 1]
+        right = text[j] if j < n else ""
+        if left in _WORD and right in _WORD:
+            out.append(" ")
+        i = j
+    return "".join(out)
+
+
 def count_statements(body):
     """数深度 0 的分号：一条语句可能写成两行，那不算"复制了一份逻辑"。
 
@@ -100,7 +129,7 @@ for path in files:
             continue
         body = [l.strip() for l in lines[i + 2:end] if l.strip() and not l.strip().startswith("//")]
         if count_statements(body) >= 2:
-            digest = hashlib.sha1("\n".join(body).encode("utf-8")).hexdigest()[:8]
+            digest = hashlib.sha1(squeeze(" ".join(body)).encode("utf-8")).hexdigest()[:8]
             groups[(m.group(3), digest, len(body))].append((path, i + 1, m.group(1), bool(m.group(2))))
         i = end + 1
 
