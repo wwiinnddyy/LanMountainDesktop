@@ -301,6 +301,14 @@ en/ja/ko 还缺 25/313/275 条，只许降不许升；补翻译就把数字改�
 同一个设置在界面上显示成一档、落盘被另一档覆盖，不报错。盘上有早期写的 `Dark`，
 所以"忽略大小写"这格漂不得（行为钉 `ThemeAppearanceValuesTests` 8 格，改成区分大小写恰好红 2 格）。
 
+**学习分析参数的合法区间只认 `StudyAnalyticsConfig.ClampedToLegalRanges()` 一家**（`Models/StudyAnalyticsModels.cs`）。
+此前"十个字段各钳一遍"的 23 行在 `NoiseFramePipeline` 与 `StudyAnalyticsService` 各抄一份逐字相同——
+同一个二进制里的两个文件，改一边忘一边是必然，而症状不报错：
+采集按一套区间跑、界面按另一套区间显示与回写，于是"设了没生效"或"下次保存把用户的值改动"。
+区间数值本身没在这笔里动（那是策略，要改得拍板）；这笔只把"谁能说这几个数合法"收成一处。
+行为钉 `StudyAnalyticsConfigRangeTests` 4 格（十个字段各钉两端越界→贴边、界内→原样、
+非钳制字段→原样带过）；把 `FrameMs` 上限 250 改成 300 只红"贴上界"那一格，验过。
+
 **时区→城市名只认 `Services/ClockCityNames.cs` 一家**（`FallbackName` 兜底写法、`Lookup(表, 时区)` 查表、
 `ResolveForHostWidget(isChinese, 时区)` 宿主组件入口）。此前世界时钟与模拟时钟各抄一份逐字相同的 20 行
 `ResolveCityName`，Clock AirApp 的 `ClockAirAppTimeFormatter` 还有第三份同样的兜底写法；

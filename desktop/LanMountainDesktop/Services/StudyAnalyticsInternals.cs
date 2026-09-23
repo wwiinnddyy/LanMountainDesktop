@@ -32,13 +32,13 @@ internal sealed class NoiseFramePipeline
 
     public NoiseFramePipeline(StudyAnalyticsConfig config)
     {
-        _config = NormalizeConfig(config);
+        _config = config.ClampedToLegalRanges();
         _realtimeBuffer = new NoiseRealtimePoint[_config.RealtimeBufferCapacity];
     }
 
     public void UpdateConfig(StudyAnalyticsConfig config)
     {
-        var normalized = NormalizeConfig(config);
+        var normalized = config.ClampedToLegalRanges();
         if (normalized.RealtimeBufferCapacity != _config.RealtimeBufferCapacity)
         {
             _realtimeBuffer = new NoiseRealtimePoint[normalized.RealtimeBufferCapacity];
@@ -273,33 +273,6 @@ internal sealed class NoiseFramePipeline
         _maxGapMs = 0;
     }
 
-    private static StudyAnalyticsConfig NormalizeConfig(StudyAnalyticsConfig config)
-    {
-        var frameMs = Math.Clamp(config.FrameMs, 20, 250);
-        var uiPublishIntervalMs = Math.Clamp(config.UiPublishIntervalMs, 50, 500);
-        var sliceSec = Math.Clamp(config.SliceSec, 5, 600);
-        var threshold = Math.Clamp(config.ScoreThresholdDbfs, -100, -5);
-        var mergeGapMs = Math.Clamp(config.SegmentMergeGapMs, 100, 4000);
-        var maxSegments = Math.Clamp(config.MaxSegmentsPerMin, 1, 40);
-        var silenceFloor = Math.Clamp(config.SilenceFloorDbfs, -100, -20);
-        var baselineDb = Math.Clamp(config.BaselineDb, 20, 90);
-        var avgWindowSec = Math.Clamp(config.AvgWindowSec, 1, 8);
-        var ringCapacity = Math.Clamp(config.RealtimeBufferCapacity, 60, 1200);
-
-        return config with
-        {
-            FrameMs = frameMs,
-            UiPublishIntervalMs = uiPublishIntervalMs,
-            SliceSec = sliceSec,
-            ScoreThresholdDbfs = threshold,
-            SegmentMergeGapMs = mergeGapMs,
-            MaxSegmentsPerMin = maxSegments,
-            SilenceFloorDbfs = silenceFloor,
-            BaselineDb = baselineDb,
-            AvgWindowSec = avgWindowSec,
-            RealtimeBufferCapacity = ringCapacity
-        };
-    }
 }
 
 internal static class ScoreCalculator

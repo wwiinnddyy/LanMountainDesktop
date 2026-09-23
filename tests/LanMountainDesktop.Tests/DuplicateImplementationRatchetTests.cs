@@ -136,8 +136,13 @@ public sealed class DuplicateImplementationRatchetTests
     /// 两块控件都是 60fps 重绘的。行为钉 <c>PointBufferPoolTests</c> 4 格，三条支路各有独立注入点，
     /// 逐条量过：去掉"够长就不重租"只红 1 格、去掉"非正数请求不动它"只红另 1 格、
     /// 去掉"还回池子前判空"只红第 3 格（那条会把 null 还进池子），各不影响其余格。）
+    /// 44 → 43 收一族（十个字段各钳一遍的 23 行，<c>NoiseFramePipeline</c> 与 <c>StudyAnalyticsService</c>
+    /// 各一份逐字相同）→ 让类型自己管自己的合法区间：<c>StudyAnalyticsConfig.ClampedToLegalRanges()</c>，
+    /// 3 个调用点改走家。区间数值一笔没动（那是策略，要改得拍板），只把"谁能说这几个数合法"收成一处。
+    /// 行为钉 <c>StudyAnalyticsConfigRangeTests</c> 4 格：十个字段各钉"两端越界→贴边、界内→原样、
+    /// 非钳制字段→原样带过"；把 <c>FrameMs</c> 上限 250 改成 300 只红"贴上界"那一格，验过。）
     /// </summary>
-    private const int IdenticalBodyFamilyCeiling = 44;
+    private const int IdenticalBodyFamilyCeiling = 43;
 
     /// <summary>
     /// 今天实测：191 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
@@ -172,7 +177,7 @@ public sealed class DuplicateImplementationRatchetTests
     private const int DriftFamilyCeiling = 190;
 
     /// <summary>
-    /// 漂移普查认领的声明处数下限（今天实测 5434）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。
+    /// 漂移普查认领的声明处数下限（今天实测 5433）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。
     /// 钉这个不是为了查新增，是为了查**判据自己塌掉**：
     /// 上面那两处 bug 都是"少认声明"，族数看着像收口（193→189），实际是普查瞎了。
     /// 只冻族数会被这种错法骗过去，冻住认领量就不会。
@@ -180,7 +185,7 @@ public sealed class DuplicateImplementationRatchetTests
     /// 5456 → 5434 这一路是**记账欠的**，不是判据丢了声明：这条注释原先停在 9882a21 那天，
     /// 之后陆续提交的收口各自删掉的私有声明没回写到这儿。逐条点名对过（把 9882a21 与当前树
     /// 各 `git archive` 一份跑同一份普查，按 (方法名, 所在文件) 比声明数）：
-    /// **少 44 条、多 22 条，净 −22**——少的是被家替掉的私有抄本与删掉的空壳/死缝
+    /// **少 45 条、多 22 条，净 −23**——少的是被家替掉的私有抄本与删掉的空壳/死缝
     /// （CleanupPendingDeletions、NormalizeExistingDirectory、NormalizeExistingFile、BuildMonogram、
     /// BuildLauncherHiddenFallbackDisplayName、AddLine、Percentile、ResolveFirstTailIndex、ResolveLevel、
     /// ResolveCityName、NormalizeThemeMode 各若干处，加 InitializeSettingsIcons、
@@ -351,7 +356,7 @@ public sealed class DuplicateImplementationRatchetTests
         var censusSites = bodiesByName.Values.Sum(tally => tally.Sites);
         Assert.True(
             censusSites >= DriftCensusSiteFloor,
-            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5434）。" +
+            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5433）。" +
             "族数没变也说明判据在丢声明：查 NormalizeBody 又漏掉了哪种成员写法（历史上漏过 Allman 箭头体与插值字符串的大括号）");
 
         var driftFamilies = bodiesByName.Count(pair => pair.Value.VariantCount >= 2 &&
