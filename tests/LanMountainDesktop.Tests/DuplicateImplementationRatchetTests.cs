@@ -149,7 +149,7 @@ public sealed class DuplicateImplementationRatchetTests
     /// 行为钉 <c>StudyNoiseStatusTextTests</c> 9 格把判定顺序逐格钉住；
     /// 两处真实修正：① 我按猜测把 <c>(Ready, Noisy)</c> 写成 ready，被这条判据当场红一次——实测"吵"排在"就绪"之前，
     /// 期望值按实测改正；② 注入"把暂停挪到吵之后"恰好红 <c>(Paused, Noisy)</c> 那一格，验过。）
-    /// 42 → 41 收一族（RSS 那对组件取网图的 36 行：Cnr 与 Ifeng 各一份**逐字相同**，
+    /// 43 → 42 收一族（RSS 那对组件取网图的 36 行：Cnr 与 Ifeng 各一份**逐字相同**，
     /// 连 <c>BrowserUserAgent</c> 常量都是两份）→ 进 <c>Views/Components/RemoteImageBitmap.GetAsync(httpClient, url, ct)</c>，
     /// 两个抄本整个删掉、3 个调用点改走家（没有留转手壳）。
     /// <c>DailyArtworkWidget</c> 那份**不算抄本**：它带 referrer 重试、客户端超时 10 秒（RSS 两个 8 秒），
@@ -225,8 +225,20 @@ public sealed class DuplicateImplementationRatchetTests
     /// 行为钉 <c>TimeZoneServiceBindingTests</c> 新增 3 格（组件形状的 Holder 夹具），三条注入逐条量过：
     /// 顺序反过来红 1 格；换绑后不刷新红 3 格；不写回字段红 3 格。
     /// 收完仍留着的那半不是抄本：每个组件得说出"我刷新的是哪个方法"，那是各自的工作。
+    /// 43 → 42 收一族（Launcher ↔ 宿主那一帧 IPC 的"读满 N 字节"：
+    /// <c>LauncherCoordinatorIpcClient</c> 与 <c>LauncherCoordinatorIpcServer</c> 各一份逐字相同的
+    /// <c>ReadExactAsync</c>，实测两体归一化后完全相同、家也是逐字搬过去）→
+    /// 进 <c>Ipc/LauncherIpcStreamIo.cs</c>，两处私有实现删除、4 个调用点走家（两端都带
+    /// <c>ConfigureAwait(false)</c>，家内部不提前后行为逐字不变）。
+    /// 为什么这条判据不许各写一遍：管道流允许一次只给一部分，把一次 <c>ReadAsync</c> 的返回值当成
+    /// "读完了"就是帧长与帧体错位——症状是对端解出垃圾或超时；两端各错一半时最难看。
+    /// 行为钉 <c>LauncherIpcStreamIoTests</c> 5 格（自己控制每次给几个字节的假流），四条注入逐条量过：
+    /// 不循环 → 红"小块流"与"提前收线"两格；把"对端收线"当成读满 → 只红后者；
+    /// 吞掉取消 → 只红 <c>PropagatesCancellation</c>；边界写成 <c>&lt;=</c> → 红三格（含"空缓冲区不碰流"）。
+    /// 家与两份抄本相同这一点不是靠眼睛：脚本按花括号配对切出两份原文，断言二者逐字相等、
+    /// 且与家的方法体（去掉访问符后）相等，任一不等就中止不落盘。
     /// </summary>
-    private const int IdenticalBodyFamilyCeiling = 43;
+    private const int IdenticalBodyFamilyCeiling = 42;
 
     /// <summary>
     /// 今天实测：189 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
@@ -288,7 +300,7 @@ public sealed class DuplicateImplementationRatchetTests
     /// <c>return null</c> 不许被压成 <c>returnnull</c>）。上限不必改；要改的那笔在下面。
     /// 顺带把第一条盲点的规模量出来了（先前只能写"未查证"）：全仓**签名行在本行不闭合左括号**的成员声明共
     /// <c>919</c> 处（方法、record 与构造函数都算在内，实测于扫描目录集合），
-    /// 这一批在两个面上都不被认成声明 ⇒ 逐字面与漂移面同时看不见它们，5760 这个认领量是**下界**。
+    /// 这一批在两个面上都不被认成声明 ⇒ 逐字面与漂移面同时看不见它们，5759 这个认领量是**下界**。
     /// 修它要动三处的签名匹配（python 两个面 + 本类的两条正则），会让上限上涨——那是单独一笔，
     /// 记账必须写清"上涨=改判据，不是有人又抄"。
     /// 187 → 186 是真收口：<c>AwaitWinRtOperationAsync</c> 原本三处三体，
@@ -302,7 +314,7 @@ public sealed class DuplicateImplementationRatchetTests
     private const int DriftFamilyCeiling = 184;
 
     /// <summary>
-    /// 漂移普查认领的声明处数下限（今天实测 5760）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。
+    /// 漂移普查认领的声明处数下限（今天实测 5759）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。
     /// 钉这个不是为了查新增，是为了查**判据自己塌掉**：
     /// 上面那两处 bug 都是"少认声明"，族数看着像收口（193→189），实际是普查瞎了。
     /// 只冻族数会被这种错法骗过去，冻住认领量就不会。
@@ -310,7 +322,7 @@ public sealed class DuplicateImplementationRatchetTests
     /// 9882a21 → 当前树这一路是**记账欠的**，不是判据丢了声明：这条注释原先停在 9882a21 那天，
     /// 之后陆续提交的收口各自删掉的私有声明没回写到这儿。2026-09-23 用**同一份（改判据之后的）**普查
     /// 跑两棵树重对过账（`git archive` 一份 9882a21、按 (方法名, 所在文件) 做集合差）：
-    /// **5785 → 5760：少 63 条、多 38 条，净 −25**（5785 − 63 + 38 = 5760，等式两边都对得上）。
+    /// **5785 → 5759：少 65 条、多 39 条，净 −26**（5785 − 65 + 39 = 5759，等式两边都对得上）。
     /// 旧账写的是 5456 → 5426（少 59 / 多 29、净 −30）——同一批增删，**换口径后每条都重新数过**：
     /// 新口径认得换行写的签名，所以两棵树的总数一起抬高（5456 → 5785），点名清单也多了几项
     /// （<c>FitFontSize(3)</c>、<c>AwaitWinRtOperationAsync(2)</c>、<c>ResolveWinRtOperationResultType(3)</c>、
@@ -501,7 +513,7 @@ public sealed class DuplicateImplementationRatchetTests
         var censusSites = bodiesByName.Values.Sum(tally => tally.Sites);
         Assert.True(
             censusSites >= DriftCensusSiteFloor,
-            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5760）。" +
+            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5759）。" +
             "族数没变也说明判据在丢声明：查 NormalizeBody 又漏掉了哪种成员写法（历史上漏过 Allman 箭头体与插值字符串的大括号）");
 
         var driftFamilies = bodiesByName.Count(pair => pair.Value.VariantCount >= 2 &&

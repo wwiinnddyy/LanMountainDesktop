@@ -193,7 +193,7 @@ internal sealed class LauncherCoordinatorIpcServer : IDisposable
         CancellationToken cancellationToken)
     {
         var lengthBuffer = new byte[LengthPrefixSize];
-        if (!await ReadExactAsync(stream, lengthBuffer, cancellationToken).ConfigureAwait(false))
+        if (!await LauncherIpcStreamIo.ReadExactAsync(stream, lengthBuffer, cancellationToken).ConfigureAwait(false))
         {
             return null;
         }
@@ -205,7 +205,7 @@ internal sealed class LauncherCoordinatorIpcServer : IDisposable
         }
 
         var payload = new byte[payloadLength];
-        if (!await ReadExactAsync(stream, payload, cancellationToken).ConfigureAwait(false))
+        if (!await LauncherIpcStreamIo.ReadExactAsync(stream, payload, cancellationToken).ConfigureAwait(false))
         {
             return null;
         }
@@ -227,25 +227,4 @@ internal sealed class LauncherCoordinatorIpcServer : IDisposable
         await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    private static async Task<bool> ReadExactAsync(
-        Stream stream,
-        byte[] buffer,
-        CancellationToken cancellationToken)
-    {
-        var totalRead = 0;
-        while (totalRead < buffer.Length)
-        {
-            var read = await stream
-                .ReadAsync(buffer.AsMemory(totalRead, buffer.Length - totalRead), cancellationToken)
-                .ConfigureAwait(false);
-            if (read == 0)
-            {
-                return false;
-            }
-
-            totalRead += read;
-        }
-
-        return true;
-    }
 }
