@@ -149,13 +149,7 @@ public sealed partial class LauncherSettingsPageViewModel : ViewModelBase, IDisp
 
     public void Dispose()
     {
-        if (_disposed)
-        {
-            return;
-        }
-
-        _settingsFacade.Settings.Changed -= OnSettingsChanged;
-        _disposed = true;
+        SettingsChangedSubscription.UnsubscribeOnce(ref _disposed, _settingsFacade.Settings, OnSettingsChanged);
     }
 
     private void OnSettingsChanged(object? sender, SettingsChangedEvent e)

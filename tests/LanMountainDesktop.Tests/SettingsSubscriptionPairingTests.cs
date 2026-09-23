@@ -10,13 +10,17 @@ namespace LanMountainDesktop.Tests;
 
 /// <summary>
 /// 设置变更事件的"订了就退"配对守卫。钉的是**数量差**而不是清单：
-/// 全仓 <c>Settings.Changed +=</c> 的处数减去 <c>-=</c> 的处数不许超过今天实测的 1（那一处是
-/// <c>SettingsWindowService</c>，理由见下面"核实过"那段；先不让第二处混进来）。
+/// 判据是**按文件的配对**：一个文件里 <c>Settings.Changed +=</c> 的处数不许超过同文件里的退订处数
+/// ——退订写在本地、或改走 <c>SettingsChangedSubscription.UnsubscribeOnce</c>（收口后的家）都算数。
+/// 今天实测唯一越界的是 <c>SettingsWindowService</c>，理由见下面"核实过"那段；第二处混进来就红。
 ///
 /// 为什么值得数：设置页 VM 是每开一次窗口现造的（<c>ActivatorUtilities.CreateInstance</c>，容器不追踪也不释放），
 /// 订了不退就是每开一次永久挂一份 —— 症状不是当场报错，而是"改了设置后旧页面还在响应"，
 /// 加上 VM 与它的本地化服务被事件钉住回收不掉。<c>SettingsWindow.DropCachedPages</c> 已经补上丢弃时释放，
 /// 这个守卫守的是"以后又加一处只订不退"。
+///
+/// 退订可以写在本地、也可以走 SettingsChangedSubscription.UnsubscribeOnce（收口后是家），
+/// 两种都算退过一次 —— 不然一次正常的收口会把守卫判成泄漏。
 ///
 /// 只数不判类型是有意的：静态判"这个类是否会被丢弃"要跨文件追构造与容器注册，代价高且容易假红；
 /// 数量差是廉价但真的能红的（新加一处只订不退 → 立刻红），而且不锁死名单，
@@ -31,9 +35,14 @@ namespace LanMountainDesktop.Tests;
 /// </summary>
 public sealed class SettingsSubscriptionPairingTests
 {
-    private static readonly Regex Subscribe = new(@"Settings\.Changed\s*\+=", RegexOptions.Compiled);
+    private const RegexOptions Scan = RegexOptions.Compiled | RegexOptions.IgnoreCase;
 
-    private static readonly Regex Unsubscribe = new(@"Settings\.Changed\s*\-=", RegexOptions.Compiled);
+    private static readonly Regex Subscribe = new(@"Settings\.Changed\s*\+=", Scan);
+
+    private static readonly Regex Unsubscribe = new(@"Settings\.Changed\s*\-=", Scan);
+
+    /// <summary>退订搬进家之后，"家调用"与"字面退订"等价，所以按同一份账算。</summary>
+    private static readonly Regex UnsubscribeOnce = new(@"SettingsChangedSubscription\.UnsubscribeOnce\(", Scan);
 
     [Fact]
     public void SettingsChangedSubscriptions_ArePairedWithinOneKnownSite()
@@ -55,7 +64,7 @@ public sealed class SettingsSubscriptionPairingTests
 
             var text = File.ReadAllText(path);
             var adds = Subscribe.Matches(text).Count;
-            var removes = Unsubscribe.Matches(text).Count;
+            var removes = Unsubscribe.Matches(text).Count + UnsubscribeOnce.Matches(text).Count;
             subscribes += adds;
             unsubscribes += removes;
             if (adds > removes)
@@ -65,7 +74,10 @@ public sealed class SettingsSubscriptionPairingTests
         }
 
         Assert.True(subscribes > 0, "一条订阅都没扫到：判据失效，这次的 0 不可信");
-        Assert.Equal(1, subscribes - unsubscribes);
+        // 总量差不再是判据：退订收进 SettingsChangedSubscription 之后，家那一条 settings.Changed -= 服务多个
+        // 订阅点，"订的处数 - 退的处数"不再是 1:1（这是改判据，不是放松：改成按文件配对 + 认家的额度，
+        // 少一对就红——把 Dev VM 那行退订删掉试一次即知）。
+        Assert.True(unsubscribes > 0, "一条退订都没扫到：判据失效");
         var offender = Assert.Single(offenders);
         Assert.Contains("SettingsWindowService.cs", offender);
         Assert.Contains("退 0", offender);

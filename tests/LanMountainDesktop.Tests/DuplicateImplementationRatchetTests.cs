@@ -340,7 +340,16 @@ public sealed class DuplicateImplementationRatchetTests
     /// 顺手记一条量歪的经过：第一次注入"去掉挂载守卫"报 0 红，因为 needle 命中的是同文件另一个方法
     /// （Attach）里的同名守卫——注入脚本必须指到具体那一个方法，否则"测不出红"会被误读成"钉不住"。
 
-    private const int IdenticalBodyFamilyCeiling = 32;
+    /// 32 → 31 收一族（兄弟页 VM 那对逐字相同的 6 行 Dispose：守卫 _disposed → 退订 Settings.Changed → 置位）
+    /// → 进 Services/Settings/SettingsChangedSubscription.UnsubscribeOnce，两个 VM 的 Dispose 各变一行；
+    /// 事件与处理器类型由家固定，调用方只交自己的方法组。
+    /// 这一笔顺带改了配对守卫的判据（不是放松）：退订收进家之后"订的处数 − 退的处数"不再是 1:1
+    /// （家那一条 settings.Changed -= handler 服务多个订阅点），于是全局计数换成按文件配对——
+    /// 一个文件里 += 的处数不许超过"本地 -= + 调用 UnsubscribeOnce 的额度"，唯一越界的仍是被核实无害的
+    /// SettingsWindowService。双向重量过：删掉 DevSettingsPageViewModel 那行退订 → 越界文件 1 变 2、守卫红；
+    /// 恢复并重建后 → 绿；棘轮三把在 31 / 182 全绿。
+
+    private const int IdenticalBodyFamilyCeiling = 31;
 
     /// <summary>
     /// 今天实测：189 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。

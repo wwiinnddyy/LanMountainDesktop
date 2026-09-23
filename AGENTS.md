@@ -409,6 +409,12 @@ headless 量不到它，这一点写进测试注释，不宣称整条链都钉�
 第 11 个组件 `ZhiJiaoHubWidget` 故意没并进来：它没有默认实例回落也没有挂载判定，是另一种判据。
 默认服务仍由各组件自己 `new`（这里收的是写法，不是实例归属）。刷新保持"发出去不管"，同步抛出照旧上抛。
 
+**设置变更事件的"订了就要退一次、且只退一次"只认 `Services/Settings/SettingsChangedSubscription.cs` 一家**
+（`UnsubscribeOnce(ref _disposed, _settingsFacade.Settings, OnSettingsChanged)`）：三个 VM 各自写过一遍
+六行守卫+退订+置位，漂开的两种错法都不报错（少守卫＝退两遍静默无操作、少置位＝释放后又被打开继续响应变更）。
+配对守卫 `SettingsSubscriptionPairingTests` 按文件算账：本地 `-= 或走这家都算退过；`SettingsWindowService``
+那一处经核实是进程级单例、无害，是唯一被记名的越界点，再来第二处就红。
+
 **组件设置变更后的重刷三步只认 `Views/Components/RecommendationServiceBinding.cs` 一家**（`AfterSettingsChange(怎么作废缓存, 要重读的参数步骤或 null, () => _isAttached, () => Refresh…(forceRefresh: true))`）：
 先作废推荐缓存、再重读本组件的自动刷新参数、最后只在已挂载时强制刷一次。顺序是判据——把作废放到刷新之后与
 漏掉它同一种症状（刷回来的还是旧缓存，下次自动刷新又盖回去，看着像偶发）。此前 8 个组件各写一遍；另外 7 个
