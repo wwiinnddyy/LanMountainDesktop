@@ -215,8 +215,15 @@ public sealed class DuplicateImplementationRatchetTests
     /// 判据自证（正对照，不是只看数字变了）：本笔前完全隐身的 <c>RemoteImageBitmap.GetAsync</c>
     /// 与 <c>WinRtAsyncAwait.AwaitAsync</c> 现在被认成声明；负对照同前一条判据自测。
     /// 报告面 <c>dump-drift-methods.py</c> 已同口径改（它的 <c>logical_lines</c> 与这里逐字对应）；
-    /// <c>dump-dup-methods.py</c> 随后也补成同口径（族数两面同数），但**成员清单**仍差 2 项
-    /// （那份面把 <c>Retry</c>／<c>TryRemoveExistingPackage</c> 掉出逐字面）——点名队列以本闸门为准，偏差挂在 #G1-BC。
+    /// <c>dump-dup-methods.py</c> 随后也补成同口径（族数两面同数）。
+    /// 那笔留在账上的一句话（"成员清单仍差 2 项：报告面把 <c>Retry</c>／<c>TryRemoveExistingPackage</c> 掉出逐字面"）
+    /// 是**猜的、方向还反了**——本笔按实测改回：把闸门这一族的成员清单整份导出来与报告面对着点，
+    /// 报告面**一项都不缺**，那两名也不在逐字面上（它们是漂移面的族：<c>Retry</c> 实测 11 站 / 8 种体 / 3 文件）。
+    /// 真正的差在另一边，而且差一族：<c>IsSameOrChildPath</c> 两份抄本（<c>InstallerPathGuard.cs:120</c>
+    /// 与 <c>PlondsPackageStore.cs:118</c>）排版不同——安装器那份把 <c>return string.Equals(</c> 的实参一行一个
+    /// （体 6 行），宿主那份挤在两行里（体 5 行）——逐字面的旧键带着"行数 + 修剪后的行 join"，于是这两份被认成两种体，
+    /// 各 1 站 ⇒ 逐字面不成人族；漂移面又因"同名只有一种体"（它比较前已 Squeeze）不显形。
+    /// **换句话说：换个版式的逐字抄本此前两头隐身**，这正是上面那条签名盲点的同一族问题，只是这次在体里。
     /// 44 → 43 收一族（<c>SetTimeZoneService</c> 的 9 份"换绑之后立刻重画"外壳 → <c>TimeZoneServiceBinding.Attach</c>）：
     /// 八处逐字六行 + 一处同形状，各写的是"调 <c>TimeZoneServiceBinding.Replace</c> 赋值给字段，紧接着刷新自己"。
     /// 收口的理由是**那条顺序**而不是行数：只留前一半就是"时区换了但组件不重画"，且只有等下一次时区变化才自愈——
@@ -237,8 +244,17 @@ public sealed class DuplicateImplementationRatchetTests
     /// 吞掉取消 → 只红 <c>PropagatesCancellation</c>；边界写成 <c>&lt;=</c> → 红三格（含"空缓冲区不碰流"）。
     /// 家与两份抄本相同这一点不是靠眼睛：脚本按花括号配对切出两份原文，断言二者逐字相等、
     /// 且与家的方法体（去掉访问符后）相等，任一不等就中止不落盘。
+    /// 42 → <b>43 是改判据那一笔，不是"有人又抄了一份"</b>（这个账本自己定的规矩：上限变化分两笔记）：
+    /// 逐字面的键原先是"方法名 + 体行数 + 修剪后的行 join"，比较前不压排版，于是<b>换个版式的逐字抄本</b>
+    /// 整族隐身——上面 <c>IsSameOrChildPath</c> 那一族就是它放出去的。
+    /// 改法两处：键里去掉行数、体的比较文本先过 <c>Squeeze</c>（与漂移面同一份实现）。
+    /// 判据自证不靠眼睛：同一棵树改前改后各导一份成员清单对着点，差集恰好一族、方向只有"闸门多认"；
+    /// 独立的报告面 <c>dump-dup-methods.py</c>（本来就压排版）改后与闸门<b>族数同 43、成员与站数双向差集均为 0</b>
+    /// ——两面各写一遍、结果逐条对平，这才是"清单可信"的证据，单看一个数不算。
+    /// 去掉行数会不会把两份不同的体并成一个？不会：<c>Squeeze</c> 只吃空白，深度 0 的分号逐个留下，
+    /// 语句数不同的文本压完也不相等（同一棵树上 <c>Dispose</c> 的 6 行体与 12 行体仍是两族，实测）。
     /// </summary>
-    private const int IdenticalBodyFamilyCeiling = 42;
+    private const int IdenticalBodyFamilyCeiling = 43;
 
     /// <summary>
     /// 今天实测：189 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
@@ -425,7 +441,9 @@ public sealed class DuplicateImplementationRatchetTests
                     continue;
                 }
 
-                var key = $"{signature.Groups["name"].Value}|{body.Count}|{string.Join('\n', body)}";
+                // 键里不带行数、比较前先 Squeeze：抄本换个排版（成员链换行、实参一行拆成五行）就是同一份实现，
+                // 按"修剪后的行 join"当键会让它两头隐身——逐字面认成两种体，漂移面又因"只有一种体"不显形。
+                var key = $"{signature.Groups["name"].Value}|{Squeeze(string.Join(' ', body))}";
                 if (!groups.TryGetValue(key, out var sites))
                 {
                     sites = [];
