@@ -153,10 +153,19 @@ for path in files:
             groups[(m.group(3), digest, len(body))].append((path, i + 1, m.group(1), bool(m.group(2))))
         i = end + 1
 
-rows = [(key, sites) for key, sites in groups.items() if len(sites) >= 2]
+by_content = {}
+for (name, digest, nlines), sites in groups.items():
+    key = (name, digest)
+    if key not in by_content:
+        by_content[key] = [nlines, []]
+    by_content[key][0] = max(by_content[key][0], nlines)
+    by_content[key][1].extend(sites)
+rows = [(k, v[1]) for k, v in by_content.items() if len(v[1]) >= 2]
+nlines_of = {k: v[0] for k, v in by_content.items()}
 rows.sort(key=lambda kv: (-len(kv[1]), kv[0][0]))
 print("== 逐字相同的方法体（份数 >= 2）==")
-for (name, digest, nlines), sites in rows:
+for (name, digest), sites in rows:
+    nlines = nlines_of[(name, digest)]
     touched = len({s[0] for s in sites})
     print(f"{len(sites)}x in {touched} files  {name}  ({nlines} 行, body#{digest})")
     for path, line, access, is_static in sites:
