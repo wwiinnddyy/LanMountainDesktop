@@ -41,8 +41,8 @@ internal sealed class PlondsPackageStore
         var modeDirectoryName = mode is PlondsPackageMode.Delta ? "delta" : "full";
         var stagingRoot = Path.Combine(
             _rootDirectory,
-            SanitizePathSegment(version.ToString()),
-            SanitizePathSegment(source.Id),
+            PathSegmentSanitizer.Sanitize(version.ToString(), "unknown"),
+            PathSegmentSanitizer.Sanitize(source.Id, "unknown"),
             modeDirectoryName);
 
         EnsureCleanDirectory(stagingRoot);
@@ -116,13 +116,6 @@ internal sealed class PlondsPackageStore
         }
     }
 
-    private static string SanitizePathSegment(string value)
-    {
-        var invalid = Path.GetInvalidFileNameChars();
-        var chars = value.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray();
-        var sanitized = new string(chars).Trim();
-        return string.IsNullOrWhiteSpace(sanitized) ? "unknown" : sanitized;
-    }
 }
 
 internal sealed record PlondsPackageStaging(

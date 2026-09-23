@@ -328,7 +328,7 @@ internal sealed class PlondsPreparedPackageInstaller
     private static string BuildNextDeploymentDirectory(string launcherRoot, string targetVersion)
     {
         Directory.CreateDirectory(launcherRoot);
-        var sanitized = SanitizePathSegment(targetVersion);
+        var sanitized = PathSegmentSanitizer.Sanitize(targetVersion, "0.0.0");
         var index = 0;
         while (true)
         {
@@ -392,10 +392,4 @@ internal sealed class PlondsPreparedPackageInstaller
         return relativePath is DeploymentLayout.CurrentMarkerFileName or DeploymentLayout.PartialMarkerFileName or DeploymentLayout.DestroyMarkerFileName;
     }
 
-    private static string SanitizePathSegment(string value)
-    {
-        var invalid = Path.GetInvalidFileNameChars();
-        var sanitized = new string(value.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray()).Trim();
-        return string.IsNullOrWhiteSpace(sanitized) ? "0.0.0" : sanitized;
-    }
 }

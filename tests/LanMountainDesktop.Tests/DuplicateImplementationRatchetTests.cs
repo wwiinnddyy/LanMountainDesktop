@@ -305,8 +305,21 @@ public sealed class DuplicateImplementationRatchetTests
     /// 不该决定门是红是绿）；两路注入实测：去掉小时的两位补零红 6 格、把"按当下瞬间取偏移"改成
     /// <c>BaseUtcOffset</c> **红 0 格**（自定义时区没有夏令时区间，测不出差别）→ 那一支记为未覆盖，
     /// 要补的是带 <c>AdjustmentRule</c> 的时区加夏/冬两个瞬间。
+    /// 38 → 37 收一族、同笔把漂移族 182 → 181：路径段压形 <c>SanitizePathSegment</c> 全仓四份——
+    /// 宿主 <c>PlondsPackageStore</c> 与安装器 <c>InstallerPlondsClient</c> 逐字相同（跨两个二进制，
+    /// 这类抄本的错法是"改了宿主忘了安装器"，而包目录命名两边必须一致），
+    /// <c>PlondsPreparedPackageInstaller</c> 是同政策换兜底词的一份，
+    /// <c>WhiteboardNotePersistenceService</c> 是**另一种判据**（另带 120 字符截断，故意没并进来——
+    /// 并进来就是拿别人的策略换掉自己的）。三份私有实现删除、5 个调用点走 <c>Core/IO/PathSegmentSanitizer</c>，
+    /// 兜底词仍由调用方给（<c>unknown</c> / <c>0.0.0</c>）：统一它是产品决定，不在这笔里代做。
+    /// 行为钉 <c>PathSegmentSanitizerTests</c> 8 格，注入实测：去掉 <c>Trim</c> 红 2 格。
+    /// 另有两格是**我自己第一版预期写错、被这两格抓出来的**，如实留在账上当凭据：
+    /// ① 剪空之后回的是调用方给的那个兜底词（<c>"   "</c> + <c>0.0.0</c> → <c>0.0.0</c>，是政策不是 bug）；
+    /// ② 制表与换行在 Windows 上也算非法字符，**先被换成** <c>_</c> 再剪，所以永远走不到兜底词
+    /// （<c>Tab+LF</c> → <c>"__"</c>）——"先换后剪"这个顺序本身就是判据。
+    /// 形状只用两平台都非法的 <c>/</c> 钉（反斜杠在 Linux 上合法，拿它钉会让门的红绿取决于跑在哪台机器上）。
     /// </summary>
-    private const int IdenticalBodyFamilyCeiling = 38;
+    private const int IdenticalBodyFamilyCeiling = 37;
 
     /// <summary>
     /// 今天实测：189 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
@@ -379,7 +392,7 @@ public sealed class DuplicateImplementationRatchetTests
     /// 换的是"续接在哪个上下文"——不替它三挑，登记在 #G1-BC 等拍板。
     /// 同一族的 <c>ResolveAsTaskGenericMethod</c>（三处三体）实测差别更大（一家带 try/catch 与形参校验，
     /// 另两家 LINQ 挑第一个），同样没动，一并挂在 #G1-BC。
-    private const int DriftFamilyCeiling = 182;
+    private const int DriftFamilyCeiling = 181;
 
     /// <summary>
     /// 漂移普查认领的声明处数下限（今天实测 5759）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。

@@ -402,6 +402,13 @@ headless 量不到它，这一点写进测试注释，不宣称整条链都钉�
 离线钉得住的只有 `HasExited` 反向（红 2 格）；`pid <= 0` 守卫与 `catch` 彼此遮蔽（各自单独注入都不红），
 "pid 合法但正在退"那一支要真起真退进程才走得到——**未覆盖**，别当已排除（详见 `LiveProcessProbeTests` 注释）。
 
+**"把不可信的串压成一个文件名/目录段"只认 `core/.../IO/PathSegmentSanitizer.cs` 一家**（`Sanitize(value, fallback)`）：
+非法字符逐个换成 `_`（不是删掉——删了 `a/b` 与 `ab` 会撞成同一段，磁盘上是两个来源盖住彼此）、两端 `Trim`、
+压空了才用兜底词；顺序是**先换后剪**，所以制表/换行这类控制字符（Windows 上也算非法）永远走不到兜底词。
+兜底词由各调用方自己给（包目录 `unknown`、版本段 `0.0.0`），统一它是产品决定，别在这一家代做。
+`WhiteboardNotePersistenceService` 那份另带 120 字符截断，是另一种判据，**故意没并进来**。
+测试只用两平台都非法的 `/` 钉形状（`\` 在 Linux 上合法，拿它钉会让门的红绿取决于跑在哪台机器上）。
+
 **"这个路径在不在那棵树里"只认 `core/.../IO/PathContainment.cs` 一家**（`IsSameOrChild(parent, child)`）。
 此前三份抄本跨两个二进制：安装器 `InstallerPathGuard.IsSameOrChildPath`（公开）、宿主 `PlondsPackageStore.IsSameOrChildPath`
 （私有，与安装器那份只差排版）、`PlondsPreparedPackageInstaller.EnsureChildPath` 把同一个判定内联在抛异常的外壳里

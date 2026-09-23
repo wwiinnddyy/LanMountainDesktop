@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using LanDesktopPLONDS.Installer.Models;
 using LanMountainDesktop.Shared.Contracts.Deployment;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanDesktopPLONDS.Installer.Services;
 
@@ -124,7 +125,7 @@ internal sealed class InstallerPlondsClient
         CancellationToken cancellationToken)
     {
         var version = SemanticVersion.Parse(candidate.Manifest.CurrentVersion).ToString();
-        var packageRoot = Path.Combine(_stagingRoot, SanitizePathSegment(version), SanitizePathSegment(candidate.Source.Id), "full");
+        var packageRoot = Path.Combine(_stagingRoot, PathSegmentSanitizer.Sanitize(version, "unknown"), PathSegmentSanitizer.Sanitize(candidate.Source.Id, "unknown"), "full");
         var urls = new[] { candidate.FilesZipUrl }
             .Concat(InstallerPlondsUrlResolver.ResolveFilesZipUrls(candidate.Manifest, candidate.Source))
             .DistinctBy(uri => uri.AbsoluteUri, StringComparer.OrdinalIgnoreCase)
@@ -504,14 +505,6 @@ internal sealed class InstallerPlondsClient
     {
         var value = Environment.GetEnvironmentVariable(environmentVariable);
         return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
-    }
-
-    private static string SanitizePathSegment(string value)
-    {
-        var invalid = Path.GetInvalidFileNameChars();
-        var chars = value.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray();
-        var sanitized = new string(chars).Trim();
-        return string.IsNullOrWhiteSpace(sanitized) ? "unknown" : sanitized;
     }
 
     private static string FormatBytes(long bytes)
