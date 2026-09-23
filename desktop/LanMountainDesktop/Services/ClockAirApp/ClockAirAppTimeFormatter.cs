@@ -25,21 +25,7 @@ public static class ClockAirAppTimeFormatter
                 ["UTC"] = "UTC",
                 ["Etc/UTC"] = "UTC"
             },
-            [LanguageCodes.English] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["China Standard Time"] = "Beijing",
-                ["Asia/Shanghai"] = "Beijing",
-                ["GMT Standard Time"] = "London",
-                ["Europe/London"] = "London",
-                ["AUS Eastern Standard Time"] = "Sydney",
-                ["Australia/Sydney"] = "Sydney",
-                ["Eastern Standard Time"] = "New York",
-                ["America/New_York"] = "New York",
-                ["Tokyo Standard Time"] = "Tokyo",
-                ["Asia/Tokyo"] = "Tokyo",
-                ["UTC"] = "UTC",
-                ["Etc/UTC"] = "UTC"
-            },
+            [LanguageCodes.English] = ClockCityNames.EnglishTable,
             [LanguageCodes.Japanese] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 ["China Standard Time"] = "北京",

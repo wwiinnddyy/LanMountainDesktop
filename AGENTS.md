@@ -310,6 +310,16 @@ en/ja/ko 还缺 25/313/275 条，只许降不许升；补翻译就把数字改�
 AirApp 按归一化语言取各自表（多 ja/ko，且 `LanguageCodes.Default` 是中文，所以法语在 AirApp 落中文、
 在宿主组件落英文）。中文表里 `UTC` / `Etc/UTC` 两边取值也不同（"协调世界时" vs 字面 `UTC`）。
 这些分歧挂 `G1-BL` 等拍板，行为钉 `ClockCityNamesTests` 里各有一格钉住，谁被顺手并掉就会红。
+英文字表现在两端共用一份（`ClockAirAppTimeFormatter` 的 `LanguageCodes.English` 子表＝`ClockCityNames.EnglishTable`）。
+
+**第八条尺子：字面数据表也不许抄两处**（`DuplicatedLiteralDictionaryRatchetTests`）。
+前面两把重复尺子只比**方法体**，看不见字段里的码表——而码表正是最容易"补一处漏一处"的东西，
+2026-09-23 就是靠这条轴才发现 AirApp 的英文城市表与家的 `EnglishTable` 12 条逐键相同（并掉了），
+也才发现两组件的城市表当初是"一份写中文、一份写 Unicode 转义"的复制（逐字文本不同，所以两把老尺子双双失明）。
+判据按**解码后的键值集合**取指纹（先还原 `\uXXXX` 等转义），只数 ≥3 条的字典字面量、且只看表自己那一层。
+今天实测：全仓 8 张这样的表，重复组 **0**（上限 0）。三条注入点各自验过：
+在生产目录种一份同内容表→红；把转义还原改成直通→红（自测那条）；把覆盖面下限抬高→红并报出实测 8 张。
+覆盖面下限存在的理由就是这次踩到的坑：探针正则把 `IReadOnlyDictionary` 拼成 `IReadonly` 时报过"全仓 0 张表"的**假零**。
 
 **打开外部链接只认一处**：组件要点开一条网页链接，一律 `Helpers/ExternalLinkLauncher.cs`
 （`TryOpen(url)` 打开、`NormalizeHttpUrl(url)` 只做归一化）。此前 http/https 归一化被逐字抄了 6 份

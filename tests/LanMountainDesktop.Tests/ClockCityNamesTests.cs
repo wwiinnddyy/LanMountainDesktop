@@ -72,4 +72,19 @@ public sealed class ClockCityNamesTests
         Assert.Contains("Etc/UTC", ClockCityNames.ChineseTable);
         Assert.Contains("Australia/Sydney", ClockCityNames.EnglishTable);
     }
+
+    /// <summary>
+    /// 英文字表只有一份了：AirApp 的英文子表就是家的 <c>EnglishTable</c>（12 条逐键等值，所以并过去行为不变）。
+    /// 这一格钉的是"别再抄第二份英文表"——新加一颗城市只补一边，就是同一颗时区在两端显示成两个城市名。
+    /// </summary>
+    [Theory]
+    [InlineData("Asia/Shanghai", "Beijing")]
+    [InlineData("China Standard Time", "Beijing")]
+    [InlineData("Australia/Sydney", "Sydney")]
+    [InlineData("Etc/UTC", "UTC")]
+    public void AirAppEnglishPath_AndTheHostWidgetShareTheSameTable(string id, string expected)
+    {
+        Assert.Equal(expected, ClockCityNames.ResolveForHostWidget(isChinese: false, Zone(id)));
+        Assert.Equal(expected, ClockAirAppTimeFormatter.ResolveCityName(Zone(id), LanguageCodes.English));
+    }
 }
