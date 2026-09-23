@@ -104,7 +104,12 @@ public sealed class DuplicateImplementationRatchetTests
     /// 逐字普查对这种数据抄本是瞎的，只能靠人对内容）。表选择口径两端本来就不同，
     /// 没替它们统一（挂 G1-BL）。行为钉 ClockCityNamesTests 14 格：删掉裸 Time 那一步只红
     /// "Samoa Time" 一格、把英文字表的 OrdinalIgnoreCase 去掉只红 "asia/shanghai" 一格，验过。）
-    private const int IdenticalBodyFamilyCeiling = 49;
+    /// 49 → 48 收一族（星期表头那 6 行循环：DateWidget 与 MonthCalendarWidget 各一份逐字相同，
+    /// 并进 <c>CalendarWeekLabels.ApplyHeaders(isChinese, blocks)</c>，两个 <c>UpdateWeekdayHeaders</c>
+    /// 方法整个删掉、调用点直接走家。上一笔刚把两份的取表分支收成 <c>For(isChinese)</c>,
+    /// 这一步收的是"取到表之后往哪儿写"。行为钉 <c>CalendarWeekLabelsTests</c> 4 格：
+    /// 注入"最后一列不填"（<c>i &lt; blocks.Count - 1</c>）恰好红 3 格、空表那格照旧绿,验过。）
+    private const int IdenticalBodyFamilyCeiling = 48;
 
     /// <summary>
     /// 今天实测：191 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。

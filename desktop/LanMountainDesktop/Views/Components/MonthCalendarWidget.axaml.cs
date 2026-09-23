@@ -88,18 +88,8 @@ public partial class MonthCalendarWidget : UserControl, IDesktopComponentWidget,
 
         // Locale changes the header width; re-balance typography on every refresh.
         ApplyAdaptiveTypography();
-        UpdateWeekdayHeaders(isZh);
+        CalendarWeekLabels.ApplyHeaders(isZh, GetWeekdayHeaderBlocks());
         GenerateCalendar(now);
-    }
-
-    private void UpdateWeekdayHeaders(bool isZh)
-    {
-        var headers = CalendarWeekLabels.For(isZh);
-        var blocks = GetWeekdayHeaderBlocks();
-        for (var i = 0; i < blocks.Count; i++)
-        {
-            blocks[i].Text = headers[i];
-        }
     }
 
     private IReadOnlyList<TextBlock> GetWeekdayHeaderBlocks()

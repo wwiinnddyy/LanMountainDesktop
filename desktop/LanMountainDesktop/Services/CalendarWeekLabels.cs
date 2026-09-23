@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+
+using Avalonia.Controls;
 
 namespace LanMountainDesktop.Services;
 
@@ -18,4 +21,19 @@ public static class CalendarWeekLabels
 
     /// <summary>组件只说"是不是中文"，别再各自抄一遍三元分支。</summary>
     public static string[] For(bool isChinese) => isChinese ? Zh : En;
+
+    /// <summary>
+    /// 把七个表头文字块按列序填上。此前日期组件与月历组件各写一份逐字相同的 6 行循环，
+    /// 两份都对得整齐——但"对得上"是靠人抄，不是靠有地方能红。
+    /// 按 <paramref name="blocks"/> 的个数取标签：控件比七列少就只填它有的，
+    /// 这跟收口前一样（少给一列不会补，多给一列会越界——那是调用方摆错控件，让它响）。
+    /// </summary>
+    public static void ApplyHeaders(bool isChinese, IReadOnlyList<TextBlock> blocks)
+    {
+        var headers = For(isChinese);
+        for (var i = 0; i < blocks.Count; i++)
+        {
+            blocks[i].Text = headers[i];
+        }
+    }
 }

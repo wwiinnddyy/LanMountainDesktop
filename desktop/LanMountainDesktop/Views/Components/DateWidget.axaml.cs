@@ -127,19 +127,9 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
             salt: 29,
             useChineseSpacing: isZh);
 
-        UpdateWeekdayHeaders(isZh);
+        CalendarWeekLabels.ApplyHeaders(isZh, GetWeekdayHeaderBlocks());
         ApplyModeVisualIfNeeded();
         GenerateCalendar(now);
-    }
-
-    private void UpdateWeekdayHeaders(bool isZh)
-    {
-        var headers = CalendarWeekLabels.For(isZh);
-        var blocks = GetWeekdayHeaderBlocks();
-        for (var i = 0; i < blocks.Count; i++)
-        {
-            blocks[i].Text = headers[i];
-        }
     }
 
     private IReadOnlyList<TextBlock> GetWeekdayHeaderBlocks()
