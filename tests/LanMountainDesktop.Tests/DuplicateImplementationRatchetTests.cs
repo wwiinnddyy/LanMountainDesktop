@@ -290,8 +290,16 @@ public sealed class DuplicateImplementationRatchetTests
     /// 这一笔**没**动漂移族（182 不变，闸门实测仍绿）：两个 <c>SelectPreferredInstallerAsset</c> 的选包算法本来就不一样
     /// （一个 <c>ScoreAsset</c> 排序、一个 <c>ScoreWindowsInstallerAsset</c> 过滤），搬走的只是共用的架构 token——
     /// "同一个二进制里两条更新路径按不同打分挑安装包"这件事本身是重复真源队列里的一条，记进 #G1-BC。
+    /// 40 → 39 收一族（点一条热搜就打开它的外链：百度与 B站两个热搜组件各抄一份逐字相同的 12 行处理）→
+    /// 进 <c>Views/Components/HotItemClick.cs</c>，判据 <c>TryGetIndex</c>（左键 + sender 是那个 <c>Border</c> +
+    /// <c>Tag</c> 落在 <c>[0, itemCount)</c>）与接线的 <c>Open</c> 分开，两个组件各留一行"我的列表是哪份、url 取哪个字段"。
+    /// 为什么值得收：少上界那一格是点最后一条越界抛（崩在点击里）、少左键那一格是中键也弹浏览器，都不报错。
+    /// 行为钉 <c>HotItemClickTests</c> 9 格（构个 <c>Border</c> 不要 headless 会话，用普通 <c>[Fact]</c>／<c>[Theory]</c>
+    /// 就够——刻意不占 <c>AvaloniaFact</c> 名额，headless 会话是今天偶发红的那条轴）。四路注入逐个量过：
+    /// 去掉上界红 2 格、去掉负数下界红 2 格、把认 <c>Border</c> 换成认 <c>TextBlock</c> 红 2 格、去掉左键判定红 1 格。
+    /// <c>Open</c> 里"真事件"那几行离线造不出 <c>PointerPressedEventArgs</c> → 未覆盖，不是已排除。
     /// </summary>
-    private const int IdenticalBodyFamilyCeiling = 40;
+    private const int IdenticalBodyFamilyCeiling = 39;
 
     /// <summary>
     /// 今天实测：189 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。

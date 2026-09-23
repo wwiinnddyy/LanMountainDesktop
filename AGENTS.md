@@ -372,6 +372,12 @@ scheme 校验在这条路上同样只靠"抄的时候抄全"——少了它，RS
 （行为钉 `DesktopIconHostTests` 6 格，四条注入点逐条量过），`Resolve()` 只负责真调 Win32——
 headless 量不到它，这一点写进测试注释，不宣称整条链都钉住了。
 
+**"点一条热搜条目打开它的外链"只认 `Views/Components/HotItemClick.cs` 一家**：组件里的处理一律
+`HotItemClick.Open(sender, e, this, _activeItems, item => item.Url)`，判据是 `TryGetIndex`
+（左键 + sender 是挂点击的那个 `Border` + `Tag` 是能解析且落在 `[0, itemCount)` 的下标）。
+此前百度与 B站两份逐字相同的 12 行；少上界那一格就是点最后一条越界抛（崩在点击里）、少左键那一格是中键也弹浏览器。
+`e.Handled` 只在真打开之后置位——判据没过时不吞事件，外层还要继续收这个点击。
+
 **本机平台标识（"os-架构"那串 token）只认 `Services/PlatformIdentifiers.cs` 一家**：
 要算清单键一律 `CurrentPlatformId`（如 `windows-x64`），只要架构段一律 `CurrentArchitectureToken`。
 此前一个值算四次（宿主两处 `ResolveCurrentPlatform` 逐字相同，两个 `SelectPreferredInstallerAsset` 各抄一遍架构 switch）。

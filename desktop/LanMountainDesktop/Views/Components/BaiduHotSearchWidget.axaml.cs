@@ -305,18 +305,7 @@ public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget
 
     private void OnHotItemPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed ||
-            sender is not Border host ||
-            host.Tag is null ||
-            !int.TryParse(host.Tag.ToString(), out var index) ||
-            index < 0 ||
-            index >= _activeItems.Count)
-        {
-            return;
-        }
-
-        ExternalLinkLauncher.TryOpen(_activeItems[index].Url);
-        e.Handled = true;
+        HotItemClick.Open(sender, e, this, _activeItems, item => item.Url);
     }
 
     private void UpdateAdaptiveLayout()
