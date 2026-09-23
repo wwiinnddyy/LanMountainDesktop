@@ -349,7 +349,21 @@ public sealed class DuplicateImplementationRatchetTests
     /// SettingsWindowService。双向重量过：删掉 DevSettingsPageViewModel 那行退订 → 越界文件 1 变 2、守卫红；
     /// 恢复并重建后 → 绿；棘轮三把在 31 / 182 全绿。
 
-    private const int IdenticalBodyFamilyCeiling = 31;
+    /// 31 → 33 是**改判据**（一行代码都没收口，只是尺子此前瞎了一格）：三份实现共用的"并签名续行"判据
+    /// 写的是"括号不等就并"，于是 <c>});</c> 这类**多闭合**的收尾行也被当成没闭合，连着吃掉紧跟其后的
+    /// 那条声明。实测全仓"本行无 <c>{</c> 且括号不等"的 7960 行里 <c>3796</c> 行是多闭合，
+    /// 只有 <c>4164</c> 行真是要并的续行。改成"只在左&gt;右时并"之后新显形 3 族：
+    /// <c>Retry</c>（<c>AirAppPackageInstaller.cs:135</c> 与启动器 <c>AirAppInstallerService.cs:196</c>，
+    /// 27 行重试循环逐字相同）、<c>TryRemoveExistingPackage</c>（同两个文件 <c>:100</c> / <c>:161</c>）、
+    /// <c>ResolveAsStreamForReadMethod</c>（<c>WindowsNotificationListener.cs:391</c> 与
+    /// <c>WindowsSmtcMusicControlService.cs:488</c>）。同时有 1 族掉出逐字面：<c>DeleteFileWithRetry</c>
+    /// —— 判据改正后它的体是"单语句转手调一个多行 lambda"，正是 2026-09-22 那条"按语句数 ≥2"要排除的形状
+    /// （它在漂移面仍在：3 站 / 2 种体 / 最大同体组 2）。净 <c>31 +3 −1 = 33</c>。
+    /// **这笔最该记住的是方法教训**："两个实现互比族数与站点清单"验不出**共用判据**的缺陷——
+    /// 上一笔正是拿这个互证把"Retry 不在逐字面"判成"它只是漂移面的一个族"，判据本身瞎着，互证却一路绿。
+    /// 所以互证只在两边判据是各写一遍的时候才算证据；共用一份逻辑的那一段，只能靠已知正例喂它。
+
+    private const int IdenticalBodyFamilyCeiling = 33;
 
     /// <summary>
     /// 今天实测：189 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
@@ -427,7 +441,12 @@ public sealed class DuplicateImplementationRatchetTests
     // 同名尺子按名字归类，于是把 Attach 这一族点出来（实测 3 站 / 3 种体，站点见报告面 dump-drift-methods.py）。
     // 记账要点：这一族的三条实现分属不同类、各有各的契约，不构成重复真源；要消它得先决定跨类同名是否算事，
     // 那是判据问题（与"两个重载自成一族"同一类假阳性），不是收口问题。
-    private const int DriftFamilyCeiling = 182;
+    // 182 → 193 与上面 31 → 33 是**同一笔改判据**（同一份"并签名续行"的逻辑，两个面共用）：
+    // 那些被 `});` 吃掉的声明在漂移面同样隐身，判据改正后一次性显形 11 族。不是有人多抄了 11 种实现。
+    // 认领量下限那条断言同轮仍绿（≥5700），所以这不是"判据放宽到什么都算"——是被吃掉的行重新算进来了。
+    // 这一格里点名的三个新可见族里，Retry 与 TryRemoveExistingPackage 已在下一笔真收口，
+    // ResolveAsStreamForReadMethod 与它旁边的 ResolveAsTaskGenericMethod（三处三体）仍挂 #G1-BC。
+    private const int DriftFamilyCeiling = 193;
 
     /// <summary>
     /// 漂移普查认领的声明处数下限（今天实测 5759）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。
@@ -679,8 +698,13 @@ public sealed class DuplicateImplementationRatchetTests
         for (var index = 0; index < lines.Length; index++)
         {
             var current = lines[index];
+            // 只在"欠闭合"（左 > 右）时并。按"不等"并会把 `});` 这类多闭合的收尾行也当成没闭合，
+            // 连着吃掉它后面那条声明：实测全仓这类多闭合行 3796 条（欠闭合 4164 条），
+            // Core 的 AirAppPackageInstaller 与启动器 AirAppInstallerService 里那两份逐字相同的 27 行
+            // Retry 正好紧跟在 `});` 后面，于是两个面上同时隐身——而两面共用这份逻辑，
+            // "两面同数"的互证对共同缺陷是无效的（2026-09-24 量到）。
             while (!current.Contains('{') &&
-                   OpenCount(current) != CloseCount(current) &&
+                   OpenCount(current) > CloseCount(current) &&
                    index + 1 < lines.Length)
             {
                 index++;

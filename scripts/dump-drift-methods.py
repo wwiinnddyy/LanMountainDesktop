@@ -31,7 +31,12 @@ KEYWORDS = {
 def logical_lines(lines):
     """把"签名换行写"的成员声明并成一条逻辑行（与 C# 闸门里的 LogicalLines 同口径）。
 
-    实测本仓有 919 行左括号在本行不闭合；此前这些声明在两个面上都不被认出来。
+    只在**左括号多于右括号**（欠闭合）时才并：实测全仓"括号不等且本行无 { "的行有 7960 条，
+    其中 4164 条是欠闭合（真要并的签名续行），**3796 条是多闭合**（`});` 这类收尾行）。
+    按"不等就并"会把那 3796 条当成没闭合，连着吃掉后面的声明——2026-09-24 实测：Core 与启动器
+    安装器里那两份逐字相同的 27 行 `Retry` 就是这么在两个面上同时隐身的（两面共用这份逻辑，
+    所以"两面同数"的互证验不出共同缺陷）。
+    此前这些声明在两个面上都不被认出来。
     返回 <c>(原始行号, 文本)</c>：并行之后的下标不等于文件行号，
     直接拿它当行号印出去会指错位置（实测 <c>PlondsPackageStore.cs</c> 差 8 行，指到了隔壁成员上）。
     """
@@ -42,7 +47,7 @@ def logical_lines(lines):
         start = i
         current = lines[i]
         while ("{" not in current
-               and sum(c in "([" for c in current) != sum(c in ")]" for c in current)
+               and sum(c in "([" for c in current) > sum(c in ")]" for c in current)
                and i + 1 < n):
             i += 1
             current = current.rstrip() + " " + lines[i].strip()

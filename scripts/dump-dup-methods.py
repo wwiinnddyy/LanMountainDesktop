@@ -63,9 +63,15 @@ def squeeze(text):
 
 def logical_lines(lines):
     """Same semantics as the gate's LogicalLines and dump-drift-methods.logical_lines:
-    join a declaration whose parameter list does not close on the same line.
+    join a declaration whose parameter list leaves more brackets **open than closed** on this line.
     Stops as soon as a brace shows up, so a method body is never swallowed into its signature.
     Yields (raw_line_index, text): after joining, the list index is no longer a file line number.
+
+    判据是"欠闭合"（>），不是"不平衡"（!=）。2026-09-24 量到的盲点：`});` 这类**多闭合**的收尾行
+    在 `!=` 下被当成"还没闭合"，于是连着往后吃行，一直吃到下一个 `{` 才停——被吃掉的正好是紧跟其后的
+    那条声明。实测代价：Core 的 AirAppPackageInstaller 与启动器 AirAppInstallerService 里那两份逐字相同
+    的 27 行 `Retry`，两个面都看不见（两面共用同一个 logical_lines，所以"两面同数"的互证对它无效——
+    互证只验得出实现差别，验不出共同缺陷）。
     """
     out = []
     i = 0
@@ -74,7 +80,7 @@ def logical_lines(lines):
         start = i
         current = lines[i]
         while ("{" not in current
-               and sum(c in "([" for c in current) != sum(c in ")]" for c in current)
+               and sum(c in "([" for c in current) > sum(c in ")]" for c in current)
                and i + 1 < n):
             i += 1
             current = current.rstrip() + " " + lines[i].strip()
