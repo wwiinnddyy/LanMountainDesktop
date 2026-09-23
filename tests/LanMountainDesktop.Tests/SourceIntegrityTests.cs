@@ -1329,6 +1329,49 @@ public sealed class SourceIntegrityTests
     }
 
     /// <summary>
+    /// WinRT 投影那两个装配标识只认 <c>desktop/LanMountainDesktop/Services/WinRtReflection.cs</c> 一处。
+    /// 拦字面量而不是只拦方法体，是因为这三条路（定位、通知、播放状态）的兜底口径都是
+    /// "拿不到类型／方法就跳过这次能力"——装配名拼错一个字母不报错，症状是那个能力安静地消失。
+    /// </summary>
+    [Fact]
+    public void WinRtAssemblyIdentityLiterals_LiveInExactlyOnePlace()
+    {
+        var allowedFile = @"desktop\LanMountainDesktop\Services\WinRtReflection.cs";
+        var needles = new[] { "\"System.Runtime.WindowsRuntime\"", "Windows, ContentType=WindowsRuntime" };
+        var offenders = new List<string>();
+
+        foreach (var file in SourceFiles())
+        {
+            if (string.Equals(RelativeToRepo(file), allowedFile, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var lines = File.ReadAllLines(file);
+            for (var index = 0; index < lines.Length; index++)
+            {
+                var trimmed = lines[index].AsSpan().TrimStart();
+                if (trimmed.StartsWith("//") || trimmed.StartsWith('*'))
+                {
+                    continue;
+                }
+
+                foreach (var needle in needles)
+                {
+                    if (lines[index].Contains(needle, StringComparison.Ordinal))
+                    {
+                        offenders.Add($"{RelativeToRepo(file)}:{index + 1} 自己写了 WinRT 装配标识，请走 WinRtReflection");
+                    }
+                }
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 处硬编码的 WinRT 装配标识：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
+    /// <summary>
     /// 组件自缩放的设计基准格子边长只有 <c>desktop/.../Views/Components/ComponentDesignMetrics.cs</c> 一处声明。
     /// 收口前 12 个组件各自写了 <c>private const double BaseCellSize = 48d;</c>：改一处基准，
     /// 其余 11 个组件在同一个网格里按旧基准缩放，症状是"某个卡片比别的胖一圈"，

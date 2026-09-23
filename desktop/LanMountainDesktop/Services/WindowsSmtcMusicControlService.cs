@@ -12,12 +12,15 @@ namespace LanMountainDesktop.Services;
 
 public sealed class WindowsSmtcMusicControlService : IMusicSessionProvider
 {
-    private static readonly Type? SessionManagerType = ResolveWinRtType("Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager");
-    private static readonly Type? AppInfoType = ResolveWinRtType("Windows.ApplicationModel.AppInfo");
+    private static readonly Type? SessionManagerType = WinRtReflection.ResolveWinRtType("Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager");
+    private static readonly Type? AppInfoType = WinRtReflection.ResolveWinRtType("Windows.ApplicationModel.AppInfo");
     private static readonly MethodInfo? RequestSessionManagerAsyncMethod =
         SessionManagerType?.GetMethod("RequestAsync", BindingFlags.Public | BindingFlags.Static);
     private static readonly MethodInfo? AsTaskGenericMethodDefinition = ResolveAsTaskGenericMethod();
-    private static readonly MethodInfo? AsStreamForReadMethod = ResolveAsStreamForReadMethod();
+    private static readonly MethodInfo? AsStreamForReadMethod =
+        WinRtReflection.ResolveStaticMethod(
+            WinRtReflection.ResolveProjectionType("System.IO.WindowsRuntimeStreamExtensions"),
+            "AsStreamForRead");
 
     private static readonly SemaphoreSlim ManagerLock = new(1, 1);
     private static object? _sessionManager;
@@ -467,7 +470,7 @@ public sealed class WindowsSmtcMusicControlService : IMusicSessionProvider
 
     private static MethodInfo? ResolveAsTaskGenericMethod()
     {
-        var type = Type.GetType("System.WindowsRuntimeSystemExtensions, System.Runtime.WindowsRuntime", throwOnError: false);
+        var type = WinRtReflection.ResolveProjectionType("System.WindowsRuntimeSystemExtensions");
         return type?
             .GetMethods(BindingFlags.Public | BindingFlags.Static)
             .FirstOrDefault(method =>
@@ -483,21 +486,6 @@ public sealed class WindowsSmtcMusicControlService : IMusicSessionProvider
                     return false;
                 }
             });
-    }
-
-    private static MethodInfo? ResolveAsStreamForReadMethod()
-    {
-        var type = Type.GetType("System.IO.WindowsRuntimeStreamExtensions, System.Runtime.WindowsRuntime", throwOnError: false);
-        return type?
-            .GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .FirstOrDefault(method =>
-                method.Name == "AsStreamForRead" &&
-                method.GetParameters().Length == 1);
-    }
-
-    private static Type? ResolveWinRtType(string typeName)
-    {
-        return Type.GetType($"{typeName}, Windows, ContentType=WindowsRuntime", throwOnError: false);
     }
 
     private static bool IsRuntimeSupported()

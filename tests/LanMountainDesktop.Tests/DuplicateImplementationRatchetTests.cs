@@ -376,7 +376,18 @@ public sealed class DuplicateImplementationRatchetTests
     /// 文件本来就不在 → 不抛也不留）；"挪进 pending"那一支**未覆盖**并写明原因（同进程的锁会把
     /// <c>File.Move</c> 一起挡住，那样测到的是"挪也失败"）。实测净 <c>−109</c> 行（两家各删 73、各加 5，家加 27）。
 
-    private const int IdenticalBodyFamilyCeiling = 31;
+    /// 31 → 30 收一族（<c>ResolveAsStreamForReadMethod</c> 两份逐字相同，<c>WindowsNotificationListener</c>
+    /// 与 <c>WindowsSmtcMusicControlService</c> 各一份）→ 进 <c>Services/WinRtReflection.cs</c>。
+    /// 同批把 <c>ResolveWinRtType</c>（三份逐字相同、每份只一句，所以本来不进逐字面）与散在三个服务里的
+    /// 两个装配标识（共 8 处字面量）一起收进同一个家，并配字面量守卫
+    /// <c>WinRtAssemblyIdentityLiterals_LiveInExactlyOnePlace</c>——这一族的风险不是崩而是"能力安静消失"，
+    /// 只比方法体的尺子看不见"同一句 <c>Type.GetType</c> 换个写法"。
+    /// <c>AsTask</c> 那个泛型方法定义怎么挑<strong>没</strong>并：三家判据不同（一家带 try/catch 与形参校验），
+    /// 那一支等拍板（#G1-BC），这里只把它们的装配名换成 <c>ResolveProjectionType</c>。
+    /// 行为钉 <c>WinRtReflectionTests</c> 3 条（夹具含 <c>Bar(int)</c> 与 <c>Foo()</c>/<c>Foo(int,int)</c>
+    /// 两个方向的干扰项）；本机真找得到 <c>AsStreamForRead</c> 与否**未覆盖**，headless 里判不出来。
+
+    private const int IdenticalBodyFamilyCeiling = 30;
 
     /// <summary>
     /// 今天实测：189 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。

@@ -60,7 +60,7 @@ public sealed class UnsupportedLocationService : ILocationService
 
 public sealed class WindowsLocationService : ILocationService
 {
-    private static readonly Type? GeolocatorType = ResolveWinRtType("Windows.Devices.Geolocation.Geolocator");
+    private static readonly Type? GeolocatorType = WinRtReflection.ResolveWinRtType("Windows.Devices.Geolocation.Geolocator");
     private static readonly MethodInfo? RequestAccessAsyncMethod =
         GeolocatorType?.GetMethod("RequestAccessAsync", BindingFlags.Public | BindingFlags.Static);
     private static readonly MethodInfo? AsTaskGenericMethodDefinition = ResolveAsTaskGenericMethod();
@@ -173,7 +173,7 @@ public sealed class WindowsLocationService : ILocationService
     {
         try
         {
-            var type = Type.GetType("System.WindowsRuntimeSystemExtensions, System.Runtime.WindowsRuntime", throwOnError: false);
+            var type = WinRtReflection.ResolveProjectionType("System.WindowsRuntimeSystemExtensions");
             if (type is null)
             {
                 return null;
@@ -211,11 +211,6 @@ public sealed class WindowsLocationService : ILocationService
         }
 
         return null;
-    }
-
-    private static Type? ResolveWinRtType(string typeName)
-    {
-        return Type.GetType($"{typeName}, Windows, ContentType=WindowsRuntime", throwOnError: false);
     }
 
     private static object? InvokeMethod(object? target, string methodName)

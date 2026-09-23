@@ -15,13 +15,16 @@ namespace LanMountainDesktop.Services;
 internal sealed class WindowsNotificationListener : IPlatformNotificationListener
 {
     private static readonly Type? UserNotificationListenerType =
-        ResolveWinRtType("Windows.UI.Notifications.Management.UserNotificationListener");
+        WinRtReflection.ResolveWinRtType("Windows.UI.Notifications.Management.UserNotificationListener");
     private static readonly Type? NotificationKindsType =
-        ResolveWinRtType("Windows.UI.Notifications.NotificationKinds");
+        WinRtReflection.ResolveWinRtType("Windows.UI.Notifications.NotificationKinds");
     private static readonly Type? KnownNotificationBindingsType =
-        ResolveWinRtType("Windows.UI.Notifications.KnownNotificationBindings");
+        WinRtReflection.ResolveWinRtType("Windows.UI.Notifications.KnownNotificationBindings");
     private static readonly MethodInfo? AsTaskGenericMethodDefinition = ResolveAsTaskGenericMethod();
-    private static readonly MethodInfo? AsStreamForReadMethod = ResolveAsStreamForReadMethod();
+    private static readonly MethodInfo? AsStreamForReadMethod =
+        WinRtReflection.ResolveStaticMethod(
+            WinRtReflection.ResolveProjectionType("System.IO.WindowsRuntimeStreamExtensions"),
+            "AsStreamForRead");
 
     private readonly NotificationListenerService _parent;
     private readonly Dictionary<string, NotificationItem> _lastSnapshot = new(StringComparer.OrdinalIgnoreCase);
@@ -267,7 +270,7 @@ internal sealed class WindowsNotificationListener : IPlatformNotificationListene
 
         try
         {
-            var sizeType = ResolveWinRtType("Windows.Foundation.Size");
+            var sizeType = WinRtReflection.ResolveWinRtType("Windows.Foundation.Size");
             object size = sizeType is not null
                 ? Activator.CreateInstance(sizeType, 32d, 32d)!
                 : null!;
@@ -382,23 +385,10 @@ internal sealed class WindowsNotificationListener : IPlatformNotificationListene
 
     private static MethodInfo? ResolveAsTaskGenericMethod()
     {
-        var type = Type.GetType("System.WindowsRuntimeSystemExtensions, System.Runtime.WindowsRuntime", throwOnError: false);
+        var type = WinRtReflection.ResolveProjectionType("System.WindowsRuntimeSystemExtensions");
         return type?
             .GetMethods(BindingFlags.Public | BindingFlags.Static)
             .FirstOrDefault(method => method.Name == "AsTask" && method.IsGenericMethodDefinition && method.GetParameters().Length == 1);
-    }
-
-    private static MethodInfo? ResolveAsStreamForReadMethod()
-    {
-        var type = Type.GetType("System.IO.WindowsRuntimeStreamExtensions, System.Runtime.WindowsRuntime", throwOnError: false);
-        return type?
-            .GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .FirstOrDefault(method => method.Name == "AsStreamForRead" && method.GetParameters().Length == 1);
-    }
-
-    private static Type? ResolveWinRtType(string typeName)
-    {
-        return Type.GetType($"{typeName}, Windows, ContentType=WindowsRuntime", throwOnError: false);
     }
 
     private static object? InvokeMethod(object? target, string methodName, object?[]? parameters)

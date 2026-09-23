@@ -475,6 +475,19 @@ headless 量不到它，这一点写进测试注释，不宣称整条链都钉�
 家不接管它的取法。行为钉 `WinRtAsyncAwaitTests` 7 格——其中"取消要传下去"那一格是第一版没钉住的：
 `WaitAsync` 对**已经完成**的任务根本不看令牌，夹具得真的挂在那儿才量得出（改正已写进测试注释）。
 
+**到 WinRT 投影里按名字取类型／方法只认 `Services/WinRtReflection.cs` 一家**：两个装配标识
+（`System.Runtime.WindowsRuntime` 与 `Windows, ContentType=WindowsRuntime`）的字面量只许写在那里，
+取类型走 `ResolveProjectionType` / `ResolveWinRtType`，取方法走 `ResolveStaticMethod(type, name)`
+（public static + **恰好一个参数**）。2026-09-24 收口前那两个标识散在三个服务里共 8 处
+（`ResolveWinRtType` 三份逐字相同、`ResolveAsStreamForReadMethod` 两份逐字相同）。
+拦字面量而不是只拦方法体的理由：这三条路的兜底口径都是"拿不到就跳过这次能力"，
+**装配名拼错一个字母不报错，症状是那条能力安静地消失**（定位、通知、播放状态都是这样）。
+守卫 `WinRtAssemblyIdentityLiterals_LiveInExactlyOnePlace`，行为钉 `WinRtReflectionTests` 3 条
+（夹具里 `Bar(int)` 与 `Foo()`/`Foo(int,int)` 两个方向的干扰项各断一条判据）。
+**没接管的一件事**：`AsTask` 那个泛型方法定义怎么挑——三家各有一套判据（一家带 try/catch 与形参校验、
+另两家 LINQ 挑第一个），那是 #G1-BC 上等拍板的差别，这一笔只把它们的装配名换成 `ResolveProjectionType`，
+没动任何一家挑重载的逻辑。
+
 **界面语言口径只认一处**：默认语言写 `LocalizationService.DefaultLanguageCode`，读当前语言走
 `ResolveLanguageCode(() => 快照.LanguageCode)`（内部含"读盘失败退回默认语言"的兜底），判断是不是中文走
 `IsChineseLanguage(code)`。此前宿主里有 41 处 `_languageCode = "zh-CN"` 初值/兜底、12 份各自复制的
