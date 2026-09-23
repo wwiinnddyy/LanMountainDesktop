@@ -372,6 +372,14 @@ scheme 校验在这条路上同样只靠"抄的时候抄全"——少了它，RS
 （行为钉 `DesktopIconHostTests` 6 格，四条注入点逐条量过），`Resolve()` 只负责真调 Win32——
 headless 量不到它，这一点写进测试注释，不宣称整条链都钉住了。
 
+**本机平台标识（"os-架构"那串 token）只认 `Services/PlatformIdentifiers.cs` 一家**：
+要算清单键一律 `CurrentPlatformId`（如 `windows-x64`），只要架构段一律 `CurrentArchitectureToken`。
+此前一个值算四次（宿主两处 `ResolveCurrentPlatform` 逐字相同，两个 `SelectPreferredInstallerAsset` 各抄一遍架构 switch）。
+这套 token 是**对外契约**不是内部命名：发布资产名里就写着 `files-windows-x64.zip`，所以三条形状不许漂——
+全小写、认不出的架构落到 `x64`（不是 `amd64`／`x86_64`）、os 与架构之间那根连字符；认不出系统写 `unknown` 不抛。
+要改口径得连发布侧一起改。两个更新路径挑安装包用的**打分算法仍然不同**（`ScoreAsset` 排序 vs
+`ScoreWindowsInstallerAsset` 过滤），那是 #G1-BC 队列里的一条，别以为这一笔已经把它收了。
+
 **"这个 pid 还活着吗"只认 `desktop/LanMountainDesktop.Launcher/Startup/LiveProcessProbe.cs` 一家**：
 只问活死一律走 `IsLive(pid)`（句柄它自己释放），**真需要那个 `Process` 句柄**才走 `TryGet(pid, out var p)`，
 且拿到就必须负责释放。此前启动器里有三份：两份逐字相同（`LaunchResultBuilder`、`StartupAttemptRegistry`）、

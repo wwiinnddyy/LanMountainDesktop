@@ -7,6 +7,7 @@ using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 using LanMountainDesktop.Shared.Contracts.Update;
 using SettingsUpdateSettingsState = LanMountainDesktop.Services.Settings.UpdateSettingsState;
+using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Services.Update;
 
@@ -128,7 +129,7 @@ public sealed class UpdateOrchestrator : IDisposable
             UpdateManifest? manifest;
             try
             {
-                var platform = ResolveCurrentPlatform();
+                var platform = PlatformIdentifiers.CurrentPlatformId;
                 manifest = settings.ForceUpdateReinstall
                     ? await _manifestProvider.GetByVersionAsync(
                         currentVersionText,
@@ -709,24 +710,6 @@ public sealed class UpdateOrchestrator : IDisposable
 
         version = new Version(parsed.Major, parsed.Minor, Math.Max(0, parsed.Build), Math.Max(0, parsed.Revision));
         return true;
-    }
-
-    private static string ResolveCurrentPlatform()
-    {
-        var os = OperatingSystem.IsWindows()
-            ? "windows"
-            : OperatingSystem.IsLinux()
-                ? "linux"
-                : OperatingSystem.IsMacOS()
-                    ? "macos"
-                    : "unknown";
-        var arch = System.Runtime.InteropServices.RuntimeInformation.OSArchitecture switch
-        {
-            System.Runtime.InteropServices.Architecture.Arm64 => "arm64",
-            System.Runtime.InteropServices.Architecture.X86 => "x86",
-            _ => "x64"
-        };
-        return $"{os}-{arch}";
     }
 
     private void OnPhaseChanged(UpdatePhase phase)

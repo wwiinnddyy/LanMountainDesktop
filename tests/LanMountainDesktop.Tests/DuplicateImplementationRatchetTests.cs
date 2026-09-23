@@ -280,8 +280,18 @@ public sealed class DuplicateImplementationRatchetTests
     /// 守卫（<c>processId &lt;= 0</c>）与 <c>catch</c> 彼此遮蔽——守卫写成 <c>&lt; 0</c> 全绿、
     /// 把 <c>catch</c> 改成 <c>throw;</c> 也全绿（非法 pid 走不到 catch）；只有 <c>HasExited</c> 反向红 2 格。
     /// 要钉"探不到不许抛给调用方"得有"pid 合法但正在退"的夹具（要真起真退进程），离线门里没做 → 未覆盖，不是已排除。
+    /// 41 → 40 收一族（本机平台标识："os-架构"两份逐字相同 <c>ResolveCurrentPlatform</c> 在
+    /// <c>SettingsDomainServices</c> 与 <c>UpdateOrchestrator</c>；同一段架构 <c>switch</c> 又被
+    /// <c>UpdateManifestMapper</c> 与 <c>GitHubReleaseUpdateService</c> 的 <c>SelectPreferredInstallerAsset</c>
+    /// 各抄一遍——一个值在同一条链上算四次）→ 进 <c>Services/PlatformIdentifiers.cs</c>，
+    /// 两处调用点走 <c>CurrentPlatformId</c>、两处走 <c>CurrentArchitectureToken</c>，值逐字不变。
+    /// 这套 token 是对外契约（发布资产名里写着 <c>files-windows-x64.zip</c>），所以钉的是"全小写 / 默认档 <c>x64</c> /
+    /// 那根连字符"三条；三处注入实测：架构两档对调红 2 格、去掉连字符红 2 格、默认档写成 <c>amd64</c> 红 4 格。
+    /// 这一笔**没**动漂移族（182 不变，闸门实测仍绿）：两个 <c>SelectPreferredInstallerAsset</c> 的选包算法本来就不一样
+    /// （一个 <c>ScoreAsset</c> 排序、一个 <c>ScoreWindowsInstallerAsset</c> 过滤），搬走的只是共用的架构 token——
+    /// "同一个二进制里两条更新路径按不同打分挑安装包"这件事本身是重复真源队列里的一条，记进 #G1-BC。
     /// </summary>
-    private const int IdenticalBodyFamilyCeiling = 41;
+    private const int IdenticalBodyFamilyCeiling = 40;
 
     /// <summary>
     /// 今天实测：189 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。

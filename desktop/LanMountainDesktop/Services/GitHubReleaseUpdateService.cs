@@ -10,6 +10,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using LanMountainDesktop.Helpers;
+using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Services;
 
@@ -646,12 +647,7 @@ public sealed class GitHubReleaseUpdateService : IDisposable
             return null;
         }
 
-        var architectureToken = RuntimeInformation.OSArchitecture switch
-        {
-            Architecture.Arm64 => "arm64",
-            Architecture.X86 => "x86",
-            _ => "x64"
-        };
+        var architectureToken = PlatformIdentifiers.CurrentArchitectureToken;
 
         if (OperatingSystem.IsWindows())
         {

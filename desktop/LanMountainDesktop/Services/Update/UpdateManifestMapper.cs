@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using LanMountainDesktop.Shared.Contracts.Update;
 using LanMountainDesktop.Services.Plonds;
+using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Services.Update;
 
@@ -108,12 +109,7 @@ internal static class UpdateManifestMapper
             return null;
         }
 
-        var architectureToken = RuntimeInformation.OSArchitecture switch
-        {
-            Architecture.Arm64 => "arm64",
-            Architecture.X86 => "x86",
-            _ => "x64"
-        };
+        var architectureToken = PlatformIdentifiers.CurrentArchitectureToken;
 
         if (OperatingSystem.IsWindows())
         {

@@ -1512,7 +1512,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
                     continue;
                 }
 
-                return UpdateManifestMapper.FromFullInstaller(release, Get().UpdateChannel, ResolveCurrentPlatform());
+                return UpdateManifestMapper.FromFullInstaller(release, Get().UpdateChannel, PlatformIdentifiers.CurrentPlatformId);
             }
             catch (OperationCanceledException)
             {
@@ -1561,24 +1561,6 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
             UserDataRoot.FolderName,
             "Updates",
             safeFileName);
-    }
-
-    private static string ResolveCurrentPlatform()
-    {
-        var os = OperatingSystem.IsWindows()
-            ? "windows"
-            : OperatingSystem.IsLinux()
-                ? "linux"
-                : OperatingSystem.IsMacOS()
-                    ? "macos"
-                    : "unknown";
-        var arch = System.Runtime.InteropServices.RuntimeInformation.OSArchitecture switch
-        {
-            System.Runtime.InteropServices.Architecture.Arm64 => "arm64",
-            System.Runtime.InteropServices.Architecture.X86 => "x86",
-            _ => "x64"
-        };
-        return $"{os}-{arch}";
     }
 
     private static bool TryParseVersion(string? value, out Version version)
