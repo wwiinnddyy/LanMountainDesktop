@@ -109,7 +109,15 @@ public sealed class DuplicateImplementationRatchetTests
     /// 方法整个删掉、调用点直接走家。上一笔刚把两份的取表分支收成 <c>For(isChinese)</c>,
     /// 这一步收的是"取到表之后往哪儿写"。行为钉 <c>CalendarWeekLabelsTests</c> 4 格：
     /// 注入"最后一列不填"（<c>i &lt; blocks.Count - 1</c>）恰好红 3 格、空表那格照旧绿,验过。）
-    private const int IdenticalBodyFamilyCeiling = 48;
+    /// 48 → 47 收一族（<c>FirstNonEmpty</c> 8 行逐字两份，而且**跨两个二进制**：
+    /// Core 的 <c>LauncherRuntimeMetadata</c>（启动器读部署目录/可执行文件名）与宿主的
+    /// <c>PlondsManifestParser</c>（解析更新清单的显示名与动作）。进
+    /// <c>core/.../Shared/Text/TextValue.cs</c>，7 个调用点改走家。
+    /// 这类跨二进制的漂开不会崩，只会让同一份清单在两处"哪个字段算有值"判断不同：
+    /// 一边把只含空格的串当有效值，标题就显示成空白、回退链断掉。
+    /// 行为钉 <c>TextValueTests</c> 4 格：注入"空白串算有值"（<c>IsNullOrWhiteSpace</c> 改成
+    /// <c>IsNullOrEmpty</c>）恰好红那 2 格敏感的、另 2 格不动，验过。）
+    private const int IdenticalBodyFamilyCeiling = 47;
 
     /// <summary>
     /// 今天实测：191 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
@@ -144,7 +152,7 @@ public sealed class DuplicateImplementationRatchetTests
     private const int DriftFamilyCeiling = 190;
 
     /// <summary>
-    /// 漂移普查认领的声明处数下限（今天实测 5439）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。
+    /// 漂移普查认领的声明处数下限（今天实测 5437）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。
     /// 钉这个不是为了查新增，是为了查**判据自己塌掉**：
     /// 上面那两处 bug 都是"少认声明"，族数看着像收口（193→189），实际是普查瞎了。
     /// 只冻族数会被这种错法骗过去，冻住认领量就不会。
@@ -323,7 +331,7 @@ public sealed class DuplicateImplementationRatchetTests
         var censusSites = bodiesByName.Values.Sum(tally => tally.Sites);
         Assert.True(
             censusSites >= DriftCensusSiteFloor,
-            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5439）。" +
+            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5437）。" +
             "族数没变也说明判据在丢声明：查 NormalizeBody 又漏掉了哪种成员写法（历史上漏过 Allman 箭头体与插值字符串的大括号）");
 
         var driftFamilies = bodiesByName.Count(pair => pair.Value.VariantCount >= 2 &&

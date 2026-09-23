@@ -1,5 +1,6 @@
 using System.Text.Json;
 using LanMountainDesktop.Services.Plonds;
+using LanMountainDesktop.Shared.Text;
 
 namespace LanMountainDesktop.Services.Update;
 
@@ -84,7 +85,7 @@ internal static class PlondsManifestParser
 
     public static string? ResolveSourceVersion(ApplyPlondsFileMap fileMap, ApplyPlondsUpdateMetadata? metadata)
     {
-        return FirstNonEmpty(
+        return TextValue.FirstNonEmpty(
             metadata?.FromVersion,
             fileMap.FromVersion,
             TryGetMetadataValue(fileMap.Metadata, "fromVersion"),
@@ -93,7 +94,7 @@ internal static class PlondsManifestParser
 
     public static string? ResolveTargetVersion(ApplyPlondsFileMap fileMap, ApplyPlondsUpdateMetadata? metadata)
     {
-        return FirstNonEmpty(
+        return TextValue.FirstNonEmpty(
             metadata?.ToVersion,
             fileMap.ToVersion,
             fileMap.Version,
@@ -251,7 +252,7 @@ internal static class PlondsManifestParser
         entry = new ApplyPlondsFileEntry
         {
             Path = path,
-            Action = FirstNonEmpty(
+            Action = TextValue.FirstNonEmpty(
                 ReadStringIgnoreCase(node, "action"),
                 ReadStringIgnoreCase(node, "op"),
                 PlondsWireFormat.ActionReplace),
@@ -416,16 +417,4 @@ internal static class PlondsManifestParser
         return null;
     }
 
-    private static string? FirstNonEmpty(params string?[] values)
-    {
-        foreach (var value in values)
-        {
-            if (!string.IsNullOrWhiteSpace(value))
-            {
-                return value;
-            }
-        }
-
-        return null;
-    }
 }

@@ -1,4 +1,5 @@
 using System.Globalization;
+using LanMountainDesktop.Shared.Text;
 
 namespace LanMountainDesktop.Shared.Contracts.Launcher;
 
@@ -50,21 +51,21 @@ public static class LauncherRuntimeMetadata
 
     public static string? GetPackageRoot(IReadOnlyList<string>? commandLineArgs = null)
     {
-        return FirstNonEmpty(
+        return TextValue.FirstNonEmpty(
             Environment.GetEnvironmentVariable(LauncherIpcConstants.PackageRootEnvVar),
             GetOptionValue(LauncherIpcConstants.PackageRootEnvVar, commandLineArgs));
     }
 
     public static string? GetForwardedVersion(IReadOnlyList<string>? commandLineArgs = null)
     {
-        return FirstNonEmpty(
+        return TextValue.FirstNonEmpty(
             Environment.GetEnvironmentVariable(LauncherIpcConstants.VersionEnvVar),
             GetOptionValue(LauncherIpcConstants.VersionEnvVar, commandLineArgs));
     }
 
     public static string? GetForwardedCodename(IReadOnlyList<string>? commandLineArgs = null)
     {
-        return FirstNonEmpty(
+        return TextValue.FirstNonEmpty(
             Environment.GetEnvironmentVariable(LauncherIpcConstants.CodenameEnvVar),
             GetOptionValue(LauncherIpcConstants.CodenameEnvVar, commandLineArgs));
     }
@@ -76,7 +77,7 @@ public static class LauncherRuntimeMetadata
 
     public static int? GetLauncherProcessId(IReadOnlyList<string>? commandLineArgs = null)
     {
-        var rawValue = FirstNonEmpty(
+        var rawValue = TextValue.FirstNonEmpty(
             Environment.GetEnvironmentVariable(LauncherIpcConstants.LauncherPidEnvVar),
             GetOptionValue(LauncherIpcConstants.LauncherPidEnvVar, commandLineArgs));
 
@@ -128,16 +129,4 @@ public static class LauncherRuntimeMetadata
             : null;
     }
 
-    private static string? FirstNonEmpty(params string?[] values)
-    {
-        foreach (var value in values)
-        {
-            if (!string.IsNullOrWhiteSpace(value))
-            {
-                return value;
-            }
-        }
-
-        return null;
-    }
 }
