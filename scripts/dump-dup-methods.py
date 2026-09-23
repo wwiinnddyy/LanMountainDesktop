@@ -61,6 +61,26 @@ def squeeze(text):
     return "".join(out)
 
 
+def logical_lines(lines):
+    """Same semantics as the gate's LogicalLines and dump-drift-methods.logical_lines:
+    join a declaration whose parameter list does not close on the same line.
+    Stops as soon as a brace shows up, so a method body is never swallowed into its signature.
+    """
+    out = []
+    i = 0
+    n = len(lines)
+    while i < n:
+        current = lines[i]
+        while ("{" not in current
+               and sum(c in "([" for c in current) != sum(c in ")]" for c in current)
+               and i + 1 < n):
+            i += 1
+            current = current.rstrip() + " " + lines[i].strip()
+        out.append(current)
+        i += 1
+    return out
+
+
 def count_statements(body):
     """数深度 0 的分号：一条语句可能写成两行，那不算"复制了一份逻辑"。
 
@@ -105,7 +125,7 @@ if not files:
 
 groups = defaultdict(list)
 for path in files:
-    lines = io.open(path, encoding="utf-8", errors="replace").read().split("\n")
+    lines = logical_lines(io.open(path, encoding="utf-8", errors="replace").read().split("\n"))
     i = 0
     while i < len(lines) - 1:
         m = SIG.match(lines[i])
