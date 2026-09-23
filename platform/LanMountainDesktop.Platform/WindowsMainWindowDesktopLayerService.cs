@@ -110,7 +110,7 @@ public sealed class WindowsMainWindowDesktopLayerService : IMainWindowDesktopLay
         }
 
         SaveRestoreStateIfNeeded(handle);
-        var desktopHost = ResolveDesktopIconHost();
+        var desktopHost = DesktopIconHost.Resolve();
         if (desktopHost != IntPtr.Zero && IsWindow(desktopHost))
         {
             ApplyDesktopChildStyle(handle);
@@ -159,45 +159,7 @@ public sealed class WindowsMainWindowDesktopLayerService : IMainWindowDesktopLay
         SetWindowLongPtr(handle, GWL_STYLE, new IntPtr(style));
     }
 
-    private static IntPtr ResolveDesktopIconHost()
-    {
-        var topLevelWindows = new List<IntPtr>();
-        EnumWindows((handle, _) =>
-        {
-            topLevelWindows.Add(handle);
-            return true;
-        }, IntPtr.Zero);
-
-        foreach (var topLevelWindow in topLevelWindows)
-        {
-            var worker = FindWindowEx(topLevelWindow, IntPtr.Zero, "WorkerW", null);
-            if (worker == IntPtr.Zero)
-            {
-                continue;
-            }
-
-            var defView = FindWindowEx(worker, IntPtr.Zero, "SHELLDLL_DefView", null);
-            if (defView != IntPtr.Zero)
-            {
-                return defView;
-            }
-        }
-
-        foreach (var topLevelWindow in topLevelWindows)
-        {
-            var defView = FindWindowEx(topLevelWindow, IntPtr.Zero, "SHELLDLL_DefView", null);
-            if (defView != IntPtr.Zero)
-            {
-                return defView;
-            }
-        }
-
-        return IntPtr.Zero;
-    }
-
     private sealed record WindowRestoreState(IntPtr Parent, IntPtr Style, IntPtr ExStyle);
-
-    private delegate bool EnumWindowsProc(IntPtr handle, IntPtr lParam);
 
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtr")]
     private static extern IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex);
@@ -217,10 +179,4 @@ public sealed class WindowsMainWindowDesktopLayerService : IMainWindowDesktopLay
     [DllImport("user32.dll")]
     private static extern bool IsWindow(IntPtr hWnd);
 
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern IntPtr FindWindowEx(IntPtr hParent, IntPtr hChildAfter, string? lpszClass, string? lpszWindow);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
 }

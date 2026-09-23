@@ -363,6 +363,15 @@ scheme 校验在这条路上同样只靠"抄的时候抄全"——少了它，RS
 `httpClient` 由调用方给：RSS 两个 8 秒、`DailyArtworkWidget` 10 秒且带 referrer 重试，那是另一种实现，
 并成一个客户端属策略问题（挂 #G1-BC），不在这笔里顺手做。
 
+**桌面图标层是哪个窗口只认 `platform/.../DesktopIconHost.cs` 一家**：要把窗口挂到桌面图标层，一律
+`DesktopIconHost.Resolve()` 取宿主，拿不到给 `IntPtr.Zero`、不抛（调用方判据一律是"0 就跳过这次挂接"）。
+此前两个桌面层服务各抄一份逐字相同的 35 行，连带 `EnumWindows`／`FindWindowEx` 两套 P/Invoke 也各一份。
+判据是"先在 `WorkerW` 里找 `SHELLDLL_DefView`，找不到再到顶层窗口自己底下找"，两种错法都不报错：
+少第二趟，壁纸窗没开 `WorkerW` 的机器上挂不上桌面；两趟顺序反了，会挂到"看得见但不是图标层"的那一窗，
+症状是图标盖在窗口上或被盖住。所以判据与取数分开：`ResolveFrom(tops, findChild)` 是纯判据、可注入可测
+（行为钉 `DesktopIconHostTests` 6 格，四条注入点逐条量过），`Resolve()` 只负责真调 Win32——
+headless 量不到它，这一点写进测试注释，不宣称整条链都钉住了。
+
 **界面语言口径只认一处**：默认语言写 `LocalizationService.DefaultLanguageCode`，读当前语言走
 `ResolveLanguageCode(() => 快照.LanguageCode)`（内部含"读盘失败退回默认语言"的兜底），判断是不是中文走
 `IsChineseLanguage(code)`。此前宿主里有 41 处 `_languageCode = "zh-CN"` 初值/兜底、12 份各自复制的

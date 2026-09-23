@@ -118,7 +118,7 @@ public sealed class WindowsWindowBottomMostService : IWindowBottomMostService
                 return;
             }
 
-            var desktopHost = ResolveDesktopIconHost();
+            var desktopHost = DesktopIconHost.Resolve();
             if (!state.NeedsNativeRepair &&
                 state.IsDesktopAttached &&
                 state.HasStableDesktopAttachment &&
@@ -417,7 +417,7 @@ public sealed class WindowsWindowBottomMostService : IWindowBottomMostService
 
         RegisterHandle(state, handle);
         ConfigureDwmAppearance(handle);
-        ApplyDesktopAttachment(state, ResolveDesktopIconHost(), logSuccess, "initial setup");
+        ApplyDesktopAttachment(state, DesktopIconHost.Resolve(), logSuccess, "initial setup");
     }
 
     private static void RegisterHandle(DesktopWindowState state, IntPtr handle)
@@ -836,42 +836,6 @@ public sealed class WindowsWindowBottomMostService : IWindowBottomMostService
         }
     }
 
-    private static IntPtr ResolveDesktopIconHost()
-    {
-        var topLevelWindows = new List<IntPtr>();
-        EnumWindows((handle, _) =>
-        {
-            topLevelWindows.Add(handle);
-            return true;
-        }, IntPtr.Zero);
-
-        foreach (var topLevelWindow in topLevelWindows)
-        {
-            var worker = FindWindowEx(topLevelWindow, IntPtr.Zero, "WorkerW", null);
-            if (worker == IntPtr.Zero)
-            {
-                continue;
-            }
-
-            var defView = FindWindowEx(worker, IntPtr.Zero, "SHELLDLL_DefView", null);
-            if (defView != IntPtr.Zero)
-            {
-                return defView;
-            }
-        }
-
-        foreach (var topLevelWindow in topLevelWindows)
-        {
-            var defView = FindWindowEx(topLevelWindow, IntPtr.Zero, "SHELLDLL_DefView", null);
-            if (defView != IntPtr.Zero)
-            {
-                return defView;
-            }
-        }
-
-        return IntPtr.Zero;
-    }
-
     private static void StartDesktopHostMonitorTimer(IntPtr currentHost)
     {
         lock (TimerLock)
@@ -893,7 +857,7 @@ public sealed class WindowsWindowBottomMostService : IWindowBottomMostService
 
     private static void MonitorDesktopHostAttachments()
     {
-        var desktopHost = ResolveDesktopIconHost();
+        var desktopHost = DesktopIconHost.Resolve();
         var hostChanged = false;
         lock (TimerLock)
         {
@@ -937,7 +901,7 @@ public sealed class WindowsWindowBottomMostService : IWindowBottomMostService
         {
             try
             {
-                var currentHost = ResolveDesktopIconHost();
+                var currentHost = DesktopIconHost.Resolve();
                 var effectiveHostChanged = hostChanged || currentHost != desktopHost;
                 List<DesktopWindowState> currentStates;
                 lock (StaticLock)
@@ -1232,8 +1196,6 @@ public sealed class WindowsWindowBottomMostService : IWindowBottomMostService
 
     private readonly record struct NativeWindowState(IntPtr Parent, uint Style, uint ExStyle);
 
-    private delegate bool EnumWindowsProc(IntPtr handle, IntPtr lParam);
-
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
@@ -1268,17 +1230,6 @@ public sealed class WindowsWindowBottomMostService : IWindowBottomMostService
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool ScreenToClient(IntPtr hWnd, ref POINT lpPoint);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern IntPtr FindWindowEx(
-        IntPtr hParent,
-        IntPtr hChildAfter,
-        string? lpszClass,
-        string? lpszWindow);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
 
     [DllImport("user32.dll")]
     private static extern uint GetDpiForWindow(IntPtr hWnd);
