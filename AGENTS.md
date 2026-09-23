@@ -117,6 +117,15 @@ AirApp 本地包生成：
 - 共享契约以 `core/LanMountainDesktop.Core/` 为准
 - market 数据来源默认是兄弟仓库 `..\\LanAirApp`
 - 迁移或 breaking change 优先同步 `docs/AIRAPP_SDK_V1_MIGRATION.md`
+- **一个包号只能对应一份 SDK 公开表面**：改 `airapp/LanMountainDesktop.AirAppSdk/` 的公开签名，必须先递增
+  `AirAppSdkInfo.SdkVersion` / `ApiVersion` 与包版本，再设 `LMD_UPDATE_AIRAPP_SDK_BASELINE=1` 重录基线。钉住这条的是基线旁边那份
+  只增台账 `tests/LanMountainDesktop.Tests/ApprovalFiles/AirAppSdk.PublicSurface.VersionLedger.txt`（每行 `版本号 + 表面哈希`）：
+  基线本身只比"相对上次录制变了没有"，看不见"换了表面、没换包号"——而 `061e405` 那次 11 个属性 `init`→`set`、包号仍是 1.0.0，
+  正是从这条缝里溜走的（外部 AirApp 绑不上，症状是加载时 `MissingMethodException`）。
+  `AirAppSdkPublicSurfaceTests` 的次序是**先判台账、再写基线**，所以录制模式也洗不白：同一个包号出现第二个哈希就红、
+  并把两个哈希都报出来，基线一个字节不改、台账也不追加。两个方向都种过样本验过：把 `AirAppComponentOptions.ComponentId`
+  从 `set` 改回 `init`（就是那次破坏的形状）带着录制开关跑 → 红且台账仍 1 行；同样的破坏加上 `SdkVersion` 递增到 1.0.1 再录 →
+  绿、台账变 2 行。它管不了已经发生的那一次（台账是破坏之后才开的账），那一半仍由 `Category=EcosystemProbe` 那 8 行真加载兜着。
 - 统一用 AirApp 措辞：新增的类型、目录、设置键、日志文案不要再引入 `plugin` / `Plugin`
 - 改名前先查 `docs/ai/NAMING_AND_FROZEN_IDENTIFIERS.md`：其中第 3 节是跨进程/跨仓协议冻结项，第 2 节是需要一次性迁移器的本地数据标识符，两者都不能当作"漏改"直接重命名
 - **清单 id 是唯一真源**：`airapp.json` 的 `components[].id` 必须与 `AddAirAppComponent` 注册的 `ComponentId` 逐字一致，宿主加载时据此校验并**拒载**（`AirAppLoader.ValidateManifestComponentContract`）。添加面板按清单列、创建控件按注册 id 找，两边漂移的症状是"面板里有、点下去没反应"且原本不报错（LanWord 实测踩过）。注册了却没声明只警告，不拒载

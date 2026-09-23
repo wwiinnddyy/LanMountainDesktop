@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -24,19 +25,31 @@ namespace LanMountainDesktop.Tests;
 /// （061e405 一次改到 11 个属性 init→set 并删掉 IAirAppWorker/IAirAppWorkerContext 整族成员，
 /// 包号仍是 1.0.0；基线是其后才录的，于是守卫一路绿，只有外部现成产物绑不上）。
 /// 这一条目前只能靠 EcosystemProbe 那 8 行真加载兜住——它跑的就是外部仓库的现成二进制。
+/// 台账（<c>AirAppSdk.PublicSurface.VersionLedger.txt</c>）补的就是这个洞的**下半截**：它管不了
+/// 已经发生的那次，但让"同一个包号两份表面"从今往后当场红 —— 每次录基线都往台账追加一行
+/// <c>版本号 + 表面哈希</c>，同一个版本号出现第二个哈希就拒绝追加，且 <c>LMD_UPDATE_AIRAPP_SDK_BASELINE</c>
+/// 也绕不过去（它追加之前先撞同一条判据）。
 /// </summary>
 public sealed class AirAppSdkPublicSurfaceTests
 {
     private const string BaselineRelativePath = "tests/LanMountainDesktop.Tests/ApprovalFiles/AirAppSdk.PublicSurface.txt";
+    private const string VersionLedgerRelativePath = "tests/LanMountainDesktop.Tests/ApprovalFiles/AirAppSdk.PublicSurface.VersionLedger.txt";
 
     private static string BaselinePath => Path.Combine(RepoRoot, BaselineRelativePath.Replace('/', Path.DirectorySeparatorChar));
+
+    private static string VersionLedgerPath => Path.Combine(RepoRoot, VersionLedgerRelativePath.Replace('/', Path.DirectorySeparatorChar));
 
     [Fact]
     public void PublicSurface_MatchesCheckedInBaseline()
     {
         var current = RenderSurface();
+        var isRecording = Environment.GetEnvironmentVariable("LMD_UPDATE_AIRAPP_SDK_BASELINE") is "1" or "true";
 
-        if (Environment.GetEnvironmentVariable("LMD_UPDATE_AIRAPP_SDK_BASELINE") is "1" or "true")
+        // 台账先判：录制模式也绕不过"同一个包号换了一份表面"这条判据，
+        // 否则一次破坏只要顺手重录基线就洗白了。
+        EnforceVersionLedger(current, appendIfMissing: isRecording);
+
+        if (isRecording)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(BaselinePath)!);
             File.WriteAllText(BaselinePath, current);
@@ -46,17 +59,69 @@ public sealed class AirAppSdkPublicSurfaceTests
         Assert.True(File.Exists(BaselinePath), $"缺少基线文件 {BaselineRelativePath}。设 LMD_UPDATE_AIRAPP_SDK_BASELINE=1 运行一次生成。");
 
         var approved = Normalize(File.ReadAllText(BaselinePath));
-        if (approved == current)
+        if (approved != current)
+        {
+            var diff = DescribeDiff(approved.Split('\n'), current.Split('\n'));
+            throw new Xunit.Sdk.XunitException(
+                $"AirAppSdk 公开表面与基线不一致，但包号 {AirAppSdkInfo.SdkVersion} 在台账里只记着当前这一份表面"
+                + $"（说明 {BaselineRelativePath} 被手改过，或表面变了却没走录制流程）："
+                + $"必须同时递增 AirAppSdkInfo.SdkVersion / ApiVersion 与 Core 包版本，再更新 {BaselineRelativePath}。"
+                + Environment.NewLine + diff);
+        }
+    }
+
+    /// <summary>
+    /// 台账判据：一个包号只能对应一份公开表面。
+    /// 基线只比"相对上次录制变了没有"，所以"换了表面、没换包号"在它眼里是绿的 ——
+    /// 而那恰好是外部 AirApp 绑不上的那一类破坏。
+    /// </summary>
+    private static void EnforceVersionLedger(string surface, bool appendIfMissing)
+    {
+        var version = AirAppSdkInfo.SdkVersion;
+        var hash = SurfaceHash(surface);
+        var recorded = ReadLedgerEntries().Where(entry => entry.Version == version).Select(entry => entry.Hash).ToArray();
+
+        var clash = recorded.Where(known => known != hash).Distinct().ToArray();
+        if (clash.Length > 0)
+        {
+            throw new Xunit.Sdk.XunitException(
+                $"包号 {version} 在 {VersionLedgerRelativePath} 里已经记着另一份公开表面（{string.Join("、", clash)}），当前是 {hash}。"
+                + "同一个版本号只能有一份二进制表面：先递增 AirAppSdkInfo.SdkVersion / ApiVersion 与包版本，再重录基线。");
+        }
+
+        if (recorded.Length > 0)
         {
             return;
         }
 
-        var diff = DescribeDiff(approved.Split('\n'), current.Split('\n'));
-        throw new Xunit.Sdk.XunitException(
-            $"AirAppSdk 公开表面发生变化。外部 AirApp 是按包号 1.0.0 编译的，任何签名变化都属于二进制破坏："
-            + $"必须同时递增 AirAppSdkInfo.SdkVersion / ApiVersion 与 Core 包版本，再更新 {BaselineRelativePath}。"
-            + Environment.NewLine + diff);
+        if (!appendIfMissing)
+        {
+            throw new Xunit.Sdk.XunitException(
+                $"{VersionLedgerRelativePath} 里没有 ({version}, {hash}) 这一对。"
+                + "递增过版本号或改过公开表面，都要设 LMD_UPDATE_AIRAPP_SDK_BASELINE=1 重录一次（同一次运行会追加台账）。");
+        }
+
+        Directory.CreateDirectory(Path.GetDirectoryName(VersionLedgerPath)!);
+        File.AppendAllText(VersionLedgerPath, version + "  " + hash + Environment.NewLine);
     }
+
+    private static (string Version, string Hash)[] ReadLedgerEntries()
+    {
+        if (!File.Exists(VersionLedgerPath))
+        {
+            return [];
+        }
+
+        return File.ReadAllLines(VersionLedgerPath)
+            .Select(line => line.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .Where(parts => parts.Length >= 2 && parts[0][0] != '#')
+            .Select(parts => (parts[0], parts[1]))
+            .ToArray();
+    }
+
+    private static string SurfaceHash(string surface) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Normalize(surface))))[..16].ToLowerInvariant();
+
 
     private static string RenderSurface()
     {
