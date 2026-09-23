@@ -149,8 +149,23 @@ public sealed class DuplicateImplementationRatchetTests
     /// 行为钉 <c>StudyNoiseStatusTextTests</c> 9 格把判定顺序逐格钉住；
     /// 两处真实修正：① 我按猜测把 <c>(Ready, Noisy)</c> 写成 ready，被这条判据当场红一次——实测"吵"排在"就绪"之前，
     /// 期望值按实测改正；② 注入"把暂停挪到吵之后"恰好红 <c>(Paused, Noisy)</c> 那一格，验过。）
+    /// 42 → 41 收一族（RSS 那对组件取网图的 36 行：Cnr 与 Ifeng 各一份**逐字相同**，
+    /// 连 <c>BrowserUserAgent</c> 常量都是两份）→ 进 <c>Views/Components/RemoteImageBitmap.GetAsync(httpClient, url, ct)</c>，
+    /// 两个抄本整个删掉、3 个调用点改走家（没有留转手壳）。
+    /// <c>DailyArtworkWidget</c> 那份**不算抄本**：它带 referrer 重试、客户端超时 10 秒（RSS 两个 8 秒），
+    /// 属另一种实现，这一笔没动它；三个客户端要不要并成一个也是策略问题（挂 #G1-BC 队列注）。
+    /// 这一族值得收的理由不是行数：两个抄本的 scheme 校验都来自 <c>NormalizeHttpUrl</c>，
+    /// 少了它就把 RSS/第三方给的串直接喂给 <c>HttpClient</c>——外链那一族已经量到 3 份"连校验都没有"的抄本，
+    /// 同一条判据在取图这条路上也不能靠"抄的时候记得抄全"。
+    /// 行为钉 <c>RemoteImageBitmapTests</c> 11 格，判据的四个错法各有独立注入点，逐条量过：
+    /// 去掉"取消原样抛"只红 <c>RethrowsCancellation</c>；把归一化换成原串只红"不该发请求"的 3 格
+    /// （file/ftp/javascript；空串与 null 那两格仍绿——它们在 <c>HttpRequestMessage</c> 构造处就炸了，
+    /// 被通用 catch 兜成同一个 null，这是实测到的覆盖面边界，不是"全钉住了"）；
+    /// 去掉 <c>memory.Position = 0</c>、去掉 UA 那行，各只红成功那一格。
+    /// 载体是假 handler 而不是真连保留端口：真连的写法下"守卫挡住了"与"请求发了但失败"
+    /// 返回值都是 null，把守卫整段删掉测试照样绿——上一轮那两个注入点就是这么暴露"没钉住"的。
     /// </summary>
-    private const int IdenticalBodyFamilyCeiling = 42;
+    private const int IdenticalBodyFamilyCeiling = 41;
 
     /// <summary>
     /// 今天实测：189 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
@@ -186,24 +201,44 @@ public sealed class DuplicateImplementationRatchetTests
     /// 只剩 AirApp 一个入口，这一族连同它的 2 种体一起消失；族内站点 1368 → 1363
     /// （ResolveCityName 少 3 处，被普查算成方法的 new Dictionary 少 2 处——两张表并成两张、
     /// 声明处从 4 个文件位降到 2 个）。
-    private const int DriftFamilyCeiling = 189;
+    /// 189 → 188 是真收口（与上面 42 → 41 同一笔）：<c>TryDownloadBitmapAsync</c> 两份逐字抄本并掉后
+    /// 只剩 <c>DailyArtworkWidget</c> 那一种实现，整族消失。
+    /// 这一笔同时量出**这把尺子的一个盲点**（不是这笔做错了什么）：
+    /// <c>RemoteImageBitmap.GetAsync</c> 的签名把参数换行写，两个面的正则都要求
+    /// <c>\([^)]*\)</c> 在同一行内闭合，于是它根本不被认成声明——
+    /// 实测：把 9882a21 与当前树各跑一份普查、按 (方法名, 所在文件) 对账，
+    /// 少 50 条 / 多 25 条、净 <c>−25</c>（5456 → 5431），而新增的 25 条里没有 <c>GetAsync</c>。
+    /// 后果要说准：家自己的入口不计入认领量，所以这一笔是"降 2、没加回 1"；更要紧的是
+    /// **两份多行签名的逐字抄本会同时躲开这两把尺子**。这类抄本现在到底有没有、有多少，我没数过——
+    /// 这条盲点的实际大小是**未查证**，不是"已排除"。记进 #G1-BC 队列尾：
+    /// 改判据那一笔要单独跑、单独记账（认多声明只会让上限涨，那笔账要写清是改判据不是有人又抄）。
+    /// </summary>
+    private const int DriftFamilyCeiling = 188;
 
     /// <summary>
-    /// 漂移普查认领的声明处数下限（今天实测 5433）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。
+    /// 漂移普查认领的声明处数下限（今天实测 5431）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。
     /// 钉这个不是为了查新增，是为了查**判据自己塌掉**：
     /// 上面那两处 bug 都是"少认声明"，族数看着像收口（193→189），实际是普查瞎了。
     /// 只冻族数会被这种错法骗过去，冻住认领量就不会。
     ///
-    /// 5456 → 5433 这一路是**记账欠的**，不是判据丢了声明：这条注释原先停在 9882a21 那天，
+    /// 5456 → 5431 这一路是**记账欠的**，不是判据丢了声明：这条注释原先停在 9882a21 那天，
     /// 之后陆续提交的收口各自删掉的私有声明没回写到这儿。逐条点名对过（把 9882a21 与当前树
     /// 各 `git archive` 一份跑同一份普查，按 (方法名, 所在文件) 比声明数）：
-    /// **少 48 条、多 25 条，净 −23**——少的是被家替掉的私有抄本与删掉的空壳/死缝
-    /// （CleanupPendingDeletions、NormalizeExistingDirectory、NormalizeExistingFile、BuildMonogram、
-    /// BuildLauncherHiddenFallbackDisplayName、AddLine、Percentile、ResolveFirstTailIndex、ResolveLevel、
-    /// ResolveCityName、NormalizeThemeMode 各若干处，加 InitializeSettingsIcons、
-    /// EnsureComponentLibraryPreviewWarmup、QueuePlacementPreviewRefresh、RemovePlacementPreviewImage/s、
-    /// UpdateSettingsViewportInsets、CleanupPendingDeletionDirectory），
-    /// 多的是各家新增的入口。普查把 new Dictionary(...) 这类对象初始化也算成声明，
+    /// **少 50 条、多 25 条，净 −25**（5456 − 50 + 25 = 5431，两边都对得上，不是估的）。
+    /// 少的是被家替掉的私有抄本与删掉的空壳/死缝，按名字点齐（括号内为处数）：
+    /// AddLine(2)、BuildLauncherHiddenFallbackDisplayName(2)、BuildMonogram(2)、CleanupPendingDeletions(2)、
+    /// CleanupPendingDeletionDirectory(1)、字典表被认成的 Dictionary(4)、EnsureComponentLibraryPreviewWarmup(1)、
+    /// EnsurePointBufferCapacity(2)、FirstNonEmpty(2)、GetWindowHandle(2)、InitializeSettingsIcons(1)、
+    /// NormalizeConfig(2)、NormalizeExistingDirectory(2)、NormalizeExistingFile(2)、NormalizeThemeMode(2)、
+    /// Percentile(3)、QueuePlacementPreviewRefresh(1)、ReleasePointBuffer(2)、RemovePlacementPreviewImage(1)、
+    /// RemovePlacementPreviewImages(1)、ResolveCityName(2)、ResolveFirstTailIndex(2)、ResolveLevel(2)、
+    /// ResolveStatusText(2)、TryDownloadBitmapAsync(2)、UpdateSettingsViewportInsets(1)、UpdateWeekdayHeaders(2)。
+    /// 多的是各家新增的入口（25 条：Monogram.From、TextValue.FirstNonEmpty、WindowHandles.OfWindow、
+    /// StudyStatistics.Percentile、PointBufferPool 两条、StudyNoiseSeriesRules 两条、CalendarWeekLabels 两条、
+    /// ClockCityNames 五条、ExistingPath 两条、AirAppPendingDeletionDirectory 两条、
+    /// LauncherHiddenItemNames.FallbackDisplayName、ThemeAppearanceValues.NormalizeThemeMode、
+    /// StudyAnalyticsConfig.ClampedToLegalRanges、SecondHandChoice.Enforce、StudyNoiseStatusText.Describe、
+    /// StudyChartGeometry.AddLine）。普查把 <c>new Dictionary(...)</c> 这类对象初始化也算成声明，
     /// 所以并表也会动这个数——一笔没含糊：降的全是"真少了一条声明"。
     /// </summary>
     private const int DriftCensusSiteFloor = 5400;
@@ -368,7 +403,7 @@ public sealed class DuplicateImplementationRatchetTests
         var censusSites = bodiesByName.Values.Sum(tally => tally.Sites);
         Assert.True(
             censusSites >= DriftCensusSiteFloor,
-            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5433）。" +
+            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5431）。" +
             "族数没变也说明判据在丢声明：查 NormalizeBody 又漏掉了哪种成员写法（历史上漏过 Allman 箭头体与插值字符串的大括号）");
 
         var driftFamilies = bodiesByName.Count(pair => pair.Value.VariantCount >= 2 &&

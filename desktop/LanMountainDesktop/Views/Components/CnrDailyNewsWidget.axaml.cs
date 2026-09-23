@@ -29,7 +29,6 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         Timeout = TimeSpan.FromSeconds(8)
     };
 
-    private const string BrowserUserAgent = HttpUserAgents.Browser;
 
     private static readonly IReadOnlyList<int> SupportedAutoRotateIntervalsMinutes = RefreshIntervalCatalog.SupportedIntervalsMinutes;
 
@@ -255,8 +254,8 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
 
         var loadTasks = new[]
         {
-            TryDownloadBitmapAsync(item1?.ImageUrl, cancellationToken),
-            TryDownloadBitmapAsync(item2?.ImageUrl, cancellationToken)
+            RemoteImageBitmap.GetAsync(ImageHttpClient, item1?.ImageUrl, cancellationToken),
+            RemoteImageBitmap.GetAsync(ImageHttpClient, item2?.ImageUrl, cancellationToken)
         };
         var bitmaps = await Task.WhenAll(loadTasks);
         if (cancellationToken.IsCancellationRequested || !_isAttached)
@@ -376,44 +375,6 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
             var enabled = i < _newsUrls.Count && !string.IsNullOrWhiteSpace(_newsUrls[i]);
             cards[i].IsHitTestVisible = enabled;
             cards[i].Opacity = enabled ? 1.0 : 0.72;
-        }
-    }
-
-    private static async Task<Bitmap?> TryDownloadBitmapAsync(string? imageUrl, CancellationToken cancellationToken)
-    {
-        var normalizedUrl = ExternalLinkLauncher.NormalizeHttpUrl(imageUrl);
-        if (string.IsNullOrWhiteSpace(normalizedUrl))
-        {
-            return null;
-        }
-
-        try
-        {
-            using var request = new HttpRequestMessage(HttpMethod.Get, normalizedUrl);
-            request.Headers.TryAddWithoutValidation("User-Agent", BrowserUserAgent);
-            request.Headers.TryAddWithoutValidation("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8");
-            using var response = await ImageHttpClient.SendAsync(
-                request,
-                HttpCompletionOption.ResponseHeadersRead,
-                cancellationToken);
-            if (!response.IsSuccessStatusCode)
-            {
-                return null;
-            }
-
-            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            var memory = new MemoryStream();
-            await stream.CopyToAsync(memory, cancellationToken);
-            memory.Position = 0;
-            return new Bitmap(memory);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch
-        {
-            return null;
         }
     }
 

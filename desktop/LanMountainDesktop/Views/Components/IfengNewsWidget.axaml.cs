@@ -29,7 +29,6 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
         Timeout = TimeSpan.FromSeconds(8)
     };
 
-    private const string BrowserUserAgent = HttpUserAgents.Browser;
     private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 4;
     private const int MaxDisplayItemCount = 12;
@@ -254,7 +253,7 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
 
         var imageTasks = newItems.Select(async item =>
         {
-            var bitmap = await TryDownloadBitmapAsync(item.ImageUrl, cancellationToken);
+            var bitmap = await RemoteImageBitmap.GetAsync(ImageHttpClient, item.ImageUrl, cancellationToken);
             if (bitmap != null && !cancellationToken.IsCancellationRequested)
             {
                 await Dispatcher.UIThread.InvokeAsync(() =>
@@ -382,44 +381,6 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
         _autoRefreshEnabled = enabled;
         _channelType = channelType;
         ComponentRefreshLifetime.Reschedule(_refreshTimer, _isAttached, enabled, intervalMinutes);
-    }
-
-    private static async Task<Bitmap?> TryDownloadBitmapAsync(string? imageUrl, CancellationToken cancellationToken)
-    {
-        var normalizedUrl = ExternalLinkLauncher.NormalizeHttpUrl(imageUrl);
-        if (string.IsNullOrWhiteSpace(normalizedUrl))
-        {
-            return null;
-        }
-
-        try
-        {
-            using var request = new HttpRequestMessage(HttpMethod.Get, normalizedUrl);
-            request.Headers.TryAddWithoutValidation("User-Agent", BrowserUserAgent);
-            request.Headers.TryAddWithoutValidation("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8");
-            using var response = await ImageHttpClient.SendAsync(
-                request,
-                HttpCompletionOption.ResponseHeadersRead,
-                cancellationToken);
-            if (!response.IsSuccessStatusCode)
-            {
-                return null;
-            }
-
-            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            var memory = new MemoryStream();
-            await stream.CopyToAsync(memory, cancellationToken);
-            memory.Position = 0;
-            return new Bitmap(memory);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch
-        {
-            return null;
-        }
     }
 
     private void DisposeImageCache()

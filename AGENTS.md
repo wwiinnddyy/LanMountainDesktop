@@ -351,6 +351,17 @@ ShellExecute，`file://` 或 `ms-msp:` 这类都能起进程。打开文件/文�
 （`FileManager`、`Shortcut`、`ZhiJiaoHub`）语义不同，仍走各自的代码。
 `SourceIntegrityTests.ExternalLinkHandling_LivesInExactlyOnePlace` 同时拦两种复发形态：第二份归一化/打开实现，
 和把 url 变量直接绑上 `ProcessStartInfo.FileName` 的绕过。
+归一化的口径要说准（我错过一次）：它**只认已经是绝对地址的 http/https**，`img.example/a.png` 这种缺 scheme
+的串一律拒掉，不会补成 `http://`。
+
+**组件从网上取一张图只认 `Views/Components/RemoteImageBitmap.cs` 一家**（`GetAsync(httpClient, url, ct)`）。
+此前 RSS 那对组件（`CnrDailyNewsWidget`、`IfengNewsWidget`）各抄一份逐字相同的 36 行。收口的理由是上面那条
+scheme 校验在这条路上同样只靠"抄的时候抄全"——少了它，RSS/第三方给的 `file://` 之类的串会直接进
+`HttpClient`。三个行为各钉住一处：非 http/https **一个请求都不发**（用假 handler 才量得到——真连保留端口时
+"守卫挡住了"与"发了但失败"返回值都是 `null`，把守卫整段删掉测试照样绿）、取消要原样抛回去（否则组件关闭过程中
+分不清"用户取消了"和"这张图下坏了"，会继续碰已释放的控件）、读流前回卷。
+`httpClient` 由调用方给：RSS 两个 8 秒、`DailyArtworkWidget` 10 秒且带 referrer 重试，那是另一种实现，
+并成一个客户端属策略问题（挂 #G1-BC），不在这笔里顺手做。
 
 **界面语言口径只认一处**：默认语言写 `LocalizationService.DefaultLanguageCode`，读当前语言走
 `ResolveLanguageCode(() => 快照.LanguageCode)`（内部含"读盘失败退回默认语言"的兜底），判断是不是中文走
