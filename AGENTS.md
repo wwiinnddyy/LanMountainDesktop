@@ -285,6 +285,13 @@ en/ja/ko 还缺 25/313/275 条，只许降不许升；补翻译就把数字改�
 `PercentileCallSites_KeepTheirOwnSentinel` 钉"哪个调用方用哪个哨兵"——收口之后这条分歧只剩一个字面量的距离，
 把某个调用点的 `-100` 顺手改成 `0` 时算法测试照样全绿，而且它还钉住站点数（少一条断言就是判据静默变窄）。
 
+**学习监测的状态行文案只认 `Views/Components/StudyNoiseStatusText.cs` 一家**
+（`Describe(snapshot, localize)`：不支持 > 出错 > 暂停 > 吵 > 运行且安静 > 就绪 > 其余算初始化）。
+噪声曲线组件与环境组件此前各抄一份逐字相同的 25 行，**连本地化键都是同一批 `study.environment.status.*`**
+——曲线组件一直在显示环境组件那套词。顺序本身是判据（差一格就把"出错"说成"吵"），所以家收整段状态机、
+只把"取词"交给调用方的 `L`：这样它不依赖本地化服务，九格判据能逐条钉住顺序
+（`StudyNoiseStatusTextTests`；把"暂停"挪到"吵"之后就只红 `(Paused, Noisy)` 那一格）。
+
 **噪声折线的两条判据只认 `Views/Components/StudyNoiseSeriesRules.cs` 一家**
 （`FirstTailIndex(点列, 尾窗时长)` 取尾窗起点、`LevelOf(dB, 基准 dB)` 判档位）。
 此前各抄 2 份逐字相同：两个自绘图表控件各一份 13 行的尾窗起点，面积图控件与噪声分布组件各一份 16 行的档位判定。

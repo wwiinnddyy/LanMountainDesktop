@@ -186,7 +186,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
             return;
         }
 
-        StatusValueTextBlock.Text = ResolveStatusText(snapshot);
+        StatusValueTextBlock.Text = StudyNoiseStatusText.Describe(snapshot, L);
         StatusValueTextBlock.Foreground = ResolveStatusBrush(snapshot);
 
         if (snapshot.LatestRealtimePoint is not { } realtimePoint)
@@ -238,41 +238,6 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
         LayoutGrid.ColumnSpacing = hideStatusLabel
             ? Math.Clamp(6 * scale, 4, 10)
             : Math.Clamp(10 * scale, 7, 14);
-    }
-
-    private string ResolveStatusText(StudyAnalyticsSnapshot snapshot)
-    {
-        if (snapshot.State == StudyAnalyticsRuntimeState.Unsupported)
-        {
-            return L("study.environment.status.unsupported", "Unsupported");
-        }
-
-        if (snapshot.State == StudyAnalyticsRuntimeState.Error || snapshot.StreamStatus == NoiseStreamStatus.Error)
-        {
-            return L("study.environment.status.error", "Error");
-        }
-
-        if (snapshot.State == StudyAnalyticsRuntimeState.Paused)
-        {
-            return L("study.environment.status.paused", "Paused");
-        }
-
-        if (snapshot.StreamStatus == NoiseStreamStatus.Noisy)
-        {
-            return L("study.environment.status.noisy", "Noisy");
-        }
-
-        if (snapshot.State == StudyAnalyticsRuntimeState.Running && snapshot.StreamStatus == NoiseStreamStatus.Quiet)
-        {
-            return L("study.environment.status.quiet", "Quiet");
-        }
-
-        if (snapshot.State == StudyAnalyticsRuntimeState.Ready)
-        {
-            return L("study.environment.status.ready", "Ready");
-        }
-
-        return L("study.environment.status.initializing", "Initializing");
     }
 
     private IBrush ResolveStatusBrush(StudyAnalyticsSnapshot snapshot)

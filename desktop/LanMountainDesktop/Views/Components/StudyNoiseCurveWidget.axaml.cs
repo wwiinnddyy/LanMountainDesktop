@@ -221,7 +221,7 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
         }
 
         var statusKind = ResolveStatusVisualKind(snapshot);
-        StatusTextBlock.Text = ResolveStatusText(snapshot);
+        StatusTextBlock.Text = StudyNoiseStatusText.Describe(snapshot, L);
         ApplyStatusBadgeStyle(statusKind, panelColor);
 
         if (snapshot.LatestRealtimePoint is { } latestPoint)
@@ -322,41 +322,6 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
         XLeftTextBlock.Text = "-12s";
         XCenterTextBlock.Text = "-6s";
         XRightTextBlock.Text = L("study.noise_curve.axis.now", "Now");
-    }
-
-    private string ResolveStatusText(StudyAnalyticsSnapshot snapshot)
-    {
-        if (snapshot.State == StudyAnalyticsRuntimeState.Unsupported)
-        {
-            return L("study.environment.status.unsupported", "Unsupported");
-        }
-
-        if (snapshot.State == StudyAnalyticsRuntimeState.Error || snapshot.StreamStatus == NoiseStreamStatus.Error)
-        {
-            return L("study.environment.status.error", "Error");
-        }
-
-        if (snapshot.State == StudyAnalyticsRuntimeState.Paused)
-        {
-            return L("study.environment.status.paused", "Paused");
-        }
-
-        if (snapshot.StreamStatus == NoiseStreamStatus.Noisy)
-        {
-            return L("study.environment.status.noisy", "Noisy");
-        }
-
-        if (snapshot.State == StudyAnalyticsRuntimeState.Running && snapshot.StreamStatus == NoiseStreamStatus.Quiet)
-        {
-            return L("study.environment.status.quiet", "Quiet");
-        }
-
-        if (snapshot.State == StudyAnalyticsRuntimeState.Ready)
-        {
-            return L("study.environment.status.ready", "Ready");
-        }
-
-        return L("study.environment.status.initializing", "Initializing");
     }
 
     private void ReloadLanguageCode()

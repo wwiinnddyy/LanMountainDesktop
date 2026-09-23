@@ -141,11 +141,23 @@ public sealed class DuplicateImplementationRatchetTests
     /// 3 个调用点改走家。区间数值一笔没动（那是策略，要改得拍板），只把"谁能说这几个数合法"收成一处。
     /// 行为钉 <c>StudyAnalyticsConfigRangeTests</c> 4 格：十个字段各钉"两端越界→贴边、界内→原样、
     /// 非钳制字段→原样带过"；把 <c>FrameMs</c> 上限 250 改成 300 只红"贴上界"那一格，验过。）
+    /// 43 → 42 收一族（状态行文案那条 25 行的状态机：噪声曲线组件与环境组件各一份逐字相同，
+    /// **连本地化键都是同一批 <c>study.environment.status.*</c>**——也就是说曲线组件一直在显示环境组件那套词。
+    /// 进 <c>Views/Components/StudyNoiseStatusText.Describe(snapshot, localize)</c>：家收整段判据（含顺序），
+    /// 取词交给调用方的 <c>L</c>，于是两个 <c>ResolveStatusText</c> 方法**整个删掉**、调用点直接内联走家
+    /// （不像上一笔那样留下转手壳，所以族数真的降了一格）。
+    /// 行为钉 <c>StudyNoiseStatusTextTests</c> 9 格把判定顺序逐格钉住；
+    /// 两处真实修正：① 我按猜测把 <c>(Ready, Noisy)</c> 写成 ready，被这条判据当场红一次——实测"吵"排在"就绪"之前，
+    /// 期望值按实测改正；② 注入"把暂停挪到吵之后"恰好红 <c>(Paused, Noisy)</c> 那一格，验过。）
     /// </summary>
-    private const int IdenticalBodyFamilyCeiling = 43;
+    private const int IdenticalBodyFamilyCeiling = 42;
 
     /// <summary>
-    /// 今天实测：191 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
+    /// 今天实测：189 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
+    /// 190 → 189 是真收口（与上面 43 → 42 同一笔）：<c>ResolveStatusText</c> 原本三处两体
+    /// （两个学习组件逐字相同 + <c>MusicControlViewModel</c> 另一种实现）——两个抄本并掉之后
+    /// 这个名字只剩音乐控件那一种实现，整族消失（族数以 C# 闸门为准：python 报告面这一轮的行数解析器
+    /// 没匹配上，所以我没有重量站点数，不在这儿写站点账）。
     /// 192 → 191 是真收口（与上面 54 → 53 同一笔）：分位数 <c>Percentile</c> 一家 3 份抄本
     /// （2 种体）全改调 <c>StudyStatistics.Percentile</c>，这个名字连同它的 2 种体一起消失——
     /// 实测族 192→191、族内站点 1371→1368，逐处比对只有 <c>Percentile</c> 这一项变动。
@@ -174,18 +186,18 @@ public sealed class DuplicateImplementationRatchetTests
     /// 只剩 AirApp 一个入口，这一族连同它的 2 种体一起消失；族内站点 1368 → 1363
     /// （ResolveCityName 少 3 处，被普查算成方法的 new Dictionary 少 2 处——两张表并成两张、
     /// 声明处从 4 个文件位降到 2 个）。
-    private const int DriftFamilyCeiling = 190;
+    private const int DriftFamilyCeiling = 189;
 
     /// <summary>
-    /// 漂移普查认领的声明处数下限（今天实测 5434）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。
+    /// 漂移普查认领的声明处数下限（今天实测 5433）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。
     /// 钉这个不是为了查新增，是为了查**判据自己塌掉**：
     /// 上面那两处 bug 都是"少认声明"，族数看着像收口（193→189），实际是普查瞎了。
     /// 只冻族数会被这种错法骗过去，冻住认领量就不会。
     ///
-    /// 5456 → 5434 这一路是**记账欠的**，不是判据丢了声明：这条注释原先停在 9882a21 那天，
+    /// 5456 → 5433 这一路是**记账欠的**，不是判据丢了声明：这条注释原先停在 9882a21 那天，
     /// 之后陆续提交的收口各自删掉的私有声明没回写到这儿。逐条点名对过（把 9882a21 与当前树
     /// 各 `git archive` 一份跑同一份普查，按 (方法名, 所在文件) 比声明数）：
-    /// **少 46 条、多 24 条，净 −22**——少的是被家替掉的私有抄本与删掉的空壳/死缝
+    /// **少 48 条、多 25 条，净 −23**——少的是被家替掉的私有抄本与删掉的空壳/死缝
     /// （CleanupPendingDeletions、NormalizeExistingDirectory、NormalizeExistingFile、BuildMonogram、
     /// BuildLauncherHiddenFallbackDisplayName、AddLine、Percentile、ResolveFirstTailIndex、ResolveLevel、
     /// ResolveCityName、NormalizeThemeMode 各若干处，加 InitializeSettingsIcons、
@@ -356,7 +368,7 @@ public sealed class DuplicateImplementationRatchetTests
         var censusSites = bodiesByName.Values.Sum(tally => tally.Sites);
         Assert.True(
             censusSites >= DriftCensusSiteFloor,
-            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5434）。" +
+            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5433）。" +
             "族数没变也说明判据在丢声明：查 NormalizeBody 又漏掉了哪种成员写法（历史上漏过 Allman 箭头体与插值字符串的大括号）");
 
         var driftFamilies = bodiesByName.Count(pair => pair.Value.VariantCount >= 2 &&
