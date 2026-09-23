@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 
 using Xunit;
@@ -13,31 +14,32 @@ namespace LanMountainDesktop.Tests;
 ///
 /// 为什么方法级的两把尺子不够：它们只比方法体。2026-09-23 收城市名那族时，
 /// 世界时钟与模拟时钟各存了一份 12+12 条的"时区 id → 城市名"字典，
-/// **一份写中文、一份写 \uXXXX 转义**——两份源码文本不同、又都是字段初始化而不是方法体，
-/// 逐字普查与"同名不同体"普查双双失明。这类复制错了不报错，症状只是"同一个键在两块屏幕上两个值"。
+/// 一份写中文、一份写转义——两份源码文本不同、又都是字段初始化而不是方法体，
+/// 逐字普查与"同名不同体"普查双双失明。同类形状还有日历组件之间抄来抄去的
+/// 星期表头与黄历宜忌候选池（这条尺子扩到数组形状后立刻量出 6 组，已各收进一家）。
 ///
-/// 这条尺子比的是**解码后的键值集合**：先把 C# 转义（\u、\n、\" 等）还原成真实字符再取指纹，
-/// 所以写法差异骗不过它。它只认 ≥3 条的字典字面量（两张三格以下的巧合表撞在一起的概率太低，
-/// 且小表常是局部常量），并刻意**只看这张表自己那一层**（嵌套子表先挖掉），
-/// 因为按语言分组的外层表必然与某个子表形状相似。
-///
-/// 覆盖面靠 <see cref="TableFloor"/> 钉住：扫到的表数低于下限就说明判据自己瞎了
-/// （历史上这条轴上栽过的就是"正则把 IReadOnlyDictionary 拼错成 IReadonly，于是全仓 0 张表"）。
-/// 两条自测是这条尺子的注入点：种一份转义写法相同的表必须判成同一张，
-/// 差一个值必须判成不同——少了它们，"0 组重复"随时可能只是"扫不出来"。
+/// 判据比的是**解码后的内容集合**：先把 C# 转义（\u 等）还原成真实字符再取指纹，
+/// 所以"同一份表的两种写法"骗不过它。认三种形状，每种形状**单独钉覆盖面下限**——
+/// 只钉一个总数的话，多认一种形状时另一种形状塌掉是看不见的。
+/// 三条 Scanner_* 自测是这条轴的注入点：少了它们，"0 组重复"随时可能只是"扫不出来"
+/// （初版就把 IReadOnlyDictionary 拼成 IReadonly，报出过"全仓 0 张表"的假零）。
 /// </summary>
 public sealed class DuplicatedLiteralDictionaryRatchetTests
 {
-    /// <summary>实测 8 张（城市名 3 张 + 各模块的小码表）。低于它＝判据在丢表。</summary>
-    private const int TableFloor = 6;
+    // 今天实测（C# 闸门与 python 探针两个面同为 8 / 1 / 33）：字典 indexer 写法 8 张、老式初值写法 1 张、字符串数组 33 张。
+    // 用途不是查新增，是查判据自己瞎了：任何一种形状掉到下限以下＝那个形状的正则又漏写法了。
+    private const int DictionaryTableFloor = 7;
+    private const int OldStyleTableFloor = 1;
+    private const int ArrayTableFloor = 30;
 
     private const int DuplicateGroupCeiling = 0;
 
-    /// <summary>语料里已知必须被认出来的两张表（同一内容的两种写法）。</summary>
+    /// <summary>语料里已知必须被认出来的两处（掉了任何一个＝那把尺子对真实码表失明）。</summary>
     private static readonly string[] MustBeSeen =
     [
         @"desktop\LanMountainDesktop\Services\ClockCityNames.cs",
-        @"desktop\LanMountainDesktop\Services\ClockAirApp\ClockAirAppTimeFormatter.cs",
+        @"desktop\LanMountainDesktop\Services\CalendarWeekLabels.cs",
+        @"desktop\LanMountainDesktop\Services\LunarCalendarService.cs",
     ];
 
     private static readonly string[] ProductionDirectories =
@@ -45,61 +47,96 @@ public sealed class DuplicatedLiteralDictionaryRatchetTests
 
     private static readonly string[] SkipPathParts = ["obj", "bin", "artifacts", "node_modules"];
 
-    private static readonly Regex Constructor = new(
+    private static readonly Regex DictionaryConstructor = new(
         @"new\s+(?:IReadOnlyDictionary|IDictionary|Dictionary)<", RegexOptions.Compiled);
 
-    private static readonly Regex Entry = new(
+    private static readonly Regex IndexerEntry = new(
         @"\[\s*""(?<k>(?:[^""\\]|\\.)*)""\s*\]\s*=\s*""(?<v>(?:[^""\\]|\\.)*)""", RegexOptions.Compiled);
 
+    private static readonly Regex OldStyleEntry = new(
+        @"\{\s*""(?<k>(?:[^""\\]|\\.)*)""\s*,\s*""(?<v>(?:[^""\\]|\\.)*)""\s*\}", RegexOptions.Compiled);
+
+    private static readonly Regex StringArrayField = new(
+        @"(?:string\[\]|IReadOnlyList<string>|IReadOnlyCollection<string>|IEnumerable<string>|List<string>)\s+\w+\s*=",
+        RegexOptions.Compiled);
+
+    private static readonly Regex StringLiteral = new(@"""(?:[^""\\]|\\.)*""", RegexOptions.Compiled);
+
+    private const int MinimumEntries = 3;
+
     [Fact]
-    public void IdenticalLiteralDictionaries_DoNotAppearInTwoFiles()
+    public void IdenticalLiteralTables_DoNotAppearInTwoFiles()
     {
         var repoRoot = RepoRoot();
-        var groups = new Dictionary<string, List<string>>(StringComparer.Ordinal);
-        var scannedTables = 0;
+        var counts = new Dictionary<string, int>(StringComparer.Ordinal)
+        {
+            ["字典 indexer"] = 0,
+            ["字典老式"] = 0,
+            ["字符串数组"] = 0,
+        };
         var seenFiles = new HashSet<string>(StringComparer.Ordinal);
+        var groups = new Dictionary<string, List<string>>(StringComparer.Ordinal);
 
         foreach (var path in EnumerateSources(repoRoot))
         {
             var relative = Relative(repoRoot, path);
-            foreach (var table in ExtractTables(File.ReadAllText(path)))
+            var text = File.ReadAllText(path);
+
+            foreach (var (shape, fingerprint) in ExtractTables(text))
             {
-                scannedTables++;
-                if (!groups.TryGetValue(table, out var sites))
+                counts[shape]++;
+                seenFiles.Add(relative);
+                if (!groups.TryGetValue(fingerprint, out var sites))
                 {
                     sites = [];
-                    groups[table] = sites;
+                    groups[fingerprint] = sites;
                 }
 
-                sites.Add(relative);
-                seenFiles.Add(relative);
+                if (!sites.Contains(relative, StringComparer.Ordinal))
+                {
+                    sites.Add(relative);
+                }
             }
         }
 
+        var blind = new List<string>();
+
+        if (counts["字典 indexer"] < DictionaryTableFloor)
+        {
+            blind.Add($"indexer 写法只剩 {counts["字典 indexer"]} 张（下限 {DictionaryTableFloor}）");
+        }
+
+        if (counts["字典老式"] < OldStyleTableFloor)
+        {
+            blind.Add($"老式初值写法的字典只剩 {counts["字典老式"]} 张（下限 {OldStyleTableFloor}）");
+        }
+
+        if (counts["字符串数组"] < ArrayTableFloor)
+        {
+            blind.Add($"字符串数组只剩 {counts["字符串数组"]} 张（下限 {ArrayTableFloor}）");
+        }
+
         Assert.True(
-            scannedTables >= TableFloor,
-            $"只扫到 {scannedTables} 张 ≥3 条的字典字面量，低于下限 {TableFloor}。" +
-            "族数/组数为 0 也可能是判据自己瞎了：先查 Constructor/Entry 两个正则又漏了哪种写法" +
-            "（历史上拼错过 IReadOnlyDictionary，也漏过嵌套子表与 { \"k\", \"v\" } 初值写法）");
+            blind.Count == 0,
+            "覆盖面掉了，一次报全三种形状的实测值：" +
+            $"indexer={counts["字典 indexer"]}、老式={counts["字典老式"]}、数组={counts["字符串数组"]}。" +
+            "\n" + string.Join("\n", blind) +
+            "\n任何一种形状静默归零，都等于那把尺子又看不见那类码表了——先修正则再往下收。");
 
         foreach (var expected in MustBeSeen)
         {
-            Assert.True(seenFiles.Contains(expected), $"扫不到 {expected} 里的城市名表——这条尺子对它失明");
+            Assert.True(seenFiles.Contains(expected), $"扫不到 {expected} 里的码表——这条尺子对它失明");
         }
 
-        var duplicates = groups.Where(pair => pair.Value.Distinct(StringComparer.Ordinal).Count() >= 2).ToList();
+        var duplicates = groups.Where(pair => pair.Value.Count >= 2).ToList();
 
         Assert.True(
             duplicates.Count <= DuplicateGroupCeiling,
-            $"内容完全相同的字面量表出现在 {duplicates.Count} 组里（上限 {DuplicateGroupCeiling}）：\n" +
-            string.Join("\n", duplicates.Select(pair => $"  {pair.Value.Distinct().Count()} 处：{string.Join(" | ", pair.Value)}")) +
-            "\n同一份码表抄两处，补一处漏一处就是\"同一个键在两块屏幕上两个值\"；把它收进 Services 里的一张家表。");
+            $"内容完全相同的字面量数据表出现在 {duplicates.Count} 组里（上限 {DuplicateGroupCeiling}）：\n" +
+            string.Join("\n", duplicates.Select(pair => "  " + pair.Value.Count + " 处：" + string.Join(" | ", pair.Value))) +
+            "\n同一份码表抄两处，补一处漏一处＝同一个键在两块屏幕上两个值；把它收进 Services 里的一张家。");
     }
 
-    /// <summary>
-    /// 注入点之一：同一份表的两种写法（字面中文 vs \uXXXX 转义）必须算同一张。
-    /// 这条要是红了，说明这条轴又看不见数据抄本了——正是它立项的理由。
-    /// </summary>
     [Fact]
     public void Scanner_SeesAnEscapedTableAsTheSameTableAsALiteralOne()
     {
@@ -124,26 +161,68 @@ public sealed class DuplicatedLiteralDictionaryRatchetTests
             }
             """;
 
-        var literal = Assert.Single(ExtractTables(Literal));
-        var escaped = Assert.Single(ExtractTables(Escaped));
-
-        Assert.Equal(literal, escaped);
+        Assert.Equal(
+            Assert.Single(ExtractTables(Literal)),
+            Assert.Single(ExtractTables(Escaped)));
     }
 
-    /// <summary>
-    /// 反向对照：值差一个字符就不许算同一张表，否则"并表"会把不同的口径抹平。
-    /// 也顺手钉住"只数自己那一层"：外层嵌套表与它的一个子表不许被判成重复。
-    /// </summary>
+    /// <summary>老式 { "k", "v" } 写法与 indexer 写法在内容相同时必须算同一张表。</summary>
     [Fact]
-    public void Scanner_KeepsTablesApart_WhenOneValueDiffers_OrWhenOneIsTheOuterNesting()
+    public void Scanner_TreatsTheOldStyleInitializerAsTheSameTable()
+    {
+        const string Indexer = """
+            class A {
+                private static readonly Dictionary<string, string> T = new Dictionary<string, string>
+                {
+                    ["k1"] = "v1", ["k2"] = "v2", ["k3"] = "v3"
+                };
+            }
+            """;
+        const string OldStyle = """
+            class B {
+                private static readonly Dictionary<string, string> T = new Dictionary<string, string>
+                {
+                    { "k1", "v1" }, { "k2", "v2" }, { "k3", "v3" }
+                };
+            }
+            """;
+
+        Assert.Equal(
+            Assert.Single(ExtractTables(Indexer)).Fingerprint,
+            Assert.Single(ExtractTables(OldStyle)).Fingerprint);
+    }
+
+    /// <summary>数组的两种写法（new string[]{...} 与集合表达式）也要算同一张表。</summary>
+    [Fact]
+    public void Scanner_TreatsBothArraySpellingsAsTheSameTable()
+    {
+        const string Braced = """
+            class A {
+                private static readonly string[] Kinds = new string[] { "alpha", "beta", "gamma" };
+            }
+            """;
+        const string CollectionExpression = """
+            class B {
+                private static readonly IReadOnlyList<string> Kinds = ["alpha", "beta", "gamma"];
+            }
+            """;
+
+        var braced = Assert.Single(ExtractTables(Braced));
+        Assert.Single(ExtractTables(CollectionExpression));
+
+        Assert.Equal(braced.Fingerprint, Assert.Single(ExtractTables(CollectionExpression)).Fingerprint);
+        Assert.StartsWith("数组|", braced.Fingerprint, StringComparison.Ordinal);
+    }
+
+    /// <summary>值差一个字符就不许算同一张，否则"并表"会把不同口径抹平。</summary>
+    [Fact]
+    public void Scanner_KeepsTablesApart_WhenOneValueDiffers()
     {
         const string Left = """
             class L {
                 private static readonly Dictionary<string, string> T = new Dictionary<string, string>
                 {
-                    ["a"] = "one",
-                    ["b"] = "two",
-                    ["c"] = "three"
+                    ["a"] = "one", ["b"] = "two", ["c"] = "three"
                 };
             }
             """;
@@ -151,38 +230,20 @@ public sealed class DuplicatedLiteralDictionaryRatchetTests
             class R {
                 private static readonly Dictionary<string, string> T = new Dictionary<string, string>
                 {
-                    ["a"] = "one",
-                    ["b"] = "TWO",
-                    ["c"] = "three"
+                    ["a"] = "one", ["b"] = "TWO", ["c"] = "three"
                 };
             }
             """;
-        const string Nested = """
-            class N {
-                private static readonly Dictionary<string, Dictionary<string, string>> T =
-                    new Dictionary<string, Dictionary<string, string>>
-                    {
-                        ["en"] = new Dictionary<string, string>
-                        {
-                            ["a"] = "one",
-                            ["b"] = "two",
-                            ["c"] = "three"
-                        }
-                    };
-            }
-            """;
 
-        Assert.NotEqual(Assert.Single(ExtractTables(Left)), Assert.Single(ExtractTables(Right)));
-
-        // 外层那张"en => 子表"本身没有字面量条目（≥3 条才算），子表与 Left 的表则是同一张：
-        // 这正是"按语言分组的码表被抄进两处"的真实形状。
-        Assert.Equal(Assert.Single(ExtractTables(Left)), Assert.Single(ExtractTables(Nested)));
+        Assert.NotEqual(
+            Assert.Single(ExtractTables(Left)),
+            Assert.Single(ExtractTables(Right)));
     }
 
-    /// <summary>抽出一段源码里每张 ≥3 条字面量条目的字典，返回其内容指纹（键值集合，排序后拼接）。</summary>
-    private static IEnumerable<string> ExtractTables(string text)
+    /// <summary>返回 (形状, 指纹)。指纹带形状前缀，形状之间不互相串组。</summary>
+    private static IEnumerable<(string Shape, string Fingerprint)> ExtractTables(string text)
     {
-        foreach (Match constructor in Constructor.Matches(text))
+        foreach (Match constructor in DictionaryConstructor.Matches(text))
         {
             var open = text.IndexOf('{', constructor.Index);
             if (open < 0)
@@ -190,58 +251,104 @@ public sealed class DuplicatedLiteralDictionaryRatchetTests
                 continue;
             }
 
-            var depth = 0;
-            var end = open;
-            while (end < text.Length)
+            var body = SliceOwnLevel(text, open, '{', '}');
+            var indexer = new List<string>();
+            var oldStyle = new List<string>();
+
+            foreach (var chunk in SplitTopLevel(body))
             {
-                var c = text[end];
-                if (c is '{' or '(')
+                var hit = IndexerEntry.Match(chunk);
+                if (hit.Success)
                 {
-                    depth++;
-                }
-                else if (c is '}' or ')')
-                {
-                    depth--;
-                    if (depth == 0 && c == '}')
-                    {
-                        break;
-                    }
+                    indexer.Add(Unescape(hit.Groups["k"].Value) + "→" + Unescape(hit.Groups["v"].Value));
+                    continue;
                 }
 
-                end++;
-            }
-
-            var entries = new List<string>();
-            foreach (var chunk in SplitTopLevel(text[(open + 1)..end]))
-            {
-                var entry = Entry.Match(chunk);
-                if (entry.Success)
+                hit = OldStyleEntry.Match(chunk);
+                if (hit.Success)
                 {
-                    entries.Add($"{Unescape(entry.Groups["k"].Value)}\u2192{Unescape(entry.Groups["v"].Value)}");
+                    oldStyle.Add(Unescape(hit.Groups["k"].Value) + "→" + Unescape(hit.Groups["v"].Value));
                 }
             }
 
-            if (entries.Count >= 3)
+            if (indexer.Count >= MinimumEntries)
             {
-                entries.Sort(StringComparer.Ordinal);
-                yield return string.Join(";", entries);
+                yield return ("字典 indexer", Fingerprint("字典", indexer));
+            }
+
+            if (oldStyle.Count >= MinimumEntries)
+            {
+                yield return ("字典老式", Fingerprint("字典", oldStyle));
+            }
+        }
+
+        foreach (Match field in StringArrayField.Matches(text))
+        {
+            var assign = field.Index + field.Length;
+            var stop = text.IndexOf(';', assign);
+            if (stop < 0)
+            {
+                continue;
+            }
+
+            // 取 = 之后到第一个 ; 的整段：new string[]{..}、[..]、new[]{..} 通吃，不做括号配对
+            var items = StringLiteral.Matches(text[(assign + 1)..stop])
+                .Select(literal => Unescape(literal.Value.Trim('"')))
+                .ToList();
+
+            if (items.Count >= MinimumEntries)
+            {
+                yield return ("字符串数组", Fingerprint("数组", items));
             }
         }
     }
 
-    /// <summary>只在深度 0 处切逗号：嵌套子表整个落进一个片段，不会被误当成本表的条目。</summary>
-    private static IEnumerable<string> SplitTopLevel(string body)
+    private static string Fingerprint(string shape, IEnumerable<string> items)
+    {
+        var sorted = items.ToList();
+        sorted.Sort(StringComparer.Ordinal);
+        return shape + "|" + string.Join(";", sorted);
+    }
+
+    private static string SliceOwnLevel(string text, int openIndex, char opener, char closer)
     {
         var depth = 0;
-        var chunk = new System.Text.StringBuilder();
-
-        foreach (var c in body)
+        var index = openIndex;
+        while (index < text.Length)
         {
-            if (c is '{' or '(')
+            var c = text[index];
+            if (c == opener)
             {
                 depth++;
             }
-            else if (c is '}' or ')')
+            else if (c == closer)
+            {
+                depth--;
+                if (depth == 0)
+                {
+                    break;
+                }
+            }
+
+            index++;
+        }
+
+        return text[(openIndex + 1)..index];
+    }
+
+    /// <summary>只在深度 0 处切逗号：嵌套子表整个落进一个片段，不会被误当成本表的一条。</summary>
+    private static IEnumerable<string> SplitTopLevel(string body)
+    {
+        var depth = 0;
+        var chunk = new StringBuilder();
+
+        foreach (var c in body)
+        {
+            if (c is '{' or '(' or '[')
+            {
+                depth++;
+            }
+            else if (c is '}' or ')' or ']')
             {
                 depth--;
             }
@@ -265,7 +372,7 @@ public sealed class DuplicatedLiteralDictionaryRatchetTests
             return value;
         }
 
-        var builder = new System.Text.StringBuilder(value.Length);
+        var builder = new StringBuilder(value.Length);
 
         for (var index = 0; index < value.Length; index++)
         {
@@ -277,28 +384,21 @@ public sealed class DuplicatedLiteralDictionaryRatchetTests
 
             var next = value[++index];
 
-            switch (next)
+            if (next == 'u' && index + 4 < value.Length)
             {
-                case 'u' when index + 4 < value.Length:
-                    builder.Append((char)Convert.ToInt32(value.Substring(index + 1, 4), 16));
-                    index += 4;
-                    break;
-                case 'n':
-                    builder.Append('\n');
-                    break;
-                case 'r':
-                    builder.Append('\r');
-                    break;
-                case 't':
-                    builder.Append('\t');
-                    break;
-                case '0':
-                    builder.Append('\0');
-                    break;
-                default:
-                    builder.Append(next);
-                    break;
+                builder.Append((char)Convert.ToInt32(value.Substring(index + 1, 4), 16));
+                index += 4;
+                continue;
             }
+
+            builder.Append(next switch
+            {
+                'n' => "\n",
+                'r' => "\r",
+                't' => "\t",
+                '0' => "\0",
+                var other => other.ToString(),
+            });
         }
 
         return builder.ToString();

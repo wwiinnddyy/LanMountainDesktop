@@ -7,6 +7,67 @@ public sealed class LunarCalendarService
 {
     private static readonly ChineseLunisolarCalendar Calendar = new();
 
+    /// <summary>
+    /// 黄历"宜/忌"候选池。此前日期组件与农历组件各存一份逐字相同的四张表（中英各一对）；
+    /// 组件按农历日取模选词，所以补一个词只补一边时，两块屏幕会在同一天显示不同的宜忌。
+    /// 中文是老黄历常用宜忌用字，英文是等义简写。
+    /// </summary>
+    public static readonly string[] YiCandidatesZh = [
+        "\u796d\u7940",
+        "\u7948\u798f",
+        "\u4f1a\u53cb",
+        "\u51fa\u884c",
+        "\u6c42\u8d22",
+        "\u5f00\u5e02",
+        "\u4ea4\u6613",
+        "\u5ac1\u5a36",
+        "\u6c42\u5b66",
+        "\u4fee\u9020",
+        "\u5b89\u5e8a",
+        "\u7eb3\u91c7"
+    ];
+
+    public static readonly string[] YiCandidatesEn = [
+        "Worship",
+        "Blessing",
+        "Travel",
+        "Meetings",
+        "Trade",
+        "Business",
+        "Study",
+        "Build",
+        "Gathering",
+        "Planning"
+    ];
+
+    public static readonly string[] JiCandidatesZh = [
+        "\u52a8\u571f",
+        "\u8bc9\u8bbc",
+        "\u8fdc\u822a",
+        "\u4e89\u6267",
+        "\u7834\u571f",
+        "\u5b89\u846c",
+        "\u4f10\u6728",
+        "\u6398\u4e95",
+        "\u8fc1\u5f99",
+        "\u5f00\u4ed3",
+        "\u7f6e\u4ea7",
+        "\u5f00\u6e20"
+    ];
+
+    public static readonly string[] JiCandidatesEn = [
+        "Dispute",
+        "Lawsuit",
+        "Major move",
+        "Groundwork",
+        "Burial",
+        "Long voyage",
+        "Contract rush",
+        "Risky purchase",
+        "Heavy repair",
+        "Conflict"
+    ];
+
     private static readonly string[] HeavenlyStemsZh =
     [
         "\u7532",

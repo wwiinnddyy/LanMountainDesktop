@@ -20,69 +20,6 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
 
     private static readonly LunarCalendarService LunarCalendarService = new();
 
-    private static readonly string[] ZhWeekdayHeaders = ["\u65e5", "\u4e00", "\u4e8c", "\u4e09", "\u56db", "\u4e94", "\u516d"];
-    private static readonly string[] EnWeekdayHeaders = ["S", "M", "T", "W", "T", "F", "S"];
-
-    private static readonly string[] ZhYiCandidates =
-    [
-        "\u796d\u7940",
-        "\u7948\u798f",
-        "\u4f1a\u53cb",
-        "\u51fa\u884c",
-        "\u6c42\u8d22",
-        "\u5f00\u5e02",
-        "\u4ea4\u6613",
-        "\u5ac1\u5a36",
-        "\u6c42\u5b66",
-        "\u4fee\u9020",
-        "\u5b89\u5e8a",
-        "\u7eb3\u91c7"
-    ];
-
-    private static readonly string[] ZhJiCandidates =
-    [
-        "\u52a8\u571f",
-        "\u8bc9\u8bbc",
-        "\u8fdc\u822a",
-        "\u4e89\u6267",
-        "\u7834\u571f",
-        "\u5b89\u846c",
-        "\u4f10\u6728",
-        "\u6398\u4e95",
-        "\u8fc1\u5f99",
-        "\u5f00\u4ed3",
-        "\u7f6e\u4ea7",
-        "\u5f00\u6e20"
-    ];
-
-    private static readonly string[] EnYiCandidates =
-    [
-        "Worship",
-        "Blessing",
-        "Travel",
-        "Meetings",
-        "Trade",
-        "Business",
-        "Study",
-        "Build",
-        "Gathering",
-        "Planning"
-    ];
-
-    private static readonly string[] EnJiCandidates =
-    [
-        "Dispute",
-        "Lawsuit",
-        "Major move",
-        "Groundwork",
-        "Burial",
-        "Long voyage",
-        "Contract rush",
-        "Risky purchase",
-        "Heavy repair",
-        "Conflict"
-    ];
-
     private TimeZoneService? _timeZoneService;
     private double _currentCellSize = 64;
     private double _weekdayFontSize = 17;
@@ -179,13 +116,13 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
         var itemCount = isZh ? _lunarItemCount : Math.Max(1, _lunarItemCount - 1);
         YiItemsTextBlock.Text = BuildDailySelection(
             now.Date,
-            isZh ? ZhYiCandidates : EnYiCandidates,
+            isZh ? LunarCalendarService.YiCandidatesZh : LunarCalendarService.YiCandidatesEn,
             count: itemCount,
             salt: 17,
             useChineseSpacing: isZh);
         JiItemsTextBlock.Text = BuildDailySelection(
             now.Date,
-            isZh ? ZhJiCandidates : EnJiCandidates,
+            isZh ? LunarCalendarService.JiCandidatesZh : LunarCalendarService.JiCandidatesEn,
             count: itemCount,
             salt: 29,
             useChineseSpacing: isZh);
@@ -197,7 +134,7 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
 
     private void UpdateWeekdayHeaders(bool isZh)
     {
-        var headers = isZh ? ZhWeekdayHeaders : EnWeekdayHeaders;
+        var headers = CalendarWeekLabels.For(isZh);
         var blocks = GetWeekdayHeaderBlocks();
         for (var i = 0; i < blocks.Count; i++)
         {

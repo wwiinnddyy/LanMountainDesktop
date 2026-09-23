@@ -139,21 +139,22 @@ public sealed class DuplicateImplementationRatchetTests
     private const int DriftFamilyCeiling = 190;
 
     /// <summary>
-    /// 漂移普查认领的声明处数下限（今天实测 5438：从 5456 起，收口真删 28 条私有声明、家新增 15 条入口（5439→5438 这一格＝少 6 条 / 多 5 条，逐条点名核过：两个组件的 ResolveCityName 与四张表里的两处 new Dictionary 没了，家里多了 3 个方法 + 2 处 new Dictionary））。
+    /// 漂移普查认领的声明处数下限（今天实测 5439）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。
     /// 钉这个不是为了查新增，是为了查**判据自己塌掉**：
     /// 上面那两处 bug 都是"少认声明"，族数看着像收口（193→189），实际是普查瞎了。
     /// 只冻族数会被这种错法骗过去，冻住认领量就不会。
     ///
-    /// 5456 → 5444 那 12 处是**记账欠的**，不是判据丢了声明：这条注释停在 <c>9882a21</c> 那天，
-    /// 之后陆续提交的收口各自删掉的私有方法声明没回写到这儿。逐条对过（把 9882a21 与 HEAD 各归档一份，
-    /// 按名字比对声明数）：少 18 条——<c>CleanupPendingDeletions</c>(2)/<c>NormalizeExistingDirectory</c>(2)/
-    /// <c>NormalizeExistingFile</c>(2)/<c>BuildMonogram</c>(2)/<c>BuildLauncherHiddenFallbackDisplayName</c>(2)
-    /// 五族被各自的家替掉，<c>AddLine</c> 2→1（家里那一头同名），再加 7 个删掉的空壳与死缝
-    /// （<c>InitializeSettingsIcons</c>、<c>EnsureComponentLibraryPreviewWarmup</c>、
-    /// <c>QueuePlacementPreviewRefresh</c>、<c>RemovePlacementPreviewImage</c>/<c>s</c>、
-    /// <c>UpdateSettingsViewportInsets</c>、<c>CleanupPendingDeletionDirectory</c>）；多 6 条是新增的入口
-    /// （<c>PathFor</c>/<c>CleanupAfterInstall</c>/<c>DirectoryOrNull</c>/<c>FileOrNull</c>/
-    /// <c>FallbackDisplayName</c>/<c>From</c>）。18−6=12，一条不差，认领量降的全是"真少了一条声明"。
+    /// 5456 → 5439 这一路是**记账欠的**，不是判据丢了声明：这条注释原先停在 9882a21 那天，
+    /// 之后陆续提交的收口各自删掉的私有声明没回写到这儿。逐条点名对过（把 9882a21 与当前树
+    /// 各 `git archive` 一份跑同一份普查，按 (方法名, 所在文件) 比声明数）：
+    /// **少 34 条、多 17 条，净 −17**——少的是被家替掉的私有抄本与删掉的空壳/死缝
+    /// （CleanupPendingDeletions、NormalizeExistingDirectory、NormalizeExistingFile、BuildMonogram、
+    /// BuildLauncherHiddenFallbackDisplayName、AddLine、Percentile、ResolveFirstTailIndex、ResolveLevel、
+    /// ResolveCityName、NormalizeThemeMode 各若干处，加 InitializeSettingsIcons、
+    /// EnsureComponentLibraryPreviewWarmup、QueuePlacementPreviewRefresh、RemovePlacementPreviewImage/s、
+    /// UpdateSettingsViewportInsets、CleanupPendingDeletionDirectory），
+    /// 多的是各家新增的入口。普查把 new Dictionary(...) 这类对象初始化也算成声明，
+    /// 所以并表也会动这个数——一笔没含糊：降的全是"真少了一条声明"。
     /// </summary>
     private const int DriftCensusSiteFloor = 5400;
 
@@ -317,7 +318,7 @@ public sealed class DuplicateImplementationRatchetTests
         var censusSites = bodiesByName.Values.Sum(tally => tally.Sites);
         Assert.True(
             censusSites >= DriftCensusSiteFloor,
-            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5438）。" +
+            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5439）。" +
             "族数没变也说明判据在丢声明：查 NormalizeBody 又漏掉了哪种成员写法（历史上漏过 Allman 箭头体与插值字符串的大括号）");
 
         var driftFamilies = bodiesByName.Count(pair => pair.Value.VariantCount >= 2 &&

@@ -17,9 +17,6 @@ public partial class MonthCalendarWidget : UserControl, IDesktopComponentWidget,
         Interval = TimeSpan.FromMinutes(1)
     };
 
-    private static readonly string[] ZhWeekdayHeaders = ["\u65e5", "\u4e00", "\u4e8c", "\u4e09", "\u56db", "\u4e94", "\u516d"];
-    private static readonly string[] EnWeekdayHeaders = ["S", "M", "T", "W", "T", "F", "S"];
-
     private TimeZoneService? _timeZoneService;
     private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private double _weekdayFontSize = 20;
@@ -97,7 +94,7 @@ public partial class MonthCalendarWidget : UserControl, IDesktopComponentWidget,
 
     private void UpdateWeekdayHeaders(bool isZh)
     {
-        var headers = isZh ? ZhWeekdayHeaders : EnWeekdayHeaders;
+        var headers = CalendarWeekLabels.For(isZh);
         var blocks = GetWeekdayHeaderBlocks();
         for (var i = 0; i < blocks.Count; i++)
         {

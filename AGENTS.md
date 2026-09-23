@@ -321,6 +321,13 @@ AirApp 按归一化语言取各自表（多 ja/ko，且 `LanguageCodes.Default` 
 在生产目录种一份同内容表→红；把转义还原改成直通→红（自测那条）；把覆盖面下限抬高→红并报出实测 8 张。
 覆盖面下限存在的理由就是这次踩到的坑：探针正则把 `IReadOnlyDictionary` 拼成 `IReadonly` 时报过"全仓 0 张表"的**假零**。
 
+认**三种形状**，每种各钉一条覆盖面下限（今天实测 8 / 1 / 33，C# 闸门与 python 探针两个面同数）：
+字典 indexer 写法、老式 `{ "k", "v" }` 初值、字符串数组（`new string[]{..}` 与 `[..]` 算同一张表）。
+只钉一个总数的话，"多认一种形状"时另一种形状塌掉是看不见的——而**数组形状一接上就量出 6 组真复制**
+（日历组件之间抄来抄去的星期表头与黄历宜忌候选池），已分别收进 `Services/CalendarWeekLabels.cs`
+与 `LunarCalendarService` 的公开表。仍不认的形状：元组列表初值、少于 3 条的表、
+以及用 `switch` 硬编码的等价映射（那类由方法级两把尺子管）。
+
 **打开外部链接只认一处**：组件要点开一条网页链接，一律 `Helpers/ExternalLinkLauncher.cs`
 （`TryOpen(url)` 打开、`NormalizeHttpUrl(url)` 只做归一化）。此前 http/https 归一化被逐字抄了 6 份
 （含 `RecommendationDataService`），shell 打开又抄了 9 份，其中 3 份（`DailyNewsView`、`JuyaNewsWidget`、
