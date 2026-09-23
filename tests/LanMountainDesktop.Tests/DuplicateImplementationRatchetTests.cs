@@ -363,7 +363,20 @@ public sealed class DuplicateImplementationRatchetTests
     /// 上一笔正是拿这个互证把"Retry 不在逐字面"判成"它只是漂移面的一个族"，判据本身瞎着，互证却一路绿。
     /// 所以互证只在两边判据是各写一遍的时候才算证据；共用一份逻辑的那一段，只能靠已知正例喂它。
 
-    private const int IdenticalBodyFamilyCeiling = 33;
+    /// 33 → 31 收两族（**真收口**，与下面 193 → 189 同一笔）：Core 的 <c>AirAppPackageInstaller</c> 与
+    /// 启动器的 <c>AirAppInstallerService</c> 各带一套私有重试件——<c>Retry</c> 那 27 行两份逐字相同
+    /// （120/250/500ms、只吞 IOException 与 UnauthorizedAccessException、耗尽后原样抛出），外加三个
+    /// 单语句转手与一份 <c>RetryDelays</c>。家早就在（<c>core/IO/FileOperationRetryHelper</c>，
+    /// 档位与抛法逐条相同），这两处属"家立着、调用点绕过去"。同批把"旧包删不动就挪进 .pending
+    /// 等下次收尾"那 13 行两份逐字相同收进 <c>AirAppPendingDeletionDirectory.RemoveOrMoveToPending</c>
+    /// ——那个类本就是这套暂存机制的家，它旁边 <c>CleanupAfterInstall</c> 的注释早在 2026-09 就写着
+    /// "这里之前有 3 份实现"。唯一的<b>行为差别</b>是多了一句可注入的重试告警（<c>FailureNotice</c>）：
+    /// 抄本闷声重试，家会报"第几次失败、多久之后再试"。
+    /// 行为钉 <c>AirAppPendingDeletionDirectoryTests</c> 两条（删得动 → 当场消失且不留 <c>*.pending</c>；
+    /// 文件本来就不在 → 不抛也不留）；"挪进 pending"那一支**未覆盖**并写明原因（同进程的锁会把
+    /// <c>File.Move</c> 一起挡住，那样测到的是"挪也失败"）。实测净 <c>−109</c> 行（两家各删 73、各加 5，家加 27）。
+
+    private const int IdenticalBodyFamilyCeiling = 31;
 
     /// <summary>
     /// 今天实测：189 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
@@ -444,9 +457,16 @@ public sealed class DuplicateImplementationRatchetTests
     // 182 → 193 与上面 31 → 33 是**同一笔改判据**（同一份"并签名续行"的逻辑，两个面共用）：
     // 那些被 `});` 吃掉的声明在漂移面同样隐身，判据改正后一次性显形 11 族。不是有人多抄了 11 种实现。
     // 认领量下限那条断言同轮仍绿（≥5700），所以这不是"判据放宽到什么都算"——是被吃掉的行重新算进来了。
-    // 这一格里点名的三个新可见族里，Retry 与 TryRemoveExistingPackage 已在下一笔真收口，
+    // 这一格里点名的三个新可见族里，Retry 与 TryRemoveExistingPackage 已在下一笔收掉，
     // ResolveAsStreamForReadMethod 与它旁边的 ResolveAsTaskGenericMethod（三处三体）仍挂 #G1-BC。
-    private const int DriftFamilyCeiling = 193;
+    // 193 → 189 是**真收口**（与上面 33 → 31 同一笔）：Core 的 AirAppPackageInstaller 与启动器的
+    // AirAppInstallerService 各带一套私有重试件（Retry / CopyWithRetry / MoveWithOverwriteRetry /
+    // DeleteFileWithRetry 四个方法加一份 RetryDelays），整个删掉改调 core/IO/FileOperationRetryHelper，
+    // 这四个名字于是只剩家一种实现、从漂移面消失。报告面按名字逐个比过：掉的正好这 4 个，
+    // 没有新名字进来，其余共有族的站点数一处未变——"只动了这一族"是量出来的，不是推断的。
+    // 两笔分开记：182 → 193 是改判据（一行代码没删），193 → 189 是收口（git diff --numstat 实测：
+    // 两个安装器各删 73 行、各加 5 行，家加 27 行 ⇒ 净 −109），并成"净 +7"会把判据账洗掉。
+    private const int DriftFamilyCeiling = 189;
 
     /// <summary>
     /// 漂移普查认领的声明处数下限（今天实测 5759）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。

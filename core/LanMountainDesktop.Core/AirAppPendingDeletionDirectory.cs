@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 
+using LanMountainDesktop.Shared.IO;
+
 namespace LanMountainDesktop.AirAppPackaging;
 
 /// <summary>
@@ -18,6 +20,31 @@ public static class AirAppPendingDeletionDirectory
 {
     public static string PathFor(string airAppsDirectory) =>
         Path.Combine(airAppsDirectory, AirAppPackagingConstants.PendingDeletionDirectoryName);
+
+    /// <summary>
+    /// 装同一个 id 时怎么处理旧包文件：先带重试地删；删不动（被瞬时锁占住）就改名挪进本目录，
+    /// 等这一次安装的收尾 <see cref="CleanupAfterInstall"/> 再回收。
+    /// </summary>
+    /// <remarks>
+    /// 收到这里之前，Core 的 <c>AirAppPackageInstaller</c> 与启动器的 <c>AirAppInstallerService</c>
+    /// 各抄了一份逐字相同的 13 行（2026-09-24 由普查尺子量出）。漂开的后果不报错：只有一侧改成
+    /// "删不动就挪进来"，另一侧照旧把"删不动"当失败往上抛，用户看到的就成了"重装同一个轻应用，
+    /// 有时成功有时报安装失败"。挪进来的文件名带一个 GUID 段，是因为两次安装可能同时想挪同一个包。
+    /// <paramref name="pendingDeletionDir"/> 由调用方保证已经建好（两个调用点都在循环前先 CreateDirectory）。
+    /// </remarks>
+    public static void RemoveOrMoveToPending(string existingPackagePath, string pendingDeletionDir, string category)
+    {
+        try
+        {
+            FileOperationRetryHelper.DeleteFileWithRetry(existingPackagePath, category);
+        }
+        catch (IOException)
+        {
+            var fileName = Path.GetFileName(existingPackagePath);
+            var pendingPath = Path.Combine(pendingDeletionDir, $"{fileName}.{Guid.NewGuid():N}.pending");
+            File.Move(existingPackagePath, pendingPath);
+        }
+    }
 
     /// <summary>清理暂存目录里的 <c>*.pending</c> 标记；目录因此变空时一并删掉。尽力而为，失败不抛。</summary>
     public static void CleanupAfterInstall(string pendingDeletionDir)

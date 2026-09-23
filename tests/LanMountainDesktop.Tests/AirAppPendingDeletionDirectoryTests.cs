@@ -25,6 +25,43 @@ public sealed class AirAppPendingDeletionDirectoryTests : IDisposable
             AirAppPendingDeletionDirectory.PathFor(_airAppsDirectory));
     }
 
+    /// <summary>
+    /// 删得动的情形：文件当场消失，且<b>不该</b>留下 <c>*.pending</c>。
+    /// 钉的是"挪进暂存"只是兜底而不是常规路径——写成"总是挪"的话，装一次就在这个隐藏目录里
+    /// 攒一份旧包副本，而 <c>CleanupAfterInstall</c> 下一轮才收，中间那段时间它照样占着磁盘。
+    /// </summary>
+    [Fact]
+    public void RemoveOrMoveToPending_DeletesTheStalePackage_InPlace()
+    {
+        var dir = Prepare(out _, out _, markerCount: 0, keepOther: false);
+        var packagePath = Path.Combine(_airAppsDirectory, "stale" + AirAppPackagingConstants.PackageFileExtension);
+        File.WriteAllText(packagePath, "old package");
+
+        AirAppPendingDeletionDirectory.RemoveOrMoveToPending(packagePath, dir, "tests");
+
+        Assert.False(File.Exists(packagePath));
+        Assert.Empty(Directory.GetFiles(dir, "*.pending"));
+    }
+
+    /// <summary>
+    /// **未覆盖的一支**：兜底那条"删不动就挪进来 <c>*.pending</c>"在这里量不到——同一进程用
+    /// <c>FileShare.None</c> 占住文件确实能让 <c>File.Delete</c> 抛 <c>IOException</c>，
+    /// 但紧接着的 <c>File.Move</c> 会撞上同一个锁（没开 <c>FILE_SHARE_DELETE</c> 就改不了名），
+    /// 于是这条夹具测的是"挪也失败"，不是"挪成功"。别把它当成那一支已经钉住了。
+    /// </summary>
+    [Fact]
+    public void RemoveOrMoveToPending_KeepsQuiet_WhenThePackageIsAlreadyGone()
+    {
+        var dir = Prepare(out _, out _, markerCount: 0, keepOther: false);
+
+        AirAppPendingDeletionDirectory.RemoveOrMoveToPending(
+            Path.Combine(_airAppsDirectory, "already-gone" + AirAppPackagingConstants.PackageFileExtension),
+            dir,
+            "tests");
+
+        Assert.Empty(Directory.GetFiles(dir, "*.pending"));
+    }
+
     [Fact]
     public void Cleanup_DeletesMarkers_AndPrunesTheNowEmptyDirectory()
     {

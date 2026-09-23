@@ -3,12 +3,7 @@ namespace LanMountainDesktop.AirAppPackaging;
 
 public sealed class AirAppPackageInstaller
 {
-    private static readonly TimeSpan[] RetryDelays =
-    [
-        TimeSpan.FromMilliseconds(120),
-        TimeSpan.FromMilliseconds(250),
-        TimeSpan.FromMilliseconds(500)
-    ];
+    private const string RetryCategory = "AirAppPackageInstaller";
 
     public AirAppPackageInstallResult Install(
         string sourcePackagePath,
@@ -31,10 +26,10 @@ public sealed class AirAppPackageInstaller
         Directory.CreateDirectory(fullAirAppsDirectory);
         var destinationPath = Path.Combine(fullAirAppsDirectory, BuildInstalledPackageFileName(manifest.Id));
         var stagingPath = destinationPath + ".incoming";
-        DeleteFileWithRetry(stagingPath);
-        CopyWithRetry(fullSourcePath, stagingPath, overwrite: true);
+        FileOperationRetryHelper.DeleteFileWithRetry(stagingPath, RetryCategory);
+        FileOperationRetryHelper.CopyWithRetry(fullSourcePath, stagingPath, overwrite: true, RetryCategory);
         RemoveExistingAirAppPackages(fullAirAppsDirectory, manifest.Id, destinationPath, stagingPath, options);
-        MoveWithOverwriteRetry(stagingPath, destinationPath);
+        FileOperationRetryHelper.MoveWithOverwriteRetry(stagingPath, destinationPath, RetryCategory);
 
         return new AirAppPackageInstallResult(destinationPath, manifest);
     }
@@ -69,7 +64,7 @@ public sealed class AirAppPackageInstaller
                     continue;
                 }
 
-                TryRemoveExistingPackage(existingPackagePath, pendingDeletionDir);
+                AirAppPendingDeletionDirectory.RemoveOrMoveToPending(existingPackagePath, pendingDeletionDir, RetryCategory);
             }
             catch
             {
@@ -95,69 +90,6 @@ public sealed class AirAppPackageInstaller
             airAppsDirectory,
             $"*{AirAppPackagingConstants.PackageFileExtension}",
             SearchOption.AllDirectories);
-    }
-
-    private static void TryRemoveExistingPackage(string existingPackagePath, string pendingDeletionDir)
-    {
-        try
-        {
-            DeleteFileWithRetry(existingPackagePath);
-        }
-        catch (IOException)
-        {
-            var fileName = Path.GetFileName(existingPackagePath);
-            var pendingPath = Path.Combine(pendingDeletionDir, $"{fileName}.{Guid.NewGuid():N}.pending");
-            File.Move(existingPackagePath, pendingPath);
-        }
-    }
-
-    private static void CopyWithRetry(string sourcePath, string destinationPath, bool overwrite)
-    {
-        Retry(() => File.Copy(sourcePath, destinationPath, overwrite));
-    }
-
-    private static void MoveWithOverwriteRetry(string sourcePath, string destinationPath)
-    {
-        Retry(() => File.Move(sourcePath, destinationPath, overwrite: true));
-    }
-
-    private static void DeleteFileWithRetry(string filePath)
-    {
-        Retry(() =>
-        {
-            if (File.Exists(filePath))
-            {
-                File.Delete(filePath);
-            }
-        });
-    }
-
-    private static void Retry(Action action)
-    {
-        Exception? lastException = null;
-        for (var attempt = 0; attempt <= RetryDelays.Length; attempt++)
-        {
-            try
-            {
-                action();
-                return;
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                lastException = ex;
-                if (attempt >= RetryDelays.Length)
-                {
-                    break;
-                }
-
-                Thread.Sleep(RetryDelays[attempt]);
-            }
-        }
-
-        if (lastException is not null)
-        {
-            throw lastException;
-        }
     }
 
     private static string BuildInstalledPackageFileName(string airAppId)

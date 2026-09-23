@@ -126,7 +126,17 @@ AirApp 本地包生成：
   并把两个哈希都报出来，基线一个字节不改、台账也不追加。两个方向都种过样本验过：把 `AirAppComponentOptions.ComponentId`
   从 `set` 改回 `init`（就是那次破坏的形状）带着录制开关跑 → 红且台账仍 1 行；同样的破坏加上 `SdkVersion` 递增到 1.0.1 再录 →
   绿、台账变 2 行。它管不了已经发生的那一次（台账是破坏之后才开的账），那一半仍由 `Category=EcosystemProbe` 那 8 行真加载兜着。
-- 统一用 AirApp 措辞：新增的类型、目录、设置键、日志文案不要再引入 `plugin` / `Plugin`
+- **装 AirApp 时那几次落盘动作只认两处**：带重试的复制 / 改名 / 删除一律
+  `core/LanMountainDesktop.Core/IO/FileOperationRetryHelper`（120/250/500ms 三档、只吞 `IOException` 与
+  `UnauthorizedAccessException`、耗尽后把最后一条异常原样抛出）；"旧包删不动就挪进 `.pending` 等下一次安装收尾"
+  一律 `core/LanMountainDesktop.Core/AirAppPendingDeletionDirectory.RemoveOrMoveToPending`。
+  2026-09-24 之前，Core 的 `AirAppPackageInstaller` 与启动器的 `AirAppInstallerService` **各带一套私有重试件**
+  （含 27 行逐字相同的 `Retry` + 三个单语句转手 + 一份 `RetryDelays`），那两个文件正是本仓"家立着、调用点绕过去"
+  最典型的一处——绕开的症状不是崩溃，而是"重装同一个轻应用时，一侧把删不动当失败往上抛、另一侧悄悄挪进暂存目录"，
+  用户看到的是有时成功有时失败。收口实测净 `−109` 行（两家各删 73 / 各加 5，家加 27），
+  唯一的行为差别是多了一句可注入的重试告警（`FailureNotice`）。
+  两条行为钉在 `AirAppPendingDeletionDirectoryTests`；**"挪进 pending"那一支未覆盖**并写明了为什么
+  （同进程的锁会把紧跟的 `File.Move` 一起挡住，那样测的是"挪也失败"）。
 - 改名前先查 `docs/ai/NAMING_AND_FROZEN_IDENTIFIERS.md`：其中第 3 节是跨进程/跨仓协议冻结项，第 2 节是需要一次性迁移器的本地数据标识符，两者都不能当作"漏改"直接重命名
 - **清单 id 是唯一真源**：`airapp.json` 的 `components[].id` 必须与 `AddAirAppComponent` 注册的 `ComponentId` 逐字一致，宿主加载时据此校验并**拒载**（`AirAppLoader.ValidateManifestComponentContract`）。添加面板按清单列、创建控件按注册 id 找，两边漂移的症状是"面板里有、点下去没反应"且原本不报错（LanWord 实测踩过）。注册了却没声明只警告，不拒载
 - **"从包里挑 airapp.json"只认两处**：宿主侧一律走 `AirApps/AirAppPackageReader.ReadManifest`（返回完整的 SDK 清单），
