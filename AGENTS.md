@@ -372,6 +372,15 @@ scheme 校验在这条路上同样只靠"抄的时候抄全"——少了它，RS
 （行为钉 `DesktopIconHostTests` 6 格，四条注入点逐条量过），`Resolve()` 只负责真调 Win32——
 headless 量不到它，这一点写进测试注释，不宣称整条链都钉住了。
 
+**WinRT 异步操作"结果类型是谁"只认 `Services/WinRtOperationResult.cs` 一家**（`ResolveType(operationType)`）：
+先看操作类型自己的一元泛型实参（**必须判 arity**，只判 `IsGenericType` 会把两元类型的第一个实参当成结果类型），
+再看它实现的 `Windows.Foundation.IAsyncOperation`1`，两边都不对给 `null`。此前 `LocationService`、
+`WindowsNotificationListener`、`WindowsSmtcMusicControlService` 各抄一份（两份逐字、一份等价换写法）。
+按 `FullName` + `Ordinal` 认接口是刻意的——宿主不在 WinRT 投影里编译，拿不到那个 CLR 类型。
+这一族的错法全程不报错：认不出结果类型时 `AwaitWinRtOperationAsync` 直接回 `null`，
+表现是定位/通知/播放状态静默拿不到值。行为钉 `WinRtOperationResultTests`（夹具含"简单名相同、
+命名空间不同"的干扰项，钉的就是"按全名认"这条口径）。
+
 **界面语言口径只认一处**：默认语言写 `LocalizationService.DefaultLanguageCode`，读当前语言走
 `ResolveLanguageCode(() => 快照.LanguageCode)`（内部含"读盘失败退回默认语言"的兜底），判断是不是中文走
 `IsChineseLanguage(code)`。此前宿主里有 41 处 `_languageCode = "zh-CN"` 初值/兜底、12 份各自复制的

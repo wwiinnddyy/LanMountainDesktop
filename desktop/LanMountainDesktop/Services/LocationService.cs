@@ -172,7 +172,7 @@ public sealed class WindowsLocationService : ILocationService
             return null;
         }
 
-        var resultType = ResolveWinRtOperationResultType(operation.GetType());
+        var resultType = WinRtOperationResult.ResolveType(operation.GetType());
         if (resultType is null)
         {
             return null;
@@ -190,34 +190,6 @@ public sealed class WindowsLocationService : ILocationService
             .GetType()
             .GetProperty("Result", BindingFlags.Public | BindingFlags.Instance)?
             .GetValue(taskObject);
-    }
-
-    private static Type? ResolveWinRtOperationResultType(Type operationType)
-    {
-        if (operationType.IsGenericType)
-        {
-            var genericArguments = operationType.GetGenericArguments();
-            if (genericArguments.Length == 1)
-            {
-                return genericArguments[0];
-            }
-        }
-
-        foreach (var iface in operationType.GetInterfaces())
-        {
-            if (!iface.IsGenericType)
-            {
-                continue;
-            }
-
-            var genericTypeDef = iface.GetGenericTypeDefinition();
-            if (string.Equals(genericTypeDef.FullName, "Windows.Foundation.IAsyncOperation`1", StringComparison.Ordinal))
-            {
-                return iface.GetGenericArguments()[0];
-            }
-        }
-
-        return null;
     }
 
     private static MethodInfo? ResolveAsTaskGenericMethod()

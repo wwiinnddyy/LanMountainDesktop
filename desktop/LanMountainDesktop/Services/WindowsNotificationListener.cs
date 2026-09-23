@@ -363,7 +363,7 @@ internal sealed class WindowsNotificationListener : IPlatformNotificationListene
             return null;
         }
 
-        var resultType = ResolveWinRtOperationResultType(operation.GetType());
+        var resultType = WinRtOperationResult.ResolveType(operation.GetType());
         if (resultType is null)
         {
             return null;
@@ -378,25 +378,6 @@ internal sealed class WindowsNotificationListener : IPlatformNotificationListene
 
         await taskObject.WaitAsync(cancellationToken).ConfigureAwait(false);
         return taskObject.GetType().GetProperty("Result", BindingFlags.Public | BindingFlags.Instance)?.GetValue(taskObject);
-    }
-
-    private static Type? ResolveWinRtOperationResultType(Type operationType)
-    {
-        if (operationType.IsGenericType && operationType.GetGenericArguments().Length == 1)
-        {
-            return operationType.GetGenericArguments()[0];
-        }
-
-        foreach (var iface in operationType.GetInterfaces())
-        {
-            if (iface.IsGenericType &&
-                string.Equals(iface.GetGenericTypeDefinition().FullName, "Windows.Foundation.IAsyncOperation`1", StringComparison.Ordinal))
-            {
-                return iface.GetGenericArguments()[0];
-            }
-        }
-
-        return null;
     }
 
     private static MethodInfo? ResolveAsTaskGenericMethod()

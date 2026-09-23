@@ -179,8 +179,23 @@ public sealed class DuplicateImplementationRatchetTests
     /// 找不到时返回第一个顶层窗口而不是 0 → 只红 <c>ReturnsZero</c> 那格。
     /// 覆盖面边界：真调 <c>EnumWindows</c> 的那个重载这里量不到（headless 没有真桌面窗口），
     /// 判据一格都不落在它身上——写清楚，别当成"整条链都钉住了"。
+    /// 40 → 39 收一族（与下面 188 → 187 同一笔）：WinRT 操作"结果类型是谁"这条判据，三个服务各抄一份——
+    /// <c>LocationService</c> 与 <c>WindowsSmtcMusicControlService</c> 逐字相同（21 行），
+    /// <c>WindowsNotificationListener</c> 是等价换写法（一元泛型那步并成一个条件、接口那步用 && 连起来）。
+    /// 逐条比过确认三者语义相同，所以三份一起改调 <c>Services/WinRtOperationResult.ResolveType</c>、
+    /// 三个抄本整个删掉（不留转手壳）。
+    /// 值得收的理由是错法不报错：认不出结果类型时调用方一律把 <c>null</c> 当成"这次不算"，
+    /// 症状是定位/通知/播放状态静默拿不到值。
+    /// 行为钉 <c>WinRtOperationResultTests</c> 6 格，四条注入点逐条量过：
+    /// 去掉 arity 判定 → 只红 <c>WrongArity</c> 一格——**这一格第一版没钉住**：夹具原本写成
+    /// <c>TwoArgOperation&lt;TSecond&gt;</c>（其实只有一元参数），注入后照样绿，是这条判据把我猜的"钉住了"
+    /// 当场否证，改成两个类型参数才真钉住；<c>FullName</c>→<c>Name</c> → 红 <c>NonGeneric</c> 与 <c>WrongArity</c>
+    /// 两格；接口那一趟整个不扫 → 同样红这两格；认不出时回 <c>typeof(object)</c> 而不是 <c>null</c> →
+    /// 红 <c>PlainType</c> 与 <c>WholeFullName</c> 两格。夹具是自家声明的
+    /// <c>Windows.Foundation.IAsyncOperation&lt;T&gt;</c>（离线可跑，宿主本来就只能按名字认它），
+    /// 外加"简单名相同、命名空间不同"的干扰项——"按全名认"这条口径靠这两格一起钉。
     /// </summary>
-    private const int IdenticalBodyFamilyCeiling = 40;
+    private const int IdenticalBodyFamilyCeiling = 39;
 
     /// <summary>
     /// 今天实测：189 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
@@ -222,24 +237,28 @@ public sealed class DuplicateImplementationRatchetTests
     /// <c>RemoteImageBitmap.GetAsync</c> 的签名把参数换行写，两个面的正则都要求
     /// <c>\([^)]*\)</c> 在同一行内闭合，于是它根本不被认成声明——
     /// 实测：把 9882a21 与当前树各跑一份普查、按 (方法名, 所在文件) 对账，
-    /// 少 54 条 / 多 28 条、净 <c>−26</c>（5456 → 5430），而新增的 28 条里没有 <c>GetAsync</c>。
+    /// 少 57 条 / 多 29 条、净 <c>−28</c>（5456 → 5428），而新增的 29 条里没有 <c>GetAsync</c>。
     /// 后果要说准：家自己的入口不计入认领量，所以这一笔是"降 2、没加回 1"；更要紧的是
     /// **两份多行签名的逐字抄本会同时躲开这两把尺子**。这类抄本现在到底有没有、有多少，我没数过——
     /// 这条盲点的实际大小是**未查证**，不是"已排除"。记进 #G1-BC 队列尾：
     /// 改判据那一笔要单独跑、单独记账（认多声明只会让上限涨，那笔账要写清是改判据不是有人又抄）。
     /// </summary>
-    private const int DriftFamilyCeiling = 188;
+    /// 188 → 187 是真收口（与上面 40 → 39 同一笔）：<c>ResolveWinRtOperationResultType</c> 原本三处两体
+    /// （两份逐字 + 一份等价换写法），三份一起改调家之后这个名字只剩家那一种实现，整族消失。
+    /// 上一笔（<c>DesktopIconHost</c>）族数不动、这一笔动——区别在漂移面数的是"同名 ≥2 种体"：
+    /// 两份**逐字相同**的抄本不进漂移面，而"行为相同、写法不同"的三份进。引用数字时别把两笔混着说。
+    private const int DriftFamilyCeiling = 187;
 
     /// <summary>
-    /// 漂移普查认领的声明处数下限（今天实测 5430）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。
+    /// 漂移普查认领的声明处数下限（今天实测 5428）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。
     /// 钉这个不是为了查新增，是为了查**判据自己塌掉**：
     /// 上面那两处 bug 都是"少认声明"，族数看着像收口（193→189），实际是普查瞎了。
     /// 只冻族数会被这种错法骗过去，冻住认领量就不会。
     ///
-    /// 5456 → 5430 这一路是**记账欠的**，不是判据丢了声明：这条注释原先停在 9882a21 那天，
+    /// 5456 → 5428 这一路是**记账欠的**，不是判据丢了声明：这条注释原先停在 9882a21 那天，
     /// 之后陆续提交的收口各自删掉的私有声明没回写到这儿。逐条点名对过（把 9882a21 与当前树
     /// 各 `git archive` 一份跑同一份普查，按 (方法名, 所在文件) 比声明数）：
-    /// **少 54 条、多 28 条，净 −26**（5456 − 54 + 28 = 5430，两边都对得上，不是估的）。
+    /// **少 57 条、多 29 条，净 −28**（5456 − 57 + 29 = 5428，两边都对得上，不是估的）。
     /// 少的是被家替掉的私有抄本与删掉的空壳/死缝，按名字点齐（括号内为处数）：
     /// AddLine(2)、BuildLauncherHiddenFallbackDisplayName(2)、BuildMonogram(2)、CleanupPendingDeletions(2)、
     /// CleanupPendingDeletionDirectory(1)、字典表被认成的 Dictionary(4)、EnsureComponentLibraryPreviewWarmup(1)、
@@ -248,13 +267,15 @@ public sealed class DuplicateImplementationRatchetTests
     /// Percentile(3)、QueuePlacementPreviewRefresh(1)、ReleasePointBuffer(2)、RemovePlacementPreviewImage(1)、
     /// RemovePlacementPreviewImages(1)、ResolveCityName(2)、ResolveFirstTailIndex(2)、ResolveLevel(2)、
     /// ResolveStatusText(2)、TryDownloadBitmapAsync(2)、UpdateSettingsViewportInsets(1)、UpdateWeekdayHeaders(2)、
-    /// ResolveDesktopIconHost(2)、以及 <c>EnumWindows(...)</c> 那两行调用点被算成声明(2)。
-    /// 多的是各家新增的入口（28 条：Monogram.From、TextValue.FirstNonEmpty、WindowHandles.OfWindow、
+    /// ResolveDesktopIconHost(2)、以及 <c>EnumWindows(...)</c> 那两行调用点被算成声明(2)、
+    /// ResolveWinRtOperationResultType(3)。
+    /// 多的是各家新增的入口（29 条：Monogram.From、TextValue.FirstNonEmpty、WindowHandles.OfWindow、
     /// StudyStatistics.Percentile、PointBufferPool 两条、StudyNoiseSeriesRules 两条、CalendarWeekLabels 两条、
     /// ClockCityNames 五条、ExistingPath 两条、AirAppPendingDeletionDirectory 两条、
     /// LauncherHiddenItemNames.FallbackDisplayName、ThemeAppearanceValues.NormalizeThemeMode、
     /// StudyAnalyticsConfig.ClampedToLegalRanges、SecondHandChoice.Enforce、StudyNoiseStatusText.Describe、
-    /// StudyChartGeometry.AddLine、DesktopIconHost 的 Resolve/ResolveFrom/FindChildByClass 三条）。普查把 <c>new Dictionary(...)</c> 这类对象初始化也算成声明，
+    /// StudyChartGeometry.AddLine、DesktopIconHost 的 Resolve/ResolveFrom/FindChildByClass 三条、
+    /// WinRtOperationResult.ResolveType）。普查把 <c>new Dictionary(...)</c> 这类对象初始化也算成声明，
     /// 所以并表也会动这个数——一笔没含糊：降的全是"真少了一条声明"。
     /// </summary>
     private const int DriftCensusSiteFloor = 5400;
@@ -419,7 +440,7 @@ public sealed class DuplicateImplementationRatchetTests
         var censusSites = bodiesByName.Values.Sum(tally => tally.Sites);
         Assert.True(
             censusSites >= DriftCensusSiteFloor,
-            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5430）。" +
+            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5428）。" +
             "族数没变也说明判据在丢声明：查 NormalizeBody 又漏掉了哪种成员写法（历史上漏过 Allman 箭头体与插值字符串的大括号）");
 
         var driftFamilies = bodiesByName.Count(pair => pair.Value.VariantCount >= 2 &&
