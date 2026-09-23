@@ -47,11 +47,11 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
 
     public void SetTimeZoneService(TimeZoneService timeZoneService)
     {
-        _timeZoneService = TimeZoneServiceBinding.Replace(
-            _timeZoneService,
+        TimeZoneServiceBinding.Attach(
+            ref _timeZoneService,
             timeZoneService,
-            OnTimeZoneChanged);
-        UpdateDate();
+            OnTimeZoneChanged,
+            UpdateDate);
     }
 
     public void ClearTimeZoneService()

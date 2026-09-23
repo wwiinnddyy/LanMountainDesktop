@@ -40,11 +40,11 @@ public partial class HolidayCalendarWidget : UserControl, IDesktopComponentWidge
 
     public void SetTimeZoneService(TimeZoneService timeZoneService)
     {
-        _timeZoneService = TimeZoneServiceBinding.Replace(
-            _timeZoneService,
+        TimeZoneServiceBinding.Attach(
+            ref _timeZoneService,
             timeZoneService,
-            OnTimeZoneChanged);
-        TriggerContentRefresh();
+            OnTimeZoneChanged,
+            TriggerContentRefresh);
     }
 
     public void ClearTimeZoneService()

@@ -31,6 +31,21 @@ public static class TimeZoneServiceBinding
         return next;
     }
 
+    /// <summary>
+    /// 换绑之后必须立刻重画一次：这条顺序现在由家管（先 Replace、再刷新），
+    /// 八个组件不再各写一遍六行。用 ref 传字段是刻意的——刷新得看到换好之后的字段值，
+    /// 若在赋值之前刷新就会拿旧时区重画（症状：时区改了但表盘要到下一次变化才对，且不报错）。
+    /// 刷新只发生一次：多刷一次会在换绑那一下重排整块面板。
+    /// </summary>
+    public static void Attach(
+        ref TimeZoneService? field,
+        TimeZoneService? next,
+        EventHandler onChanged,
+        Action refreshAfterChange)
+    {
+        field = Replace(field, next, onChanged);
+        refreshAfterChange();
+    }
     /// <summary>退掉 <paramref name="current"/> 并返回 null；本来没订过就是空操作。</summary>
     public static TimeZoneService? Clear(TimeZoneService? current, EventHandler onChanged)
     {

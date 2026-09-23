@@ -76,4 +76,71 @@ public sealed class TimeZoneServiceBindingTests
         Assert.Null(TimeZoneServiceBinding.Replace(current, null, handler));
         service.CurrentTimeZone = OtherZone;
     }
+
+    [Fact]
+    public void Attach_WritesTheField_BeforeRefreshing()
+    {
+        var service = new TimeZoneService();
+        var holder = new Holder();
+
+        holder.Attach(service, (_, _) => { });
+
+        Assert.Equal(1, holder.Refreshes);
+        Assert.Same(service, holder.SeenByRefresh);
+        Assert.Same(service, holder.Field);
+    }
+
+    [Fact]
+    public void Attach_OnASecondService_RefreshesAgain_AndRoutesToTheNewOne()
+    {
+        var first = new TimeZoneService();
+        var second = new TimeZoneService();
+        object? raisedBy = null;
+        EventHandler handler = (sender, _) => raisedBy = sender;
+        var holder = new Holder();
+
+        holder.Attach(first, handler);
+        holder.Attach(second, handler);
+
+        Assert.Equal(2, holder.Refreshes);
+        first.CurrentTimeZone = OtherZone;
+        Assert.Null(raisedBy);
+        second.CurrentTimeZone = OtherZone;
+        Assert.Same(second, raisedBy);
+    }
+
+    [Fact]
+    public void Attach_WithNullService_UnsubscribesButStillRefreshes()
+    {
+        var service = new TimeZoneService();
+        var hits = 0;
+        EventHandler handler = (_, _) => hits++;
+        var holder = new Holder();
+        holder.Attach(service, handler);
+
+        holder.Attach(null, handler);
+
+        Assert.Null(holder.Field);
+        Assert.Equal(2, holder.Refreshes);
+        service.CurrentTimeZone = OtherZone;
+        Assert.Equal(0, hits);
+    }
+
+    private sealed class Holder
+    {
+        public TimeZoneService? Field;
+
+        public TimeZoneService? SeenByRefresh;
+
+        public int Refreshes;
+
+        public void Attach(TimeZoneService? next, EventHandler handler) =>
+            TimeZoneServiceBinding.Attach(ref Field, next, handler, Refresh);
+
+        private void Refresh()
+        {
+            SeenByRefresh = Field;
+            Refreshes++;
+        }
+    }
 }

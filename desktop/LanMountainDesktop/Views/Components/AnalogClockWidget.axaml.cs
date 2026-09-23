@@ -63,11 +63,11 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
 
     public void SetTimeZoneService(TimeZoneService timeZoneService)
     {
-        _timeZoneService = TimeZoneServiceBinding.Replace(
-            _timeZoneService,
+        TimeZoneServiceBinding.Attach(
+            ref _timeZoneService,
             timeZoneService,
-            OnTimeZoneChanged);
-        UpdateClock();
+            OnTimeZoneChanged,
+            UpdateClock);
     }
 
     public void ClearTimeZoneService()

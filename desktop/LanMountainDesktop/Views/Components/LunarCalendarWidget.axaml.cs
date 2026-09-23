@@ -39,11 +39,11 @@ public partial class LunarCalendarWidget : UserControl, IDesktopComponentWidget,
 
     public void SetTimeZoneService(TimeZoneService timeZoneService)
     {
-        _timeZoneService = TimeZoneServiceBinding.Replace(
-            _timeZoneService,
+        TimeZoneServiceBinding.Attach(
+            ref _timeZoneService,
             timeZoneService,
-            OnTimeZoneChanged);
-        UpdateContent();
+            OnTimeZoneChanged,
+            UpdateContent);
     }
 
     public void ClearTimeZoneService()
