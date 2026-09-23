@@ -177,7 +177,7 @@ public sealed class DuplicateImplementationRatchetTests
     private const int DriftFamilyCeiling = 190;
 
     /// <summary>
-    /// 漂移普查认领的声明处数下限（今天实测 5433）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。
+    /// 漂移普查认领的声明处数下限（今天实测 5434）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。
     /// 钉这个不是为了查新增，是为了查**判据自己塌掉**：
     /// 上面那两处 bug 都是"少认声明"，族数看着像收口（193→189），实际是普查瞎了。
     /// 只冻族数会被这种错法骗过去，冻住认领量就不会。
@@ -185,7 +185,7 @@ public sealed class DuplicateImplementationRatchetTests
     /// 5456 → 5434 这一路是**记账欠的**，不是判据丢了声明：这条注释原先停在 9882a21 那天，
     /// 之后陆续提交的收口各自删掉的私有声明没回写到这儿。逐条点名对过（把 9882a21 与当前树
     /// 各 `git archive` 一份跑同一份普查，按 (方法名, 所在文件) 比声明数）：
-    /// **少 45 条、多 22 条，净 −23**——少的是被家替掉的私有抄本与删掉的空壳/死缝
+    /// **少 46 条、多 24 条，净 −22**——少的是被家替掉的私有抄本与删掉的空壳/死缝
     /// （CleanupPendingDeletions、NormalizeExistingDirectory、NormalizeExistingFile、BuildMonogram、
     /// BuildLauncherHiddenFallbackDisplayName、AddLine、Percentile、ResolveFirstTailIndex、ResolveLevel、
     /// ResolveCityName、NormalizeThemeMode 各若干处，加 InitializeSettingsIcons、
@@ -356,7 +356,7 @@ public sealed class DuplicateImplementationRatchetTests
         var censusSites = bodiesByName.Values.Sum(tally => tally.Sites);
         Assert.True(
             censusSites >= DriftCensusSiteFloor,
-            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5433）。" +
+            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5434）。" +
             "族数没变也说明判据在丢声明：查 NormalizeBody 又漏掉了哪种成员写法（历史上漏过 Allman 箭头体与插值字符串的大括号）");
 
         var driftFamilies = bodiesByName.Count(pair => pair.Value.VariantCount >= 2 &&

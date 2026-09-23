@@ -96,31 +96,8 @@ public partial class WorldClockComponentEditor : ComponentEditorViewBase
 
     private void OnSecondHandChanged(object? sender, RoutedEventArgs e)
     {
-        _ = sender;
         _ = e;
-        if (_suppressEvents)
-        {
-            return;
-        }
-
-        _suppressEvents = true;
-        if (sender == TickRadioButton)
-        {
-            TickRadioButton.IsChecked = true;
-            SweepRadioButton.IsChecked = false;
-        }
-        else if (sender == SweepRadioButton)
-        {
-            SweepRadioButton.IsChecked = true;
-            TickRadioButton.IsChecked = false;
-        }
-
-        if (TickRadioButton.IsChecked != true && SweepRadioButton.IsChecked != true)
-        {
-            TickRadioButton.IsChecked = true;
-        }
-
-        _suppressEvents = false;
+        SecondHandChoice.Enforce(TickRadioButton, SweepRadioButton, sender, ref _suppressEvents);
         SaveState();
     }
 
