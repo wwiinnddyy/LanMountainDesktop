@@ -318,8 +318,18 @@ public sealed class DuplicateImplementationRatchetTests
     /// ② 制表与换行在 Windows 上也算非法字符，**先被换成** <c>_</c> 再剪，所以永远走不到兜底词
     /// （<c>Tab+LF</c> → <c>"__"</c>）——"先换后剪"这个顺序本身就是判据。
     /// 形状只用两平台都非法的 <c>/</c> 钉（反斜杠在 Linux 上合法，拿它钉会让门的红绿取决于跑在哪台机器上）。
+    /// 37 → 34 收三族（10 个组件被下推推荐信息服务时各写同一条不变量：<c>_svc = x ?? 自己的默认实例;</c> 紧接着
+    /// <c>if (_isAttached) _ = RefreshXxxAsync(forceRefresh: false);</c>，只有"刷新方法是哪个"不同；
+    /// 逐字面量到 3 族各 2 站）→ 进 <c>Views/Components/RecommendationServiceBinding.Attach</c>，
+    /// 与 <see cref="TimeZoneServiceBinding"/> 同形（<c>ref</c> 字段 + <c>Func&lt;bool&gt;</c> 挂载 +
+    /// <c>Func&lt;Task&gt;</c> 刷新），各组件只留一行。第 11 个组件 <c>ZhiJiaoHubWidget</c> **不算抄本**：
+    /// 它没有默认实例回落、也没有挂载判定，字段直接赋值（那是另一种判据，别顺手统一）。
+    /// 语义逐字保留、没改良：刷新仍"发出去不管"（同步抛出照旧上抛，钉住），默认实例仍归各组件自己 new
+    /// （十个 <c>RecommendationDataService</c> 是不是各自留一份缓存是另一件事，挂在 #G1-BC）。
+    /// 行为钉 <c>RecommendationServiceBindingTests</c> 4 格，两处注入各红 2 格（实测）：
+    /// 把顺序改成"先刷后换"红两格（刷新看到的还是默认实例）、去掉 <c>isAttached()</c> 那一步红两格。
     /// </summary>
-    private const int IdenticalBodyFamilyCeiling = 37;
+    private const int IdenticalBodyFamilyCeiling = 34;
 
     /// <summary>
     /// 今天实测：189 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
@@ -392,7 +402,12 @@ public sealed class DuplicateImplementationRatchetTests
     /// 换的是"续接在哪个上下文"——不替它三挑，登记在 #G1-BC 等拍板。
     /// 同一族的 <c>ResolveAsTaskGenericMethod</c>（三处三体）实测差别更大（一家带 try/catch 与形参校验，
     /// 另两家 LINQ 挑第一个），同样没动，一并挂在 #G1-BC。
-    private const int DriftFamilyCeiling = 181;
+    // 181 → 182 这一格是**名字跨类撞车被同名尺子认领**，不是有人又抄了一份：本笔新增的
+    // RecommendationServiceBinding.Attach 与早已存在的 TimeZoneServiceBinding.Attach 等同名但不同判据，
+    // 同名尺子按名字归类，于是把 Attach 这一族点出来（实测 3 站 / 3 种体，站点见报告面 dump-drift-methods.py）。
+    // 记账要点：这一族的三条实现分属不同类、各有各的契约，不构成重复真源；要消它得先决定跨类同名是否算事，
+    // 那是判据问题（与"两个重载自成一族"同一类假阳性），不是收口问题。
+    private const int DriftFamilyCeiling = 182;
 
     /// <summary>
     /// 漂移普查认领的声明处数下限（今天实测 5759）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。

@@ -76,11 +76,12 @@ public partial class ExchangeRateCalculatorWidget : UserControl, IDesktopCompone
 
     public void SetRecommendationInfoService(IRecommendationInfoService recommendationInfoService)
     {
-        _recommendationService = recommendationInfoService ?? DefaultRecommendationService;
-        if (_isAttached)
-        {
-            _ = RefreshExchangeRateAsync(forceRefresh: false);
-        }
+        RecommendationServiceBinding.Attach(
+            ref _recommendationService,
+            recommendationInfoService,
+            DefaultRecommendationService,
+            () => _isAttached,
+            () => RefreshExchangeRateAsync(forceRefresh: false));
     }
 
     public void SetCalculatorDataService(ICalculatorDataService calculatorDataService)

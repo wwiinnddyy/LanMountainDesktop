@@ -138,11 +138,12 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
 
     public void SetRecommendationInfoService(IRecommendationInfoService recommendationInfoService)
     {
-        _recommendationService = recommendationInfoService ?? DefaultRecommendationService;
-        if (_isAttached)
-        {
-            _ = RefreshPoetryAsync(forceRefresh: false);
-        }
+        RecommendationServiceBinding.Attach(
+            ref _recommendationService,
+            recommendationInfoService,
+            DefaultRecommendationService,
+            () => _isAttached,
+            () => RefreshPoetryAsync(forceRefresh: false));
     }
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)

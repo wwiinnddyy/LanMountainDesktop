@@ -82,11 +82,12 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
 
     public void SetRecommendationInfoService(IRecommendationInfoService recommendationInfoService)
     {
-        _recommendationService = recommendationInfoService ?? DefaultRecommendationService;
-        if (_isAttached)
-        {
-            _ = RefreshNewsAsync(forceRefresh: false);
-        }
+        RecommendationServiceBinding.Attach(
+            ref _recommendationService,
+            recommendationInfoService,
+            DefaultRecommendationService,
+            () => _isAttached,
+            () => RefreshNewsAsync(forceRefresh: false));
     }
 
     public void RefreshFromSettings()

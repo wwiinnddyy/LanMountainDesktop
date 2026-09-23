@@ -149,11 +149,12 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
 
     public void SetRecommendationInfoService(IRecommendationInfoService recommendationInfoService)
     {
-        _recommendationService = recommendationInfoService ?? DefaultRecommendationService;
-        if (_isAttached)
-        {
-            _ = RefreshPostsAsync(forceRefresh: false);
-        }
+        RecommendationServiceBinding.Attach(
+            ref _recommendationService,
+            recommendationInfoService,
+            DefaultRecommendationService,
+            () => _isAttached,
+            () => RefreshPostsAsync(forceRefresh: false));
     }
 
     public void RefreshFromSettings()

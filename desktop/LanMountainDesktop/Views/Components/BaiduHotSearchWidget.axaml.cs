@@ -85,11 +85,12 @@ public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget
 
     public void SetRecommendationInfoService(IRecommendationInfoService recommendationInfoService)
     {
-        _recommendationService = recommendationInfoService ?? DefaultRecommendationService;
-        if (_isAttached)
-        {
-            _ = RefreshHotSearchAsync(forceRefresh: false);
-        }
+        RecommendationServiceBinding.Attach(
+            ref _recommendationService,
+            recommendationInfoService,
+            DefaultRecommendationService,
+            () => _isAttached,
+            () => RefreshHotSearchAsync(forceRefresh: false));
     }
 
     public void RefreshFromSettings()

@@ -122,11 +122,12 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
 
     public void SetRecommendationInfoService(IRecommendationInfoService recommendationInfoService)
     {
-        _recommendationService = recommendationInfoService ?? DefaultRecommendationService;
-        if (_isAttached)
-        {
-            _ = RefreshArtworkAsync(forceRefresh: false);
-        }
+        RecommendationServiceBinding.Attach(
+            ref _recommendationService,
+            recommendationInfoService,
+            DefaultRecommendationService,
+            () => _isAttached,
+            () => RefreshArtworkAsync(forceRefresh: false));
     }
 
     public void RefreshFromSettings()
