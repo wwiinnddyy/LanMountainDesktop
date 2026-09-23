@@ -23,7 +23,7 @@ DEFAULT_ROOTS = ["core", "desktop", "airapp", "install", "platform", "mobile", "
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
 NAMES = os.environ.get("NAMES")
 NAMES = [n.strip() for n in NAMES.split(",") if n.strip()] if NAMES else None
-SKIP_DIRS = {"obj", "bin", "node_modules"}
+SKIP_DIRS = {"obj", "bin", "artifacts", "node_modules"}
 
 name_alt = "|".join(re.escape(n) for n in NAMES) if NAMES else r"[A-Za-z_]\w*"
 SIG = re.compile(
@@ -65,18 +65,20 @@ def logical_lines(lines):
     """Same semantics as the gate's LogicalLines and dump-drift-methods.logical_lines:
     join a declaration whose parameter list does not close on the same line.
     Stops as soon as a brace shows up, so a method body is never swallowed into its signature.
+    Yields (raw_line_index, text): after joining, the list index is no longer a file line number.
     """
     out = []
     i = 0
     n = len(lines)
     while i < n:
+        start = i
         current = lines[i]
         while ("{" not in current
                and sum(c in "([" for c in current) != sum(c in ")]" for c in current)
                and i + 1 < n):
             i += 1
             current = current.rstrip() + " " + lines[i].strip()
-        out.append(current)
+        out.append((start, current))
         i += 1
     return out
 
@@ -125,7 +127,9 @@ if not files:
 
 groups = defaultdict(list)
 for path in files:
-    lines = logical_lines(io.open(path, encoding="utf-8", errors="replace").read().split("\n"))
+    joined = logical_lines(io.open(path, encoding="utf-8", errors="replace").read().split("\n"))
+    starts = [start for start, _ in joined]
+    lines = [text for _, text in joined]
     i = 0
     while i < len(lines) - 1:
         m = SIG.match(lines[i])
@@ -150,7 +154,7 @@ for path in files:
         body = [l.strip() for l in lines[i + 2:end] if l.strip() and not l.strip().startswith("//")]
         if count_statements(body) >= 2:
             digest = hashlib.sha1(squeeze(" ".join(body)).encode("utf-8")).hexdigest()[:8]
-            groups[(m.group(3), digest, len(body))].append((path, i + 1, m.group(1), bool(m.group(2))))
+            groups[(m.group(3), digest, len(body))].append((path, starts[i] + 1, m.group(1), bool(m.group(2))))
         i = end + 1
 
 by_content = {}

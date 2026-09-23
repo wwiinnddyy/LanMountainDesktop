@@ -32,18 +32,21 @@ def logical_lines(lines):
     """把"签名换行写"的成员声明并成一条逻辑行（与 C# 闸门里的 LogicalLines 同口径）。
 
     实测本仓有 919 行左括号在本行不闭合；此前这些声明在两个面上都不被认出来。
+    返回 <c>(原始行号, 文本)</c>：并行之后的下标不等于文件行号，
+    直接拿它当行号印出去会指错位置（实测 <c>PlondsPackageStore.cs</c> 差 8 行，指到了隔壁成员上）。
     """
     out = []
     i = 0
     n = len(lines)
     while i < n:
+        start = i
         current = lines[i]
         while ("{" not in current
                and sum(c in "([" for c in current) != sum(c in ")]" for c in current)
                and i + 1 < n):
             i += 1
             current = current.rstrip() + " " + lines[i].strip()
-        out.append(current)
+        out.append((start, current))
         i += 1
     return out
 
@@ -97,6 +100,8 @@ def method_bodies(path):
     except OSError:
         return []
     lines = logical_lines(raw)
+    starts = [start for start, _ in lines]
+    lines = [text for _, text in lines]
     collected = []
     for index, raw in enumerate(lines):
         line = raw.strip()
@@ -116,14 +121,14 @@ def method_bodies(path):
         # 认"这一行以 `;` 或 `=>` 收尾 + 括号配平"，才不会把 K&R 写的 `{ …() => …; }` 误当成表达式体。
         if arrow >= 0 and not allman_brace and line.endswith((";", "=>")) \
                 and raw.count("{") == raw.count("}"):
-            emit(collected, name, index + 1,
+            emit(collected, name, starts[index] + 1,
                  normalise(arrow_tail(lines, index + 1, raw[arrow + 2:])), implementation=True)
             continue
         if "{" not in raw and not allman_brace:
             # 没有大括号、下一行也不是 `{`：要么 `=>` 另起一行，要么是无体的声明
             # （接口方法、abstract）——后者不算一种实现，不计。
             if ahead.startswith("=>"):
-                emit(collected, name, index + 1,
+                emit(collected, name, starts[index] + 1,
                      normalise(arrow_tail(lines, index + 2, ahead[2:])), implementation=True)
             continue
         depth = 0
@@ -141,7 +146,7 @@ def method_bodies(path):
                 break
             cursor += 1
         # 走到这里说明本行或下一行有 `{`：这是一个实现，哪怕它是 `{ }`。
-        emit(collected, name, index + 1, normalise(" ".join(body)), implementation=True)
+        emit(collected, name, starts[index] + 1, normalise(" ".join(body)), implementation=True)
     return collected
 
 
