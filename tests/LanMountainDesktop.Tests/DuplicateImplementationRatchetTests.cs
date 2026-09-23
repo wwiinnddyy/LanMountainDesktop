@@ -298,8 +298,15 @@ public sealed class DuplicateImplementationRatchetTests
     /// 就够——刻意不占 <c>AvaloniaFact</c> 名额，headless 会话是今天偶发红的那条轴）。四路注入逐个量过：
     /// 去掉上界红 2 格、去掉负数下界红 2 格、把认 <c>Border</c> 换成认 <c>TextBlock</c> 红 2 格、去掉左键判定红 1 格。
     /// <c>Open</c> 里"真事件"那几行离线造不出 <c>PointerPressedEventArgs</c> → 未覆盖，不是已排除。
+    /// 39 → 38 收一族（时区在两个时钟编辑器的下拉里怎么写：两份逐字相同的六行 <c>FormatTimeZone</c>，
+    /// 症状是"同一个时区在两个面板里长得不一样"，不报错也不崩）→ 进 <c>Views/Components/TimeZoneDisplayLabel.cs</c>，
+    /// 瞬间参数化后两个编辑器各留一行调用。形状钉 <c>TimeZoneDisplayLabelTests</c> 7 格，夹具一律
+    /// <c>CreateCustomTimeZone</c> 自造时区（不查系统时区库——"这台机器有没有 America/Los_Angeles"
+    /// 不该决定门是红是绿）；两路注入实测：去掉小时的两位补零红 6 格、把"按当下瞬间取偏移"改成
+    /// <c>BaseUtcOffset</c> **红 0 格**（自定义时区没有夏令时区间，测不出差别）→ 那一支记为未覆盖，
+    /// 要补的是带 <c>AdjustmentRule</c> 的时区加夏/冬两个瞬间。
     /// </summary>
-    private const int IdenticalBodyFamilyCeiling = 39;
+    private const int IdenticalBodyFamilyCeiling = 38;
 
     /// <summary>
     /// 今天实测：189 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。

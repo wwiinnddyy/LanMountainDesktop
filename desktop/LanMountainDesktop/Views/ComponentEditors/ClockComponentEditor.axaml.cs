@@ -5,6 +5,7 @@ using Avalonia.Interactivity;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Views.Components;
 
 namespace LanMountainDesktop.Views.ComponentEditors;
 
@@ -53,7 +54,7 @@ public partial class ClockComponentEditor : ComponentEditorViewBase
             var item = new ComboBoxItem
             {
                 Tag = timeZone.Id,
-                Content = FormatTimeZone(timeZone)
+                Content = TimeZoneDisplayLabel.Format(timeZone)
             };
             item.Classes.Add("component-editor-select-item");
             TimeZoneComboBox.Items.Add(item);
@@ -104,13 +105,4 @@ public partial class ClockComponentEditor : ComponentEditorViewBase
             nameof(ComponentSettingsSnapshot.DesktopClockSecondHandMode));
     }
 
-    private static string FormatTimeZone(TimeZoneInfo timeZone)
-    {
-        var offset = timeZone.GetUtcOffset(DateTime.UtcNow);
-        var sign = offset >= TimeSpan.Zero ? "+" : "-";
-        var totalMinutes = Math.Abs((int)offset.TotalMinutes);
-        var hours = totalMinutes / 60;
-        var minutes = totalMinutes % 60;
-        return $"(UTC{sign}{hours:D2}:{minutes:D2}) {timeZone.StandardName}";
-    }
 }

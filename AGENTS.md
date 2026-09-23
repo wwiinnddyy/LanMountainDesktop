@@ -372,6 +372,12 @@ scheme 校验在这条路上同样只靠"抄的时候抄全"——少了它，RS
 （行为钉 `DesktopIconHostTests` 6 格，四条注入点逐条量过），`Resolve()` 只负责真调 Win32——
 headless 量不到它，这一点写进测试注释，不宣称整条链都钉住了。
 
+**时区在界面上怎么写只认 `Views/Components/TimeZoneDisplayLabel.cs` 一家**（`Format(timeZone[, now])`）：
+形状是 `(UTC±HH:MM) StandardName`——小时与分钟各两位、零偏移算正、括号与名字之间一个空格。
+此前两个时钟编辑器各抄一份逐字相同的六行；漂开的症状只是"同一个时区在两个面板里长得不一样"，不报错。
+偏移一律按**传入的那一刻**取（带夏令时的时区会随季节换数字），要显示"当前偏移"就传 `DateTime.UtcNow`
+（已默认如此）。测试夹具用 `CreateCustomTimeZone` 自造时区，别去查系统时区库。
+
 **"点一条热搜条目打开它的外链"只认 `Views/Components/HotItemClick.cs` 一家**：组件里的处理一律
 `HotItemClick.Open(sender, e, this, _activeItems, item => item.Url)`，判据是 `TryGetIndex`
 （左键 + sender 是挂点击的那个 `Border` + `Tag` 是能解析且落在 `[0, itemCount)` 的下标）。

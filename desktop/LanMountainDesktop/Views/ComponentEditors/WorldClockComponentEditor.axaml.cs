@@ -5,6 +5,7 @@ using Avalonia.Interactivity;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Views.Components;
 
 namespace LanMountainDesktop.Views.ComponentEditors;
 
@@ -59,7 +60,7 @@ public partial class WorldClockComponentEditor : ComponentEditorViewBase
                 var item = new ComboBoxItem
                 {
                     Tag = zone.Id,
-                    Content = FormatTimeZone(zone)
+                    Content = TimeZoneDisplayLabel.Format(zone)
                 };
                 item.Classes.Add("component-editor-select-item");
                 combo.Items.Add(item);
@@ -117,13 +118,4 @@ public partial class WorldClockComponentEditor : ComponentEditorViewBase
             nameof(ComponentSettingsSnapshot.WorldClockSecondHandMode));
     }
 
-    private static string FormatTimeZone(TimeZoneInfo timeZone)
-    {
-        var offset = timeZone.GetUtcOffset(DateTime.UtcNow);
-        var sign = offset >= TimeSpan.Zero ? "+" : "-";
-        var totalMinutes = Math.Abs((int)offset.TotalMinutes);
-        var hours = totalMinutes / 60;
-        var minutes = totalMinutes % 60;
-        return $"(UTC{sign}{hours:D2}:{minutes:D2}) {timeZone.StandardName}";
-    }
 }
