@@ -2340,7 +2340,7 @@ public sealed class AirAppGeneratedSettingsPageViewModel
     public string? Description { get; }
 }
 
-public sealed partial class DevSettingsPageViewModel : ViewModelBase
+public sealed partial class DevSettingsPageViewModel : ViewModelBase, IDisposable
 {
     private readonly ISettingsFacadeService _settingsFacade;
     private readonly LocalizationService _localizationService = new();
@@ -2359,6 +2359,16 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
         _isInitializing = false;
 
         _settingsFacade.Settings.Changed += OnSettingsChanged;
+    }
+
+    /// <summary>
+    /// 由设置窗口丢页时释放（<c>SettingsWindow.DropCachedPages</c>）：这个 VM 在构造里订了设置变更，
+    /// 而页 VM 是每开一次窗口现造的（<c>ActivatorUtilities</c> 造的实例容器不管释放），
+    /// 不退订就会一直挂在设置服务上、旧页还会继续响应设置变更。
+    /// </summary>
+    public void Dispose()
+    {
+        _settingsFacade.Settings.Changed -= OnSettingsChanged;
     }
 
     [ObservableProperty]

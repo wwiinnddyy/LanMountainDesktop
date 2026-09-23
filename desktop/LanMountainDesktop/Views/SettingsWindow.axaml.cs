@@ -113,7 +113,7 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
             ViewModel.Pages.Add(page);
         }
 
-        _cachedPages.Clear();
+        DropCachedPages();
         _navigationBackStack.Clear();
         ViewModel.CanGoBack = false;
         CloseDrawer();
@@ -361,6 +361,25 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         }
 
         return ViewModel.Pages.FirstOrDefault();
+    }
+
+    /// <summary>
+    /// 缓存整批丢弃时必须把页的 ViewModel 释放掉：页是 <c>ActivatorUtilities.CreateInstance</c> 现造的，
+    /// 容器不追踪也不负责释放，而 <c>Rebuild()</c> 之后旧页只是从字典里消失——
+    /// 那些在构造里订了 <c>Settings.Changed</c> 的页 VM 就永远留在那条事件上（每开一次设置窗口留一份，
+    /// 旧页还会继续响应设置变更）。这里只认实现了 <c>IDisposable</c> 的 DataContext，别的页不受影响。
+    /// </summary>
+    private void DropCachedPages()
+    {
+        foreach (var page in _cachedPages.Values)
+        {
+            if (page.DataContext is IDisposable viewModel)
+            {
+                viewModel.Dispose();
+            }
+        }
+
+        _cachedPages.Clear();
     }
 
     private Control GetOrCreatePage(SettingsPageDescriptor descriptor)
@@ -794,7 +813,7 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
     private void OnClosed(object? sender, EventArgs e)
     {
         RemoveSearchHighlight();
-        _cachedPages.Clear();
+        DropCachedPages();
         PendingRestartStateService.StateChanged -= OnPendingRestartStateChanged;
         if (RootNavigationView is not null)
         {
