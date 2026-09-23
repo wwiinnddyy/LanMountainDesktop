@@ -1,4 +1,5 @@
 using System.Security.Principal;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanDesktopPLONDS.Installer.Services;
 
@@ -53,12 +54,12 @@ internal static class InstallerElevation
     private static bool IsUnderSpecialFolder(string fullPath, Environment.SpecialFolder folder)
     {
         var root = Environment.GetFolderPath(folder);
-        return !string.IsNullOrWhiteSpace(root) && InstallerPathGuard.IsSameOrChildPath(root, fullPath);
+        return !string.IsNullOrWhiteSpace(root) && PathContainment.IsSameOrChild(root, fullPath);
     }
 
     private static bool IsUnderWindowsDirectory(string fullPath)
     {
         var windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
-        return !string.IsNullOrWhiteSpace(windows) && InstallerPathGuard.IsSameOrChildPath(windows, fullPath);
+        return !string.IsNullOrWhiteSpace(windows) && PathContainment.IsSameOrChild(windows, fullPath);
     }
 }

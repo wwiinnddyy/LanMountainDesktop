@@ -372,6 +372,15 @@ scheme 校验在这条路上同样只靠"抄的时候抄全"——少了它，RS
 （行为钉 `DesktopIconHostTests` 6 格，四条注入点逐条量过），`Resolve()` 只负责真调 Win32——
 headless 量不到它，这一点写进测试注释，不宣称整条链都钉住了。
 
+**"这个路径在不在那棵树里"只认 `core/.../IO/PathContainment.cs` 一家**（`IsSameOrChild(parent, child)`）。
+此前三份抄本跨两个二进制：安装器 `InstallerPathGuard.IsSameOrChildPath`（公开）、宿主 `PlondsPackageStore.IsSameOrChildPath`
+（私有，与安装器那份只差排版）、`PlondsPreparedPackageInstaller.EnsureChildPath` 把同一个判定内联在抛异常的外壳里
+（三个条件换了顺序）。漂开的症状不报错：包外的文件被当成包内，解包就写到目标树外面。
+两条口径按抄本原样搬、没顺手改，要改请先看 #G1-BI：① 两侧都先 `Path.GetFullPath` 绝对化（传空串会抛
+`ArgumentException`，调用方要接）；② 比较用 `OrdinalIgnoreCase`——Windows 上对，大小写敏感的文件系统上会放宽。
+"父比子深"和"共享前缀的兄弟目录"两类假阳性有取真值/假值对钉住（`PathContainmentTests`），三种错法逐个量过：
+只比前缀不补分隔符红 2 格、去掉末尾分隔符的 `TrimEnd` 红 2 格、方向写反红 5 格。
+
 **WinRT 异步操作"结果类型是谁"只认 `Services/WinRtOperationResult.cs` 一家**（`ResolveType(operationType)`）：
 先看操作类型自己的一元泛型实参（**必须判 arity**，只判 `IsGenericType` 会把两元类型的第一个实参当成结果类型），
 再看它实现的 `Windows.Foundation.IAsyncOperation`1`，两边都不对给 `null`。此前 `LocationService`、

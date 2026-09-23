@@ -1,3 +1,5 @@
+using LanMountainDesktop.Shared.IO;
+
 namespace LanDesktopPLONDS.Installer.Services;
 
 public static class InstallerPathGuard
@@ -111,23 +113,10 @@ public static class InstallerPathGuard
 
     public static void EnsureChildPath(string parent, string child)
     {
-        if (!IsSameOrChildPath(parent, child))
+        if (!PathContainment.IsSameOrChild(parent, child))
         {
             throw new InvalidDataException($"Path escapes the expected root: {child}");
         }
-    }
-
-    public static bool IsSameOrChildPath(string parent, string child)
-    {
-        var resolvedParent = Path.GetFullPath(parent)
-            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        var resolvedChild = Path.GetFullPath(child);
-        return string.Equals(
-                   resolvedParent,
-                   resolvedChild.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
-                   StringComparison.OrdinalIgnoreCase)
-               || resolvedChild.StartsWith(resolvedParent + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
-               || resolvedChild.StartsWith(resolvedParent + Path.AltDirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
     }
 
     public static string NormalizeRelativePath(string relativePath)

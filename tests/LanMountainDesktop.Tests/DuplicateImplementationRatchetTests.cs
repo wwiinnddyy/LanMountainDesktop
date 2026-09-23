@@ -253,8 +253,23 @@ public sealed class DuplicateImplementationRatchetTests
     /// ——两面各写一遍、结果逐条对平，这才是"清单可信"的证据，单看一个数不算。
     /// 去掉行数会不会把两份不同的体并成一个？不会：<c>Squeeze</c> 只吃空白，深度 0 的分号逐个留下，
     /// 语句数不同的文本压完也不相等（同一棵树上 <c>Dispose</c> 的 6 行体与 12 行体仍是两族，实测）。
+    /// 43 → 42 收一族（<c>IsSameOrChildPath</c> 就是上面那笔刚露出来的那一族，实为三份抄本、跨两个二进制：
+    /// <c>InstallerPathGuard</c> 公开一份、<c>PlondsPackageStore</c> 私有两份之一、
+    /// <c>PlondsPreparedPackageInstaller.EnsureChildPath</c> 把同一个判定内联在抛异常的外壳里（三个条件换了顺序））→
+    /// 进 <c>Core/IO/PathContainment.IsSameOrChild</c>，三份实现删除、6 个调用点走家；
+    /// 行为逐字搬过去没顺手改（含 <c>OrdinalIgnoreCase</c> 与"两侧先绝对化、空串会抛"两条口径），
+    /// 要改的那半挂在 #G1-BI／#G1-BC 等拍板，不在这笔里代做。
+    /// 同一笔把漂移族 184 → 183：三个 <c>EnsureChildPath</c> 外壳内联的判定搬走之后只剩"判一下、不对就抛"，
+    /// 归一化字符串后三种体并成一种（族要的是"同名且 ≥2 种体"），族随判定的收口一起消失。
+    /// 行为钉 <c>PathContainmentTests</c> 12 格（10 格真值/假值对 + 大小写现状一格 + 空串抛异常一格），
+    /// 三处注入逐个量过（数字是测出来的，不是推的）：只比前缀不补分隔符 → 红 2 格（两格"共享前缀的兄弟目录"）；
+    /// 去掉 <c>TrimEnd</c> → 红 2 格（根目录 <c>C:\</c> 那一格 + parent 带尾分隔符那一格）；
+    /// 判定写反（拿 parent 去 <c>StartsWith(child + 分隔符)</c>）→ 红 5 格（连大小写现状那一格一起红）。
+    /// 顺带量到一处**钉不住的格**：child 带尾分隔符那一格在"去掉 TrimEnd"的注入下仍然绿——它的真值由
+    /// <c>StartsWith(parent + 分隔符)</c> 那条给，压根不经过 <c>TrimEnd</c>。这条注在测试注释里，
+    /// 免得下一只手把它当成"已经覆盖 TrimEnd"的那一格。
     /// </summary>
-    private const int IdenticalBodyFamilyCeiling = 43;
+    private const int IdenticalBodyFamilyCeiling = 42;
 
     /// <summary>
     /// 今天实测：189 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
@@ -327,7 +342,7 @@ public sealed class DuplicateImplementationRatchetTests
     /// 换的是"续接在哪个上下文"——不替它三挑，登记在 #G1-BC 等拍板。
     /// 同一族的 <c>ResolveAsTaskGenericMethod</c>（三处三体）实测差别更大（一家带 try/catch 与形参校验，
     /// 另两家 LINQ 挑第一个），同样没动，一并挂在 #G1-BC。
-    private const int DriftFamilyCeiling = 184;
+    private const int DriftFamilyCeiling = 183;
 
     /// <summary>
     /// 漂移普查认领的声明处数下限（今天实测 5759）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。

@@ -263,7 +263,7 @@ internal sealed class FilesPackageInstaller
 
         var files = Directory
             .EnumerateFiles(resolvedPackageRoot, "*", SearchOption.AllDirectories)
-            .Where(path => !InstallerPathGuard.IsSameOrChildPath(resolvedAppDirectory, path))
+            .Where(path => !PathContainment.IsSameOrChild(resolvedAppDirectory, path))
             .Where(path =>
             {
                 var relative = InstallerPathGuard.NormalizeRelativePath(Path.GetRelativePath(resolvedPackageRoot, path));

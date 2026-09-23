@@ -106,7 +106,7 @@ public sealed class UninstallService
         if (!string.IsNullOrWhiteSpace(currentExePath))
         {
             var normalizedExe = Path.GetFullPath(currentExePath);
-            if (InstallerPathGuard.IsSameOrChildPath(_installPath, normalizedExe))
+            if (PathContainment.IsSameOrChild(_installPath, normalizedExe))
             {
                 // 自身 exe 在安装目录内，使用 cmd /c 延迟删除
                 SpawnDelayedDelete();
