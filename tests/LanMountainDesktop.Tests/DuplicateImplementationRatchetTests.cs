@@ -329,7 +329,18 @@ public sealed class DuplicateImplementationRatchetTests
     /// 行为钉 <c>RecommendationServiceBindingTests</c> 4 格，两处注入各红 2 格（实测）：
     /// 把顺序改成"先刷后换"红两格（刷新看到的还是默认实例）、去掉 <c>isAttached()</c> 那一步红两格。
     /// </summary>
-    private const int IdenticalBodyFamilyCeiling = 34;
+    /// 34 → 32 收两族（"设置变了之后重刷卡片"：8 个组件各写同样三步 —— 作废推荐缓存、重读本组件的自动刷新参数、
+    /// 只在已挂载时强制刷一次；只有"重读哪个参数、刷哪个方法"不同）→ 同一家再加一个 AfterSettingsChange，
+    /// 组件侧各留一行。第一步收的是"怎么作废"这个动作（调用点传 _recommendationService.ClearCache），不传服务本身：
+    /// 家只需要这一点，收窄之后整条顺序可钉，也不必为测试造十七个成员的假实现。
+    /// 三处注入逐个量过：作废挪到刷新之后 → 红 4 格（全红，顺序真被钉住）；去掉挂载守卫 → 红 1 格；
+    /// 去掉"重读参数"那步 → 红 2 格。剩下 7 个组件的 RefreshFromSettings 不在这条流程里
+    /// （时钟、课程表、可移动存储、学习环境与、白板、世界时钟、职教 hub 各读自己的设置项），
+    /// 是结构性差异不是抄本，逐一点名跳过、没硬并。
+    /// 顺手记一条量歪的经过：第一次注入"去掉挂载守卫"报 0 红，因为 needle 命中的是同文件另一个方法
+    /// （Attach）里的同名守卫——注入脚本必须指到具体那一个方法，否则"测不出红"会被误读成"钉不住"。
+
+    private const int IdenticalBodyFamilyCeiling = 32;
 
     /// <summary>
     /// 今天实测：189 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。

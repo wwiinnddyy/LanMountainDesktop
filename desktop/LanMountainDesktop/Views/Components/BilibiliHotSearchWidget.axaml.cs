@@ -90,12 +90,11 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
 
     public void RefreshFromSettings()
     {
-        _recommendationService.ClearCache();
-        ApplyAutoRefreshSettings();
-        if (_isAttached)
-        {
-            _ = RefreshHotSearchAsync(forceRefresh: true);
-        }
+        RecommendationServiceBinding.AfterSettingsChange(
+            _recommendationService.ClearCache,
+            ApplyAutoRefreshSettings,
+            () => _isAttached,
+            () => RefreshHotSearchAsync(forceRefresh: true));
     }
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)

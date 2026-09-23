@@ -132,11 +132,11 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
 
     public void RefreshFromSettings()
     {
-        _recommendationService.ClearCache();
-        if (_isAttached)
-        {
-            _ = RefreshArtworkAsync(forceRefresh: true);
-        }
+        RecommendationServiceBinding.AfterSettingsChange(
+            _recommendationService.ClearCache,
+            null,
+            () => _isAttached,
+            () => RefreshArtworkAsync(forceRefresh: true));
     }
 
     public void SetComponentPlacementContext(string componentId, string? placementId)

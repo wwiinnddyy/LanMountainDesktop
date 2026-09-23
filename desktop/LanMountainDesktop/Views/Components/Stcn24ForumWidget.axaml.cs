@@ -159,12 +159,11 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
 
     public void RefreshFromSettings()
     {
-        _recommendationService.ClearCache();
-        ApplyAutoRefreshSettings();
-        if (_isAttached)
-        {
-            _ = RefreshPostsAsync(forceRefresh: true);
-        }
+        RecommendationServiceBinding.AfterSettingsChange(
+            _recommendationService.ClearCache,
+            ApplyAutoRefreshSettings,
+            () => _isAttached,
+            () => RefreshPostsAsync(forceRefresh: true));
     }
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)

@@ -80,12 +80,11 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
 
     public void RefreshFromSettings()
     {
-        _recommendationService.ClearCache();
-        ApplyAutoRefreshSettings();
-        if (_isAttached)
-        {
-            _ = RefreshWordAsync(forceRefresh: true);
-        }
+        RecommendationServiceBinding.AfterSettingsChange(
+            _recommendationService.ClearCache,
+            ApplyAutoRefreshSettings,
+            () => _isAttached,
+            () => RefreshWordAsync(forceRefresh: true));
     }
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)

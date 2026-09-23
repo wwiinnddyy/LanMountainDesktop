@@ -92,12 +92,11 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
 
     public void RefreshFromSettings()
     {
-        _recommendationService.ClearCache();
-        ApplyAutoRotateSettings();
-        if (_isAttached)
-        {
-            _ = RefreshNewsAsync(forceRefresh: true);
-        }
+        RecommendationServiceBinding.AfterSettingsChange(
+            _recommendationService.ClearCache,
+            ApplyAutoRotateSettings,
+            () => _isAttached,
+            () => RefreshNewsAsync(forceRefresh: true));
     }
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)

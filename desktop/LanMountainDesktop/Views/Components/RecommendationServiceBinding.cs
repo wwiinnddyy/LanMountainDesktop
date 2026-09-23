@@ -37,4 +37,32 @@ internal static class RecommendationServiceBinding
 
         _ = refresh();
     }
+
+    /// <summary>
+    /// 设置变了之后重刷这张卡片：先清推荐服务的缓存，再重读本组件的自动刷新参数（没有可重读的就传 <c>null</c>），
+    /// 最后**只在已挂载时**强制刷一次。
+    ///
+    /// 这三步的顺序就是判据，错了都不报错：漏掉作废缓存 —— 刷回来的还是缓存里的旧数据，症状是"改了设置卡片不换内容"，
+    /// 而且下一次自动刷新会自己盖回去，看起来像偶发；把作废放到刷新之后 —— 同一种旧数据；少了挂载判定 ——
+    /// 组件还没挂上桌面就被强制刷。此前 8 个组件各写一遍（只有"重读哪个参数、刷哪个方法"不同），逐字面量到 2 族。
+    /// 第一步收的是"怎么作废"这个动作（调用点传 <c>_recommendationService.ClearCache</c>），不是服务本身：
+    /// 家只需要这一点，收窄之后顺序能被整条钉住，也不必为测试造十七个成员的假实现。
+    /// <c>applySettings</c> 用可空而不是空 lambda：空实现带活调用点正是这仓另一把尺子要抓的形状，
+    /// <c>null</c> 说的是"这个组件没有要重读的自动刷新参数"（画作卡片就是这种）。
+    /// </summary>
+    public static void AfterSettingsChange(
+        Action invalidateCache,
+        Action? applySettings,
+        Func<bool> isAttached,
+        Func<Task> forceRefresh)
+    {
+        invalidateCache();
+        applySettings?.Invoke();
+        if (!isAttached())
+        {
+            return;
+        }
+
+        _ = forceRefresh();
+    }
 }

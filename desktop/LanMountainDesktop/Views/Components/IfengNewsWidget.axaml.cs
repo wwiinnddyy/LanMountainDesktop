@@ -90,12 +90,11 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
 
     public void RefreshFromSettings()
     {
-        _recommendationService.ClearCache();
-        ApplyAutoRefreshSettings();
-        if (_isAttached)
-        {
-            _ = RefreshNewsAsync(forceRefresh: true);
-        }
+        RecommendationServiceBinding.AfterSettingsChange(
+            _recommendationService.ClearCache,
+            ApplyAutoRefreshSettings,
+            () => _isAttached,
+            () => RefreshNewsAsync(forceRefresh: true));
     }
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
