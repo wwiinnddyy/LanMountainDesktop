@@ -275,7 +275,7 @@ public sealed class WindowsSmtcMusicControlService : IMusicSessionProvider
             }
 
             var operation = RequestSessionManagerAsyncMethod?.Invoke(null, null);
-            var manager = await AwaitWinRtOperationAsync(operation, cancellationToken);
+            var manager = await WinRtAsyncAwait.AwaitAsync(operation, AsTaskGenericMethodDefinition, cancellationToken);
             _sessionManager = manager;
             return manager;
         }
@@ -288,7 +288,7 @@ public sealed class WindowsSmtcMusicControlService : IMusicSessionProvider
     private async Task<object?> TryGetMediaPropertiesAsync(object session, CancellationToken cancellationToken)
     {
         var operation = InvokeMethod(session, "TryGetMediaPropertiesAsync");
-        return await AwaitWinRtOperationAsync(operation, cancellationToken);
+        return await WinRtAsyncAwait.AwaitAsync(operation, AsTaskGenericMethodDefinition, cancellationToken);
     }
 
     private async Task<byte[]?> ResolveThumbnailBytesAsync(
@@ -324,7 +324,7 @@ public sealed class WindowsSmtcMusicControlService : IMusicSessionProvider
         try
         {
             var openReadAsyncOperation = InvokeMethod(thumbnailReference, "OpenReadAsync");
-            randomAccessStream = await AwaitWinRtOperationAsync(openReadAsyncOperation, cancellationToken);
+            randomAccessStream = await WinRtAsyncAwait.AwaitAsync(openReadAsyncOperation, AsTaskGenericMethodDefinition, cancellationToken);
             if (randomAccessStream is null || AsStreamForReadMethod is null)
             {
                 return null;
@@ -461,32 +461,8 @@ public sealed class WindowsSmtcMusicControlService : IMusicSessionProvider
 
     private static async Task<bool> AwaitBooleanWinRtOperationAsync(object? operation, CancellationToken cancellationToken)
     {
-        var result = await AwaitWinRtOperationAsync(operation, cancellationToken);
+        var result = await WinRtAsyncAwait.AwaitAsync(operation, AsTaskGenericMethodDefinition, cancellationToken);
         return result is bool boolValue && boolValue;
-    }
-
-    private static async Task<object?> AwaitWinRtOperationAsync(object? operation, CancellationToken cancellationToken)
-    {
-        if (operation is null || AsTaskGenericMethodDefinition is null)
-        {
-            return null;
-        }
-
-        var resultType = WinRtOperationResult.ResolveType(operation.GetType());
-        if (resultType is null)
-        {
-            return null;
-        }
-
-        var asTaskMethod = AsTaskGenericMethodDefinition.MakeGenericMethod(resultType);
-        var taskObject = asTaskMethod.Invoke(null, [operation]) as Task;
-        if (taskObject is null)
-        {
-            return null;
-        }
-
-        await taskObject.WaitAsync(cancellationToken);
-        return taskObject.GetType().GetProperty("Result", BindingFlags.Public | BindingFlags.Instance)?.GetValue(taskObject);
     }
 
     private static MethodInfo? ResolveAsTaskGenericMethod()

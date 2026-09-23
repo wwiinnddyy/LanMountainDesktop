@@ -381,6 +381,17 @@ headless 量不到它，这一点写进测试注释，不宣称整条链都钉�
 表现是定位/通知/播放状态静默拿不到值。行为钉 `WinRtOperationResultTests`（夹具含"简单名相同、
 命名空间不同"的干扰项，钉的就是"按全名认"这条口径）。
 
+
+**等一扇 WinRT 操作只认 `Services/WinRtAsyncAwait.cs` 一家**（`AwaitAsync(operation, asTaskDefinition, ct)`）：
+`LocationService` 与 `WindowsSmtcMusicControlService` 各一份实现已删掉、改调这家。三条契约不许漂：
+认不出结果类型／拿不到 `Task`／没有 `Result` 属性 → 回 `null`；**失败与取消必须原样抛**——
+调用方各自的 `catch` 靠 HRESULT 分类，吞成 `null` 就是把"被拒绝"看成"没值"。
+`WindowsNotificationListener` 还没并进来：它内部多一句 `ConfigureAwait(false)`（部分调用点外面还再配一次），
+换的是续接上下文，属行为差别，等拍板（#G1-BC）；同一族的 `ResolveAsTaskGenericMethod`（三处三体，
+一家带 try/catch 与形参校验，另两家 LINQ 挑第一个）同理没动。`AsTask` 的泛型方法定义由调用方传入，
+家不接管它的取法。行为钉 `WinRtAsyncAwaitTests` 7 格——其中"取消要传下去"那一格是第一版没钉住的：
+`WaitAsync` 对**已经完成**的任务根本不看令牌，夹具得真的挂在那儿才量得出（改正已写进测试注释）。
+
 **界面语言口径只认一处**：默认语言写 `LocalizationService.DefaultLanguageCode`，读当前语言走
 `ResolveLanguageCode(() => 快照.LanguageCode)`（内部含"读盘失败退回默认语言"的兜底），判断是不是中文走
 `IsChineseLanguage(code)`。此前宿主里有 41 处 `_languageCode = "zh-CN"` 初值/兜底、12 份各自复制的

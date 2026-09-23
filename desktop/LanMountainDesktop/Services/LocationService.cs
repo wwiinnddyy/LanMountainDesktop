@@ -80,7 +80,10 @@ public sealed class WindowsLocationService : ILocationService
 
         try
         {
-            var access = await AwaitWinRtOperationAsync(RequestAccessAsyncMethod!.Invoke(null, null), cancellationToken);
+            var access = await WinRtAsyncAwait.AwaitAsync(
+                RequestAccessAsyncMethod!.Invoke(null, null),
+                AsTaskGenericMethodDefinition,
+                cancellationToken);
             var accessText = access?.ToString();
             if (string.Equals(accessText, "Denied", StringComparison.OrdinalIgnoreCase))
             {
@@ -106,8 +109,9 @@ public sealed class WindowsLocationService : ILocationService
             SetPropertyValue(geolocator, "MovementThreshold", 0d);
             SetPropertyValue(geolocator, "ReportInterval", (uint)0);
 
-            var geoposition = await AwaitWinRtOperationAsync(
+            var geoposition = await WinRtAsyncAwait.AwaitAsync(
                 InvokeMethod(geolocator, "GetGeopositionAsync"),
+                AsTaskGenericMethodDefinition,
                 cancellationToken);
             if (geoposition is null)
             {
@@ -163,33 +167,6 @@ public sealed class WindowsLocationService : ILocationService
         }
 
         return LocationRequestResult.Fail(LocationFailureReason.Unknown, ex.Message);
-    }
-
-    private static async Task<object?> AwaitWinRtOperationAsync(object? operation, CancellationToken cancellationToken)
-    {
-        if (operation is null || AsTaskGenericMethodDefinition is null)
-        {
-            return null;
-        }
-
-        var resultType = WinRtOperationResult.ResolveType(operation.GetType());
-        if (resultType is null)
-        {
-            return null;
-        }
-
-        var asTaskMethod = AsTaskGenericMethodDefinition.MakeGenericMethod(resultType);
-        var taskObject = asTaskMethod.Invoke(null, [operation]) as Task;
-        if (taskObject is null)
-        {
-            return null;
-        }
-
-        await taskObject.WaitAsync(cancellationToken);
-        return taskObject
-            .GetType()
-            .GetProperty("Result", BindingFlags.Public | BindingFlags.Instance)?
-            .GetValue(taskObject);
     }
 
     private static MethodInfo? ResolveAsTaskGenericMethod()
