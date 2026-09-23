@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using LanMountainDesktop.Shared.Diagnostics;
 using System.IO;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -9,6 +8,7 @@ using LanMountainDesktop.Launcher.Views;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 using LanMountainDesktop.Shared.IPC;
 using LanMountainDesktop.Shared.IPC.Abstractions.Services;
+using LanMountainDesktop.Launcher.Startup;
 
 namespace LanMountainDesktop.Launcher.Shell;
 
@@ -334,7 +334,7 @@ internal static class LauncherGuiCoordinator
             AttemptId = attempt.AttemptId,
             CoordinatorPid = Environment.ProcessId,
             HostPid = attempt.HostPid,
-            HostProcessAlive = TryGetLiveProcess(attempt.HostPid),
+            HostProcessAlive = LiveProcessProbe.IsLive(attempt.HostPid),
             LaunchSource = attempt.LaunchSource,
             SuccessPolicy = attempt.SuccessPolicy,
             LastObservedStage = attempt.LastObservedStage,
@@ -625,21 +625,4 @@ internal static class LauncherGuiCoordinator
         }
     }
 
-    private static bool TryGetLiveProcess(int processId)
-    {
-        if (processId <= 0)
-        {
-            return false;
-        }
-
-        try
-        {
-            using var process = Process.GetProcessById(processId);
-            return !process.HasExited;
-        }
-        catch
-        {
-            return false;
-        }
-    }
 }

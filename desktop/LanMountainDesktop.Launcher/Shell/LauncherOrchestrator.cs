@@ -109,7 +109,7 @@ internal sealed class LauncherOrchestrator
                 trackedAttempt = _startupAttemptRegistry.GetOwnedAttempt() ?? trackedAttempt;
                 var hostPid = trackedAttempt?.HostPid ?? 0;
                 var hostProcessAlive = hostProcessAliveOverride ??
-                                       (hostPid > 0 && LaunchResultBuilder.TryGetLiveProcess(hostPid, out _));
+                                       (hostPid > 0 && LiveProcessProbe.IsLive(hostPid));
                 var status = new LauncherCoordinatorStatus
                 {
                     AttemptId = trackedAttempt?.AttemptId ?? string.Empty,

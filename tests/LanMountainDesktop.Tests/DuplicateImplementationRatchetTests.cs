@@ -268,8 +268,20 @@ public sealed class DuplicateImplementationRatchetTests
     /// 顺带量到一处**钉不住的格**：child 带尾分隔符那一格在"去掉 TrimEnd"的注入下仍然绿——它的真值由
     /// <c>StartsWith(parent + 分隔符)</c> 那条给，压根不经过 <c>TrimEnd</c>。这条注在测试注释里，
     /// 免得下一只手把它当成"已经覆盖 TrimEnd"的那一格。
+    /// 42 → 41 收一族、183 → 182 同笔（探活"<c>pid</c> 还活着吗"三份抄本全在启动器里：
+    /// <c>LaunchResultBuilder.TryGetLiveProcess</c> 与 <c>StartupAttemptRegistry</c> 那份逐字相同（这一族），
+    /// <c>LauncherGuiCoordinator</c> 另有一种只回 bool 的形状（漂移族 <c>TryGetLiveProcess</c> 实测 3 站 / 2 种体 / 3 文件））
+    /// → 进 <c>Startup/LiveProcessProbe.cs</c>，判据一份实现、按所有权分两个入口：
+    /// <c>IsLive</c> 自己释放句柄、<c>TryGet</c> 把句柄交出去（"拿到就要释放"写进签名注释）。
+    /// 收口的理由不只是抄本：<b>当时 7 个调用点全写成 <c>out _</c></b>——前两份把 <c>Process</c> 递出来又没人释放，
+    /// 每探一次活死留一个内核句柄，而探活是反复做的（协调器状态回灌、收养判定、清理陈旧登记），
+    /// 属于慢慢涨、不报错的那种症状。改完之后 <c>out _</c> 0 处、真需要句柄的只有收养那 1 个点。
+    /// 行为钉 <c>LiveProcessProbeTests</c> 5 格，三条注入逐个量过，并如实记下两处**钉不住**：
+    /// 守卫（<c>processId &lt;= 0</c>）与 <c>catch</c> 彼此遮蔽——守卫写成 <c>&lt; 0</c> 全绿、
+    /// 把 <c>catch</c> 改成 <c>throw;</c> 也全绿（非法 pid 走不到 catch）；只有 <c>HasExited</c> 反向红 2 格。
+    /// 要钉"探不到不许抛给调用方"得有"pid 合法但正在退"的夹具（要真起真退进程），离线门里没做 → 未覆盖，不是已排除。
     /// </summary>
-    private const int IdenticalBodyFamilyCeiling = 42;
+    private const int IdenticalBodyFamilyCeiling = 41;
 
     /// <summary>
     /// 今天实测：189 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
@@ -342,7 +354,7 @@ public sealed class DuplicateImplementationRatchetTests
     /// 换的是"续接在哪个上下文"——不替它三挑，登记在 #G1-BC 等拍板。
     /// 同一族的 <c>ResolveAsTaskGenericMethod</c>（三处三体）实测差别更大（一家带 try/catch 与形参校验，
     /// 另两家 LINQ 挑第一个），同样没动，一并挂在 #G1-BC。
-    private const int DriftFamilyCeiling = 183;
+    private const int DriftFamilyCeiling = 182;
 
     /// <summary>
     /// 漂移普查认领的声明处数下限（今天实测 5759）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。

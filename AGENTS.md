@@ -372,6 +372,16 @@ scheme 校验在这条路上同样只靠"抄的时候抄全"——少了它，RS
 （行为钉 `DesktopIconHostTests` 6 格，四条注入点逐条量过），`Resolve()` 只负责真调 Win32——
 headless 量不到它，这一点写进测试注释，不宣称整条链都钉住了。
 
+**"这个 pid 还活着吗"只认 `desktop/LanMountainDesktop.Launcher/Startup/LiveProcessProbe.cs` 一家**：
+只问活死一律走 `IsLive(pid)`（句柄它自己释放），**真需要那个 `Process` 句柄**才走 `TryGet(pid, out var p)`，
+且拿到就必须负责释放。此前启动器里有三份：两份逐字相同（`LaunchResultBuilder`、`StartupAttemptRegistry`）、
+一份只回 bool 的第三种形状（`LauncherGuiCoordinator`）。收口的理由不是风格——前两份把句柄递出来，
+而当时 **7 个调用点全部写成 `out _`**，等于每探一次活死留一个内核句柄（探活反复发生在协调器状态回灌、
+收养判定、清理陈旧登记上，属慢慢涨、不报错的症状）。判成"死"的后果是重起一个宿主（可恢复），
+判成"活"的后果是把 IPC 连到一个正在消失的进程上（不可恢复），所以取不到句柄一律算"不当活"、不外抛。
+离线钉得住的只有 `HasExited` 反向（红 2 格）；`pid <= 0` 守卫与 `catch` 彼此遮蔽（各自单独注入都不红），
+"pid 合法但正在退"那一支要真起真退进程才走得到——**未覆盖**，别当已排除（详见 `LiveProcessProbeTests` 注释）。
+
 **"这个路径在不在那棵树里"只认 `core/.../IO/PathContainment.cs` 一家**（`IsSameOrChild(parent, child)`）。
 此前三份抄本跨两个二进制：安装器 `InstallerPathGuard.IsSameOrChildPath`（公开）、宿主 `PlondsPackageStore.IsSameOrChildPath`
 （私有，与安装器那份只差排版）、`PlondsPreparedPackageInstaller.EnsureChildPath` 把同一个判定内联在抛异常的外壳里

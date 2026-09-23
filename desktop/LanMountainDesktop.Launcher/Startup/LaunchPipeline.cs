@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using LanMountainDesktop.Launcher.Models;
 using LanMountainDesktop.Launcher.Views;
 using LanMountainDesktop.Shared.Contracts.Launcher;
@@ -167,24 +166,4 @@ internal static class LaunchResultBuilder
         return merged;
     }
 
-    public static bool TryGetLiveProcess(int processId, out Process? process)
-    {
-        process = null;
-        if (processId <= 0)
-        {
-            return false;
-        }
-
-        try
-        {
-            process = Process.GetProcessById(processId);
-            return !process.HasExited;
-        }
-        catch
-        {
-            process?.Dispose();
-            process = null;
-            return false;
-        }
-    }
 }

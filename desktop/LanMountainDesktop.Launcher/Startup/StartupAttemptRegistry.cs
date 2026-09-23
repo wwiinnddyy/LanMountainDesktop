@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using LanMountainDesktop.Shared.Data;
 using System.Security.Cryptography;
 using System.Text;
@@ -165,7 +164,7 @@ internal sealed class StartupAttemptRegistry
 
         // 进程已死且协调器心跳超时
         if (record.CoordinatorPid > 0 &&
-            !TryGetLiveProcess(record.CoordinatorPid, out _) &&
+            !LiveProcessProbe.IsLive(record.CoordinatorPid) &&
             DateTimeOffset.UtcNow - record.HeartbeatAtUtc > TimeSpan.FromMinutes(2))
         {
             return true;
@@ -173,9 +172,9 @@ internal sealed class StartupAttemptRegistry
 
         // 主进程已死且协调器已死
         if (record.HostPid > 0 &&
-            !TryGetLiveProcess(record.HostPid, out _) &&
+            !LiveProcessProbe.IsLive(record.HostPid) &&
             record.CoordinatorPid > 0 &&
-            !TryGetLiveProcess(record.CoordinatorPid, out _))
+            !LiveProcessProbe.IsLive(record.CoordinatorPid))
         {
             return true;
         }
@@ -466,7 +465,7 @@ internal sealed class StartupAttemptRegistry
             return false;
         }
 
-        return TryGetLiveProcess(record.HostPid, out _);
+        return LiveProcessProbe.IsLive(record.HostPid);
     }
 
     private static bool IsRecoverableCoordinatorAttempt(StartupAttemptRecord record)
@@ -485,7 +484,7 @@ internal sealed class StartupAttemptRegistry
             return true;
         }
 
-        return TryGetLiveProcess(record.HostPid, out _);
+        return LiveProcessProbe.IsLive(record.HostPid);
     }
 
     private static bool IsCoordinatorLive(StartupAttemptRecord record)
@@ -506,28 +505,7 @@ internal sealed class StartupAttemptRegistry
             return false;
         }
 
-        return TryGetLiveProcess(record.CoordinatorPid, out _);
-    }
-
-    private static bool TryGetLiveProcess(int processId, out Process? process)
-    {
-        process = null;
-        if (processId <= 0)
-        {
-            return false;
-        }
-
-        try
-        {
-            process = Process.GetProcessById(processId);
-            return !process.HasExited;
-        }
-        catch
-        {
-            process?.Dispose();
-            process = null;
-            return false;
-        }
+        return LiveProcessProbe.IsLive(record.CoordinatorPid);
     }
 
     private static string ComputePathHash(string statePath)

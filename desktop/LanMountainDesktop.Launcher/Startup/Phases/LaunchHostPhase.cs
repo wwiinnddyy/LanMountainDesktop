@@ -1,6 +1,7 @@
 using LanMountainDesktop.Launcher.Models;
 using LanMountainDesktop.Launcher.Shell;
 using LanMountainDesktop.Shared.Contracts.Launcher;
+using LanMountainDesktop.Launcher.Startup;
 
 namespace LanMountainDesktop.Launcher.Startup;
 
@@ -24,7 +25,7 @@ internal sealed class LaunchHostPhase : ILaunchPhase
         HostLaunchOutcome launchOutcome;
         if (attachableAttempt is not null &&
             context.StartupAttemptRegistry.AdoptAttempt(attachableAttempt.AttemptId) &&
-            LaunchResultBuilder.TryGetLiveProcess(attachableAttempt.HostPid, out var attachedProcess))
+            LiveProcessProbe.TryGet(attachableAttempt.HostPid, out var attachedProcess))
         {
             context.TrackedAttempt = attachableAttempt;
             context.AttachedToExistingAttempt = true;
