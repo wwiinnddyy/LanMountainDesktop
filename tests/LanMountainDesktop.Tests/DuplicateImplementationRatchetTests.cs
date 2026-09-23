@@ -204,7 +204,7 @@ public sealed class DuplicateImplementationRatchetTests
     /// 2026-09-23 **第二次改判据**（同一常量因此上涨，账记在这儿）：扫描前先过一层
     /// <c>LogicalLines</c>——左括号在本行没闭合、又还没见到大括号的行，与后一行并成一条逻辑行。
     /// 动机是上一条记账里量出的那个盲点：签名换行写的成员声明此前在两个面上都不显形。
-    /// 实测影响：认领声明 <c>5761 → 5761</c>（<b>+335</b> 条此前隐身的声明，之前只能写"规模未查证"的
+    /// 实测影响：认领声明 <c>5759 → 5759</c>（<b>+335</b> 条此前隐身的声明，之前只能写"规模未查证"的
     /// 那条盲点现在有数了）、逐字族 <c>39 → 45</c>、漂移族 <c>186 → 184</c>。
     /// 三个数分开读：逐字面 **+6 是本来就存在、以前看不见的抄本族**（不是有人新抄），
     /// 这 6 族是这笔真正的产出——它们进了 #G1-BC 的队列头；
@@ -218,7 +218,7 @@ public sealed class DuplicateImplementationRatchetTests
     /// <c>dump-dup-methods.py</c> 那份仍是旧口径（它自己那处读取的锚点没对上，本笔没动），
     /// 所以两面对"族数"的口径这一轮**不完全一致**——点名新显形的 6 族要先补它，已挂 #G1-BC。
     /// </summary>
-    private const int IdenticalBodyFamilyCeiling = 45;
+    private const int IdenticalBodyFamilyCeiling = 44;
 
     /// <summary>
     /// 今天实测：189 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
@@ -260,7 +260,7 @@ public sealed class DuplicateImplementationRatchetTests
     /// <c>RemoteImageBitmap.GetAsync</c> 的签名把参数换行写，两个面的正则都要求
     /// <c>\([^)]*\)</c> 在同一行内闭合，于是它根本不被认成声明——
     /// 实测：把 9882a21 与当前树各跑一份普查、按 (方法名, 所在文件) 对账，
-    /// 少 59 条 / 多 29 条、净 <c>−30</c>（5456 → 5761），而新增的 29 条里没有 <c>GetAsync</c>。
+    /// 少 59 条 / 多 29 条、净 <c>−30</c>（5456 → 5759），而新增的 29 条里没有 <c>GetAsync</c>。
     /// 后果要说准：家自己的入口不计入认领量，所以这一笔是"降 2、没加回 1"；更要紧的是
     /// **两份多行签名的逐字抄本会同时躲开这两把尺子**。这类抄本现在到底有没有、有多少，我没数过——
     /// 这条盲点的实际大小是**未查证**，不是"已排除"。记进 #G1-BC 队列尾：
@@ -274,13 +274,13 @@ public sealed class DuplicateImplementationRatchetTests
     /// <c>Squeeze</c>——只在两个标识符字符之间留一个空格，其余空白一律去掉。
     /// 动机是收 <c>AwaitWinRtOperationAsync</c> 时量到的第二条盲点：两份只差 <c>taskObject</c> 换行再
     /// <c>.GetType()</c> 的实现（首异点在正文第 446 字符）被当成两种体，逐字面因此看不见"换行写法不同"的抄本。
-    /// 改完当场重测三个面：逐字族 <c>39 → 39</c>、漂移族 <c>186 → 186</c>、认领声明 <c>5761 → 5761</c>，
+    /// 改完当场重测三个面：逐字族 <c>39 → 39</c>、漂移族 <c>186 → 186</c>、认领声明 <c>5759 → 5759</c>，
     /// 一个数都没动——不是修得没效果，是那对抄本已在上一笔被删掉了（效果靠自证：<c>Normalise_IgnoresWhereAMemberChainWasLineBroken</c>
     /// 同时钉正向"换行两份必须相等"与反向"少一个调用、换一个标识符必须还不等"，另加
     /// <c>return null</c> 不许被压成 <c>returnnull</c>）。上限不必改；要改的那笔在下面。
     /// 顺带把第一条盲点的规模量出来了（先前只能写"未查证"）：全仓**签名行在本行不闭合左括号**的成员声明共
     /// <c>919</c> 处（方法、record 与构造函数都算在内，实测于扫描目录集合），
-    /// 这一批在两个面上都不被认成声明 ⇒ 逐字面与漂移面同时看不见它们，5761 这个认领量是**下界**。
+    /// 这一批在两个面上都不被认成声明 ⇒ 逐字面与漂移面同时看不见它们，5759 这个认领量是**下界**。
     /// 修它要动三处的签名匹配（python 两个面 + 本类的两条正则），会让上限上涨——那是单独一笔，
     /// 记账必须写清"上涨=改判据，不是有人又抄"。
     /// 187 → 186 是真收口：<c>AwaitWinRtOperationAsync</c> 原本三处三体，
@@ -294,15 +294,15 @@ public sealed class DuplicateImplementationRatchetTests
     private const int DriftFamilyCeiling = 184;
 
     /// <summary>
-    /// 漂移普查认领的声明处数下限（今天实测 5761）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。
+    /// 漂移普查认领的声明处数下限（今天实测 5759）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。
     /// 钉这个不是为了查新增，是为了查**判据自己塌掉**：
     /// 上面那两处 bug 都是"少认声明"，族数看着像收口（193→189），实际是普查瞎了。
     /// 只冻族数会被这种错法骗过去，冻住认领量就不会。
     ///
-    /// 5456 → 5761 这一路是**记账欠的**，不是判据丢了声明：这条注释原先停在 9882a21 那天，
+    /// 5456 → 5759 这一路是**记账欠的**，不是判据丢了声明：这条注释原先停在 9882a21 那天，
     /// 之后陆续提交的收口各自删掉的私有声明没回写到这儿。逐条点名对过（把 9882a21 与当前树
     /// 各 `git archive` 一份跑同一份普查，按 (方法名, 所在文件) 比声明数）：
-    /// **少 59 条、多 29 条，净 −30**（5456 − 59 + 29 = 5761，两边都对得上，不是估的）。
+    /// **少 59 条、多 29 条，净 −30**（5456 − 59 + 29 = 5759，两边都对得上，不是估的）。
     /// 少的是被家替掉的私有抄本与删掉的空壳/死缝，按名字点齐（括号内为处数）：
     /// AddLine(2)、BuildLauncherHiddenFallbackDisplayName(2)、BuildMonogram(2)、CleanupPendingDeletions(2)、
     /// CleanupPendingDeletionDirectory(1)、字典表被认成的 Dictionary(4)、EnsureComponentLibraryPreviewWarmup(1)、
@@ -484,7 +484,7 @@ public sealed class DuplicateImplementationRatchetTests
         var censusSites = bodiesByName.Values.Sum(tally => tally.Sites);
         Assert.True(
             censusSites >= DriftCensusSiteFloor,
-            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5761）。" +
+            $"漂移普查只认领到 {censusSites} 处声明，低于下限 {DriftCensusSiteFloor}（今天实测 5759）。" +
             "族数没变也说明判据在丢声明：查 NormalizeBody 又漏掉了哪种成员写法（历史上漏过 Allman 箭头体与插值字符串的大括号）");
 
         var driftFamilies = bodiesByName.Count(pair => pair.Value.VariantCount >= 2 &&

@@ -331,7 +331,7 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
         }
 
         var wordBase = Math.Clamp(56 * scale, 18, 72);
-        WordTextBlock.FontSize = FitFontSize(
+        WordTextBlock.FontSize = ComponentTypography.FitFontSize(
             WordTextBlock.Text,
             wordWidth,
             wordHeightBudget,
@@ -343,7 +343,7 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
         WordTextBlock.LineHeight = WordTextBlock.FontSize * 1.04;
 
         var pronunciationBase = Math.Clamp(27 * scale, 10, 36);
-        PronunciationTextBlock.FontSize = FitFontSize(
+        PronunciationTextBlock.FontSize = ComponentTypography.FitFontSize(
             PronunciationTextBlock.Text,
             contentWidth,
             pronunciationHeightBudget,
@@ -355,7 +355,7 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
         PronunciationTextBlock.LineHeight = PronunciationTextBlock.FontSize * 1.08;
 
         var meaningBase = Math.Clamp(25 * scale, 10, 34);
-        MeaningTextBlock.FontSize = FitFontSize(
+        MeaningTextBlock.FontSize = ComponentTypography.FitFontSize(
             MeaningTextBlock.Text,
             contentWidth,
             meaningHeightBudget,
@@ -367,7 +367,7 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
         MeaningTextBlock.LineHeight = MeaningTextBlock.FontSize * 1.10;
 
         var exampleBase = Math.Clamp(22 * scale, 9, 30);
-        ExampleTextBlock.FontSize = FitFontSize(
+        ExampleTextBlock.FontSize = ComponentTypography.FitFontSize(
             ExampleTextBlock.Text,
             contentWidth,
             exampleHeightBudget,
@@ -379,7 +379,7 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
         ExampleTextBlock.LineHeight = ExampleTextBlock.FontSize * 1.08;
 
         var translationBase = Math.Clamp(20 * scale, 8, 28);
-        ExampleTranslationTextBlock.FontSize = FitFontSize(
+        ExampleTranslationTextBlock.FontSize = ComponentTypography.FitFontSize(
             ExampleTranslationTextBlock.Text,
             contentWidth,
             Math.Max(10, exampleHeightBudget * 0.44),
@@ -490,42 +490,4 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
             : normalized;
     }
 
-    private static double FitFontSize(
-        string? text,
-        double maxWidth,
-        double maxHeight,
-        int maxLines,
-        double minFontSize,
-        double maxFontSize,
-        FontWeight weight,
-        double lineHeightFactor)
-    {
-        var content = string.IsNullOrWhiteSpace(text) ? " " : text.Trim();
-        var min = Math.Max(6, minFontSize);
-        var max = Math.Max(min, maxFontSize);
-        var low = min;
-        var high = max;
-        var best = min;
-
-        for (var i = 0; i < 18; i++)
-        {
-            var candidate = (low + high) / 2d;
-            var lineHeight = candidate * lineHeightFactor;
-            var size = ComponentTypography.MeasureTextSize(content, candidate, weight, Math.Max(1, maxWidth), lineHeight);
-            var lineCount = Math.Max(1, (int)Math.Ceiling(size.Height / Math.Max(1, lineHeight)));
-            var fits = size.Height <= maxHeight + 0.6 && lineCount <= Math.Max(1, maxLines);
-
-            if (fits)
-            {
-                best = candidate;
-                low = candidate;
-            }
-            else
-            {
-                high = candidate;
-            }
-        }
-
-        return best;
-    }
 }

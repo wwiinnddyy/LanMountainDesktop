@@ -45,4 +45,54 @@ public static class ComponentTypography
         ratio = Math.Clamp(ratio, 0, 1);
         return from + ((to - from) * ratio);
     }
+
+    /// <summary>
+    /// 在给定盒子里把文字塞得下得最大字号：对字号做 18 轮二分，量得的行高/行数由本类的
+    /// <c>MeasureTextSize</c> 给。<b>三份逐字相同的抄本 2026-09-23 并到这里</b>
+    /// （<c>DailyArtwork</c>、<c>DailyWord</c>、<c>DailyWord2x2</c>）。
+    ///
+    /// 三个数字不许漂，漂开的症状都不是崩溃而是"看着不对"：
+    /// 18 轮决定收敛精度（改小会在大盒子里给出偏小的字号）；<c>Math.Max(6, minFontSize)
+    /// 是字号地板（低于 6 磅文字就读不了了）；<c>maxHeight + 0.6</c> 那条余量是量取与排版之间
+    /// 的舍入差——把它抹掉会让"刚好放得下"的那一档被判成放不下，字号小一级。
+    /// 空文本按一个空格量（按空串量会得到 0 高，二分会一路顶到上限然后溢出）。
+    /// </summary>
+    public static double FitFontSize(
+        string? text,
+        double maxWidth,
+        double maxHeight,
+        int maxLines,
+        double minFontSize,
+        double maxFontSize,
+        FontWeight weight,
+        double lineHeightFactor)
+    {
+        var content = string.IsNullOrWhiteSpace(text) ? " " : text.Trim();
+        var min = Math.Max(6, minFontSize);
+        var max = Math.Max(min, maxFontSize);
+        var low = min;
+        var high = max;
+        var best = min;
+
+        for (var i = 0; i < 18; i++)
+        {
+            var candidate = (low + high) / 2d;
+            var lineHeight = candidate * lineHeightFactor;
+            var size = ComponentTypography.MeasureTextSize(content, candidate, weight, Math.Max(1, maxWidth), lineHeight);
+            var lineCount = Math.Max(1, (int)Math.Ceiling(size.Height / Math.Max(1, lineHeight)));
+            var fits = size.Height <= maxHeight + 0.6 && lineCount <= Math.Max(1, maxLines);
+
+            if (fits)
+            {
+                best = candidate;
+                low = candidate;
+            }
+            else
+            {
+                high = candidate;
+            }
+        }
+
+        return best;
+    }
 }

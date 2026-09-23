@@ -476,7 +476,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         var leftSingleLineHeight = Math.Max(12, (leftContentHeight - dateStackSpacing) / 2d);
 
         var dateBase = Math.Clamp(44 * scale, 16, 62);
-        DateTextBlock.FontSize = FitFontSize(
+        DateTextBlock.FontSize = ComponentTypography.FitFontSize(
             DateTextBlock.Text,
             leftContentWidth,
             leftSingleLineHeight,
@@ -487,7 +487,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
             lineHeightFactor: 1.10);
         DateTextBlock.LineHeight = DateTextBlock.FontSize * 1.10;
 
-        WeekdayTextBlock.FontSize = FitFontSize(
+        WeekdayTextBlock.FontSize = ComponentTypography.FitFontSize(
             WeekdayTextBlock.Text,
             leftContentWidth,
             leftSingleLineHeight,
@@ -728,45 +728,6 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         return Math.Clamp(Math.Min(cellScale, Math.Min(widthScale, heightScale)), 0.56, 2.0);
     }
 
-    private static double FitFontSize(
-        string? text,
-        double maxWidth,
-        double maxHeight,
-        int maxLines,
-        double minFontSize,
-        double maxFontSize,
-        FontWeight weight,
-        double lineHeightFactor)
-    {
-        var content = string.IsNullOrWhiteSpace(text) ? " " : text.Trim();
-        var min = Math.Max(6, minFontSize);
-        var max = Math.Max(min, maxFontSize);
-        var low = min;
-        var high = max;
-        var best = min;
-
-        for (var i = 0; i < 18; i++)
-        {
-            var candidate = (low + high) / 2d;
-            var lineHeight = candidate * lineHeightFactor;
-            var size = ComponentTypography.MeasureTextSize(content, candidate, weight, Math.Max(1, maxWidth), lineHeight);
-            var lineCount = Math.Max(1, (int)Math.Ceiling(size.Height / Math.Max(1, lineHeight)));
-            var fits = size.Height <= maxHeight + 0.6 && lineCount <= Math.Max(1, maxLines);
-
-            if (fits)
-            {
-                best = candidate;
-                low = candidate;
-            }
-            else
-            {
-                high = candidate;
-            }
-        }
-
-        return best;
-    }
-
     private static AdaptiveTextLayout FitAdaptiveTextLayout(
         string? text,
         double maxWidth,
@@ -792,7 +753,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         {
             for (var lineLimit = linesByHeight; lineLimit >= safeMinLines; lineLimit--)
             {
-                var fontSize = FitFontSize(
+                var fontSize = ComponentTypography.FitFontSize(
                     content,
                     maxWidth,
                     maxHeight,

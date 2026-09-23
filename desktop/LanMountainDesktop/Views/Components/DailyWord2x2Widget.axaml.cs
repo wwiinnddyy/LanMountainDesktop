@@ -303,7 +303,7 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
         var wordHeightBudget = Math.Max(18, contentHeight * 0.34);
         var detailHeightBudget = Math.Max(18, contentHeight - wordHeightBudget - Math.Clamp(8 * scale, 4, 14));
 
-        WordTextBlock.FontSize = FitFontSize(
+        WordTextBlock.FontSize = ComponentTypography.FitFontSize(
             WordTextBlock.Text,
             wordWidth,
             wordHeightBudget,
@@ -314,7 +314,7 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
             lineHeightFactor: 1.02);
         WordTextBlock.LineHeight = WordTextBlock.FontSize * 1.02;
 
-        var detailFont = FitFontSize(
+        var detailFont = ComponentTypography.FitFontSize(
             MeaningTextBlock.IsVisible ? MeaningTextBlock.Text : HiddenHintTextBlock.Text,
             contentWidth,
             detailHeightBudget,
@@ -381,42 +381,4 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
         return compact.Length <= 160 ? compact : $"{compact[..160]}...";
     }
 
-    private static double FitFontSize(
-        string? text,
-        double maxWidth,
-        double maxHeight,
-        int maxLines,
-        double minFontSize,
-        double maxFontSize,
-        FontWeight weight,
-        double lineHeightFactor)
-    {
-        var content = string.IsNullOrWhiteSpace(text) ? " " : text.Trim();
-        var min = Math.Max(6, minFontSize);
-        var max = Math.Max(min, maxFontSize);
-        var low = min;
-        var high = max;
-        var best = min;
-
-        for (var i = 0; i < 18; i++)
-        {
-            var candidate = (low + high) / 2d;
-            var lineHeight = candidate * lineHeightFactor;
-            var size = ComponentTypography.MeasureTextSize(content, candidate, weight, Math.Max(1, maxWidth), lineHeight);
-            var lineCount = Math.Max(1, (int)Math.Ceiling(size.Height / Math.Max(1, lineHeight)));
-            var fits = size.Height <= maxHeight + 0.6 && lineCount <= Math.Max(1, maxLines);
-
-            if (fits)
-            {
-                best = candidate;
-                low = candidate;
-            }
-            else
-            {
-                high = candidate;
-            }
-        }
-
-        return best;
-    }
 }
