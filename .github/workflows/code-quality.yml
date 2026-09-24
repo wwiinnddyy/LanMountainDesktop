@@ -40,21 +40,47 @@ jobs:
         run: dotnet build ${{ env.Solution_Name }} -c Release --no-restore -v minimal
 
       # 661 条测试此前在 CI 里一条都没跑：全仓唯一的 dotnet test 在 airapp-sdk-publish.yml，
-      # 而且 --filter 只挑 AirAppSdkVersionConsistencyTests。本地实测 Release 全绿（2m0s）。
-      # EcosystemProbe 跑的是同级仓库里的外部 AirApp 产物，CI 上没有那些产物，单独用
-      # 生态体检作业承担，不进 PR 闸门。
+      # 而且 --filter 只挑 AirAppSdkVersionConsistencyTests。
+      # ⚠ 这一步（和下面 Check unused members）都是 bash 写法，必须写 shell: bash——
+      #   windows-latest 的默认 shell 是 pwsh，c8b8ae0 那笔"把测试接进闸门"就是这么在 pwsh 里
+      #   写了 `if ! …; then … fi`，ParserError 直接让作业停在解析上：**一条测试都没跑，
+      #   而红的原因是语法错，不是测试失败**（本地 2026-09-25 从 run 300 的日志里查到）。
+      #   所以这里除了补 shell，还加了一条"看到的用例数必须 ≥ 下限"的判据：解析错、filter 打错、
+      #   工程没进解决方案，这三种"绿色但什么都没跑"的形态都会当场红。
+      # EcosystemProbe 跑的是同级仓库里的外部 AirApp 产物，CI 上没有那些产物（探针会动态 Skip，
+      # 全 Skip 的绿不算证据），所以它只在本地跑：dotnet test … --filter "Category=EcosystemProbe"。
       #
       # 重跑一次是因为 Avalonia headless 的每测试会话在清理阶段有线程归属竞态
-      # （本地实测约 1/4 概率挂 1 条，测试体本身是过的；详见
-      # tests/LanMountainDesktop.Tests/AssemblyInfo.Xunit.cs 里已排除的两条修法）。
+      # （2026-09-24 本地实测：全量 6 趟里 3 趟各挂 1 条、快速子集 8 趟里 3 趟各挂 1 条，
+      #  测试体本身是过的；详见 tests/LanMountainDesktop.Tests/AssemblyInfo.Xunit.cs 里已排除的两条修法）。
       # 连续两次失败才拦，真缺陷仍然会被挡住。
       - name: Test
+        shell: bash
         run: |
+          set -uo pipefail
           FILTER='Category!=EcosystemProbe'
-          if ! dotnet test ${{ env.Solution_Name }} -c Release --no-build -v minimal --filter "$FILTER"; then
+          MIN_CASES=1000
+          SUMMARY="${RUNNER_TEMP:-/tmp}/dotnet-test-summary.log"
+
+          run_suite() {
+            dotnet test "$Solution_Name" -c Release --no-build -v minimal --filter "$FILTER" 2>&1 | tee "$SUMMARY"
+            return "${PIPESTATUS[0]}"
+          }
+
+          if ! run_suite; then
             echo "::warning title=Flaky headless test run::first dotnet test run failed, retrying once"
-            dotnet test ${{ env.Solution_Name }} -c Release --no-build -v minimal --filter "$FILTER"
+            run_suite || exit 1
           fi
+
+          TOTAL="$(grep -oE 'Total: *[0-9]+' "$SUMMARY" | tail -1 | grep -oE '[0-9]+' || true)"
+          if [ -z "${TOTAL:-}" ]; then
+            TOTAL="$(grep -oE '总计: *[0-9]+' "$SUMMARY" | tail -1 | grep -oE '[0-9]+' || true)"
+          fi
+          if [ -z "${TOTAL:-}" ] || [ "$TOTAL" -lt "$MIN_CASES" ]; then
+            echo "::error title=CI 没跑到测试::闸门只认领到 ${TOTAL:-0} 条用例（下限 ${MIN_CASES}）。红在这里说明 dotnet test 没真正执行或 filter/工程列表变了，见 G1-E。"
+            exit 1
+          fi
+          echo "Test gate saw ${TOTAL} cases (floor ${MIN_CASES})."
 
       # 未使用私有成员必须为 0。Platform/Windows/Patches 是 Harmony 补丁，方法由 PatchAll
       # 反射调用，分析器看不见，所以排除；除此之外新增死成员要在这里被拦下。
@@ -65,6 +91,7 @@ jobs:
       #  安装器 0、Platform 0、Mobile 0）。启动器那 4 处与 AirAppHost 那 1 处的来历见
       #  AGENTS.md "未使用成员" 一节；Mobile.Android 需要 android workload，本地量到 0，不进 CI 循环。
       - name: Check unused members
+        shell: bash
         run: |
           set -e
           dotnet format style desktop/LanMountainDesktop/LanMountainDesktop.csproj \
