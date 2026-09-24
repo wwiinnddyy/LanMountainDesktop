@@ -52,7 +52,6 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
     private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private bool _isAttached;
     private bool _isRefreshing;
-    private bool _autoRefreshEnabled = true;
     private bool _isNightVisual = true;
 
     public IfengNewsWidget()
@@ -378,7 +377,6 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
         {
         }
 
-        _autoRefreshEnabled = enabled;
         _channelType = channelType;
         ComponentRefreshLifetime.Reschedule(_refreshTimer, _isAttached, enabled, intervalMinutes);
     }

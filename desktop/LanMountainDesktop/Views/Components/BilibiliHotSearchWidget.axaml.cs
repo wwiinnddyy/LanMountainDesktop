@@ -42,7 +42,6 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
     private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private bool _isAttached;
     private bool _isRefreshing;
-    private bool _autoRefreshEnabled = true;
     private bool _isNightVisual = true;
 
     private sealed record HotItemVisual(
@@ -440,7 +439,6 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
             // Keep fallback defaults.
         }
 
-        _autoRefreshEnabled = enabled;
         ComponentRefreshLifetime.Reschedule(_refreshTimer, _isAttached, enabled, intervalMinutes);
     }
 

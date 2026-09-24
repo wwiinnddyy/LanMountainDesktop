@@ -50,7 +50,6 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
     private string _languageCode = LocalizationService.DefaultLanguageCode;
     private bool _isAttached;
     private bool _isRefreshing;
-    private bool _autoRotateEnabled = true;
 
     public CnrDailyNewsWidget()
     {
@@ -452,7 +451,6 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
             // Keep fallback defaults.
         }
 
-        _autoRotateEnabled = enabled;
         ComponentRefreshLifetime.Reschedule(_refreshTimer, _isAttached, enabled, intervalMinutes);
     }
 

@@ -55,7 +55,6 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
     private int _visibleItemCount = BaseDisplayItemCount;
     private bool _isAttached;
     private bool _isRefreshing;
-    private bool _autoRefreshEnabled = true;
     private bool _isNightVisual = true;
 
     private sealed record ForumItemVisual(
@@ -484,7 +483,6 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
             _sourceType = Stcn24ForumSourceTypes.LatestCreated;
         }
 
-        _autoRefreshEnabled = enabled;
         ComponentRefreshLifetime.Reschedule(_refreshTimer, _isAttached, enabled, intervalMinutes);
     }
 

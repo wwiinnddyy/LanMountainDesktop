@@ -44,7 +44,6 @@ public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget
     private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private bool _isAttached;
     private bool _isRefreshing;
-    private bool _autoRefreshEnabled = true;
     private string _sourceType = BaiduHotSearchSourceTypes.Official;
     private bool _isNightVisual = true;
     private string? _componentColorScheme;
@@ -430,7 +429,6 @@ public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget
             _componentColorScheme = null;
         }
 
-        _autoRefreshEnabled = enabled;
         _sourceType = sourceType;
         ComponentRefreshLifetime.Reschedule(_refreshTimer, _isAttached, enabled, intervalMinutes);
     }

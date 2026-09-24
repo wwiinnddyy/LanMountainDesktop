@@ -437,6 +437,10 @@ public sealed class AirAppRuntimeService : IDisposable
         return new AirAppPackageInstallResult(manifest, ReplacedExisting: false, RestartRequired: true);
     }
 
+    // 故意留着：这是"登记外部已放进包目录的包"这条能力的唯一实现，它原来的两个公开入口实测零调用已删，
+    // 于是整条能力没入口（G1-BB：宿主没有轻应用卸载路径，缓存清理与登记外部包两条一起挂着等拍板）。
+    // 名单与理由见 tests/.../ZeroUseInstanceMemberRatchetTests.cs 的登记项——那条决定做完时，这段连着方法一起删。
+#pragma warning disable IDE0051
     private AirAppManifest RegisterInstalledAirAppPackageCore(string packagePath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(packagePath);
@@ -456,6 +460,7 @@ public sealed class AirAppRuntimeService : IDisposable
         PendingRestartStateService.SetPending(PendingRestartStateService.AirAppCatalogReason, true);
         return manifest;
     }
+#pragma warning restore IDE0051
 
     public void Dispose()
     {

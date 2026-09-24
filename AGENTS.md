@@ -196,6 +196,19 @@ Sdk/Runtime/Host/DevServer/Template + 安装器 + Platform + Mobile，逐个量�
 删这类字段时注意：赋值常发生在接口实现里（`SetComponentPlacementContext`、`SetDesktopPageContext`），
 先确认该接口是否只有这一个消费者，是的话连同接口实现一起摘掉，别只留一个空方法。
 
+2026-09-25 又量出一批 11 处，全在宿主工程（其余 10 个工程实测仍为 0），三件事各记一笔：
+① **上面那句"逐个量过全为 0"当时是真的，但它守的闸门在 CI 里从来没执行过**（`code-quality.yml` 的
+Check unused members 写的是 bash 而 windows runner 默认 pwsh，a387d56 才修好），所以 09-23/24 两次收口
+（`ComponentRefreshLifetime.Reschedule`、`DailyWordAutoRefresh.Apply`）留下的 7 个只写 `_autoRefreshEnabled`
+/ `_autoRotateEnabled` 攒了三天没人看见——**闸门没跑等于没有闸门，写在文档里的"0"不是状态**。这 7 处已删。
+② IDE0051 会误报 Harmony 补丁件：`Win32WindowManagerConstructorPatcher.TargetMethod`/`Prefix` 与
+`AppWindowInitializeAppWindowPatcher.Postfix` 由 `harmony.PatchAll` 按约定反射拿（`Program.cs:186` 启动时装），
+判据看不见反射，照它删就是窗口边框补丁静默失效——用 `#pragma warning disable IDE0051` 带理由压掉，
+**范围只圈那几个方法**（不圈整文件，之后往里加成员照常会报）。③ `AirAppRuntimeService.RegisterInstalledAirAppPackageCore`
+是已登记的断头路能力（G1-BB），压着并在注释里写明"那条决定做完时连着方法一起删"。
+配套一条测量陷阱：这条命令的阈值必须与 CI 同参 `--severity hidden`——写成 `--severity info` 会把配成
+hidden 的这两条整条过滤掉，五个工程齐刷刷报 0，看着像积压清零。
+
 **宿主给组件下推能力一律走"每能力一个小接口 + 走子树的家"**（`ITimeZoneAwareComponentWidget`、
 `IWeatherInfoAwareComponentWidget`、`IDesktopPageVisibilityAwareComponentWidget`……），
 组件外面还包着 chrome（外层 Border + 内容宿主），所以只查直接子控件会漏。

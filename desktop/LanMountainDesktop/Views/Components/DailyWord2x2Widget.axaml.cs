@@ -40,7 +40,6 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
     private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private bool _isAttached;
     private readonly ComponentFeedRefresh _feed = new();
-    private bool _autoRefreshEnabled = true;
     private bool _isNightVisual = true;
     private bool _isMeaningVisible;
 
@@ -307,7 +306,7 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
 
     private void ApplyAutoRefreshSettings()
     {
-        _autoRefreshEnabled = DailyWordAutoRefresh.Apply(_componentSettingsService, _refreshTimer, _isAttached);
+        DailyWordAutoRefresh.Apply(_componentSettingsService, _refreshTimer, _isAttached);
     }
 
     private double ResolveScale()
