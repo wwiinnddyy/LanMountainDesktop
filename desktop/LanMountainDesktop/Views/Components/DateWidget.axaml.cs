@@ -114,17 +114,17 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
         }
 
         var itemCount = isZh ? _lunarItemCount : Math.Max(1, _lunarItemCount - 1);
-        YiItemsTextBlock.Text = BuildDailySelection(
+        YiItemsTextBlock.Text = LunarCalendarService.BuildDailySelection(
             now.Date,
             isZh ? LunarCalendarService.YiCandidatesZh : LunarCalendarService.YiCandidatesEn,
             count: itemCount,
-            salt: 17,
+            salt: LunarCalendarService.AuspiciousSalt,
             useChineseSpacing: isZh);
-        JiItemsTextBlock.Text = BuildDailySelection(
+        JiItemsTextBlock.Text = LunarCalendarService.BuildDailySelection(
             now.Date,
             isZh ? LunarCalendarService.JiCandidatesZh : LunarCalendarService.JiCandidatesEn,
             count: itemCount,
-            salt: 29,
+            salt: LunarCalendarService.IllicitSalt,
             useChineseSpacing: isZh);
 
         CalendarWeekLabels.ApplyHeaders(isZh, GetWeekdayHeaderBlocks());
@@ -363,41 +363,6 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
 
     private IBrush GetThemeBrush(string key, double opacity) =>
         AdaptiveTokens.Brush(this, key, new SolidColorBrush(Colors.Gray), opacity);
-
-    private static string BuildDailySelection(
-        DateTime date,
-        string[] pool,
-        int count,
-        int salt,
-        bool useChineseSpacing)
-    {
-        if (pool.Length == 0 || count <= 0)
-        {
-            return string.Empty;
-        }
-
-        var target = Math.Min(count, pool.Length);
-        var selected = new List<string>(target);
-        var usedIndices = new HashSet<int>();
-        var cursor = Math.Abs(date.Year * 1009 + date.DayOfYear * 37 + salt * 211);
-        var step = (salt % Math.Max(1, pool.Length - 1)) + 1;
-
-        for (var i = 0; i < pool.Length * 3 && selected.Count < target; i++)
-        {
-            var index = (cursor + i * step) % pool.Length;
-            if (usedIndices.Add(index))
-            {
-                selected.Add(pool[index]);
-            }
-        }
-
-        if (selected.Count == 0)
-        {
-            return string.Empty;
-        }
-
-        return string.Join(useChineseSpacing ? " " : ", ", selected);
-    }
 
     private static int GetCalendarRowCount(int startDayOfWeek, int daysInMonth)
     {

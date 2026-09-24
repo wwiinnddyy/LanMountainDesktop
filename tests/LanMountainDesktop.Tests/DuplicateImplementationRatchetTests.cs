@@ -399,7 +399,16 @@ public sealed class DuplicateImplementationRatchetTests
     /// "摘标记"那一半故意没并（宿主 / 启动器 / 安装器三处写法不同，还带重试与 .destroy 联动）。
     /// 行为钉 <c>DeploymentStagingTests</c> 4 条。
 
-    private const int IdenticalBodyFamilyCeiling = 29;
+    /// 29 → 28 收一族（<c>BuildDailySelection</c>：黄历"宜/忌"每天挑几条那 22 行，
+    /// <c>DateWidget</c> 与 <c>LunarCalendarWidget</c> 各一份逐字相同，共 4 个调用点）→ 进
+    /// <c>LunarCalendarService.BuildDailySelection</c>。四张候选池表本来就在这个家（2026-09-23 那次
+    /// 按"字面数据表"收的），属"表是一家、算法各写一遍"。顺带把两个调用点各写死的种子
+    /// <c>17</c> / <c>29</c> 提成 <c>AuspiciousSalt</c> / <c>IllicitSalt</c>——种子写两遍时
+    /// 同一天两块屏会给出两版宜忌，且两边都看着正常。实测净 <c>−13</c> 行（两家各删 34 / 各加 8，家加 56）。
+    /// 行为钉 <c>LunarDailySelectionTests</c> 5 格（稳定、两种子分列、不许重复且池不够就少给、
+    /// 空池与非正数兜底、中文空格 vs 其余 ", "）。
+
+    private const int IdenticalBodyFamilyCeiling = 28;
 
     /// <summary>
     /// 今天实测：189 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。

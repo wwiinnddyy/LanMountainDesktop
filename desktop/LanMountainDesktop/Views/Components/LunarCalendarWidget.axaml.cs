@@ -93,17 +93,17 @@ public partial class LunarCalendarWidget : UserControl, IDesktopComponentWidget,
         LunarDateTextBlock.Text = isZh ? lunar.LunarDateZh : lunar.LunarDateEn;
         YiLabelTextBlock.Text = isZh ? "\u5b9c" : "Do";
         JiLabelTextBlock.Text = isZh ? "\u5fcc" : "Avoid";
-        YiItemsTextBlock.Text = BuildDailySelection(
+        YiItemsTextBlock.Text = LunarCalendarService.BuildDailySelection(
             now.Date,
             isZh ? LunarCalendarService.YiCandidatesZh : LunarCalendarService.YiCandidatesEn,
             count: _auspiciousItemCount,
-            salt: 17,
+            salt: LunarCalendarService.AuspiciousSalt,
             useChineseSpacing: isZh);
-        JiItemsTextBlock.Text = BuildDailySelection(
+        JiItemsTextBlock.Text = LunarCalendarService.BuildDailySelection(
             now.Date,
             isZh ? LunarCalendarService.JiCandidatesZh : LunarCalendarService.JiCandidatesEn,
             count: _auspiciousItemCount,
-            salt: 29,
+            salt: LunarCalendarService.IllicitSalt,
             useChineseSpacing: isZh);
     }
 
@@ -179,38 +179,4 @@ public partial class LunarCalendarWidget : UserControl, IDesktopComponentWidget,
         };
     }
 
-    private static string BuildDailySelection(
-        DateTime date,
-        string[] pool,
-        int count,
-        int salt,
-        bool useChineseSpacing)
-    {
-        if (pool.Length == 0 || count <= 0)
-        {
-            return string.Empty;
-        }
-
-        var target = Math.Min(count, pool.Length);
-        var selected = new List<string>(target);
-        var usedIndices = new HashSet<int>();
-        var cursor = Math.Abs(date.Year * 1009 + date.DayOfYear * 37 + salt * 211);
-        var step = (salt % Math.Max(1, pool.Length - 1)) + 1;
-
-        for (var i = 0; i < pool.Length * 3 && selected.Count < target; i++)
-        {
-            var index = (cursor + i * step) % pool.Length;
-            if (usedIndices.Add(index))
-            {
-                selected.Add(pool[index]);
-            }
-        }
-
-        if (selected.Count == 0)
-        {
-            return string.Empty;
-        }
-
-        return string.Join(useChineseSpacing ? " " : ", ", selected);
-    }
 }

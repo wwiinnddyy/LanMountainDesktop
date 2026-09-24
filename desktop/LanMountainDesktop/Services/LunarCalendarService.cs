@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 
 namespace LanMountainDesktop.Services;
@@ -67,6 +68,61 @@ public sealed class LunarCalendarService
         "Heavy repair",
         "Conflict"
     ];
+
+    /// <summary>
+    /// "宜"那一列的取值种子。两个日历组件必须用同一个种子——各自写一个数字时，
+    /// 同一天两块屏幕会给出两版宜忌，而且两边看着都像是正常结果。
+    /// </summary>
+    public const int AuspiciousSalt = 17;
+
+    /// <summary>"忌"那一列的取值种子。</summary>
+    public const int IllicitSalt = 29;
+
+    /// <summary>
+    /// 从候选池里按"是哪一天"挑 <paramref name="count"/> 条，拼成一行显示文案。
+    /// 起点 = 年 × 1009 + 年内日序 × 37 + 种子 × 211（取绝对值），步长 = 种子对池长取模再 +1，
+    /// 绕圈取并跳过已经取过的下标——所以同一个种子在同一天永远给同一批词。
+    /// </summary>
+    /// <remarks>
+    /// 收口前宿主的 <c>DateWidget</c>（2 个调用点）与 <c>LunarCalendarWidget</c>（2 个调用点）
+    /// 各抄了一份逐字相同的 22 行（2026-09-24 由普查尺子量出）。候选池四张表早就在这里了，
+    /// 属于"家立着、算法各写一遍"。兜底口径按抄本原样搬、没顺手统一：空池或 <c>count &lt;= 0</c>
+    /// 给空串；池不够大就少给几条；中文用空格分隔、其余用 <c>", "</c>（这个排版差别是既成的两种口径）。
+    /// </remarks>
+    public static string BuildDailySelection(
+        DateTime date,
+        string[] pool,
+        int count,
+        int salt,
+        bool useChineseSpacing)
+    {
+        if (pool.Length == 0 || count <= 0)
+        {
+            return string.Empty;
+        }
+
+        var target = Math.Min(count, pool.Length);
+        var selected = new List<string>(target);
+        var usedIndices = new HashSet<int>();
+        var cursor = Math.Abs(date.Year * 1009 + date.DayOfYear * 37 + salt * 211);
+        var step = (salt % Math.Max(1, pool.Length - 1)) + 1;
+
+        for (var i = 0; i < pool.Length * 3 && selected.Count < target; i++)
+        {
+            var index = (cursor + i * step) % pool.Length;
+            if (usedIndices.Add(index))
+            {
+                selected.Add(pool[index]);
+            }
+        }
+
+        if (selected.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        return string.Join(useChineseSpacing ? " " : ", ", selected);
+    }
 
     private static readonly string[] HeavenlyStemsZh =
     [
