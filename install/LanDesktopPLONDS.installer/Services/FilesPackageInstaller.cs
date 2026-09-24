@@ -50,7 +50,7 @@ internal sealed class FilesPackageInstaller
                 0,
                 null));
 
-            PrepareTargetDirectory(targetDeployment);
+            DeploymentStaging.Prepare(targetDeployment);
 
             // (b) 复制所有应用文件到部署目录
             await CopyDirectoryAsync(sourceAppDirectory, targetDeployment, package.Version, progress, cancellationToken)
@@ -162,17 +162,6 @@ internal sealed class FilesPackageInstaller
     /// <summary>
     /// 准备目标部署目录：创建目录并写入 .partial 标记。
     /// </summary>
-    private static void PrepareTargetDirectory(string targetDeployment)
-    {
-        if (Directory.Exists(targetDeployment))
-        {
-            Directory.Delete(targetDeployment, recursive: true);
-        }
-
-        Directory.CreateDirectory(targetDeployment);
-        File.WriteAllText(Path.Combine(targetDeployment, DeploymentLayout.PartialMarkerFileName), string.Empty);
-    }
-
     /// <summary>
     /// 逐文件复制源目录到目标目录，跳过标记文件。
     /// </summary>

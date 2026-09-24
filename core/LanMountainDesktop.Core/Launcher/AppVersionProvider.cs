@@ -280,7 +280,7 @@ public static class AppVersionProvider
         {
             var candidates = Directory.GetDirectories(packageRoot, "app-*", SearchOption.TopDirectoryOnly)
                 .Where(path => !File.Exists(Path.Combine(path, DeploymentLayout.DestroyMarkerFileName)))
-                .Where(path => !File.Exists(Path.Combine(path, DeploymentLayout.PartialMarkerFileName)))
+                .Where(path => !DeploymentStaging.IsPartial(path))
                 .Select(path => new
                 {
                     Path = path,

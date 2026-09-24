@@ -85,7 +85,7 @@ internal sealed class PlondsUpdateApplier(
                         && string.Equals(existingCheckpoint.TargetVersion, targetVersion, StringComparison.OrdinalIgnoreCase)
                         && string.Equals(existingCheckpoint.SourceDirectory ?? string.Empty, currentDeployment ?? string.Empty, StringComparison.OrdinalIgnoreCase)
                         && Directory.Exists(existingCheckpoint.TargetDirectory)
-                        && File.Exists(Path.Combine(existingCheckpoint.TargetDirectory, DeploymentLayout.PartialMarkerFileName));
+                        && DeploymentStaging.IsPartial(existingCheckpoint.TargetDirectory);
 
         if (existingCheckpoint is not null && !canResume)
         {
@@ -105,7 +105,7 @@ internal sealed class PlondsUpdateApplier(
                 if (Directory.Exists(targetDeployment)) Directory.Delete(targetDeployment, true);
                 progressReporter.ReportProgress(new InstallProgressReport(InstallStage.CreateTarget, "Creating target deployment...", 20, null, 0, fileEntries.Count));
                 Directory.CreateDirectory(targetDeployment);
-                File.WriteAllText(Path.Combine(targetDeployment, DeploymentLayout.PartialMarkerFileName), string.Empty);
+                DeploymentStaging.MarkPartial(targetDeployment);
             }
 
             checkpointStore.Save(checkpoint);

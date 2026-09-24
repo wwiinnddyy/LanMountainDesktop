@@ -62,7 +62,7 @@ internal sealed class PlondsPreparedPackageInstaller
         var targetDeployment = BuildNextDeploymentDirectory(launcherRoot, package.Version.ToString());
 
         progress?.Report(new InstallProgressReport(InstallStage.CreateTarget, "Creating target deployment...", 15, null, 0, 0));
-        PrepareTargetDirectory(targetDeployment);
+        DeploymentStaging.Prepare(targetDeployment);
         CopyDirectory(sourceAppDirectory, targetDeployment, cancellationToken, skipMarkers: true);
 
         progress?.Report(new InstallProgressReport(InstallStage.ActivateDeployment, "Activating deployment...", 85, null, 0, 0));
@@ -93,7 +93,7 @@ internal sealed class PlondsPreparedPackageInstaller
         var fileEntries = manifest.FilesMap ?? new Dictionary<string, PlondsClientFileEntry>();
 
         progress?.Report(new InstallProgressReport(InstallStage.CreateTarget, "Creating target deployment...", 15, null, 0, fileEntries.Count));
-        PrepareTargetDirectory(targetDeployment);
+        DeploymentStaging.Prepare(targetDeployment);
         CopyDirectory(currentDeployment, targetDeployment, cancellationToken, skipMarkers: true);
 
         var applied = 0;
@@ -227,17 +227,6 @@ internal sealed class PlondsPreparedPackageInstaller
         }
     }
 
-    private static void PrepareTargetDirectory(string targetDeployment)
-    {
-        if (Directory.Exists(targetDeployment))
-        {
-            Directory.Delete(targetDeployment, recursive: true);
-        }
-
-        Directory.CreateDirectory(targetDeployment);
-        File.WriteAllText(Path.Combine(targetDeployment, DeploymentLayout.PartialMarkerFileName), string.Empty);
-    }
-
     private static void CopyDirectory(
         string sourceDirectory,
         string targetDirectory,
@@ -277,7 +266,7 @@ internal sealed class PlondsPreparedPackageInstaller
         var executable = OperatingSystem.IsWindows() ? "LanMountainDesktop.exe" : "LanMountainDesktop";
         return Directory.GetDirectories(launcherRoot, "app-*", SearchOption.TopDirectoryOnly)
             .Where(path => !File.Exists(Path.Combine(path, DeploymentLayout.DestroyMarkerFileName)))
-            .Where(path => !File.Exists(Path.Combine(path, DeploymentLayout.PartialMarkerFileName)))
+            .Where(path => !DeploymentStaging.IsPartial(path))
             .Where(path => File.Exists(Path.Combine(path, executable)) || File.Exists(Path.Combine(path, DeploymentLayout.CurrentMarkerFileName)))
             .Select(path => new
             {

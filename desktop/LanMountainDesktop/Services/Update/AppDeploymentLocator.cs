@@ -21,7 +21,7 @@ internal sealed class AppDeploymentLocator(string launcherRoot)
 
         return candidates
             .Where(path => !File.Exists(Path.Combine(path, DeploymentLayout.DestroyMarkerFileName)))
-            .Where(path => !File.Exists(Path.Combine(path, DeploymentLayout.PartialMarkerFileName)))
+            .Where(path => !DeploymentStaging.IsPartial(path))
             .Where(path => File.Exists(Path.Combine(path, executable)))
             .Select(path => new
             {
@@ -68,7 +68,7 @@ internal sealed class AppDeploymentLocator(string launcherRoot)
 
             var candidates = Directory.GetDirectories(LauncherRoot, "app-*", SearchOption.TopDirectoryOnly);
             var validDeployments = candidates
-                .Where(path => !File.Exists(Path.Combine(path, DeploymentLayout.PartialMarkerFileName)))
+                .Where(path => !DeploymentStaging.IsPartial(path))
                 .Select(path => new
                 {
                     Path = path,

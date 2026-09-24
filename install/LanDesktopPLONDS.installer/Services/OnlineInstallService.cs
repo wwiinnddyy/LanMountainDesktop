@@ -208,7 +208,7 @@ internal sealed class OnlineInstallService(
         }
 
         Directory.CreateDirectory(targetDeployment);
-        File.WriteAllText(Path.Combine(targetDeployment, DeploymentLayout.PartialMarkerFileName), string.Empty);
+        DeploymentStaging.MarkPartial(targetDeployment);
 
         progress?.Report(new InstallerDeployProgress(
             "复制未变更文件",

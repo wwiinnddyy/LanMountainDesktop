@@ -35,7 +35,7 @@ internal sealed class InstalledProductInspector
 
             // 跳过被标记为销毁或部分完成的部署
             if (File.Exists(Path.Combine(dir, DeploymentLayout.DestroyMarkerFileName)) ||
-                File.Exists(Path.Combine(dir, DeploymentLayout.PartialMarkerFileName)))
+                DeploymentStaging.IsPartial(dir))
             {
                 continue;
             }

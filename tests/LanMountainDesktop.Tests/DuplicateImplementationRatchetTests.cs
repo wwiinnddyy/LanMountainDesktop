@@ -387,7 +387,19 @@ public sealed class DuplicateImplementationRatchetTests
     /// 行为钉 <c>WinRtReflectionTests</c> 3 条（夹具含 <c>Bar(int)</c> 与 <c>Foo()</c>/<c>Foo(int,int)</c>
     /// 两个方向的干扰项）；本机真找得到 <c>AsStreamForRead</c> 与否**未覆盖**，headless 里判不出来。
 
-    private const int IdenticalBodyFamilyCeiling = 30;
+    /// 30 → 29 收一族（<c>PrepareTargetDirectory</c>：宿主 <c>PlondsPreparedPackageInstaller</c> 与安装器
+    /// <c>FilesPackageInstaller</c> 各一份逐字相同 9 行、共 3 个调用点跨两个二进制）→ 新家
+    /// <c>core/.../Deployment/DeploymentStaging.Prepare</c>。
+    /// 量的时候顺手把<strong>同一条不变量的读侧</strong>也数了一遍："带 <c>.partial</c> 的部署目录等于不存在"
+    /// 这句在四个二进制里写了 8 遍（<c>AppVersionProvider</c>、<c>AppDeploymentLocator</c> ×2、
+    /// 启动器 <c>DeploymentLocator</c> ×3、<c>InstalledProductInspector</c>、<c>PlondsUpdateApplier</c>），
+    /// 另有两处"只落标记不清空"的写侧——都收进同一个家的 <c>IsPartial</c> / <c>MarkPartial</c>。
+    /// 这些读侧是单语句形状，<b>本来就不进逐字面</b>（"语句数 ≥2"排除它们是对的），所以这一族只 −1，
+    /// 但收口的理由正是它们：写侧漏落标记不会报错，读侧全体就把半写完的部署当成可用版本挑中。
+    /// "摘标记"那一半故意没并（宿主 / 启动器 / 安装器三处写法不同，还带重试与 .destroy 联动）。
+    /// 行为钉 <c>DeploymentStagingTests</c> 4 条。
+
+    private const int IdenticalBodyFamilyCeiling = 29;
 
     /// <summary>
     /// 今天实测：189 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。

@@ -679,6 +679,18 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 唯一保留的字面量是 `OobeStateService` 里改名前的 `.launcher/state`（只读旧数据，与 `Launcher/state` 不是同一个目录）。
 守卫 `SourceIntegrityTests.LauncherStateDirectoryName_LivesInExactlyOnePlace`。
 
+**"一次部署怎么开始"只认 `core/LanMountainDesktop.Core/Deployment/DeploymentStaging.cs` 一家**：
+往部署目录里写之前一律 `DeploymentStaging.Prepare(dir)`（清空 → 重建 → **当场**落下 `.partial`），
+只补标记不动内容用 `MarkPartial`，读侧判"这个目录还没写完"用 `IsPartial`。
+2026-09-24 之前宿主的 `PlondsPreparedPackageInstaller` 与安装器的 `FilesPackageInstaller` 各抄了一份逐字相同的
+9 行（3 个调用点跨两个二进制），而**同一条不变量的读侧写了 8 遍**（Core 的 `AppVersionProvider`、宿主的
+`AppDeploymentLocator` ×2、启动器的 `DeploymentLocator` ×3、安装器的 `InstalledProductInspector` 与宿主的
+`PlondsUpdateApplier`）。为什么这件事非得一家：读侧一致地认为"带 `.partial` 就等于不存在"，
+只要有一个写侧忘了落标记，**半写完的部署就会被启动器当成可用版本挑中**——症状是更新后起不来或起在缺文件的
+目录上，而写侧那一路顺利、什么都不报。收口的读侧都是单语句形状，按"语句数 ≥2"本来就不进逐字普查，
+所以这一族只降 1 格，别拿族数当这笔的收益。**故意没并的是"摘标记"**：宿主 / 启动器 / 安装器三处写法不同
+（有的带重试、有的连带 `.destroy` 联动），那是各部署路径自己的收尾语义。行为钉 `DeploymentStagingTests` 4 条。
+
 **部署标记文件名同样只认那一处**：`.current` / `.partial` / `.destroy` 一律用 `DeploymentLayout` 的
 `CurrentMarkerFileName` / `PartialMarkerFileName` / `DestroyMarkerFileName`。2026-09-22 量出来宿主与 Core 里
 攒了 **35 处字面量**（`AppVersionProvider`、`PlondsPreparedPackageInstaller`、`AppDeploymentLocator`、

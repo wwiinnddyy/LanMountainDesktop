@@ -40,7 +40,7 @@ internal sealed class DeploymentLocator
                 .Where(path =>
                 {
                     var hasDestroy = File.Exists(Path.Combine(path, DeploymentLayout.DestroyMarkerFileName));
-                    var hasPartial = File.Exists(Path.Combine(path, DeploymentLayout.PartialMarkerFileName));
+                    var hasPartial = DeploymentStaging.IsPartial(path);
                     var hasExe = File.Exists(Path.Combine(path, executable));
                     var hasCurrent = File.Exists(Path.Combine(path, DeploymentLayout.CurrentMarkerFileName));
                     var version = ParseVersionFromDirectory(path);
@@ -297,7 +297,7 @@ internal sealed class DeploymentLocator
         var searchPattern = DeploymentLayout.DeploymentDirectoryPrefix + "*";
         var appDirs = Directory.GetDirectories(root, searchPattern, SearchOption.TopDirectoryOnly)
             .Where(path => !File.Exists(Path.Combine(path, DeploymentLayout.DestroyMarkerFileName)))
-            .Where(path => !File.Exists(Path.Combine(path, DeploymentLayout.PartialMarkerFileName)))
+            .Where(path => !DeploymentStaging.IsPartial(path))
             .Select(path => new
             {
                 Path = path,
@@ -486,7 +486,7 @@ internal sealed class DeploymentLocator
             var candidates = Directory.GetDirectories(_appRoot, searchPattern, SearchOption.TopDirectoryOnly);
 
             var validDeployments = candidates
-                .Where(path => !File.Exists(Path.Combine(path, DeploymentLayout.PartialMarkerFileName)))
+                .Where(path => !DeploymentStaging.IsPartial(path))
                 .Select(path => new
                 {
                     Path = path,
