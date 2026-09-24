@@ -116,8 +116,7 @@ public partial class StudyInterruptDensityWidget : UserControl, IDesktopComponen
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
     {
-        UpdateAdaptiveLayout();
-        ApplyTypographyByBackground(StudyPanelPalette.Resolve(this, RootBorder.Background));
+        StudyComponentLifecycle.RefreshOnResize(RootBorder, UpdateAdaptiveLayout, ApplyTypographyByBackground);
     }
 
     private void OnActualThemeVariantChanged(object? sender, EventArgs e)

@@ -96,4 +96,40 @@ public sealed class ComponentThemeModeTests
 
         Assert.Equal(2, painted);
     }
+
+    /// <summary>
+    /// 钉的是<b>先后</b>：重绘回调读的是那个字段，所以字段必须先落新值。
+    /// 反过来的话面板会按上一档画完，且不报错——这正是 4 个组件逐字抄那两行时唯一抄不错的方式
+    /// （抄错了没人看得见），2026-09-25 把每日一词/录音/世界时钟 5 处也接到这家之后，
+    /// 这条判据就只剩这一处实现了。
+    /// </summary>
+    [AvaloniaFact]
+    public void RefreshNightVisual_WritesTheFlagBeforeHandingControlToTheReflow()
+    {
+        var isNightVisual = false;
+        var seenByReflow = new List<bool>();
+
+        ComponentThemeMode.RefreshNightVisual(
+            Themed(ThemeVariant.Dark),
+            ref isNightVisual,
+            () => seenByReflow.Add(isNightVisual));
+
+        Assert.True(isNightVisual);
+        Assert.Single(seenByReflow);
+        Assert.True(seenByReflow[0]);
+    }
+
+    [AvaloniaFact]
+    public void RefreshNightVisual_HasNoMemo_ReflowsEveryPass()
+    {
+        // 与 IfChanged 版的分工：这一版每次路过都重画，代价由调用方自己认（用哪版看重排多贵）。
+        bool isNightVisual = true;
+        var control = Themed(ThemeVariant.Dark);
+        var reflows = 0;
+
+        ComponentThemeMode.RefreshNightVisual(control, ref isNightVisual, () => reflows++);
+        ComponentThemeMode.RefreshNightVisual(control, ref isNightVisual, () => reflows++);
+
+        Assert.Equal(2, reflows);
+    }
 }

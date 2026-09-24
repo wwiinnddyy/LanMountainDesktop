@@ -153,8 +153,7 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget, IDe
 
     private void OnActualThemeVariantChanged(object? sender, EventArgs e)
     {
-        _isNightVisual = ComponentThemeMode.ResolveIsNight(this, fallbackToNightWhenSurfaceUnknown: true);
-        ApplyNightModeVisual();
+        ComponentThemeMode.RefreshNightVisual(this, ref _isNightVisual, ApplyNightModeVisual, fallbackToNightWhenSurfaceUnknown: true);
     }
 
     private void ApplyNightModeVisual()

@@ -19,7 +19,8 @@ namespace LanMountainDesktop.Tests;
 /// 覆盖面也钉住：名字表里每个方法名都必须在磁盘上至少出现一次。
 /// 删掉一整族方法、或者把名字表改窄，都会让"未调用 0 处"照样成立——那种静默收窄比红灯贵。
 ///
-/// 一条已知漏报方向（保守，不是误报）：跨文件的调用点是按**名字**认的（<c>.Name(</c> 形态），
+/// 一条已知漏报方向（保守，不是误报）：跨文件的调用点是按**名字**认的（<c>.Name(</c> 形态，
+/// 本文件那一侧放宽到"名字作为一个完整标识符出现"，好让方法组实参也算，见 <see cref="Invocation"/>），
 /// 因为这一族里 <c>ApplyCellSize</c> 实测有 22 处是运行期注册表按实例统一推的，
 /// 逐个文件去配对会把"由别人调"的真调用判成缺失。代价是：同名成员只要在任意一处有 <c>.Name(</c>，
 /// 别的文件里没人调的定义也会被算成已调用。
@@ -54,9 +55,18 @@ public sealed class WidgetLayoutAppliedRatchetTests
 
     private static readonly Regex Dispatched = new(@"\b(?:override|abstract)\b", RegexOptions.Compiled);
 
-    /// <summary>调用点：同一个名字后面紧跟左括号，且前面不是标识符字符（避开 <c>Foo.ApplyCellSizeGroup</c>）。</summary>
+    /// <summary>
+    /// 调用点：同一个名字作为一个完整的标识符出现（后面不接标识符字符），且前面不是标识符字符
+    /// （避开 <c>Foo.ApplyCellSizeGroup</c>）。
+    /// <b>为什么不只认 <c>.Name(</c></b>：2026-09-25 把 5 个学习组件的"尺寸变了重排 + 按底色重算"
+    /// 收进 <c>StudyComponentLifecycle.RefreshOnResize</c> 之后，这条闸门一次报出 5 处"没人调"——
+    /// 那 5 个组件此刻写的是 <c>RefreshOnResize(RootBorder, UpdateAdaptiveLayout, ApplyTypographyByBackground)</c>，
+    /// <b>方法组当实参递出去</b>就是调用点（由那个家去调），带括号的形态反而是唯一被排除的声明行。
+    /// 放宽的代价：把名字写进字符串或文档注释也算"有人引用"，但那不是这一族会漂开的方式
+    /// （实际漂开方式是抄本漏掉那一步，见本条闸门的由来）。
+    /// </summary>
     private static readonly Regex Invocation = new(
-        @"(?<![A-Za-z0-9_])(?<name>" + string.Join('|', LayoutMethodNames) + @")\s*\(",
+        @"(?<![A-Za-z0-9_])(?<name>" + string.Join('|', LayoutMethodNames) + @")(?![A-Za-z0-9_])",
         RegexOptions.Compiled);
 
     [Fact]

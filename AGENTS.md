@@ -280,7 +280,9 @@ en/ja/ko 还缺 25/313/275 条，只许降不许升；补翻译就把数字改�
 判出来之后怎么落地也只有两个家：每次都要重排的用 `RefreshNightVisual`，重画代价大的（时钟/日历/计时器要重建渐变画刷、
 刷整块面板）用 `RefreshNightVisualIfChanged`——后者把"只在档位真的翻了才画"这条判据收在一处（2026-09-23 之前它被
 逐字抄在 4 个组件里、另 2 个各带一个 `force` 口子），判据写歪的两种后果都不报错：少了 `HasValue` 那步就是第一次进来不画，
-比较反了就是每次路过都重画。两边都有行为钉 `ComponentThemeModeTests`。
+比较反了就是每次路过都重画。两边都有行为钉 `ComponentThemeModeTests`（`RefreshNightVisual` 那一半到
+2026-09-25 才补上 2 格：落字段必须先于重排、且这一版**没有**"变了才画"的备忘——那天把每日一词/录音/
+世界时钟剩下的 5 处两行抄本也接进这家，逐字族 23 → 21）。
 
 **亮度/对比度算式只认一处**：WCAG 相对亮度、α 合成、最低对比度一律走 `Theme/ColorMath.cs`
 （`RelativeLuminance` / `ToOpaqueAgainst` / `MinContrastRatio` / `ContrastRatio`）。此前 15 个组件各自复制了
@@ -547,6 +549,15 @@ AirApp 子进程的语言兜底在 `AirAppSdk` 的 `AirAppLocalizer` 里，它�
 以及"徽章压在玻璃上"的那套算法：`ResolveBadgeColor`（面板亮度分三档不透明度，状态徽章那档更实写成
 `StatusBadgeTiers`）、`BadgeBorderBrush`、`ResolveBadgeForeground`。组件里只留 4 行赋值（各自的控件与调色板不同）。
 阈值 0.58 这一档徽章和内嵌卡片共用，判档走 `IsBrightPanel(panelColor)`，不要再各写一遍。
+
+**"学习面板尺寸变了要重算哪两样"只认 `Views/Components/StudyComponentLifecycle.RefreshOnResize` 一家**
+（2026-09-25：5 个组件各抄一份逐字相同的两行）：调用形状是
+`RefreshOnResize(RootBorder, UpdateAdaptiveLayout, ApplyTypographyByBackground)`——先按新尺寸重排，
+再把<b>重排之后现读</b>的那块面板底色交给各自的重绘回调。参数收面板本身而不是画刷，所以调用方没法提前把旧画刷读走。
+剩下两个学习组件<b>不是少抄一步，是另一种架构</b>：`StudySessionHistoryWidget` 在尺寸变化时走
+`RenderSnapshot`（里面本来就现取 `StudyPanelPalette.Resolve`），`StudyEnvironmentWidget` 一次都不碰取色家、
+文字色全走 XAML 的 `DynamicResource Adaptive*`（主题翻档自动跟）。所以别把它们改成这一家——
+那等于替"采样取色派 vs 主题资源派"选边，属设计决定，已挂 #G1-CD 等拍板。
 
 **快照事件的订/解只认一处**：学习组件订 `IStudyAnalyticsService.SnapshotUpdated` 走
 `Services/StudySnapshotSubscription.cs`（`Subscribe(ref _isSubscribed, service, _renderGate.HandleSnapshotUpdated)` 与 `Unsubscribe`）。

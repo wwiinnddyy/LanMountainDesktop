@@ -111,8 +111,7 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
 
     private void OnActualThemeVariantChanged(object? sender, EventArgs e)
     {
-        _isNightVisual = ComponentThemeMode.ResolveIsNight(this, fallbackToNightWhenSurfaceUnknown: true);
-        ApplyNightModeVisual();
+        ComponentThemeMode.RefreshNightVisual(this, ref _isNightVisual, ApplyNightModeVisual, fallbackToNightWhenSurfaceUnknown: true);
     }
 
     private void ApplyNightModeVisual()
@@ -209,8 +208,7 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
 
     private void ApplyDesignTimePreview()
     {
-        _isNightVisual = ComponentThemeMode.ResolveIsNight(this, fallbackToNightWhenSurfaceUnknown: true);
-        ApplyNightModeVisual();
+        ComponentThemeMode.RefreshNightVisual(this, ref _isNightVisual, ApplyNightModeVisual, fallbackToNightWhenSurfaceUnknown: true);
 
         WordTextBlock.Text = "serendipity";
         PronunciationTextBlock.Text = "UK /,seren'dipiti/ | US /,seren'dipiti/";

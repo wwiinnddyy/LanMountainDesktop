@@ -443,7 +443,31 @@ public sealed class DuplicateImplementationRatchetTests
     /// 曾按"CI 也跑过测试"来写，实际 CI 的 Test 步骤因 bash/pwsh 不匹配从没执行过（a387d56 修，
     /// 并加了"必须真看到用例数 ≥1000"的下限判据）。
 
-    private const int IdenticalBodyFamilyCeiling = 23;
+    /// 23 → 21 一次收两族，两族都收进<b>早就存在的家</b>（不是新抽象）：
+    /// <list type="bullet">
+    /// <item><description><c>OnSizeChanged</c> 5 份逐字相同（<c>StudyDeductionReasonsWidget</c> /
+    /// <c>StudyInterruptDensityWidget</c> / <c>StudyNoiseDistributionWidget</c> /
+    /// <c>StudyScoreOverviewWidget</c> / <c>StudySessionControlWidget</c>）→
+    /// <c>StudyComponentLifecycle.RefreshOnResize</c>。收的是面板本身而不是它的画刷，为的是保住抄本
+    /// 原本的读点（底色在重排<b>之后</b>现读）。行为钉 <c>StudyComponentLifecycleTests</c> +1 格
+    /// （回调里换掉 <c>Border.Background</c>，提前读走就红）。
+    /// 同族剩下三个不是抄歪，是各用自己的架构：<c>StudyNoiseCurveWidget.axaml.cs:150</c> 做的是同样两件事、
+    /// 只是换了拼写并多补一次 <c>ApplyCellSize</c>；<c>StudySessionHistoryWidget.axaml.cs:119</c> 尺寸变了走
+    /// <c>RenderSnapshot</c>（那里面本来就现取 <c>StudyPanelPalette.Resolve</c>）；
+    /// <c>StudyEnvironmentWidget.axaml.cs:97</c> 一次都没碰取色家，文字色全走 XAML 的
+    /// <c>DynamicResource Adaptive*</c>（主题翻档自动跟，所以尺寸变化确实不需要重算）。
+    /// 把这三种架构统一起来等于替"采样取色派 vs 主题资源派"选边，属设计决定，不在这一笔里改，
+    /// 已另立 #G1-CD 等拍板。</description></item>
+    /// <item><description><c>OnActualThemeVariantChanged</c> 3 份逐字相同（<c>DailyWordWidget</c> /
+    /// <c>DailyWord2x2Widget</c> / <c>RecordingWidget</c>）→ <c>ComponentThemeMode.RefreshNightVisual</c>
+    /// （那一家本来就有，另外 6 个组件一直在用），顺带把 <c>DailyWordWidget.ApplyDesignTimePreview</c>
+    /// 与 <c>WorldClockWidget</c> 两处同形状的非族站点也接上。这家此前<b>没有</b>直接的格
+    /// （只有 <c>…IfChanged</c> 版有），这次补 2 格：写字段必须先于重排、且这一版没有"变了才画"的备忘。
+    /// </description></item>
+    /// </list>
+    /// 普查成员清单逐行比过：只掉这两项名字，无新名字进来（实测 21 族，站点里已无这两个签名）。
+
+    private const int IdenticalBodyFamilyCeiling = 21;
 
     /// <summary>
     /// 今天实测：189 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
