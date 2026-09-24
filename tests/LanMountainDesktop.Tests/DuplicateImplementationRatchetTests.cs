@@ -408,7 +408,20 @@ public sealed class DuplicateImplementationRatchetTests
     /// 行为钉 <c>LunarDailySelectionTests</c> 5 格（稳定、两种子分列、不许重复且池不够就少给、
     /// 空池与非正数兜底、中文空格 vs 其余 ", "）。
 
-    private const int IdenticalBodyFamilyCeiling = 28;
+    /// 28 → 27 收一族（<c>RefreshWordAsync</c>：每日一词 1x1 与 2x2 两块面板各一份<b>逐字相同的 45 行</b>
+    /// 单飞取数协议）→ 拆成两个家：<c>Views/Components/ComponentFeedRefresh</c>（协议本身：不挂载/已忙不起跑、
+    /// 起前先置忙再画按钮、换发时先换后取消旧源、等完<b>重新问一次</b>挂载与取消、取不到与抛异常都画失败态而
+    /// <c>OperationCanceledException</c> 静默、收尾只在"这把还是我的"时清字段并复位）
+    /// 与 <c>Views/Components/DailyWordFeed</c>（组 query 调服务 + "成功但载荷为空也算没取到" + 起前两下的顺序）。
+    /// <b>这笔一开始是倒挂的</b>：只把协议收走之后普查报 28 → 29——<c>BeginWordRefresh</c>（2 行）与
+    /// <c>RequestWordAsync</c>（8 行）成了新的两份逐字抄本，族数反而涨。这说明"收一族"不能只按行数判完成，
+    /// 得等普查说没有新名字才算收干净；补上第二个家之后实测 27，成员清单与上一轮逐行比过，
+    /// <b>只掉 <c>RefreshWordAsync</c> 一项、没有新名字进来</b>。
+    /// 两块面板各自留下的只有一处 per-widget 的落地 lambda（控件不同，那是本来的差别）。
+    /// 行为钉 <c>ComponentFeedRefreshTests</c> 7 格 + <c>DailyWordFeedTests</c> 4 格；
+    /// "先换发再取消旧源"那句<strong>没钉</strong>并写明原因（单飞守卫下从公开入口走不到，属防御性写法）。
+
+    private const int IdenticalBodyFamilyCeiling = 27;
 
     /// <summary>
     /// 今天实测：189 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。

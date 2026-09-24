@@ -35,12 +35,11 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
     private readonly LocalizationService _localizationService = new();
 
     private IRecommendationInfoService _recommendationService = DefaultRecommendationService;
-    private CancellationTokenSource? _refreshCts;
     private DailyWordSnapshot? _latestSnapshot;
     private string _languageCode = LocalizationService.DefaultLanguageCode;
     private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private bool _isAttached;
-    private bool _isRefreshing;
+    private readonly ComponentFeedRefresh _feed = new();
     private bool _autoRefreshEnabled = true;
     private bool _isNightVisual = true;
     private bool _isMeaningVisible;
@@ -97,7 +96,7 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        ComponentRefreshLifetime.Detach(ref _isAttached, _refreshTimer, ref _refreshCts, UpdateRefreshButtonState);
+        ComponentRefreshLifetime.Detach(ref _isAttached, _refreshTimer, ref _feed.InFlight, UpdateRefreshButtonState);
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -127,7 +126,7 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
 
     private async void OnRefreshButtonClick(object? sender, RoutedEventArgs e)
     {
-        if (_isRefreshing)
+        if (_feed.IsBusy)
         {
             return;
         }
@@ -165,63 +164,23 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
         e.Handled = true;
     }
 
-    private async Task RefreshWordAsync(bool forceRefresh)
-    {
-        if (!_isAttached || _isRefreshing)
-        {
-            return;
-        }
-
-        _isRefreshing = true;
-        UpdateRefreshButtonState();
-        UpdateLanguageCode();
-
-        var cts = new CancellationTokenSource();
-        var previous = Interlocked.Exchange(ref _refreshCts, cts);
-        CancellationHelper.CancelAndDispose(previous);
-
-        try
-        {
-            var query = new DailyWordQuery(
-                Locale: _languageCode,
-                ForceRefresh: forceRefresh);
-            var result = await _recommendationService.GetDailyWordAsync(query, cts.Token);
-            if (!_isAttached || cts.IsCancellationRequested)
+    private Task RefreshWordAsync(bool forceRefresh) =>
+        _feed.RunAsync(
+            () => _isAttached,
+            () => DailyWordFeed.BeginRefresh(UpdateRefreshButtonState, UpdateLanguageCode),
+            async token =>
             {
-                return;
-            }
+                var snapshot = await DailyWordFeed.RequestAsync(_recommendationService, _languageCode, forceRefresh, token);
+                if (snapshot is null)
+                {
+                    return false;
+                }
 
-            if (!result.Success || result.Data is null)
-            {
-                ApplyFailedState();
-                return;
-            }
-
-            ApplySnapshot(result.Data);
-        }
-        catch (OperationCanceledException)
-        {
-            // Ignore canceled requests.
-        }
-        catch
-        {
-            if (_isAttached && !cts.IsCancellationRequested)
-            {
-                ApplyFailedState();
-            }
-        }
-        finally
-        {
-            if (ReferenceEquals(_refreshCts, cts))
-            {
-                _refreshCts = null;
-            }
-
-            cts.Dispose();
-            _isRefreshing = false;
-            UpdateRefreshButtonState();
-        }
-    }
+                ApplySnapshot(snapshot);
+                return true;
+            },
+            ApplyFailedState,
+            UpdateRefreshButtonState);
 
     private void ApplySnapshot(DailyWordSnapshot snapshot)
     {
@@ -339,9 +298,9 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
 
     private void UpdateRefreshButtonState()
     {
-        RefreshButton.IsEnabled = !_isRefreshing;
-        RefreshButton.Opacity = _isRefreshing ? 0.60 : 1.0;
-        RefreshIcon.Opacity = _isRefreshing ? 0.60 : 1.0;
+        RefreshButton.IsEnabled = !_feed.IsBusy;
+        RefreshButton.Opacity = _feed.IsBusy ? 0.60 : 1.0;
+        RefreshIcon.Opacity = _feed.IsBusy ? 0.60 : 1.0;
     }
 
     private void UpdateLanguageCode() =>
