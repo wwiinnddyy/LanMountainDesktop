@@ -421,7 +421,30 @@ headless 量不到它，这一点写进测试注释，不宣称整条链都钉�
 离线钉得住的只有 `HasExited` 反向（红 2 格）；`pid <= 0` 守卫与 `catch` 彼此遮蔽（各自单独注入都不红），
 "pid 合法但正在退"那一支要真起真退进程才走得到——**未覆盖**，别当已排除（详见 `LiveProcessProbeTests` 注释）。
 
-**组件被下推"推荐信息服务"那两步只认 `Views/Components/RecommendationServiceBinding.cs` 一家**
+**"组件发起一次取数"只认 `Views/Components/ComponentFeedRefresh.cs` 一家**（2026-09-24：每日一词 1x1 与 2x2
+各抄一份<b>逐字相同的 45 行</b>）。协议本身在这里：不挂载或已忙就不起、起前先置忙再画按钮、换发时先换后取消旧源、
+await 完<b>重新问一次</b>挂载与取消、"没取到"与抛异常都画失败态而 `OperationCanceledException` 静默、
+收尾只在"这把还是我的那把"时清字段并复位。取数那半步（组 query 调哪个接口、"成功但载荷为空也算没取到"）
+在 `Views/Components/DailyWordFeed.cs`，落地（往各自控件上画）留在组件里——两块屏幕控件不同，那是本来的差别。
+抄本少抄一句不会报错：少那句"重新问一次"就是往已分离的可视树上落地，少 finally 里那句复位就是按钮永久灰着。
+行为钉 `ComponentFeedRefreshTests` 7 格 + `DailyWordFeedTests` 4 格；"先换发再取消旧源"那一支**没钉**并写明原因
+（单飞守卫下从公开入口走不到，属防御性写法，别当成已验证的路径）。
+**其余 9 个组件的 `Refresh…Async(bool forceRefresh)` 是同骨架换接口**，还没逐个走过家——判它们要不要走，
+和 `ResolveScale` 三对一起挂在 #G1-BC。
+
+**"这段像素占几格"只认 `DesktopEditing/DesktopPlacementMath.EstimateCellSpan` 一家**（加号在前、`AwayFromZero`、
+最少 1 格、网格不合法给 1 格）：此前"桌面拖拽快照"与"组件浮窗按请求尺寸估格"两处各抄一份 5 行（4 个调用点），
+漂开的症状是同一个组件拖出来与浮窗回来的尺寸差一格。行为钉 `DesktopPlacementMathTests`（含一条专门钉半点舍入方向
+的——换成默认的银行家舍入就红）。同理黄历"今天宜/忌写哪几条"也只认 `LunarCalendarService.BuildDailySelection`，
+两个日历组件此前各抄一份逐字相同的 22 行、种子 17/29 还在四处写死；种子与池长不互质会让一部分候选永远不出现
+（实测中文"忌"12 条只能出现 3 条，见 #G1-CB）。
+
+**收一族不能按行数判完成**（2026-09-24 实测到的反例）：`RefreshWordAsync` 只把协议收走之后普查报 **28 → 29**——
+`BeginWordRefresh`(2 行) 与 `RequestWordAsync`(8 行) 成了新的逐字抄本，族数不降反升。补上第二个家之后才到 27，
+且成员清单要逐行比过、确认"没有新名字进来"才算收干净。反向教训同一条账上：只按"删了多少行"汇报收口，
+会把"复制换了个地方"当成成果。
+
+**组件被下推"推荐信息服务"只认 `Views/Components/RecommendationServiceBinding.cs` 一家**
 （`Attach(ref 字段, 新服务, 自己的默认实例, () => _isAttached, () => Refresh…(forceRefresh: false))`）：
 先换字段、再**只在已挂载时**刷一次；顺序与挂载条件都是判据，各自错了都不报错
 （先刷后换 = 卡片还是旧服务的数据；少了挂载判定 = 没挂上桌面就去刷还没准备好的控件）。
