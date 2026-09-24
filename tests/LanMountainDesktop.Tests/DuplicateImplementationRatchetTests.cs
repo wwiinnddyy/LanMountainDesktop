@@ -428,7 +428,22 @@ public sealed class DuplicateImplementationRatchetTests
     /// 行为钉 <c>DesktopPlacementMathTests</c> 3 格（加在已有的 1 格间接测试旁边）：
     /// 半点必须 AwayFromZero（银行家舍入会红）、最小 1 格、几何不合法给 1 格而不是 0 或抛。
 
-    private const int IdenticalBodyFamilyCeiling = 26;
+    /// 26 → 23 一次收三族（<c>TryGetCachedWithoutProbe</c> / <c>TryGetCachedAfterProbe</c> / <c>UpdateCache</c>，
+    /// 宿主 <c>AppSettingsService</c> 与启动器 <c>LauncherSettingsService</c> 各一份逐字相同，
+    /// 连同一组 4 个静态字段）→ 进 <c>Services/SettingsSnapshotCache&lt;T&gt;</c>。
+    /// 这就是 #G1-T 那条"两个设置服务是近似克隆"里<b>真逐字相同</b>的那三块；两边的锁
+    /// （各自 <c>CacheGate</c> 罩住"读盘→落盘→写缓存"整段）与快照类型仍各写各的，
+    /// 收进来会改变临界区大小，那属行为变更不属收口，#G1-T 因此仍是待决而不是已完成。
+    /// 判据漂开的症状不是崩，而是"改了设置某一边读到旧值"或"每次 Load 都打一次盘"。
+    /// 行为钉 <c>SettingsSnapshotCacheTests</c> 6 格：探针窗口内/外、磁盘写时间一致/不一致、
+    /// 换一个 settings.json 不许复用、<c>MarkProbed</c> 只动探针时刻不动写时间、
+    /// 读出去与存进去都必须是克隆（缓存本体漏出去的话，调用方改一份就等于改了缓存）。
+    /// 普查成员清单逐行比过：只掉这三项，无新名字进来。
+    /// <b>顺手改对了一个 CI 事实</b>：上限注释与 <c>code-quality.yml</c> 里"本地 Release 全绿"那句
+    /// 曾按"CI 也跑过测试"来写，实际 CI 的 Test 步骤因 bash/pwsh 不匹配从没执行过（a387d56 修，
+    /// 并加了"必须真看到用例数 ≥1000"的下限判据）。
+
+    private const int IdenticalBodyFamilyCeiling = 23;
 
     /// <summary>
     /// 今天实测：189 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。

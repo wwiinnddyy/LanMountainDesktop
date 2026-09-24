@@ -18,12 +18,9 @@ public sealed class LauncherSettingsService
         WriteIndented = true
     };
     private static readonly object CacheGate = new();
-    private static readonly TimeSpan CacheProbeInterval = TimeSpan.FromMilliseconds(400);
-
-    private static string? _cachedPath;
-    private static LauncherSettingsSnapshot? _cachedSnapshot;
-    private static DateTime _cachedWriteTimeUtc = DateTime.MinValue;
-    private static DateTime _lastProbeUtc = DateTime.MinValue;
+    /// <summary>判据与状态都在 <see cref="SettingsSnapshotCache{T}" /> 里；锁仍由本服务按自己的 CacheGate 罩。</summary>
+    private static readonly SettingsSnapshotCache<LauncherSettingsSnapshot> Cache =
+        new(static snapshot => snapshot.Clone(), TimeSpan.FromMilliseconds(400));
 
     private readonly string _settingsPath;
     private readonly string _legacyAppSettingsPath;
@@ -54,7 +51,7 @@ public sealed class LauncherSettingsService
                     ? File.GetLastWriteTimeUtc(_settingsPath)
                     : DateTime.MinValue;
 
-                _lastProbeUtc = nowUtc;
+                Cache.MarkProbed(nowUtc);
                 if (TryGetCachedAfterProbe(writeTimeUtc, out cached))
                 {
                     return cached;
@@ -114,33 +111,12 @@ public sealed class LauncherSettingsService
         }
     }
 
-    private bool TryGetCachedWithoutProbe(DateTime nowUtc, out LauncherSettingsSnapshot snapshot)
-    {
-        if (string.Equals(_cachedPath, _settingsPath, StringComparison.Ordinal) &&
-            _cachedSnapshot is not null &&
-            nowUtc - _lastProbeUtc < CacheProbeInterval)
-        {
-            snapshot = _cachedSnapshot.Clone();
-            return true;
-        }
+    /// <summary>还在探针窗口里就别再问磁盘（这条判据的来历见 SettingsSnapshotCache）。</summary>
+    private bool TryGetCachedWithoutProbe(DateTime nowUtc, out LauncherSettingsSnapshot snapshot) =>
+        Cache.TryGetWithinProbeWindow(_settingsPath, nowUtc, out snapshot);
 
-        snapshot = null!;
-        return false;
-    }
-
-    private bool TryGetCachedAfterProbe(DateTime writeTimeUtc, out LauncherSettingsSnapshot snapshot)
-    {
-        if (string.Equals(_cachedPath, _settingsPath, StringComparison.Ordinal) &&
-            _cachedSnapshot is not null &&
-            writeTimeUtc == _cachedWriteTimeUtc)
-        {
-            snapshot = _cachedSnapshot.Clone();
-            return true;
-        }
-
-        snapshot = null!;
-        return false;
-    }
+    private bool TryGetCachedAfterProbe(DateTime writeTimeUtc, out LauncherSettingsSnapshot snapshot) =>
+        Cache.TryGetAtCachedWriteTime(_settingsPath, writeTimeUtc, out snapshot);
 
     private LauncherSettingsSnapshot LoadSnapshotFromDisk()
     {
@@ -222,13 +198,8 @@ public sealed class LauncherSettingsService
             .ToList();
     }
 
-    private void UpdateCache(LauncherSettingsSnapshot snapshot, DateTime writeTimeUtc, DateTime probeTimeUtc)
-    {
-        _cachedPath = _settingsPath;
-        _cachedSnapshot = snapshot.Clone();
-        _cachedWriteTimeUtc = writeTimeUtc;
-        _lastProbeUtc = probeTimeUtc;
-    }
+    private void UpdateCache(LauncherSettingsSnapshot snapshot, DateTime writeTimeUtc, DateTime probeTimeUtc) =>
+        Cache.Update(_settingsPath, snapshot, writeTimeUtc, probeTimeUtc);
 
     private sealed class LegacyLauncherSettingsSnapshot
     {
