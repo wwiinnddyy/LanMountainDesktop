@@ -50,8 +50,8 @@ internal static class FusedDesktopPlacementMath
     {
         ArgumentNullException.ThrowIfNull(placement);
 
-        var widthCells = Math.Max(1, placement.GridWidthCells ?? EstimateCellSpan(placement.Width, grid));
-        var heightCells = Math.Max(1, placement.GridHeightCells ?? EstimateCellSpan(placement.Height, grid));
+        var widthCells = Math.Max(1, placement.GridWidthCells ?? DesktopPlacementMath.EstimateCellSpan(placement.Width, grid));
+        var heightCells = Math.Max(1, placement.GridHeightCells ?? DesktopPlacementMath.EstimateCellSpan(placement.Height, grid));
         var maxColumn = Math.Max(0, grid.ColumnCount - widthCells);
         var maxRow = Math.Max(0, grid.RowCount - heightCells);
         var pitch = grid.Pitch;
@@ -83,15 +83,4 @@ internal static class FusedDesktopPlacementMath
         return snapped;
     }
 
-    private static int EstimateCellSpan(double pixelSize, DesktopGridGeometry grid)
-    {
-        if (!grid.IsValid || grid.CellSize <= 0)
-        {
-            return 1;
-        }
-
-        return Math.Max(1, (int)Math.Round(
-            (Math.Max(1, pixelSize) + grid.CellGap) / grid.Pitch,
-            MidpointRounding.AwayFromZero));
-    }
 }

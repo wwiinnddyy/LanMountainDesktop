@@ -290,4 +290,36 @@ public sealed class DesktopPlacementMathTests
         Assert.Equal(168, snapped.Width, 3);
         Assert.Equal(256, snapped.Height, 3);
     }
+
+    [Fact]
+    public void EstimateCellSpan_CountsTheGap_AndRoundsAwayFromZero()
+    {
+        var grid = new DesktopGridGeometry(Origin: default, CellSize: 80, CellGap: 8, ColumnCount: 6, RowCount: 6);
+
+        // (212 + 8) / 88 = 2.5 正好落在半点上：AwayFromZero 要给 3（默认的银行家舍入会给 2）。
+        Assert.Equal(3, DesktopPlacementMath.EstimateCellSpan(212, grid));
+        // 132 → (132+8)/88 = 1.59…，加 gap 之后是 2 格；只按 CellSize 除会得 1.65→2，
+        // 但换成 100 就能分开两种算法：(100+8)/88 = 1.23→1，而 100/80 = 1.25→1。
+        Assert.Equal(1, DesktopPlacementMath.EstimateCellSpan(100, grid));
+    }
+
+    [Fact]
+    public void EstimateCellSpan_NeverReturnsLessThanOneCell()
+    {
+        var grid = new DesktopGridGeometry(Origin: default, CellSize: 80, CellGap: 8, ColumnCount: 6, RowCount: 6);
+
+        Assert.Equal(1, DesktopPlacementMath.EstimateCellSpan(0, grid));
+        Assert.Equal(1, DesktopPlacementMath.EstimateCellSpan(-500, grid));
+    }
+
+    /// <summary>几何还没算好（首帧、零列）时一律按 1 格占位——两份抄本原本的兜底就是这个，别改成 0 或抛。</summary>
+    [Fact]
+    public void EstimateCellSpan_FallsBackToOneCell_WhenTheGridIsNotUsable()
+    {
+        var noColumns = new DesktopGridGeometry(Origin: default, CellSize: 80, CellGap: 8, ColumnCount: 0, RowCount: 6);
+        var zeroCell = new DesktopGridGeometry(Origin: default, CellSize: 0, CellGap: 8, ColumnCount: 6, RowCount: 6);
+
+        Assert.Equal(1, DesktopPlacementMath.EstimateCellSpan(1000, noColumns));
+        Assert.Equal(1, DesktopPlacementMath.EstimateCellSpan(1000, zeroCell));
+    }
 }

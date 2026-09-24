@@ -901,8 +901,8 @@ public partial class DesktopWidgetWindow : Window
         var requestedLocalWidth = ComponentContainer.Width;
         var requestedLocalHeight = ComponentContainer.Height;
 
-        var widthCells = Math.Max(1, EstimateCellSpan(requestedLocalWidth, context.Geometry));
-        var heightCells = Math.Max(1, EstimateCellSpan(requestedLocalHeight, context.Geometry));
+        var widthCells = Math.Max(1, DesktopPlacementMath.EstimateCellSpan(requestedLocalWidth, context.Geometry));
+        var heightCells = Math.Max(1, DesktopPlacementMath.EstimateCellSpan(requestedLocalHeight, context.Geometry));
 
         widthCells = Math.Max(_resizeStartWidthCells, widthCells);
         heightCells = Math.Max(_resizeStartHeightCells, heightCells);
@@ -979,15 +979,4 @@ public partial class DesktopWidgetWindow : Window
         return true;
     }
 
-    private static int EstimateCellSpan(double pixelSize, DesktopGridGeometry grid)
-    {
-        if (!grid.IsValid || grid.CellSize <= 0)
-        {
-            return 1;
-        }
-
-        return Math.Max(1, (int)Math.Round(
-            (Math.Max(1, pixelSize) + grid.CellGap) / grid.Pitch,
-            MidpointRounding.AwayFromZero));
-    }
 }

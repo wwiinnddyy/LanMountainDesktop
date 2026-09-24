@@ -21,6 +21,29 @@ internal readonly record struct DesktopGridGeometry(
 
 internal static class DesktopPlacementMath
 {
+    /// <summary>
+    /// 把一段像素宽度/高度换算成"占几格"，只有这一处算法：分子先把 <c>CellGap</c> 加上再除以 <c>Pitch</c>，
+    /// 取整用 <c>AwayFromZero</c>，最少 1 格；网格不合法（<c>CellSize &lt;= 0</c> 等）一律给 1 格。
+    /// </summary>
+    /// <remarks>
+    /// 收口前 <c>FusedDesktopPlacementMath</c>（桌面摆放快照）与 <c>DesktopWidgetWindow</c>（组件浮窗按请求尺寸
+    /// 估格）各有一份逐字相同的 5 行（2026-09-24 由普查尺子量出，共 4 个调用点）。漂开的症状不报错：
+    /// 同一个组件"从桌面拖出来的大小"与"浮窗请求回来的大小"会差一格。
+    /// "网格不合法给 1 格"是两份抄本一致的兜底，没顺手改成 0 或抛——那会让首帧还没算好几何的时候
+    /// 组件直接不占位。
+    /// </remarks>
+    public static int EstimateCellSpan(double pixelSize, DesktopGridGeometry grid)
+    {
+        if (!grid.IsValid || grid.CellSize <= 0)
+        {
+            return 1;
+        }
+
+        return Math.Max(1, (int)Math.Round(
+            (Math.Max(1, pixelSize) + grid.CellGap) / grid.Pitch,
+            MidpointRounding.AwayFromZero));
+    }
+
     public static double ComputeDragStartThreshold(double cellSize)
     {
         return Math.Max(10d, Math.Max(0d, cellSize) * 0.18d);

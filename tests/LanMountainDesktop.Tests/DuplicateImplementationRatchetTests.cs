@@ -421,7 +421,14 @@ public sealed class DuplicateImplementationRatchetTests
     /// 行为钉 <c>ComponentFeedRefreshTests</c> 7 格 + <c>DailyWordFeedTests</c> 4 格；
     /// "先换发再取消旧源"那句<strong>没钉</strong>并写明原因（单飞守卫下从公开入口走不到，属防御性写法）。
 
-    private const int IdenticalBodyFamilyCeiling = 27;
+    /// 27 → 26 收一族（<c>EstimateCellSpan</c>：像素换格数那 5 行，<c>FusedDesktopPlacementMath</c> 与
+    /// <c>DesktopWidgetWindow</c> 各一份逐字相同、共 4 个调用点）→ 进同一命名空间里早就存在的
+    /// <c>DesktopPlacementMath</c>（网格几何算式本来就住这儿）。漂开的症状不报错：同一个组件
+    /// "从桌面拖出来的大小"与"浮窗请求回来的大小"差一格。实测净 <c>−3</c> 行（家加 23，两家各删 13 / 各加 2）。
+    /// 行为钉 <c>DesktopPlacementMathTests</c> 3 格（加在已有的 1 格间接测试旁边）：
+    /// 半点必须 AwayFromZero（银行家舍入会红）、最小 1 格、几何不合法给 1 格而不是 0 或抛。
+
+    private const int IdenticalBodyFamilyCeiling = 26;
 
     /// <summary>
     /// 今天实测：189 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
