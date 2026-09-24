@@ -24,9 +24,24 @@ public sealed class ExistingPathTests : IDisposable
         var full = Path.GetFullPath(_root);
 
         Assert.Equal(full, ExistingPath.DirectoryOrNull(full));
-        // `.`/相对形状会被 GetFullPath 归一，所以不同写法算得出同一个可比较的串。
-        Assert.Equal(full, ExistingPath.DirectoryOrNull(
-            "." + Path.DirectorySeparatorChar + Path.GetRelativePath(Environment.CurrentDirectory, full)));
+        // `.`/相对形状会被 GetFullPath 归一，所以不同写法算得出同一个可比较的串——<b>但只在同一个盘内成立</b>。
+        // 2026-09-25 CI 首次真跑用例时这条红了（Expected 全路径、Actual null）：CI 的工作目录在 D:、
+        // 临时目录在 C:，`Path.GetRelativePath` 拼出的 `.\..\Users\...` 经 GetFullPath 会落到
+        // D:\Users\runneradmin\... 那一边，那个目录本来就不存在——量的是相对归一，不该量跨盘拼接。
+        // 所以相对那一支的探针放在工作目录下，保证相对串必然算回同一个绝对位置。
+        var relative = Path.Combine("existing-path-relative", Guid.NewGuid().ToString("N"));
+        var relativeFull = Path.GetFullPath(relative);
+        Directory.CreateDirectory(relativeFull);
+        try
+        {
+            Assert.Equal(relativeFull, ExistingPath.DirectoryOrNull(
+                "." + Path.DirectorySeparatorChar + relative));
+        }
+        finally
+        {
+            Directory.Delete(relativeFull);
+            Directory.Delete(Path.GetDirectoryName(relativeFull)!);
+        }
 
         // 钉住**现状**（两份被收口的实现都是这个行为，收口没改语义）：尾部带分隔符时原样保留，
         // 于是 "C:\dir\" 与 "C:\dir" 算出来是两个不同的串——拿返回值再做相等比较的调用方要注意这一点
