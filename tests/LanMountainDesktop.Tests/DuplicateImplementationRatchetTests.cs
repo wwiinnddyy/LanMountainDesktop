@@ -467,7 +467,28 @@ public sealed class DuplicateImplementationRatchetTests
     /// </list>
     /// 普查成员清单逐行比过：只掉这两项名字，无新名字进来（实测 21 族，站点里已无这两个签名）。
 
-    private const int IdenticalBodyFamilyCeiling = 21;
+    /// 21 → 19 一次收两族（同一个签名 <c>OnAttachedToVisualTree</c> 的两个不同体）：
+    /// 7 个学习组件挂载那五步（落"已挂载"位 → 重读显示设置 → 订快照事件 → 重算监测租约 → 各家刷新）
+    /// 此前是 3 份逐字相同 + 2 份"最后一步换成排渲染门"的逐字相同 + 2 份各多一步的孤本，
+    /// 现在一律走 <c>StudyComponentLifecycle.Attach</c>（与它已有的 <c>Detach</c> 同一个家、互为反向）。
+    /// 有后果的那一条是<b>状态位必须最先落</b>：<c>StudyMonitoringLease.Sync(…, isAttached, isOnActivePage)</c>
+    /// 在 <c>!isAttached</c> 时直接 Release，状态位落在后面就等于"组件放回桌面却没拿到租约"，
+    /// 症状是学习监测不再采数且不报错。行为钉 <c>StudyComponentLifecycleTests</c> +1 格
+    /// （三个回调各自读那个状态位，落晚了就红；假服务靠传 <c>isSubscribed = true</c> 走"已订过"那一支省掉）。
+    /// <c>StudySessionHistoryWidget</c> 没进来：它压根没有租约那一步（全文件零 <c>_monitoringLease</c>），
+    /// 形状不同，硬套要塞一个空的实参——那才是把判据写没。<b>未查证它该不该有租约</b>，已写进 #G1-CD。
+    /// 这一笔还逼出两处判据盲区，都按"判据必须认家"的既有原则修，不是放宽放行：
+    /// <list type="number">
+    /// <item><description><c>ComponentLifecyclePairingRatchetTests</c> 的 snapshot 族只让<b>收</b>的一侧认家，
+    /// 起点收进 <c>Attach</c> 之后"起 1/8"直接红了（覆盖面下限按文本条数算）。已把 <c>Attach</c> 也认成家，
+    /// 下限 8 不动（实测 1 处裸 Subscribe + 7 处走家 = 8）。变异验过：摘掉一处 <c>Detach</c> → 红
+    /// （"收 12/13"，与这条文件注释里 2026-09-23 记的那条一致：整批交给家之后，族计数才是真哨兵）。</description></item>
+    /// <item><description><c>WidgetLayoutAppliedRatchetTests</c> 只认 <c>Name(</c> 形态的调用点，
+    /// 方法组当实参递出去（交给家去调）不算——同一笔里 5 个组件的 <c>UpdateAdaptiveLayout</c> 被报成"没人调"。
+    /// 已放宽为"完整标识符出现"，双向变异验过：引用留着 → 绿；把同文件两处引用都换成空 lambda → 红且只报那一处。</description></item>
+    /// </list>
+
+    private const int IdenticalBodyFamilyCeiling = 19;
 
     /// <summary>
     /// 今天实测：189 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。

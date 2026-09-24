@@ -570,6 +570,19 @@ AirApp 子进程的语言兜底在 `AirAppSdk` 的 `AirAppLocalizer` 里，它�
 同一条守卫现在禁组件再声明 `OnStudySnapshotUpdated`。行为由 `StudyComponentRenderingTests` 两条钉住
 （不可见时不排队、可见时排队；把 `_canRender()` 判断去掉后第一条立刻红）。
 
+**学习组件挂载那五步只认 `Views/Components/StudyComponentLifecycle.Attach` 一家**（2026-09-25：
+7 个组件各抄一遍，其中 5 份逐字相同）：落"已挂载"位 → 重读自己的显示设置 → 订快照事件 →
+重算监测租约 → 按各家口径刷新。实参留两个口子（前 1 个：语言码 or 全套显示设置；后 1 个：
+重画视觉 / 排一次渲染门 / 先复位计时器再重画）。
+**状态位必须最先落**，这条有后果：`StudyMonitoringLease.Sync(…, isAttached, isOnActivePage)`
+在 `!isAttached` 时走的是 Release（`Services/StudyAnalyticsMonitoringLeaseCoordinator.cs:110`），
+落在后面就等于"组件放回桌面却没拿到租约"，症状是学习监测不再采数、不报错。
+行为钉 `StudyComponentLifecycleTests`（三个回调各读那个状态位；假服务靠传 `isSubscribed = true`
+走"已订过"那一支省掉，不必为 14 个成员写桩）。`StudySessionHistoryWidget` 故意没进来：
+它全文件没有租约那一步（形状不同，硬套要塞空实参），该不该有租约未查证，挂 #G1-CD。
+**它的反向是 `Detach`（四步），两侧都已进闸门**：`ComponentLifecyclePairingRatchetTests`
+的 snapshot 族现在"起"与"收"都认这个家——只认一侧会在收口之后红"起 1/8"（2026-09-25 实测）。
+
 **对比度取色只认一处**：在玻璃面板上从候选色里挑一个读得清的前景，一律
 `Theme/AdaptiveBrushFactory.cs`（`Create(...)` 出画刷、`Pick(...)` 只出颜色，后者可直接单测）。
 策略是"取第一个在**所有**背景样本上都达标的候选；一个都不达标就退而取对比度最高的那个"，

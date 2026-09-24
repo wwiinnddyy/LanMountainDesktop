@@ -93,13 +93,10 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        _isAttached = true;
-        ReloadLanguageCode();
-
-        StudySnapshotSubscription.Subscribe(ref _isSubscribed, _studyAnalyticsService, _renderGate.HandleSnapshotUpdated);
-
-        UpdateMonitoringLeaseState();
-        _renderGate.Queue(_studyAnalyticsService.GetSnapshot());
+        StudyComponentLifecycle.Attach(
+            ref _isAttached, ref _isSubscribed, _studyAnalyticsService, _renderGate,
+            ReloadLanguageCode, UpdateMonitoringLeaseState,
+            () => _renderGate.Queue(_studyAnalyticsService.GetSnapshot()));
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)

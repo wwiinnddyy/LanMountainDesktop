@@ -91,12 +91,9 @@ public partial class StudyDeductionReasonsWidget : UserControl, IDesktopComponen
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        _isAttached = true;
-        ReloadLanguageCode();
-        StudySnapshotSubscription.Subscribe(ref _isSubscribed, _studyAnalyticsService, _renderGate.HandleSnapshotUpdated);
-
-        UpdateMonitoringLeaseState();
-        RefreshVisual();
+        StudyComponentLifecycle.Attach(
+            ref _isAttached, ref _isSubscribed, _studyAnalyticsService, _renderGate,
+            ReloadLanguageCode, UpdateMonitoringLeaseState, RefreshVisual);
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)

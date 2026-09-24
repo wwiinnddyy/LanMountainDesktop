@@ -103,4 +103,49 @@ public sealed class StudyComponentLifecycleTests
         Assert.Equal(["reflow", "repaint"], order);
         Assert.Equal(Colors.White, seen);
     }
+
+    /// <summary>
+    /// 挂载那五步里唯一有后果的一条：<b>状态位必须最先落</b>。
+    /// <c>StudyMonitoringLease.Sync(…, isAttached, isOnActivePage)</c> 在 <c>!isAttached</c> 时走的是 Release
+    /// （<c>Services/StudyAnalyticsMonitoringLeaseCoordinator.cs:110</c>），所以状态位落在重算租约之后，
+    /// 组件"从桌面摘掉再放回来"那一次就拿不到租约——症状是学习监测不再采数，且不报错。
+    /// 假服务是省掉的：传 <c>isSubscribed = true</c> 让家走进"已经订过"那一支，<c>null!</c> 就不会被碰。
+    /// </summary>
+    [Fact]
+    public void Attach_FlipsTheAttachedFlagBeforeEveryStepThatReadsIt()
+    {
+        var isAttached = false;
+        var isSubscribed = true;
+        var order = new List<string>();
+        var seenByReload = false;
+        bool? seenByLease = null;
+        bool? seenByRefresh = null;
+        var renderGate = new StudySnapshotRenderGate(() => isAttached, _ => { });
+
+        StudyComponentLifecycle.Attach(
+            ref isAttached,
+            ref isSubscribed,
+            null!,
+            renderGate,
+            () =>
+            {
+                order.Add("reload");
+                seenByReload = isAttached;
+            },
+            () =>
+            {
+                order.Add("lease");
+                seenByLease = isAttached;
+            },
+            () =>
+            {
+                order.Add("refresh");
+                seenByRefresh = isAttached;
+            });
+
+        Assert.Equal(["reload", "lease", "refresh"], order);
+        Assert.True(seenByReload);
+        Assert.True(seenByLease);
+        Assert.True(seenByRefresh);
+    }
 }

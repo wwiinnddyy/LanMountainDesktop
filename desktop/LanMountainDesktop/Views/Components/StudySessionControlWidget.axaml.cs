@@ -105,13 +105,14 @@ public partial class StudySessionControlWidget : UserControl, IDesktopComponentW
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        _isAttached = true;
-        ReloadLanguageCode();
-        StudySnapshotSubscription.Subscribe(ref _isSubscribed, _studyAnalyticsService, _renderGate.HandleSnapshotUpdated);
-
-        UpdateMonitoringLeaseState();
-        UpdateTimerState();
-        RefreshVisual();
+        StudyComponentLifecycle.Attach(
+            ref _isAttached, ref _isSubscribed, _studyAnalyticsService, _renderGate,
+            ReloadLanguageCode, UpdateMonitoringLeaseState,
+            () =>
+            {
+                UpdateTimerState();
+                RefreshVisual();
+            });
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)

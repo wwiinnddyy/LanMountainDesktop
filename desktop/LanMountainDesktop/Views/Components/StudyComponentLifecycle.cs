@@ -6,8 +6,9 @@ using LanMountainDesktop.Services;
 namespace LanMountainDesktop.Views.Components;
 
 /// <summary>
-/// 学习组件生命周期里被各抄一遍的不变量，目前两条：detach 的固定四步、活跃页上下文的固定三步。
-/// 第一件是 detach 的固定四步：落"未挂载"状态位 → 放监测租约 → 清渲染门 → 退订快照事件。
+/// 学习组件生命周期里被各抄一遍的不变量，目前有四件：挂载那五步、detach 的固定四步、
+/// 活跃页上下文的固定三步、尺寸变了要重算的那两件事。
+/// detach 那件是：落"未挂载"状态位 → 放监测租约 → 清渲染门 → 退订快照事件。
 /// 顺序是有意的：租约与退订都发生在 _isAttached=false 之后，反过会让协调器以为还有活着的页面。
 /// 这四步此前在 6 个学习组件里逐字各抄一份——漏抄最后一行就是一个还在被回调的事件泄漏
 /// （本仓真发生过两次：组件库预览换选中项、组件浮窗关停）。
@@ -25,6 +26,33 @@ internal static class StudyComponentLifecycle
         StudyMonitoringLease.Release(ref monitoringLease);
         renderGate.Clear();
         StudySnapshotSubscription.Unsubscribe(ref isSubscribed, studyAnalyticsService, renderGate.HandleSnapshotUpdated);
+    }
+
+    /// <summary>
+    /// <see cref="Detach"/> 的反向那五步：落"已挂载"状态位 → 重读自己的显示设置 → 订快照事件 →
+    /// 重算监测租约 → 按各家口径刷新一次。
+    /// <b>状态位必须最先落</b>，这条有后果：<c>StudyMonitoringLease.Sync(…, isAttached, isOnActivePage)</c>
+    /// 在 <c>!isAttached</c> 时走的是 <see cref="StudyMonitoringLease.Release"/>（见
+    /// <c>Services/StudyAnalyticsMonitoringLeaseCoordinator.cs:110</c>），所以把状态位落在重算之后，
+    /// 组件"从桌面摘掉再放回来"那一次就拿不到租约——症状是学习监测不再采数，且不报错。
+    /// 订事件与重算租约之间的先后今天换不出差别（两件事不读对方的结果），这里保留五份抄本原本的顺序。
+    /// 最后一步各家不同（重画视觉 / 把最新快照排进渲染门 / 还要先复位一次计时器），所以留成实参；
+    /// 第一个实参也留成口子：环境面板重读的是 <c>ReloadDisplaySettings</c>，其余四个是 <c>ReloadLanguageCode</c>。
+    /// </summary>
+    internal static void Attach(
+        ref bool isAttached,
+        ref bool isSubscribed,
+        IStudyAnalyticsService studyAnalyticsService,
+        StudySnapshotRenderGate renderGate,
+        Action reloadSettings,
+        Action updateMonitoringLeaseState,
+        Action refresh)
+    {
+        isAttached = true;
+        reloadSettings();
+        StudySnapshotSubscription.Subscribe(ref isSubscribed, studyAnalyticsService, renderGate.HandleSnapshotUpdated);
+        updateMonitoringLeaseState();
+        refresh();
     }
 
     /// <summary>

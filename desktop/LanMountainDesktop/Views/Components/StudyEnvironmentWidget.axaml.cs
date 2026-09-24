@@ -80,12 +80,9 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        _isAttached = true;
-        ReloadDisplaySettings();
-        StudySnapshotSubscription.Subscribe(ref _isSubscribed, _studyAnalyticsService, _renderGate.HandleSnapshotUpdated);
-
-        UpdateMonitoringLeaseState();
-        RefreshVisual();
+        StudyComponentLifecycle.Attach(
+            ref _isAttached, ref _isSubscribed, _studyAnalyticsService, _renderGate,
+            ReloadDisplaySettings, UpdateMonitoringLeaseState, RefreshVisual);
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)

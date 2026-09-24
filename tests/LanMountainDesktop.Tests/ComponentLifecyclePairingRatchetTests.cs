@@ -17,9 +17,9 @@ namespace LanMountainDesktop.Tests;
 /// ① 只查同时出现 <c>AttachedToVisualTree</c> 或 <c>DetachedFromVisualTree</c> 的文件（组件才有 detach 时机）；
 /// ② 监视租约<b>不在</b>这张表里：它走 <c>StudyMonitoringLease.Sync(ref …, 状态位)</c>，
 ///    取/放由家按状态对账，按动词数只会得出假结论；
-/// ③ "收"的一侧要认家：snapshot 族认 <c>StudyComponentLifecycle.Detach</c>、
-///    timer 族认 <c>ComponentRefreshLifetime.Detach</c>（表是它内部停的）。
-///    不认的话这条判据会反过来逼代码保留逐字复制——本末倒置。
+/// ③ "起"与"收"两侧都要认家：snapshot 族认 <c>StudyComponentLifecycle.Attach</c> /
+///    <c>StudyComponentLifecycle.Detach</c>、timer 族认 <c>ComponentRefreshLifetime.Detach</c>
+///    （表是它内部停的）。不认的话这条判据会反过来逼代码保留逐字复制——本末倒置。
 /// 每族的"起/收"条数还各钉一个下限：把 <c>Stop()</c> 删掉、或者把某一族的正则改窄，
 /// 都会让"未配对 0 处"照样成立，那种静默收窄比红灯贵。
 /// 两道哨兵各管一半：2026-09-23 实测摘掉一个组件的 <c>Detach(...)</c> 调用，
@@ -63,7 +63,12 @@ public sealed class ComponentLifecyclePairingRatchetTests
                 RegexOptions.Compiled),
             true, 1, 1),
         new("snapshot",
-            new Regex(@"StudySnapshotSubscription\s*\.\s*Subscribe", RegexOptions.Compiled),
+            // 与下面"收的一侧认家"完全对称：2026-09-25 把 7 个学习组件挂载那五步收进
+            // StudyComponentLifecycle.Attach（那五步里才是真 Subscribe），起的一侧必须也认这个家，
+            // 否则这条判据会反过来把刚收掉的抄本再逼回来。下限 8 不动：现在是 1 处裸 Subscribe
+            // （StudySessionHistoryWidget 没有租约那一步，形状不同，没收）+ 7 处走家 = 8。
+            new Regex(@"StudySnapshotSubscription\s*\.\s*Subscribe|StudyComponentLifecycle\s*\.\s*Attach",
+                RegexOptions.Compiled),
             // 收的一侧也算上"整批交给家"的写法：学习组件的 detach 四步已收进
             // StudyComponentLifecycle.Detach（里面才是真 Unsubscribe）。
             // 判据必须认这个家，否则它会反过来逼代码保留逐字复制——那是本末倒置。
