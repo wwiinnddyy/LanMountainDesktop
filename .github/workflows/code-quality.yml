@@ -36,8 +36,14 @@ jobs:
       - name: Restore
         run: dotnet restore ${{ env.Solution_Name }}
 
+      # -m:1 不是风格：本地一直用单节点构建就是因为多节点复用会让 Avalonia 的 XAML 任务与
+      # 上一项目的输出抢同一个 dll。2026-09-25 run 36059631386 在 CI 里实测到这个形状——
+      # 编译诊断 0 条，只有一句 `Avalonia error AVLN9999: The process cannot access the file
+      # '…obj\Release\net10.0\LanMountainDesktop.dll' because it is being used by another process`，
+      # 作业停在 Build、后面的 Test / Check unused members 全没执行。
+      # 若换了 -m:1 还复现，下一步才是给它加重跑兜底（届时写清"上游修好后删哪段"）。
       - name: Build
-        run: dotnet build ${{ env.Solution_Name }} -c Release --no-restore -v minimal
+        run: dotnet build ${{ env.Solution_Name }} -c Release --no-restore -m:1 -v minimal
 
       # 661 条测试此前在 CI 里一条都没跑：全仓唯一的 dotnet test 在 airapp-sdk-publish.yml，
       # 而且 --filter 只挑 AirAppSdkVersionConsistencyTests。
