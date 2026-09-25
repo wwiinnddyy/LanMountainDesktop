@@ -350,8 +350,7 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
 
     private void UpdateRefreshButtonState()
     {
-        ComponentBusyVisual.Apply(RefreshButton, !_feed.IsBusy, !_isAttached, dimmedOpacity: 0.85);
-        ComponentBusyVisual.Fade(RefreshIcon, _feed.IsBusy, dimmedOpacity: 0.56);
+        ComponentBusyVisual.ApplyToFeed(RefreshButton, RefreshIcon, _feed.IsBusy);
     }
 
     private void UpdateLanguageCode() =>

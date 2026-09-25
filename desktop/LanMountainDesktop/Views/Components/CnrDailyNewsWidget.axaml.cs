@@ -326,7 +326,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
 
     // 淡出故意只看"没上台面"、不跟禁用同判据：这是收口前的既有形状，保留并写明分叉（见家的注释）。
     private void UpdateRefreshButtonState() =>
-        ComponentBusyVisual.Apply(RefreshButton, !_feed.IsBusy && _isAttached, !_isAttached, dimmedOpacity: 0.6);
+        ComponentBusyVisual.Apply(RefreshButton, !_feed.IsBusy && _isAttached);
 
     private void UpdateNewsInteractionState()
     {

@@ -2229,6 +2229,58 @@ public sealed class SourceIntegrityTests
             $"{offenders.Count} 处重复的语言码退档实现：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
     }
 
+    /// <summary>
+    /// 忙态淡出值只认家里那一处（<see cref="ComponentBusyVisual.DimmedOpacity"/>，2026-09-26 定档 0.60）。
+    ///
+    /// 此前七个组件各写两份语句，实测淡出值 <c>0.56 / 0.58 / 0.60 / 0.65 / 0.85</c> 五档并存，
+    /// 且 <c>Cnr</c>、每日一词 1x1、每日诗词三家把"禁用"与"淡出"写成两个判据——
+    /// 症状是按钮在忙的时候点不动、画面又完全没有"正在取数"的迹象。数值与第二判据一旦允许回到调用点，
+    /// 这两件事都会重新长出来，所以这里双向拦：① 不许再传 <c>dimmedOpacity</c>；
+    /// ② 不许传第三个位置参数（那就是从前的"第二判据"逃生口）；
+    /// ③ 覆盖面下限拦住"调用点被改名或整体删光导致这条守卫静默变绿"。
+    /// 三个注入点各验过：种回数值、种回第三参数、把下限抬到测不上的值，都只红这一条。
+    /// </summary>
+    [Fact]
+    public void BusyVisualDimValue_LivesInTheHomeOnly()
+    {
+        // 实测七个组件共 8 处调用（每日一词 1x1 与 2x2 各一处 ApplyToFeed，其余每家一处）。
+        const int CallSiteFloor = 8;
+        var namedValue = new Regex(@"ComponentBusyVisual\.\w+\([^)]*dimmedOpacity");
+        var secondCriterion = new Regex(
+            @"ComponentBusyVisual\.Apply\([^()]*,[^()]*,[^()]*\)|ComponentBusyVisual\.Fade\([^()]*,[^()]*,[^()]*\)");
+        var offenders = new List<string>();
+        var callSites = 0;
+
+        foreach (var file in SourceFiles())
+        {
+            var relative = RelativeToRepo(file);
+            foreach (var (line, number) in CodeLines(file))
+            {
+                if (!line.Contains("ComponentBusyVisual.", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                callSites++;
+                if (namedValue.IsMatch(line))
+                {
+                    offenders.Add($"{relative}:{number} 又自己给了淡出值——要换档改 ComponentBusyVisual.DimmedOpacity");
+                }
+                else if (secondCriterion.IsMatch(line))
+                {
+                    offenders.Add($"{relative}:{number} 又给了一遍第二判据——禁用与淡出从此是同一个位");
+                }
+            }
+        }
+
+        Assert.True(
+            callSites >= CallSiteFloor,
+            $"忙态调用点实测 {callSites} 处，低于下限 {CallSiteFloor}——调用点被改名或删光会让这条守卫永远绿，先确认它们去了哪");
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 处绕开忙态淡出档：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
     private static readonly Regex MethodStart = new(
         @"^\s{4}(?:private|internal|public|protected|override|static|async|\[)", RegexOptions.Compiled);
 

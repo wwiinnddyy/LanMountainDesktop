@@ -489,8 +489,8 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
 
     private void UpdateRefreshButtonState()
     {
-        ComponentBusyVisual.Apply(RefreshButton, !_isRefreshing, !_isAttached, dimmedOpacity: 0.85);
-        ComponentBusyVisual.Fade(RefreshGlyphTextBlock, _isRefreshing, dimmedOpacity: 0.56);
+        ComponentBusyVisual.Apply(RefreshButton, !_isRefreshing);
+        ComponentBusyVisual.Fade(RefreshGlyphTextBlock, _isRefreshing);
     }
 
     private static string PrepareAuthorText(string? rawText, int targetUnits, int maxLines)
