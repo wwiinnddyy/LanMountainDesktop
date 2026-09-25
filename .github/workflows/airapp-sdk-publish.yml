@@ -61,11 +61,17 @@ jobs:
       - name: Resolve version
         id: version
         shell: pwsh
+        env:
+          # 手工触发时填的版本走环境变量传给脚本，不直接拼进命令行——
+          # 拼进去就是一条"输入内容会出现在 shell 脚本里"的注入面。
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          $version = '${{ github.event.inputs.version }}'
-          if ([string]::IsNullOrWhiteSpace($version) -and '${{ github.ref_type }}' -eq 'tag') {
+          $version = $env:INPUT_VERSION
+          if ([string]::IsNullOrWhiteSpace($version) -and $env:REF_TYPE -eq 'tag') {
             # airapp-sdk-v1.0.0 -> 1.0.0
-            $version = '${{ github.ref_name }}' -replace '^airapp-sdk-v', ''
+            $version = $env:REF_NAME -replace '^airapp-sdk-v', ''
           }
           "value=$version" >> $env:GITHUB_OUTPUT
           if ([string]::IsNullOrWhiteSpace($version)) {
@@ -74,20 +80,29 @@ jobs:
             Write-Host "Publishing version $version."
           }
 
+      # 这道作业里没有 Restore，而宿主 csproj 会用 Exec 以 --no-restore 去编 AirAppHost
+      # （LanMountainDesktop.csproj:107），于是 AirAppHost 的 obj/project.assets.json 根本不存在：
+      # 2026-09-25 打 airapp-sdk-v1.0.1 时实测红在 error NETSDK1004（assets file not found），
+      # 后面 Pack / Push 一步都没走到。与 Quality Check 作业同一先例（那边有 Restore 步）。
+      - name: Restore
+        run: dotnet restore LanMountainDesktop.slnx
+
       - name: Verify the single version line
         # 版本一致性由 AirAppSdkVersionConsistencyTests 守卫：
         # AirAppSdkInfo / AirAppSdk 包 / Core 包 / 模板默认版本必须一致。
         run: >
           dotnet test tests/LanMountainDesktop.Tests/LanMountainDesktop.Tests.csproj
-          -c Release
+          -c Release --no-restore
           --filter "FullyQualifiedName~AirAppSdkVersionConsistencyTests"
 
       - name: Pack
         shell: pwsh
+        env:
+          PACKAGE_VERSION: ${{ steps.version.outputs.value }}
         run: |
           $packArgs = @('-Configuration', 'Release', '-OutputPath', '.\artifacts\nuget')
-          if (-not [string]::IsNullOrWhiteSpace('${{ steps.version.outputs.value }}')) {
-            $packArgs += @('-Version', '${{ steps.version.outputs.value }}')
+          if (-not [string]::IsNullOrWhiteSpace($env:PACKAGE_VERSION)) {
+            $packArgs += @('-Version', $env:PACKAGE_VERSION)
           }
           .\scripts\Pack-AirAppPackages.ps1 @packArgs
 
