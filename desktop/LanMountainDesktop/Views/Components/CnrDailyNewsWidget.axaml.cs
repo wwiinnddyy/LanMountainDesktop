@@ -324,11 +324,9 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         });
     }
 
-    private void UpdateRefreshButtonState()
-    {
-        RefreshButton.IsEnabled = !_feed.IsBusy && _isAttached;
-        RefreshButton.Opacity = _isAttached ? 1.0 : 0.6;
-    }
+    // 淡出故意只看"没上台面"、不跟禁用同判据：这是收口前的既有形状，保留并写明分叉（见家的注释）。
+    private void UpdateRefreshButtonState() =>
+        ComponentBusyVisual.Apply(RefreshButton, !_feed.IsBusy && _isAttached, !_isAttached, dimmedOpacity: 0.6);
 
     private void UpdateNewsInteractionState()
     {

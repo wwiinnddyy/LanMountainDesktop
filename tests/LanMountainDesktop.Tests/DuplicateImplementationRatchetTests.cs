@@ -532,11 +532,26 @@ public sealed class DuplicateImplementationRatchetTests
     /// "<c>OnSizeChanged</c> 5 处 5 文件逐字相同"，那 5 处今天已收进 <c>RefreshOnResize</c>；
     /// 现在同签名只剩 2 处（FileManager / RemovableStorage 那对空处理器），正对照改成按哈希点名。
 
+    /// 12 → 11 收一族：<c>UpdateRefreshButtonState</c>（"取数在忙 / 面板没上台面"怎么画到刷新按钮上）。
+    /// 逐字相同的那对是 Baidu 与 Ifeng；<b>另外五家各漂开一点，这把尺子从头到尾看不见它们</b>——
+    /// 所以这一笔的真实规模是 <b>7 家</b>不是 2 家，量到的口径差异有三类：
+    /// 淡出值 <c>0.56 / 0.58 / 0.60 / 0.65 / 0.85</b> 五档并存；禁用判据有 <c>_feed.IsBusy</c> 与
+    /// <c>_isRefreshing</c>（每日诗词没走 <c>ComponentFeedRefresh</c>，见 #G1-CG）两种；
+    /// 而 <b>Cnr 与每日一词 1x1 把"禁用"与"淡出"写成两个判据</b>（忙→禁用，但只有"没上台面"才淡），
+    /// 症状是"按钮点了没反应，画面上却完全没有正在取数的样子"。<c>Bilibili</c>/<c>汇率</c> 等没有这个方法。
+    /// 家 <c>ComponentBusyVisual</c> 只收写法、<b>不统一口径</b>：淡出值与两个判据都由调用方显式给，
+    /// 默认重载是"禁用即淡出"（同判据），要让两者分开必须走那条三参数的重载——
+    /// 于是那两家的分叉从"散在七份各写两行的实现里没人对账"变成"调用点上明写"。
+    /// 该不该统一（尤其"忙的时候要不要淡"）属视觉决定，留给 #G1-AF 那类账，这里不代做。
+    /// 行为钉 <c>ComponentBusyVisualTests</c> 8 格（同判据、分开判据、只淡出不碰可交互、五档各按调用方给的数），
+    /// 两个变异验过：把 <c>Fade</c> 的三元式改成恒淡→红 3 格；把同判据重载的 <c>!enabled</c> 写成 <c>enabled</c>→红 6 格。
+    /// 漂移面这一笔之后实测仍是 189（没顶破上限），因为七个壳彼此还是七种体。
+    ///
     /// 13 → 12 收一族：<c>ResolveCulture</c>（语言码 → CultureInfo，认不出别抛）。守卫基线一次报出 <b>5 家 8 处</b>——比我按 <c>catch (CultureNotFoundException)</c> 数的 4 处多一家： <c>DailyArtworkWidget</c> 那份写的是 <c>catch { }</c> 兜住一切，所以行级 grep 看不见它。现在"怎么试、失败长什么样"只认 <c>Services/LanguageCulture.GetOrFallback</c> 一处，<b>退哪一档仍由各调用点自己说</b>（装界面语言退 <c>LanguageCodes.Default</c>、格式化退 <c>InvariantCulture</c>，这是内容口径差异，留给 #G1-BL 那类账，不在这里替谁选边）。
     /// 三条实测语义边界写在家注释里，因为它们决定"退档到底盖不盖得住"：<c>GetCultureInfo("")</c> <b>不抛</b>（给不变区域，所以调用方传的 fallback 对空码不起作用——今天 5 个调用点传的都先过 <c>LanguageCodes.Normalize</c>，够不到）；纯空白与汉字串才抛 <c>CultureNotFoundException</c>；而 <c>"not-a-real-tag-xx"</c> <b>成功</b>返回 <c>Name="not"</c>——拼错语言码的症状不是退档，是安静地用一个不存在的档位，要防它得在码表那一头。后两条按现状钉成测试（<c>LanguageCulture_…</c> 4 格），哪天有人收紧码表，这两格会红着提醒。
     /// 守卫 <c>CultureResolution_LivesInExactlyOnePlace</c> 拦两条（家外出现该 catch、或 <c>ResolveCulture</c> 自己还接失败），两个方向都变异验过：把 Launcher 那份内联抄本装回去→红并点名 2 处；只把判据里的家路径改成一个不存在的名字→红（家被改名后守卫会永远绿，这条自己也要有红点）。允许 <c>=&gt; LanguageCulture.GetOrFallback(…)</c> 的一行转手壳：调用点实测 15 处，把壳全拆了会让"我这档退哪儿"在每条现场再写一遍，那才是第二个真源。
 
-    private const int IdenticalBodyFamilyCeiling = 12;
+    private const int IdenticalBodyFamilyCeiling = 11;
 
     /// 18 → 15 一次收三族，全是同一个签名 <c>ResolveScale</c> 的三个不同体（#66 队列里那条"三对"）：
     /// <list type="bullet">

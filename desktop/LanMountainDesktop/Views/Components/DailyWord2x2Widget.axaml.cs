@@ -295,9 +295,8 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
 
     private void UpdateRefreshButtonState()
     {
-        RefreshButton.IsEnabled = !_feed.IsBusy;
-        RefreshButton.Opacity = _feed.IsBusy ? 0.60 : 1.0;
-        RefreshIcon.Opacity = _feed.IsBusy ? 0.60 : 1.0;
+        ComponentBusyVisual.Apply(RefreshButton, !_feed.IsBusy, dimmedOpacity: 0.60);
+        ComponentBusyVisual.Fade(RefreshIcon, _feed.IsBusy, dimmedOpacity: 0.60);
     }
 
     private void UpdateLanguageCode() =>

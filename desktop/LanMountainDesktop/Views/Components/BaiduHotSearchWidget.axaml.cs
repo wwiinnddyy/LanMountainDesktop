@@ -363,12 +363,8 @@ public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget
         }
     }
 
-    private void UpdateRefreshButtonState()
-    {
-        var enabled = _isAttached && !_feed.IsBusy;
-        RefreshButton.IsEnabled = enabled;
-        RefreshButton.Opacity = enabled ? 1.0 : 0.65;
-    }
+    private void UpdateRefreshButtonState() =>
+        ComponentBusyVisual.Apply(RefreshButton, _isAttached && !_feed.IsBusy, dimmedOpacity: 0.65);
 
     private void UpdateLanguageCode() =>
         _languageCode = _localizationService.ResolveLanguageCode(() => _appSettingsService.Load().LanguageCode);

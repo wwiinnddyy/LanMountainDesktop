@@ -420,11 +420,8 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
         }
     }
 
-    private void UpdateRefreshButtonState()
-    {
-        RefreshButton.IsEnabled = !_feed.IsBusy;
-        RefreshButton.Opacity = _feed.IsBusy ? 0.58 : 1.0;
-    }
+    private void UpdateRefreshButtonState() =>
+        ComponentBusyVisual.Apply(RefreshButton, !_feed.IsBusy, dimmedOpacity: 0.58);
 
     private void UpdateLanguageCode() =>
         _languageCode = _localizationService.ResolveLanguageCode(() => _appSettingsService.Load().LanguageCode);

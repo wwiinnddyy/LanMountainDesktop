@@ -480,6 +480,17 @@ await 完<b>重新问一次</b>挂载与取消、"没取到"与抛异常都画�
 行为钉 `ComponentFeedRefreshTests` 7 格 + `DailyWordFeedTests` 4 格；"先换发再取消旧源"那一支**没钉**并写明原因
 （单飞守卫下从公开入口走不到，属防御性写法，别当成已验证的路径）。
 
+**"把忙态画到刷新按钮上"只认 `Views/Components/ComponentBusyVisual.cs` 一家**（2026-09-25：七个组件各写两份
+语句，`Baidu` 与 `Ifeng` 逐字相同、其余五家各漂开一点）：`Apply(button, enabled, dimmedOpacity)` 是默认形状
+（**禁用即淡出，同一个判据**），`Apply(button, enabled, dimmed, dimmedOpacity)` 只给"两个判据确实要分开"的组件用
+并且要在调用点说清为什么，`Fade(visual, dimmed, dimmedOpacity)` 画那些不可交互的字形/图标。
+**家只收写法、没统一任何口径**，因为量到的分歧都是既成事实：淡出值五档并存（0.56 / 0.58 / 0.60 / 0.65 / 0.85）、
+禁用判据两种（`_feed.IsBusy` 六家、`_isRefreshing` 一家——它没走 `ComponentFeedRefresh`，见 #G1-CG），
+而 `CnrDailyNewsWidget` 与每日一词 1x1 把禁用与淡出写成两个判据
+（忙→禁用，却只有"没上台面"才淡），症状是**按钮点了没反应、画面上又完全没有在取数的样子**。
+这三件事要不要统一是视觉决定，已挂 #G1-CH 等拍板；在那之前别把某家的淡出值"顺手对齐"成另一家的数，
+也别把那两个分开的判据合并——合并就是替 #G1-CH 做完决定。行为钉 `ComponentBusyVisualTests` 8 格。
+
 **组件"挂上台面"那三步只认 `Views/Components/ComponentRefreshLifetime.Attach` 一家**（2026-09-25：
 每日一词 1x1/2x2 各抄一份<b>逐字相同的四行</b>，另有 7 个同骨架的组件）：落"已附着"位 → 按设置起停表 →
 （可选：画刷新按钮等控件收尾）→ 立刻取一次数。调用形状是
