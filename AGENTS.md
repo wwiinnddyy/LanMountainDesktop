@@ -611,8 +611,10 @@ AirApp 子进程的语言兜底在 `AirAppSdk` 的 `AirAppLocalizer` 里，它�
 （2026-09-25：5 个组件各抄一份逐字相同的两行）：调用形状是
 `RefreshOnResize(RootBorder, UpdateAdaptiveLayout, ApplyTypographyByBackground)`——先按新尺寸重排，
 再把<b>重排之后现读</b>的那块面板底色交给各自的重绘回调。参数收面板本身而不是画刷，所以调用方没法提前把旧画刷读走。
-剩下两个学习组件<b>不是少抄一步，是另一种架构</b>：`StudySessionHistoryWidget` 在尺寸变化时走
-`RenderSnapshot`（里面本来就现取 `StudyPanelPalette.Resolve`），`StudyEnvironmentWidget` 一次都不碰取色家、
+剩下两个学习组件<b>不是少抄一步，是另一种架构</b>：`StudySessionHistoryWidget` 在尺寸/主题变化时走
+`RepaintWithSnapshot`（先 `_currentSnapshot ??= GetSnapshot()` 再画；2026-09-25 之前是
+`if (_currentSnapshot is not null)` 才画，于是"首帧之前/学习开关关着"那一段时间与主题变化<b>整个不重画</b>，
+而配色恰恰是在 `RenderSnapshot` 里现取现算的——这条已修），`StudyEnvironmentWidget` 一次都不碰取色家、
 文字色全走 XAML 的 `DynamicResource Adaptive*`（主题翻档自动跟）。所以别把它们改成这一家——
 那等于替"采样取色派 vs 主题资源派"选边，属设计决定，已挂 #G1-CD 等拍板。
 

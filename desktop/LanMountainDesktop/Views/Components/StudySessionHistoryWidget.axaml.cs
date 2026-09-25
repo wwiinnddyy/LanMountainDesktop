@@ -119,18 +119,26 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
     {
         UpdateAdaptiveLayout();
-        if (_currentSnapshot is not null)
-        {
-            RenderSnapshot(_currentSnapshot);
-        }
+        RepaintWithSnapshot();
     }
 
     private void OnActualThemeVariantChanged(object? sender, EventArgs e)
     {
-        if (_currentSnapshot is not null)
-        {
-            RenderSnapshot(_currentSnapshot);
-        }
+        RepaintWithSnapshot();
+    }
+
+    /// <summary>
+    /// 重画一次，手里没有快照就向服务取一张再画。
+    /// 原来两处都是 <c>if (_currentSnapshot is not null)</c> 才画，于是"首帧之前"或"学习开关关着"
+    /// 的时候尺寸与主题变化<b>整个不重画</b>——而面板底色、标题与各行的前景色恰恰是在
+    /// <see cref="RenderSnapshot"/> 里现取现算的，跳过的症状是"翻档之后文字对比度停在上一档"，不报错。
+    /// 取快照这一步与 <c>RefreshFromService</c> 同源（<c>GetSnapshot()</c> 的返回值非空，
+    /// 本组件与 peers 的渲染门都无条件调它），所以这里不会新增异常路径。
+    /// </summary>
+    private void RepaintWithSnapshot()
+    {
+        _currentSnapshot ??= _studyAnalyticsService.GetSnapshot();
+        RenderSnapshot(_currentSnapshot);
     }
 
     private bool CanRenderSnapshot()
