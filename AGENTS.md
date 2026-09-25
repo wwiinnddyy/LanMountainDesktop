@@ -126,6 +126,22 @@ AirApp 本地包生成：
   并把两个哈希都报出来，基线一个字节不改、台账也不追加。两个方向都种过样本验过：把 `AirAppComponentOptions.ComponentId`
   从 `set` 改回 `init`（就是那次破坏的形状）带着录制开关跑 → 红且台账仍 1 行；同样的破坏加上 `SdkVersion` 递增到 1.0.1 再录 →
   绿、台账变 2 行。它管不了已经发生的那一次（台账是破坏之后才开的账），那一半仍由 `Category=EcosystemProbe` 那 8 行真加载兜着。
+- **抬一次 SDK 版本线的完整动作**（2026-09-25 第一次走完，六家外部轻应用从 6/8 回到 8/8）：
+  ① 六处同步（`AirAppSdkInfo.SdkVersion` + `ApiVersion`、SDK / Core / Template 三个 csproj、
+  模板 `template.json` 的 `airAppSdkVersion` 默认值——`AirAppSdkVersionConsistencyTests` 逐条拦）；
+  模板 `content/airapp.json` 里的 `apiVersion` 也要跟着改，那是给新工程的初值。
+  ② 设 `LMD_UPDATE_AIRAPP_SDK_BASELINE=1` 重录一次基线，台账会自动多出一行 `1.0.1 <新哈希>`——
+  基线里唯一该变的就是 `Version=1.0.1.0` 那几处装配限定名，别的全等才说明没录错东西。
+  ③ `scripts/Pack-AirAppPackages.ps1 -Configuration Release -OutputPath ./artifacts/nuget` 出三个本地包。
+  ④ 打 tag `airapp-sdk-v1.0.1` 由 CI 发（`airapp-sdk-publish.yml` 有 `packages: write`，本地没有 PAT 也能发）。
+  ⑤ 六个外部仓库各改 `PackageReference` 版本 + `airapp.json` 的 `apiVersion` 再 Release 重建；
+  还原时**别用 `--source` 覆盖**（各家 NuGet.config 是 `<clear/>` + GitHub Packages，本地没凭据），
+  用 `dotnet restore <proj> -p:RestoreAdditionalProjectSources="<仓库>\artifacts\nuget"` 只加一个源。
+  ⑥ 复跑 `--filter "Category=EcosystemProbe"`，目标 8/8。
+  外部那六家绑不绑得上还有个隐藏判据：`ExcludeAssets` 必须写 `"runtime;native"`——只写 `runtime` 会留下
+  一个**空的 `runtimes/` 目录骨架**，宿主打包校验就拒载（实测 SchedulePlugin 就是这样，其余五家一直是对的）。
+  宿主侧另外两件事：市场安装只比 **major**，装载期靠真绑定；抬 `ApiVersion` 不会把老包预先挡在门外
+  （没有任何一处按字符串全等做预检），老包真绑不上时才由人话版报错拦下。
 - **装 AirApp 时那几次落盘动作只认两处**：带重试的复制 / 改名 / 删除一律
   `core/LanMountainDesktop.Core/IO/FileOperationRetryHelper`（120/250/500ms 三档、只吞 `IOException` 与
   `UnauthorizedAccessException`、耗尽后把最后一条异常原样抛出）；"旧包删不动就挪进 `.pending` 等下一次安装收尾"

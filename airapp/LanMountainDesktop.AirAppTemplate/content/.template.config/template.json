@@ -47,7 +47,7 @@
     "airAppSdkVersion": {
       "type": "parameter",
       "datatype": "text",
-      "defaultValue": "1.0.0",
+      "defaultValue": "1.0.1",
       "description": "LanMountainDesktop.AirAppSdk package version.",
       "replaces": "__AIRAPP_SDK_VERSION__"
     },

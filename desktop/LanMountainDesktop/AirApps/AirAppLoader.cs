@@ -876,8 +876,12 @@ public sealed class AirAppLoader
         if (Directory.Exists(runtimesDirectory) &&
             !Directory.EnumerateFiles(runtimesDirectory, "*", SearchOption.AllDirectories).Any())
         {
+            // 2026-09-25 生态体检真报过一次：SchedulePlugin 的 PackageReference 只写了 ExcludeAssets="runtime"
+            // （其余五家都是 "runtime;native"），于是 NuGet 把依赖的原生资产目录骨架建出来却没放文件，
+            // 产物里就剩一个空 runtimes/。作者看到的只是一句"空目录"，想不到是那个分号。
             throw new InvalidOperationException(
-                $"AirApp '{manifest.Id}' contains an empty 'runtimes' directory. Native/runtime assets must be packaged together with the AirApp.");
+                $"AirApp '{manifest.Id}' contains an empty 'runtimes' directory. Native/runtime assets must be packaged together with the AirApp. "
+                + "An empty directory usually means the project excluded runtime assets but not native ones: set ExcludeAssets=\"runtime;native\" on the SDK PackageReference.");
         }
     }
 
