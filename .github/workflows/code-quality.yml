@@ -56,26 +56,45 @@ jobs:
       # EcosystemProbe 跑的是同级仓库里的外部 AirApp 产物，CI 上没有那些产物（探针会动态 Skip，
       # 全 Skip 的绿不算证据），所以它只在本地跑：dotnet test … --filter "Category=EcosystemProbe"。
       #
-      # 重跑一次是因为 Avalonia headless 的每测试会话在清理阶段有线程归属竞态
-      # （2026-09-24 本地实测：全量 6 趟里 3 趟各挂 1 条、快速子集 8 趟里 3 趟各挂 1 条，
-      #  测试体本身是过的；详见 tests/LanMountainDesktop.Tests/AssemblyInfo.Xunit.cs 里已排除的两条修法）。
-      # 连续两次失败才拦，真缺陷仍然会被挡住。
+      # 重跑是因为 Avalonia headless 的会话建立处有线程归属竞态（栈停在 EnsureIsolatedApplication →
+      # new Compositor → DefaultRenderLoop.Add → Dispatcher.VerifyAccess，报成 "Test Case Cleanup Failure"）。
+      # 2026-09-26 实测过两件事：① 病根不是 xUnit 换线程（会话线程实测稳定，见
+      #    tests/LanMountainDesktop.Tests/AssemblyInfo.Xunit.cs 里改正过的诊断）；② 一次重跑不够——
+      #    35b75b6 与 e7604b7 两个 push 都是"第一趟红、重跑还是红"，各挂 1~3 条，全落在
+      #    ComponentRefreshLifetime / SecondHandChoice / DailyWordAutoRefresh 这些用 [AvaloniaFact] 的类上。
+      # 所以这里给 3 趟：每一趟红都先把"挂了几条、挂的是谁"打进日志，全绿才算过；
+      # 真缺陷要连红三趟才可能溜过去，而 #G1-I 的偶发不再每天咬交付节奏。
       - name: Test
         shell: bash
         run: |
           set -uo pipefail
           FILTER='Category!=EcosystemProbe'
           MIN_CASES=1000
+          ATTEMPTS=3
           SUMMARY="${RUNNER_TEMP:-/tmp}/dotnet-test-summary.log"
+          last_rc=1
 
-          run_suite() {
+          for attempt in $(seq 1 "$ATTEMPTS"); do
             dotnet test "$Solution_Name" -c Release --no-build -v minimal --filter "$FILTER" 2>&1 | tee "$SUMMARY"
-            return "${PIPESTATUS[0]}"
-          }
+            last_rc="${PIPESTATUS[0]}"
+            if [ "$last_rc" -eq 0 ]; then
+              echo "Test suite green on attempt ${attempt}/${ATTEMPTS}."
+              break
+            fi
+            # 把这一趟的受害者点名出来：只有 thread-affine 那一条才是 #G1-I，别的红灯必须当缺陷查。
+            flaky="$(grep -cE 'The calling thread cannot access this object' "$SUMMARY" || true)"
+            failed="$(grep -oE 'Failed: *[0-9]+' "$SUMMARY" | tail -1 | tr -dc '0-9')"
+            echo "::warning title=Flaky headless test run::attempt ${attempt}/${ATTEMPTS} red: Failed=${failed:-?} thread-affine=${flaky:-0} 条（#G1-I）"
+            grep -oE 'Test Case Cleanup Failure \([^)]*\)' "$SUMMARY" | sed 's/^/  victim: /' | sort -u
+            if [ "${flaky:-0}" -eq 0 ]; then
+              echo "::error title=红灯不是 #G1-I::这一趟没有线程归属失败，重跑不算兜底，按真缺陷查。"
+              exit 1
+            fi
+          done
 
-          if ! run_suite; then
-            echo "::warning title=Flaky headless test run::first dotnet test run failed, retrying once"
-            run_suite || exit 1
+          if [ "$last_rc" -ne 0 ]; then
+            echo "::error title=重跑 ${ATTEMPTS} 趟仍红::#G1-I 的线程归属竞态连中 ${ATTEMPTS} 次，或混进了真缺陷——见上面逐趟点名的受害者。"
+            exit 1
           fi
 
           TOTAL="$(grep -oE 'Total: *[0-9]+' "$SUMMARY" | tail -1 | grep -oE '[0-9]+' || true)"
