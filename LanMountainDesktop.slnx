@@ -9,5 +9,6 @@
   <Project Path="desktop/LanMountainDesktop/LanMountainDesktop.csproj" />
   <Project Path="desktop/LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj" />
   <Project Path="install/LanDesktopPLONDS.installer/LanDesktopPLONDS.installer.csproj" />
+  <Project Path="mobile/LanMountainDesktop.Mobile/LanMountainDesktop.Mobile.csproj" />
   <Project Path="tests/LanMountainDesktop.Tests/LanMountainDesktop.Tests.csproj" />
 </Solution>

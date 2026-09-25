@@ -1623,6 +1623,74 @@ public sealed class SourceIntegrityTests
             $"{claimed} 个 .cs 被工程认领，另有 {offenders.Count} 个没人认领：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
     }
 
+    /// <summary>
+    /// 磁盘上每个 <c>.csproj</c> 要么在 <c>LanMountainDesktop.slnx</c> 里（=本地全量门会编译它），
+    /// 要么在下面这张豁免表里写明"为什么由别人编译"。2026-09-25 第一次量：磁盘 18 个工程，
+    /// 解决方案只认领 11 个——漏的 7 个里 <c>mobile/LanMountainDesktop.Mobile</c> 是<b>真的脱门</b>：
+    /// 它是普通 <c>net10.0</c>、本地一条 <c>dotnet build</c> 就能编译，却没人编译它，
+    /// 于是它引用 <c>Core</c> 与 <c>AirAppSdk</c> 的公开面变了也不会在这里报红
+    /// （隔壁那条 <see cref="EveryCSharpFile_IsClaimedByAProject"/> 只问"有没有工程认领这个 .cs"，
+    /// 一个不在解决方案里的工程自己就能认领——那条守卫绿着，这条缺口就看不见）。已收进解决方案。
+    /// 其余 6 个各有理由：Android 那头本地没有 workload（实测 <c>dotnet workload list</c> 只有
+    /// <c>wasm-tools</c>），CI 有 <c>build-android</c> 专门装 workload 并 Release 构建；
+    /// 模板 <c>content/</c> 里那个是 <c>dotnet new</c> 的负载文本（父工程 <c>EnableDefaultCompileItems=false</c>
+    /// 且 <c>Compile Remove="content\**\*.cs"</c>，真编译会出双份类型）；PLONDS 那 4 个是另一条交付线。
+    /// 判据双向：解决方案里写了磁盘上不存在的工程也算红（挂在解决方案里的死引用同样骗过 IDE）。
+    /// </summary>
+    [Fact]
+    public void EveryProject_IsEitherInTheSolutionOrExemptWithReason()
+    {
+        var onDisk = Directory
+            .EnumerateFiles(RepoRoot, "*.csproj", SearchOption.AllDirectories)
+            .Where(path => !IsUnderBuildArtifactDirectory(path))
+            .Select(path => RelativeToRepo(path).Replace('\\', '/'))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var solutionText = File.ReadAllText(Path.Combine(RepoRoot, "LanMountainDesktop.slnx"));
+        var inSolution = Regex
+            .Matches(solutionText, @"Project Path=""([^""]+)""")
+            .Select(match => match.Groups[1].Value.Replace('\\', '/'))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var missingFromSolution = onDisk
+            .Where(project => !inSolution.Contains(project) && !ProjectExemptions.ContainsKey(project))
+            .OrderBy(project => project, StringComparer.Ordinal)
+            .ToList();
+
+        var staleSolutionEntries = inSolution
+            .Where(project => !onDisk.Contains(project))
+            .OrderBy(project => project, StringComparer.Ordinal)
+            .ToList();
+
+        var obsoleteExemptions = ProjectExemptions.Keys
+            .Where(project => !onDisk.Contains(project))
+            .OrderBy(project => project, StringComparer.Ordinal)
+            .ToList();
+
+        Assert.True(
+            missingFromSolution.Count == 0 && staleSolutionEntries.Count == 0 && obsoleteExemptions.Count == 0,
+            $"磁盘 {onDisk.Count} 个工程、解决方案认领 {inSolution.Count} 个。" +
+            $"{Environment.NewLine}没人编译（既不在解决方案也不在豁免表）：{string.Join("、", missingFromSolution)}" +
+            $"{Environment.NewLine}解决方案里指向不存在的工程：{string.Join("、", staleSolutionEntries)}" +
+            $"{Environment.NewLine}豁免表里已经不存在的路径（工程搬走或删除后请同步删理由）：{string.Join("、", obsoleteExemptions)}");
+    }
+
+    private static readonly Dictionary<string, string> ProjectExemptions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["mobile/LanMountainDesktop.Mobile.Android/LanMountainDesktop.Mobile.Android.csproj"] =
+            "net10.0-android：本地无 android workload，由 CI 的 build-android 作业装 workload 并构建",
+        ["airapp/LanMountainDesktop.AirAppTemplate/content/LanMountainDesktop.AirAppTemplate.csproj"] =
+            "dotnet new 模板负载文本，随模板包分发，不参与任何解决方案编译",
+        ["PenguinLogisticsOnlineNetworkDistributionSystem/src/Plonds.Api/Plonds.Api.csproj"] =
+            "PLONDS 更新服务端：另一条交付线，不属于宿主",
+        ["PenguinLogisticsOnlineNetworkDistributionSystem/src/Plonds.Core/Plonds.Core.csproj"] =
+            "PLONDS 更新服务端：另一条交付线，不属于宿主",
+        ["PenguinLogisticsOnlineNetworkDistributionSystem/src/Plonds.Shared/Plonds.Shared.csproj"] =
+            "PLONDS 更新服务端：另一条交付线，不属于宿主",
+        ["PenguinLogisticsOnlineNetworkDistributionSystem/src/Plonds.Tool/Plonds.Tool.csproj"] =
+            "PLONDS 更新服务端：另一条交付线，不属于宿主",
+    };
+
     private static bool IsUnderBuildArtifactDirectory(string path) => path
         .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
         .Any(segment => segment is "obj" or "bin" or ".git" or "artifacts" or "node_modules");
