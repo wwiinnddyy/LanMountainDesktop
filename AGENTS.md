@@ -508,9 +508,20 @@ await 完<b>重新问一次</b>挂载与取消、"没取到"与抛异常都画�
 共 <b>405 行</b>（59/56/58/58/59/57/58），收完之后七段实参合起来 169 行（`RunAsync(() => _isAttached, begin, request, ApplyFailedState, 收尾)`）。
 **这把重复普查从头到尾看不见这一族**——各家 payload 不同（query 类型与服务方法都不一样），所以族数不动，
 收益是"协议只有一处实现"。收口时量到的两处漂移（Bilibili 的 finally 少了画按钮、Cnr 与 Stcn24 是"先画按钮
-再换语言"）随收口自然消失。**两家故意没进来**，别再"顺手统一"：`ZhiJiaoHubWidget` 没有忙位、每次换发都是
-"取消并新建"（另一种判据，早已登记）；`JuyaNewsWidget` 有忙位但**整个文件没有任何取消令牌**，
-三条加载路径各自维护那一个布尔位——接进这家会同时给它补上取消与单飞，属行为变更，挂在 #G1-CG 等拍板。
+再换语言"）随收口自然消失。**一家故意没进来**，别再"顺手统一"：`ZhiJiaoHubWidget` 没有忙位、每次换发都是
+"取消并新建"（另一种判据，早已登记）；另一家 `JuyaNewsWidget` 当时确实"有忙位但整个文件没有取消令牌"，
+2026-09-26 已按下面的形状接进来。
+
+**`JuyaNewsWidget` 现在也走这家（2026-09-26，#G1-CG 做完）**：它以前整个文件没有一个取消令牌，
+三条路径（首载 / 滚动追加 / 手动刷新）各自置各自清那一个忙位。收口后三条都走 `_feed.RunAsync`，
+`OnDetachedFromVisualTree` 里 `CancellationHelper.CancelAndDispose(ref _feed.InFlight)` 才让"摘掉台面"真的能取消
+（以前只有落地前的 `_isAttached` 守卫，请求本身跑完才回）。追加那一趟不碰网络，但**故意也走家**——
+它与取数共用同一个单飞位，拆开就会出现"追加与刷新同时改 `_loadedDates`"。
+顺带修掉一处"失败被说成空"：`FetchJuyaNewsAsync` 以前 `catch { }` 返回空列表，于是"HTTP 挂了 / RSS 解析不了 /
+被取消"与"今天确实没出刊"三件事在界面上长得一样（都是把面板清空、什么都不说）。现在取不到返回 `null`
+（家去画"加载失败"），空列表才是真的没内容；**`OperationCanceledException` 必须原样抛回去**——
+它要是被同一个 catch 吞掉，"用户摘台"就会被报成"这个源是空的"。
+`RefreshButtonText`/`RefreshIcon` 的恢复合并成一处 `ResetRefreshButton`（以前在成功、没出刊、失败三条出口各写一遍）。
 
 **"这段像素占几格"只认 `DesktopEditing/DesktopPlacementMath.EstimateCellSpan` 一家**（加号在前、`AwayFromZero`、
 最少 1 格、网格不合法给 1 格）：此前"桌面拖拽快照"与"组件浮窗按请求尺寸估格"两处各抄一份 5 行（4 个调用点），

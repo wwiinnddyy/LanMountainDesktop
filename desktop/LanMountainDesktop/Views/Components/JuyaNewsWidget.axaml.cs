@@ -19,6 +19,7 @@ using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
 using LanMountainDesktop.Helpers;
+using LanMountainDesktop.Shared.Threading;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -40,7 +41,7 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
     
     private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private bool _isAttached;
-    private bool _isLoading;
+    private readonly ComponentFeedRefresh _feed = new();
     private bool _isNightVisual;
     private DateTime _earliestLoadedDate = DateTime.Today;
 
@@ -72,6 +73,9 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = false;
+        // 摘掉台面之后这趟拉取以前没人能取消：整个文件不带取消令牌，请求会跑到自己结束
+        // （落地前有 _isAttached 守卫，所以不会画到已分离的控件上，但连接与解析开销照付）。
+        CancellationHelper.CancelAndDispose(ref _feed.InFlight);
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -111,25 +115,21 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
         }
     }
 
-    private async Task LoadInitialNewsAsync()
-    {
-        if (!_isAttached || _isLoading)
+    private Task LoadInitialNewsAsync() => _feed.RunAsync(
+        () => _isAttached,
+        begin: () =>
         {
-            return;
-        }
-
-        _isLoading = true;
-        LoadingTextBlock.IsVisible = true;
-        StatusTextBlock.IsVisible = false;
-
-        try
+            LoadingTextBlock.IsVisible = true;
+            StatusTextBlock.IsVisible = false;
+        },
+        request: async token =>
         {
-            // 解析RSS获取所有新闻
-            var allNews = await FetchJuyaNewsAsync();
-            
-            if (!_isAttached)
+            // 取不到（HTTP 失败或 XML 解析不了）是 null → 让家去画失败态；
+            // 真的没有条目是空列表 → 按成功处理，别把空源说成故障。
+            var allNews = await FetchJuyaNewsAsync(token);
+            if (allNews is null)
             {
-                return;
+                return false;
             }
 
             // 缓存新闻数据
@@ -169,31 +169,24 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
                 StatusTextBlock.IsVisible = false;
                 UpdateAdaptiveLayout();
             });
-        }
-        catch
-        {
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                if (!_isAttached) return;
-                StatusTextBlock.Text = "加载失败";
-                StatusTextBlock.IsVisible = true;
-                LoadingTextBlock.IsVisible = false;
-            });
-        }
-        finally
-        {
-            _isLoading = false;
-        }
-    }
 
-    private async Task<List<JuyaDailyNews>> FetchJuyaNewsAsync()
+            return true;
+        },
+        applyFailure: () =>
+        {
+            StatusTextBlock.Text = "加载失败";
+            StatusTextBlock.IsVisible = true;
+            LoadingTextBlock.IsVisible = false;
+        });
+
+    private async Task<List<JuyaDailyNews>?> FetchJuyaNewsAsync(CancellationToken token)
     {
         var result = new List<JuyaDailyNews>();
-        
+
         try
         {
             // 使用字节数组获取内容，确保正确解码 UTF-8
-            var response = await HttpClient.GetByteArrayAsync(RssUrl);
+            var response = await HttpClient.GetByteArrayAsync(RssUrl, token);
             var rssContent = System.Text.Encoding.UTF8.GetString(response);
             var doc = XDocument.Parse(rssContent);
             
@@ -241,11 +234,17 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
                 result.Add(news);
             }
         }
+        catch (OperationCanceledException)
+        {
+            // 我们自己摘台或换发取消的：必须原样抛回去，让家分清"被取消"与"没取到"。
+            // 一句吞掉就是本文修的那个形状的复发点：取消会被当成"源是空的"，界面上什么都不说。
+            throw;
+        }
         catch
         {
-            // 返回空列表
+            return null;
         }
-        
+
         return result.OrderByDescending(n => n.Date).ToList();
     }
 
@@ -511,13 +510,9 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
         _dailyViews.Add(view);
     }
 
-    private async void OnScrollChanged(object? sender, ScrollChangedEventArgs e)
+    private void OnScrollChanged(object? sender, ScrollChangedEventArgs e)
     {
-        if (_isLoading || !_isAttached)
-        {
-            return;
-        }
-
+        // "没挂载"与"已经有一趟在飞"这两条判断交给家（以前这里与 LoadMoreNewsAsync 各判一遍）。
         var scrollViewer = (ScrollViewer)sender!;
         
         var offset = scrollViewer.Offset;
@@ -526,80 +521,73 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
         
         if (offset.Y >= extent.Height - viewport.Height - 200)
         {
-            await LoadMoreNewsAsync();
+            _ = LoadMoreNewsAsync();
         }
     }
 
-    private async Task LoadMoreNewsAsync()
+    private Task LoadMoreNewsAsync()
     {
-        if (_isLoading || !_isAttached)
-        {
-            return;
-        }
-
         var nextDates = Enumerable.Range(1, LoadMoreDays)
             .Select(i => _earliestLoadedDate.AddDays(-i))
             .Where(d => _cachedNews.ContainsKey(d) && !_loadedDates.Contains(d))
             .ToList();
 
-        if (!nextDates.Any())
+        if (nextDates.Count == 0)
         {
-            return;
+            return Task.CompletedTask;
         }
 
-        _isLoading = true;
-        LoadingTextBlock.IsVisible = true;
-
-        try
-        {
-            await Dispatcher.UIThread.InvokeAsync(() =>
+        // 这一趟不碰网络，但它与两条取数路径共用同一个单飞位（收口前三家共用 _isLoading：
+        // 拆开就会出现"追加与刷新同时改 _loadedDates"），所以照样走家。
+        return _feed.RunAsync(
+            () => _isAttached,
+            begin: () => LoadingTextBlock.IsVisible = true,
+            request: async _ =>
             {
-                if (!_isAttached) return;
-
-                foreach (var date in nextDates.OrderByDescending(d => d))
+                await Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    AddDailyNewsToView(_cachedNews[date]);
-                    _loadedDates.Add(date);
-                }
+                    foreach (var date in nextDates.OrderByDescending(d => d))
+                    {
+                        AddDailyNewsToView(_cachedNews[date]);
+                        _loadedDates.Add(date);
+                    }
 
-                _earliestLoadedDate = _loadedDates.Min();
-                LoadingTextBlock.IsVisible = false;
-                UpdateAdaptiveLayout();
-            });
-        }
-        finally
-        {
-            _isLoading = false;
-        }
+                    _earliestLoadedDate = _loadedDates.Min();
+                    LoadingTextBlock.IsVisible = false;
+                    UpdateAdaptiveLayout();
+                });
+
+                return true;
+            },
+            applyFailure: () => LoadingTextBlock.IsVisible = false);
     }
 
-    private async void OnRefreshButtonClick(object? sender, RoutedEventArgs e)
+    private void OnRefreshButtonClick(object? sender, RoutedEventArgs e)
     {
         e.Handled = true;
-        
-        if (_isLoading)
-        {
-            return;
-        }
-
-        _isLoading = true;
-        RefreshButtonText.Text = "刷新中...";
-        RefreshIcon.IsEnabled = false;
-
-        try
-        {
-            var allNews = await FetchJuyaNewsAsync();
-            
-            if (!_isAttached)
+        _ = _feed.RunAsync(
+            () => _isAttached,
+            begin: () =>
             {
-                return;
-            }
-
-            var today = DateTime.Today;
-            var todayNews = allNews.FirstOrDefault(n => n.Date.Date == today);
-            
-            if (todayNews != null)
+                RefreshButtonText.Text = "刷新中...";
+                RefreshIcon.IsEnabled = false;
+            },
+            request: async token =>
             {
+                var allNews = await FetchJuyaNewsAsync(token);
+                if (allNews is null)
+                {
+                    return false;
+                }
+
+                var today = DateTime.Today;
+                var todayNews = allNews.FirstOrDefault(n => n.Date.Date == today);
+                if (todayNews is null)
+                {
+                    // 今天没出刊：不是故障，按成功收尾（家会把按钮恢复原样）。
+                    return true;
+                }
+
                 _cachedNews[today] = todayNews;
 
                 await Dispatcher.UIThread.InvokeAsync(() =>
@@ -634,32 +622,20 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
                         _loadedDates.Insert(0, today);
                     }
 
-                    RefreshButtonText.Text = "刷新";
-                    RefreshIcon.IsEnabled = true;
                     UpdateAdaptiveLayout();
                 });
-            }
-            else
-            {
-                await Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    RefreshButtonText.Text = "刷新";
-                    RefreshIcon.IsEnabled = true;
-                });
-            }
-        }
-        catch
-        {
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                RefreshButtonText.Text = "刷新";
-                RefreshIcon.IsEnabled = true;
-            });
-        }
-        finally
-        {
-            _isLoading = false;
-        }
+
+                return true;
+            },
+            // 取不到时这家界面没有"刷新失败"这类文案（收口前后都一样），失败与成功走同一句收尾。
+            applyFailure: () => { },
+            end: ResetRefreshButton);
+    }
+
+    private void ResetRefreshButton()
+    {
+        RefreshButtonText.Text = "刷新";
+        RefreshIcon.IsEnabled = true;
     }
 
     private void ApplyLoadingState()
