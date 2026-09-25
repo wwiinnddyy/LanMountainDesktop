@@ -103,10 +103,18 @@ jobs:
           # 跑在 ubuntu-latest 上：反斜杠路径在 Linux 的 pwsh 里不是分隔符（".\scripts\x.ps1"
           # 会被当成一整串参数、Join-Path 出来的也是字面反斜杠），所以这里一律用正斜杠；
           # 脚本内部的默认路径与工程清单也同步改成了正斜杠（Windows 同样认）。
-          $packArgs = @('-Configuration', 'Release', '-OutputPath', 'artifacts/nuget',
-                        '-NuGetPackagesPath', '.nuget/packages')
+          #
+          # 参数必须用**哈希表**splat，不能用数组：数组 splat 是按位置喂的（实测
+          # `T @("-A","x","-B","y")` 得到 `A=-A B=x C=-B`），于是 "-Configuration" 成了 $OutputPath 的值、
+          # 名字全被当成值往后错一格；错到第 5 个元素时位置用完，报的就是上次那个
+          # "A positional parameter cannot be found that accepts argument '-NuGetPackagesPath'"。
+          $packArgs = @{
+            Configuration    = 'Release'
+            OutputPath       = 'artifacts/nuget'
+            NuGetPackagesPath = '.nuget/packages'
+          }
           if (-not [string]::IsNullOrWhiteSpace($env:PACKAGE_VERSION)) {
-            $packArgs += @('-Version', $env:PACKAGE_VERSION)
+            $packArgs['Version'] = $env:PACKAGE_VERSION
           }
           & ./scripts/Pack-AirAppPackages.ps1 @packArgs
 
