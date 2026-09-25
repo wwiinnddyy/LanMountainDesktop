@@ -100,10 +100,9 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        _isAttached = true;
-        ApplyAutoRotateSettings();
-        UpdateRefreshButtonState();
-        _ = RefreshNewsAsync(forceRefresh: false);
+        ComponentRefreshLifetime.Attach(
+            ref _isAttached, ApplyAutoRotateSettings, UpdateRefreshButtonState,
+            () => RefreshNewsAsync(forceRefresh: false));
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)

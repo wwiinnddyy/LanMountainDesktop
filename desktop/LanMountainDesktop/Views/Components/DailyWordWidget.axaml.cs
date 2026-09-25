@@ -92,10 +92,9 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        _isAttached = true;
-        ApplyAutoRefreshSettings();
-        UpdateRefreshButtonState();
-        _ = RefreshWordAsync(forceRefresh: false);
+        ComponentRefreshLifetime.Attach(
+            ref _isAttached, ApplyAutoRefreshSettings, UpdateRefreshButtonState,
+            () => RefreshWordAsync(forceRefresh: false));
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)

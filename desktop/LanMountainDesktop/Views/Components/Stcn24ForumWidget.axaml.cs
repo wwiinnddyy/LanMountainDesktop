@@ -167,10 +167,9 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        _isAttached = true;
-        ApplyAutoRefreshSettings();
-
-        _ = RefreshPostsAsync(forceRefresh: false);
+        ComponentRefreshLifetime.Attach(
+            ref _isAttached, ApplyAutoRefreshSettings, null,
+            () => RefreshPostsAsync(forceRefresh: false));
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)

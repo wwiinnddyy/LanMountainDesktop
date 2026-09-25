@@ -444,6 +444,19 @@ await 完<b>重新问一次</b>挂载与取消、"没取到"与抛异常都画�
 抄本少抄一句不会报错：少那句"重新问一次"就是往已分离的可视树上落地，少 finally 里那句复位就是按钮永久灰着。
 行为钉 `ComponentFeedRefreshTests` 7 格 + `DailyWordFeedTests` 4 格；"先换发再取消旧源"那一支**没钉**并写明原因
 （单飞守卫下从公开入口走不到，属防御性写法，别当成已验证的路径）。
+
+**组件"挂上台面"那三步只认 `Views/Components/ComponentRefreshLifetime.Attach` 一家**（2026-09-25：
+每日一词 1x1/2x2 各抄一份<b>逐字相同的四行</b>，另有 7 个同骨架的组件）：落"已附着"位 → 按设置起停表 →
+（可选：画刷新按钮等控件收尾）→ 立刻取一次数。调用形状是
+`Attach(ref _isAttached, 起表那一步, 控件收尾或 null, () => Refresh…Async(forceRefresh: false))`。
+两条顺序都是判据、错法都不报错：① **状态位必须最先落**——各组件 `Refresh…Async` 第一句就是
+`if (!_isAttached || _isRefreshing) return;`（实测 9 个组件逐字如此），落晚了这次取数整个不发，
+症状是"面板放上台面是空的，要等第一次 tick"；`Reschedule` 也读同一个位（不附着就只写间隔不起表）。
+② 取数排在控件收尾之后，否则出现"按钮还是正常的、内容已经报错"。`_ = …`（发出去不管）也收在这里。
+行为钉 `ComponentRefreshLifetimeTests` 两格（三个回调各读那个状态位；收尾口子给 null 时两步照做）。
+**`DailyPoetryWidget` 故意没进来**：它是"画按钮 → 刷模式视觉 → 起表 → 取数"，收尾排在起表<b>之前</b>，
+套这个家等于替它换顺序（行为变更，要改另拍）。`Recording`/`WorldClock` 等没有刷新表的组件也不属于这一族。
+
 **其余 9 个组件的 `Refresh…Async(bool forceRefresh)` 是同骨架换接口**，还没逐个走过家——判它们要不要走，
 和 `ResolveScale` 三对一起挂在 #G1-BC。
 
@@ -962,8 +975,12 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 连行吞掉（编译都不过）。**批量改方法体必须逐字匹配整段方法体**，并核对 `git diff --stat` 的增删行数对称。
 两把尺子的位置参数都改成"目录不存在就直接退出"（`dump-dup-methods.py` 的 `NAMES` 是**环境变量**不是参数，
 把它当参数传会被当成目录、扫 0 个文件报一个假的 0——这就是我自己上当的那一次）。
-`dump-dup-methods.py` 的正对照现在用 `OnSizeChanged`（5 处 5 文件逐字相同，肉眼比过两份）；
-早先记的 `NormalizeWeatherLocale` 三份已被收口，拿它当对照会误判工具坏了。
+`dump-dup-methods.py` 的正对照：<b>按 body 哈希点名，别按方法名</b>——2026-09-25 实测当前在档的逐字族是
+`OnCloseClick (3 行, body#8c9d211e)`、`OnSecondHandChanged (3 行, body#eac08fe6)`、
+`OnSizeChanged (3 行, body#ca742105)` 等 18 族，任选一族要求它报出与站点清单相同的文件数。
+（此前这条写的是"`OnSizeChanged` 5 处 5 文件"，那 5 处已在同日收进 `StudyComponentLifecycle.RefreshOnResize`，
+同名的两份空处理器还在但只有 2 处；更早记的 `NormalizeWeatherLocale` 三份也已被收口——
+**正对照的条目会因收口失效，所以以哈希为准**。）
 **第三把尺子数的是"动词配对"，不是方法体**：`python scripts/check-component-pairs.py`
 （组件是短命的、服务与计时器是长命的：`Attach` 里起来的东西必须在 `Detach`/`Dispose` 收回去）。
 2026-09-22 首跑：46 个有 attach/detach 的组件文件里 **0 处未配对**

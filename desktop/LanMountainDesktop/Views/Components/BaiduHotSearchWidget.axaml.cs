@@ -103,10 +103,9 @@ public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        _isAttached = true;
-        ApplyAutoRefreshSettings();
-        UpdateRefreshButtonState();
-        _ = RefreshHotSearchAsync(forceRefresh: false);
+        ComponentRefreshLifetime.Attach(
+            ref _isAttached, ApplyAutoRefreshSettings, UpdateRefreshButtonState,
+            () => RefreshHotSearchAsync(forceRefresh: false));
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)

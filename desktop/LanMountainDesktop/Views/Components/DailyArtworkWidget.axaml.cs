@@ -150,9 +150,9 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        _isAttached = true;
-        _refreshTimer.Start();
-        _ = RefreshArtworkAsync(forceRefresh: false);
+        ComponentRefreshLifetime.Attach(
+            ref _isAttached, () => _refreshTimer.Start(), null,
+            () => RefreshArtworkAsync(forceRefresh: false));
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)

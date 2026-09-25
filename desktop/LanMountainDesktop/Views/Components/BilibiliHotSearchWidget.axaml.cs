@@ -98,9 +98,9 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        _isAttached = true;
-        ApplyAutoRefreshSettings();
-        _ = RefreshHotSearchAsync(forceRefresh: false);
+        ComponentRefreshLifetime.Attach(
+            ref _isAttached, ApplyAutoRefreshSettings, null,
+            () => RefreshHotSearchAsync(forceRefresh: false));
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)

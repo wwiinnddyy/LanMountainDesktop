@@ -92,9 +92,9 @@ public partial class ExchangeRateCalculatorWidget : UserControl, IDesktopCompone
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        _isAttached = true;
-        _refreshTimer.Start();
-        _ = RefreshExchangeRateAsync(forceRefresh: false);
+        ComponentRefreshLifetime.Attach(
+            ref _isAttached, () => _refreshTimer.Start(), null,
+            () => RefreshExchangeRateAsync(forceRefresh: false));
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)

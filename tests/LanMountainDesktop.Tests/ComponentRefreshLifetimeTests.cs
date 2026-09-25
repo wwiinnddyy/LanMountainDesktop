@@ -10,8 +10,8 @@ using Xunit;
 namespace LanMountainDesktop.Tests;
 
 /// <summary>
-/// 组件刷新计时器生命周期的家唯一的证据：收（detach 三连＝置附着标志 + 停表 + 取消并释放刷新请求）
-/// 与起（<c>Reschedule</c>＝按设置重排间隔并决定起停）。
+/// 组件刷新计时器生命周期的家唯一的证据：收（detach 三连＝置附着标志 + 停表 + 取消并释放刷新请求）、
+/// 起（<c>Reschedule</c>＝按设置重排间隔并决定起停）与挂上台面那三步（<c>Attach</c>＝落附着位 + 起表 + 立刻取一次数）。
 ///
 /// 为什么收口的同时要补这一条：11 个组件各写一遍 detach 三连、7 个组件各写一遍 14 行起停判据时，
 /// 正确性靠"抄得对"；收进家之后，
@@ -129,5 +129,68 @@ public sealed class ComponentRefreshLifetimeTests
 
         Assert.True(timer.IsEnabled);
         timer.Stop();
+    }
+
+    /// <summary>
+    /// 挂上台面那三步的判据，收口前是 9 个组件各抄一遍的形状（其中每日一词那两份逐字相同）。
+    /// 三个回调都去读那个状态位：家把落位排在最前，所以三处都读到 true。
+    /// 落晚了的后果不是崩，是<b>这次取数整个没发出去</b>——组件自己的 <c>Refresh…Async</c> 第一句就是
+    /// <c>if (!_isAttached || _isRefreshing) return;</c>（实测 9 个组件逐字如此），
+    /// 症状是面板放上台面是空的，要等第一次 tick 才出内容。
+    /// </summary>
+    [AvaloniaFact]
+    public void Attach_FlipsTheFlagFirst_ThenArmsThenLoads()
+    {
+        var isAttached = false;
+        var order = new List<string>();
+        var seenByArm = false;
+        var seenByCleanup = false;
+        var seenByLoad = false;
+
+        ComponentRefreshLifetime.Attach(
+            ref isAttached,
+            armRefreshTimer: () =>
+            {
+                order.Add("arm");
+                seenByArm = isAttached;
+            },
+            afterArming: () =>
+            {
+                order.Add("cleanup");
+                seenByCleanup = isAttached;
+            },
+            kickFirstLoad: () =>
+            {
+                order.Add("load");
+                seenByLoad = isAttached;
+                return Task.CompletedTask;
+            });
+
+        Assert.Equal(["arm", "cleanup", "load"], order);
+        Assert.True(seenByArm);
+        Assert.True(seenByCleanup);
+        Assert.True(seenByLoad);
+    }
+
+    [AvaloniaFact]
+    public void Attach_WithoutAControlCleanupStep_StillArmsAndLoads()
+    {
+        // B站热搜 / 知乎论坛 / 每日插画 / 汇率那四个没有"画按钮态"这一步，口子给 null 也要两步都做。
+        var isAttached = false;
+        var armed = false;
+        var loaded = false;
+
+        ComponentRefreshLifetime.Attach(
+            ref isAttached,
+            () => armed = true,
+            null,
+            () =>
+            {
+                loaded = true;
+                return Task.CompletedTask;
+            });
+
+        Assert.True(armed);
+        Assert.True(loaded);
     }
 }

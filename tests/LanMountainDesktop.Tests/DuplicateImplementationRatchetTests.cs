@@ -488,7 +488,22 @@ public sealed class DuplicateImplementationRatchetTests
     /// 已放宽为"完整标识符出现"，双向变异验过：引用留着 → 绿；把同文件两处引用都换成空 lambda → 红且只报那一处。</description></item>
     /// </list>
 
-    private const int IdenticalBodyFamilyCeiling = 19;
+    /// 19 → 18 收一族：<c>OnAttachedToVisualTree</c> 里每日一词 1x1 与 2x2 那两份逐字相同的四行
+    /// （落"已附着"位 → 按设置起停表 → 画刷新按钮 → 立刻取一次数）→
+    /// <c>ComponentRefreshLifetime.Attach</c>（这个家已有 Detach 与 Reschedule，缺的正是起的那一半），
+    /// 同形状的另一批 7 个组件（Baidu/Bilibili/Cnr/Ifeng/Stcn24/每日插画/汇率）一起走家——
+    /// 它们只差"字段名与要不要画按钮"，按这把尺子的口径本来就属漂移面，这一笔让漂移面的同一族少 7 处。
+    /// 判据两条都写在家里：① <b>状态位必须最先落</b>，因为各组件 <c>Refresh…Async</c> 第一句就是
+    /// <c>if (!_isAttached || _isRefreshing) return;</c>（实测 9 个组件逐字如此），落晚了这次取数整个不发，
+    /// 症状是"放上台面是空的，等第一次 tick 才出内容"；② 取数排在控件收尾之后，否则"按钮正常、内容已报错"。
+    /// 行为钉 <c>ComponentRefreshLifetimeTests</c> +2 格（三个回调各读那个状态位 + 没有收尾口子时两步照做）。
+    /// <c>DailyPoetryWidget</c> 故意没进来：它是"画按钮 → 刷模式视觉 → 起表 → 取数"，
+    /// 收尾排在起表<b>之前</b>，套这个家等于替它换顺序（行为变更，另拍）。
+    /// <b>顺带更正一条已经失效的工具自证</b>：AGENTS.md 里 <c>dump-dup-methods.py</c> 的正对照写的是
+    /// "<c>OnSizeChanged</c> 5 处 5 文件逐字相同"，那 5 处今天已收进 <c>RefreshOnResize</c>；
+    /// 现在同签名只剩 2 处（FileManager / RemovableStorage 那对空处理器），正对照改成按哈希点名。
+
+    private const int IdenticalBodyFamilyCeiling = 18;
 
     /// <summary>
     /// 今天实测：189 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。

@@ -98,10 +98,9 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        _isAttached = true;
-        ApplyAutoRefreshSettings();
-        UpdateRefreshButtonState();
-        _ = RefreshNewsAsync(forceRefresh: false);
+        ComponentRefreshLifetime.Attach(
+            ref _isAttached, ApplyAutoRefreshSettings, UpdateRefreshButtonState,
+            () => RefreshNewsAsync(forceRefresh: false));
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)

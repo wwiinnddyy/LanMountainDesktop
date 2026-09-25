@@ -87,10 +87,9 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        _isAttached = true;
-        ApplyAutoRefreshSettings();
-        UpdateRefreshButtonState();
-        _ = RefreshWordAsync(forceRefresh: false);
+        ComponentRefreshLifetime.Attach(
+            ref _isAttached, ApplyAutoRefreshSettings, UpdateRefreshButtonState,
+            () => RefreshWordAsync(forceRefresh: false));
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
