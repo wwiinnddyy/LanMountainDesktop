@@ -1,5 +1,3 @@
-using System.Text.RegularExpressions;
-
 using LanMountainDesktop.Services;
 
 using Xunit;
@@ -8,7 +6,8 @@ namespace LanMountainDesktop.Tests;
 
 /// <summary>
 /// 分位数这家的算法。三份抄本（两个学习组件 + 分析服务）的线性插值部分逐字相同，
-/// 唯一分歧是"空数组返回什么"，所以那一格按调用方各钉一次，而不是统一改死。
+/// 唯一分歧是"空数组返回什么"——2026-09-26 拍板统一成 <see cref="StudyStatistics.NoMeasurementDbfs"/>，
+/// 参数从签名上拿掉了，所以"谁又给自己挑了一档"这件事从此由编译器拦，这里只钉调用点数量与形状。
 /// </summary>
 public sealed class StudyStatisticsTests
 {
@@ -20,34 +19,38 @@ public sealed class StudyStatisticsTests
     [InlineData(-3.0, 10d)]         // 越界钳到端点，不抛也不 NaN
     [InlineData(5.0, 40d)]
     public void Percentile_InterpolatesOnSortedValues(double percentile, double expected) =>
-        Assert.Equal(expected, StudyStatistics.Percentile([10, 20, 30, 40], percentile, emptySentinel: 0), 6);
+        Assert.Equal(expected, StudyStatistics.Percentile([10, 20, 30, 40], percentile), 6);
 
     [Fact]
     public void Percentile_OfASingleValue_IgnoresThePosition()
     {
-        Assert.Equal(-7d, StudyStatistics.Percentile([-7], 0.5, emptySentinel: 0));
-        Assert.Equal(-7d, StudyStatistics.Percentile([-7], 1.0, emptySentinel: 0));
+        Assert.Equal(-7d, StudyStatistics.Percentile([-7], 0.5));
+        Assert.Equal(-7d, StudyStatistics.Percentile([-7], 1.0));
     }
 
-    [Fact]
-    public void Percentile_OfEmpty_UsesTheCallersOwnSentinel()
+    /// <summary>刻度方向决定的那一档：dBFS 的 0 是满刻度（最响），不能拿来表示"没测到"。</summary>
+    [Theory]
+    [InlineData(0.0)]
+    [InlineData(0.5)]
+    [InlineData(0.95)]
+    [InlineData(1.0)]
+    public void Percentile_OfEmpty_IsBelowTheSilenceFloor(double percentile)
     {
-        // 既有分歧：面板把"没有测量值"压到刻度底端，分析服务给 0。统一成哪个都要先拍（G1-BK）。
-        Assert.Equal(-100d, StudyStatistics.Percentile([], 0.95, emptySentinel: -100));
-        Assert.Equal(0d, StudyStatistics.Percentile([], 0.95, emptySentinel: 0));
+        // -100 也在研究配置的钳位下沿（StudyAnalyticsModels.cs:68 把静音档钳在 -100..-20），
+        // 所以它落在"任何读数档之外"；0 不是——0 是满刻度。
+        Assert.Equal(-100d, StudyStatistics.Percentile([], percentile));
+        Assert.Equal(StudyStatistics.NoMeasurementDbfs, StudyStatistics.Percentile([], percentile));
     }
 
     /// <summary>
-    /// 把"哪个调用方用哪个哨兵"钉在源码上。G1-BK 拍板之前，这条分歧不许被顺手统一掉——
-    /// 收口后它只剩一个字面量的距离：把某个调用点的 <c>-100</c> 改成 <c>0</c>，
-    /// 上面的算法测试照样全绿，因为只有这里在核对调用方给的数。
-    /// 站点数也钉住：少一条断言就是静默变窄（判据的输入集合会随调用点消失而缩小）。
+    /// 站点名单：统一之后剩下的价值是"别悄悄地少一条调用"。
+    /// 每处调用必须只带两个实参——哨兵再回到调用点，这条就红。
     /// </summary>
     [Theory]
-    [InlineData(@"desktop\LanMountainDesktop\Views\Components\StudyDeductionReasonsWidget.axaml.cs", 1, "-100")]
-    [InlineData(@"desktop\LanMountainDesktop\Views\Components\StudyScoreOverviewWidget.axaml.cs", 1, "-100")]
-    [InlineData(@"desktop\LanMountainDesktop\Services\StudyAnalyticsInternals.cs", 3, "0")]
-    public void PercentileCallSites_KeepTheirOwnSentinel(string relative, int expectedSites, string expectedSentinel)
+    [InlineData(@"desktop\LanMountainDesktop\Views\Components\StudyDeductionReasonsWidget.axaml.cs", 1)]
+    [InlineData(@"desktop\LanMountainDesktop\Views\Components\StudyScoreOverviewWidget.axaml.cs", 1)]
+    [InlineData(@"desktop\LanMountainDesktop\Services\StudyAnalyticsInternals.cs", 3)]
+    public void PercentileCallSites_TakeNoSentinel(string relative, int expectedSites)
     {
         var path = Path.Combine(RepoRoot(), relative);
         var hits = new List<string>();
@@ -67,9 +70,9 @@ public sealed class StudyStatisticsTests
         Assert.Equal(expectedSites, hits.Count);
         foreach (var call in hits)
         {
-            var actual = Regex.Match(call, @"emptySentinel:\s*(-?\d+)");
-            Assert.True(actual.Success, $"{call} 没显式给 emptySentinel（G1-BK 未拍板，不许靠默认值）");
-            Assert.Equal(expectedSentinel, actual.Groups[1].Value);
+            Assert.False(call.Contains("emptySentinel", StringComparison.Ordinal), $"{call} 又把哨兵拿回了调用点");
+            var commas = call.Split(',').Length - 1;
+            Assert.True(commas <= 1, $"{call} 的参数个数变了（分位数只要有序数组与位置两个）");
         }
     }
 

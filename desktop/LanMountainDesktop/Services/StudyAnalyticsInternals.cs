@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using LanMountainDesktop.Models;
@@ -224,8 +224,8 @@ internal sealed class NoiseFramePipeline
 
         var avgDbfs = ScoreCalculator.ComputeAverageDbfs(dbfsList);
         var maxDbfs = dbfsList[^1];
-        var p50Dbfs = StudyStatistics.Percentile(sortedValues: dbfsList, percentile: 0.50, emptySentinel: 0);
-        var p95Dbfs = StudyStatistics.Percentile(sortedValues: dbfsList, percentile: 0.95, emptySentinel: 0);
+        var p50Dbfs = StudyStatistics.Percentile(sortedValues: dbfsList, percentile: 0.50);
+        var p95Dbfs = StudyStatistics.Percentile(sortedValues: dbfsList, percentile: 0.95);
         var overRatio = _overThresholdFrameCount / (double)_slicePoints.Count;
 
         var raw = new NoiseSliceRawStats(
@@ -241,7 +241,7 @@ internal sealed class NoiseFramePipeline
 
         var display = new NoiseSliceDisplayStats(
             AvgDb: Math.Round(displayList.Average(), 2),
-            P95Db: Math.Round(StudyStatistics.Percentile(displayList, 0.95, emptySentinel: 0), 2));
+            P95Db: Math.Round(StudyStatistics.Percentile(displayList, 0.95), 2));
 
         var score = ScoreCalculator.Calculate(
             p50Dbfs: raw.P50Dbfs,

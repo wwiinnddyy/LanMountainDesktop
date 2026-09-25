@@ -369,7 +369,7 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
         }
 
         var dbfsValues = points.Select(p => p.Dbfs).OrderBy(v => v).ToArray();
-        var p50Dbfs = StudyStatistics.Percentile(dbfsValues, 0.50, emptySentinel: -100);
+        var p50Dbfs = StudyStatistics.Percentile(dbfsValues, 0.50);
 
         var overDurationMs = 0d;
         var weightedDurationMs = 0d;
