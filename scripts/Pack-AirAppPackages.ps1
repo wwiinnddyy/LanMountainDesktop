@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [string]$OutputPath,
     [string]$Configuration = "Release",
@@ -11,10 +11,10 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 if ([string]::IsNullOrWhiteSpace($OutputPath)) {
-    $OutputPath = Join-Path $repoRoot "artifacts\nuget"
+    $OutputPath = Join-Path $repoRoot "artifacts/nuget"
 }
 if ([string]::IsNullOrWhiteSpace($NuGetPackagesPath)) {
-    $NuGetPackagesPath = Join-Path $repoRoot ".nuget\packages"
+    $NuGetPackagesPath = Join-Path $repoRoot ".nuget/packages"
 }
 
 $resolvedOutputPath = [System.IO.Path]::GetFullPath($OutputPath)
@@ -24,9 +24,9 @@ New-Item -ItemType Directory -Force -Path $resolvedNuGetPackagesPath | Out-Null
 $env:NUGET_PACKAGES = $resolvedNuGetPackagesPath
 
 $projects = @(
-    "core\LanMountainDesktop.Core\LanMountainDesktop.Core.csproj",
-    "airapp\LanMountainDesktop.AirAppSdk\LanMountainDesktop.AirAppSdk.csproj",
-    "airapp\LanMountainDesktop.AirAppTemplate\LanMountainDesktop.AirAppTemplate.csproj"
+    "core/LanMountainDesktop.Core/LanMountainDesktop.Core.csproj",
+    "airapp/LanMountainDesktop.AirAppSdk/LanMountainDesktop.AirAppSdk.csproj",
+    "airapp/LanMountainDesktop.AirAppTemplate/LanMountainDesktop.AirAppTemplate.csproj"
 )
 
 $versionArgs = @()

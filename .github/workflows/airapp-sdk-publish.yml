@@ -100,11 +100,15 @@ jobs:
         env:
           PACKAGE_VERSION: ${{ steps.version.outputs.value }}
         run: |
-          $packArgs = @('-Configuration', 'Release', '-OutputPath', '.\artifacts\nuget')
+          # 跑在 ubuntu-latest 上：反斜杠路径在 Linux 的 pwsh 里不是分隔符（".\scripts\x.ps1"
+          # 会被当成一整串参数、Join-Path 出来的也是字面反斜杠），所以这里一律用正斜杠；
+          # 脚本内部的默认路径与工程清单也同步改成了正斜杠（Windows 同样认）。
+          $packArgs = @('-Configuration', 'Release', '-OutputPath', 'artifacts/nuget',
+                        '-NuGetPackagesPath', '.nuget/packages')
           if (-not [string]::IsNullOrWhiteSpace($env:PACKAGE_VERSION)) {
             $packArgs += @('-Version', $env:PACKAGE_VERSION)
           }
-          .\scripts\Pack-AirAppPackages.ps1 @packArgs
+          & ./scripts/Pack-AirAppPackages.ps1 @packArgs
 
       - name: Upload package artifacts
         uses: actions/upload-artifact@v7
