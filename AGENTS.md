@@ -1131,6 +1131,11 @@ C# 主构造器会被当成方法声明（`class X(IProgress<…>? p)` 报成一
 两条棘轮（类型与实例成员）都用它：只剥引号内文本、**插值洞 `{expr}` 必须保留**——
 第一版整段换掉就把 `$"… {FormatRelative(…)}"` 里的真调用吞了，当场把活方法报成死码（这条是实测踩的，
 `StringLiteralStrippingKeepsInterpolationHoles` 四个方向钉住）。
+**引用计数是按方法名数的，不是按接收者类型**（`reachCount[name] − 声明行数`）——所以给新类型起方法名时，
+撞上名单里任何一条（`Invalidate` / `Dispose` / `Refresh` 这类通用动词都在名单里）都会把那条登记
+误判成"已经有人调了"。2026-09-25 真撞上：图表底格那个方法一开始也叫 `Invalidate`，加上调用点后
+`AirAppMarketAssetCacheService.Invalidate` 立刻红成假欠账；处置是**把新方法改名**（`DropGeometry`）而不是删登记，
+那条登记的注释里已写下这个坑。
 **滑杆的 `Minimum`/`Maximum` 不许写死数字**，要绑视图模型上从 `DesktopGridLimits` 读的那四个量程属性——
 设置页量程是这套数的第四份副本，漂了的症状不是崩，而是"拖到尽头网格不动"或"存进去被运行期悄悄钳掉"。
 

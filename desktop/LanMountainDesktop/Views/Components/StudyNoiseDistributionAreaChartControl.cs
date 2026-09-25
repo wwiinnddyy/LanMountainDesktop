@@ -195,7 +195,7 @@ public sealed class StudyNoiseDistributionAreaChartControl : Control
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         PointBufferPool.ReturnPoints(ref _pointBuffer);
-        _gridLayer.Invalidate();
+        _gridLayer.DropGeometry();
         _staticLineGeometry = null;
         _staticFillGeometry = null;
         _dynamicLineGeometry = null;

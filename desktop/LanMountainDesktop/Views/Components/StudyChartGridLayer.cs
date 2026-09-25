@@ -26,7 +26,7 @@ internal sealed class StudyChartGridLayer
     private Rect _cachedPlot;
 
     /// <summary>控件从视觉树上摘下去时丢掉几何，重新上台面按新尺寸重建一次。</summary>
-    public void Invalidate()
+    public void DropGeometry()
     {
         _gridGeometry = null;
         _axisGeometry = null;

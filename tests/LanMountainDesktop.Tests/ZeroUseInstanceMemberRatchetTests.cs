@@ -160,7 +160,11 @@ public sealed class ZeroUseInstanceMemberRatchetTests
             "于是整条能力不可达：留作能力证据，删不删与卸载功能一起定",
         ["AirAppMarketAssetCacheService.Invalidate"] =
             "注释写着\"卸载后清缓存\"，但宿主根本没有轻应用卸载路径（全仓 grep Uninstall 只有遥测事件名与启动器旧版本迁移）" +
-            "＝整条能力没入口，不是漏调",
+            "＝整条能力没入口，不是漏调。" +
+            "<b>这条登记对同名敏感</b>：本棘轮的引用计数是按名字数的（reachCount[name] 减声明行），" +
+            "任何新写的 <c>xxx.Invalidate()</c> 都会让它看起来\"有人调\"。" +
+            "2026-09-25 就真撞上过一次（图表底格缓存那个方法原本也叫 <c>Invalidate</c>，一加上调用点这条就红）——" +
+            "当时的处置是把那个方法改名成 <c>DropGeometry</c>，<b>不要</b>顺手把这条登记删掉。",
         ["AirAppMarketAirAppEntry.GetVersionSummary"] =
             "\"v版本 | API x | Host >= y\" 这行摘要只在这里构造，市场列表与详情面板都没地方显示",
         // —— 只有测试在调 ——
