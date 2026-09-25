@@ -872,15 +872,8 @@ public partial class App : Application
         var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
         var languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
 
-        CultureInfo culture;
-        try
-        {
-            culture = CultureInfo.GetCultureInfo(languageCode);
-        }
-        catch (CultureNotFoundException)
-        {
-            culture = CultureInfo.GetCultureInfo(LanguageCodes.Default);
-        }
+        var culture = LanguageCulture.GetOrFallback(
+            languageCode, CultureInfo.GetCultureInfo(LanguageCodes.Default));
 
         CultureInfo.DefaultThreadCurrentCulture = culture;
         CultureInfo.DefaultThreadCurrentUICulture = culture;

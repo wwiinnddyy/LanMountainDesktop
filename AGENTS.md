@@ -597,6 +597,21 @@ await 完<b>重新问一次</b>挂载与取消、"没取到"与抛异常都画�
 另两家 LINQ 挑第一个），那是 #G1-BC 上等拍板的差别，这一笔只把它们的装配名换成 `ResolveProjectionType`，
 没动任何一家挑重载的逻辑。
 
+**语言码 → CultureInfo 的"试与接失败"只认 `Services/LanguageCulture.cs` 一家**（`GetOrFallback(码, 调用方的档)`）。
+2026-09-25 守卫基线一次报出 **5 家 8 处**：`App.axaml.cs`、`SettingsViewModels`、`LauncherSettingsPageViewModel`、
+`WeatherSettingsPageViewModel` 各一份 `catch (CultureNotFoundException)`，`DailyArtworkWidget` 那份是 `catch { }`
+兜住一切（所以只按 catch 文本数会漏掉它，别拿 grep 的 4 处当基线）。
+**退哪一档故意留在调用方**：装界面语言退 `LanguageCodes.Default`、格式化退 `InvariantCulture`，
+同一个"码不认"在两处给出两种格式是既有口径（并成一档要先定"格式该跟着界面语言走还是永远不变区域"，属内容决定）。
+三条实测语义，写在家注释里，也写在这里，因为它们决定"退档到底盖不盖得住"：
+`GetCultureInfo("")` **不抛**，给不变区域——调用方传的 fallback 对空码不起作用（今天 5 个调用点都先过
+`LanguageCodes.Normalize`，够不到；别改成"看起来更对"的空串退档，那是改口径）；纯空白与非拉丁串才抛；
+而 `"not-a-real-tag-xx"` **成功**返回 `Name="not"`——拼错语言码的症状不是退档，是安静地用一个不存在的档位。
+后两条按现状钉成测试（`LanguageCulture_…` 4 格），哪天收紧码表这两格会红着提醒。
+守卫 `CultureResolution_LivesInExactlyOnePlace` 两条方向都变异验过（装回一份内联抄本→红并点名 2 处；
+把判据里的家路径改成一个不存在的名字→红）。**允许 `=> LanguageCulture.GetOrFallback(…)` 的一行转手壳**：
+调用点实测 15 处，把壳全拆了会让"我这档退哪儿"在每条现场重写一遍，那才是第二个真源。
+
 **界面语言口径只认一处**：默认语言写 `LocalizationService.DefaultLanguageCode`，读当前语言走
 `ResolveLanguageCode(() => 快照.LanguageCode)`（内部含"读盘失败退回默认语言"的兜底），判断是不是中文走
 `IsChineseLanguage(code)`。此前宿主里有 41 处 `_languageCode = "zh-CN"` 初值/兜底、12 份各自复制的
@@ -656,7 +671,9 @@ AirApp 子进程的语言兜底在 `AirAppSdk` 的 `AirAppLocalizer` 里，它�
 （`MinDisplayDb`/`MaxDisplayDb`，或 `WindowMinDb`/`WindowMaxDb`），别在控件里再写第三份字面量。
 ② **网格那一层是个持有缓存的对象，不是静态方法**：它的真值就是"几何缓存配不配当前画布尺寸"这个状态，
 静态方法要调用方把 `Rect` 与两个 `StreamGeometry` 用 `ref` 传进来，漏写"记下这次尺寸"那一行不报错，
-症状是尺寸变了网格不跟着变、或反过来每帧重建几何。控件摘下台面时记得 `_gridLayer.Invalidate()`。
+症状是尺寸变了网格不跟着变、或反过来每帧重建几何。控件摘下台面时记得 `_gridLayer.DropGeometry()`
+（这个方法**故意不叫 `Invalidate`**：零引用棘轮按方法名数引用，撞名会把名单里
+`AirAppMarketAssetCacheService.Invalidate` 那条登记洗白成"已有人调"，见下文那条口径）。
 ③ 这段在渲染热路径上，代价已按满输入量过（1200 点 → 420 点，实测 39.1~56.9 µs/次；两块图表每帧各跑一次
 占 16.7ms 预算的 0.47%~0.68%），量测钉在 `StudyChartGeometryTests` 那条 `CostIsAFractionOfOneFrame` 上，
 上限 500 µs。行为 11 格、7 个变异逐条验过，其中<b>两个变异 stayed green 并已写进注释</b>：

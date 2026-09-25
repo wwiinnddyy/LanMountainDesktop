@@ -952,18 +952,9 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
     private string? NormalizeTimeZoneId(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-    private CultureInfo ResolveCulture(string? languageCode)
-    {
-        var normalizedLanguageCode = _localizationService.NormalizeLanguageCode(languageCode);
-        try
-        {
-            return CultureInfo.GetCultureInfo(normalizedLanguageCode);
-        }
-        catch (CultureNotFoundException)
-        {
-            return CultureInfo.GetCultureInfo(LanguageCodes.Default);
-        }
-    }
+    private CultureInfo ResolveCulture(string? languageCode) => LanguageCulture.GetOrFallback(
+        _localizationService.NormalizeLanguageCode(languageCode),
+        CultureInfo.GetCultureInfo(LanguageCodes.Default));
 
     private string L(string key, string fallback)
         => _localizationService.GetString(_languageCode, key, fallback);

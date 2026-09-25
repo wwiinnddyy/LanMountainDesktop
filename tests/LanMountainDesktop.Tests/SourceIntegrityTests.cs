@@ -1,4 +1,5 @@
 using LanMountainDesktop.Shared.Contracts.Deployment;
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -2149,6 +2150,134 @@ public sealed class SourceIntegrityTests
         Assert.True(
             offenders.Count == 0,
             $"{offenders.Count} 处重复的短文本归一化：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
+    /// <summary>
+    /// "语言码认不出时退回哪一档"由调用方说，但"试 <c>GetCultureInfo</c> 并接住失败"只认
+    /// <c>desktop/LanMountainDesktop/Services/LanguageCulture.cs</c> 一处。
+    /// 2026-09-25 收口前量到 <b>5 家、8 处</b>（守卫基线原样报出来的数）：
+    /// <c>App.axaml.cs:880</c>、<c>SettingsViewModels.cs:955/962</c>、
+    /// <c>LauncherSettingsPageViewModel.cs:352/358</c>、<c>WeatherSettingsPageViewModel.cs:915/921</c> 各一份
+    /// 声明 + <c>catch (CultureNotFoundException)</c>，<c>DailyArtworkWidget.axaml.cs:673</c> 那份是
+    /// <c>catch { }</c> 兜住一切。其中 Launcher 与 Weather 两份逐字相同（重复普查里是一族）。
+    /// <b>退哪一档是内容口径、不是抄漏</b>：装界面语言退 <c>LanguageCodes.Default</c>，格式化退
+    /// <c>InvariantCulture</c>——同一个"码不认"在两处给出两种格式，所以家只收"怎么试"，档由调用方传，
+    /// 这一条留给 #G1-BL 那类"端口径不一致"的账，不在这里替谁选边。
+    /// 守卫拦两件事：① 家外面再出现 <c>catch (CultureNotFoundException)</c>；
+    /// ② 家外面 <c>ResolveCulture</c> 的方法体里再出现任何 <c>catch</c>——
+    /// 调用点实测有 15 处，把转手壳全拆了会让"我这档退哪儿"在每条现场再写一遍，那才是第二个真源，
+    /// 所以**一行式转手的壳允许**，允许的前提是它不再自己接失败。找不到家文件本身也算红
+    /// （家被改名后这条守卫会永远绿）。
+    /// </summary>
+    [Fact]
+    public void CultureResolution_LivesInExactlyOnePlace()
+    {
+        var homeFile = @"desktop\LanMountainDesktop\Services\LanguageCulture.cs";
+        var catchRe = new Regex(@"catch\s*\(\s*CultureNotFoundException");
+        var declRe = new Regex(@"(?:private|internal|public|protected)[\w\s<>?]*\sResolveCulture\s*\(");
+        var anyCatchRe = new Regex(@"^\s*catch\b");
+        var offenders = new List<string>();
+        var seenHome = false;
+
+        foreach (var file in SourceFiles())
+        {
+            var relative = RelativeToRepo(file);
+            if (string.Equals(relative, homeFile, StringComparison.OrdinalIgnoreCase))
+            {
+                seenHome = true;
+                continue;
+            }
+
+            var lines = CodeLines(file).ToList();
+            for (var index = 0; index < lines.Count; index++)
+            {
+                var (line, number) = lines[index];
+                if (catchRe.IsMatch(line))
+                {
+                    offenders.Add($"{relative}:{number} 又抄了一份语言码退档，请用 LanguageCulture.GetOrFallback");
+                    continue;
+                }
+
+                if (!declRe.IsMatch(line))
+                {
+                    continue;
+                }
+
+                // 声明之后的方法体（到下一条同缩进的成员声明为止）里不许再有 catch。
+                for (var next = index + 1; next < lines.Count; next++)
+                {
+                    var bodyLine = lines[next].Line;
+                    if (declRe.IsMatch(bodyLine) || MethodStart.IsMatch(bodyLine))
+                    {
+                        break;
+                    }
+
+                    if (anyCatchRe.IsMatch(bodyLine))
+                    {
+                        offenders.Add(
+                            $"{relative}:{number} 的 ResolveCulture 还在自己接失败——" +
+                            "档位可以留在这里说，试与接失败请走 LanguageCulture.GetOrFallback");
+                        break;
+                    }
+                }
+            }
+        }
+
+        Assert.True(seenHome, $"守卫找不到家文件 {homeFile}——它被改名或删掉的话，这条守卫就永远绿，等于没有守卫");
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 处重复的语言码退档实现：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
+    private static readonly Regex MethodStart = new(
+        @"^\s{4}(?:private|internal|public|protected|override|static|async|\[)", RegexOptions.Compiled);
+
+    /// <summary>
+    /// 家自己的行为钉，四条按 2026-09-25 的实测语义写（不是按"应该怎样"写）：认得的码给那档；
+    /// 抛 <c>CultureNotFoundException</c> 的码（纯空白、汉字串）回调用方给的档；
+    /// <b>空串不走退档</b>（<c>GetCultureInfo("")</c> 不抛，给的是不变区域）；
+    /// <b>看着像标签的错码也不走退档</b>（<c>"not-a-real-tag-xx"</c> 成功返回 <c>Name="not"</c>）。
+    /// 后两条钉的是"退档其实盖不住哪些输入"——把它们钉成现在这样，是为了哪天有人收紧码表时
+    /// 这里会红，而不是让"拼错语言码"继续静默变成一个不存在的档位。
+    /// </summary>
+    [Theory]
+    [InlineData("zh-CN")]
+    [InlineData("en-US")]
+    public void LanguageCulture_KnownCode_GivesThatCulture(string code)
+    {
+        var culture = LanMountainDesktop.Services.LanguageCulture.GetOrFallback(
+            code, CultureInfo.InvariantCulture);
+
+        Assert.Equal(code, culture.Name);
+    }
+
+    [Theory]
+    [InlineData("   ")]
+    [InlineData("中文")]
+    public void LanguageCulture_CodeThatThrows_GivesTheCallersFallback(string code)
+    {
+        var fallback = CultureInfo.GetCultureInfo("ja-JP");
+
+        Assert.Same(fallback, LanMountainDesktop.Services.LanguageCulture.GetOrFallback(code, fallback));
+    }
+
+    [Fact]
+    public void LanguageCulture_EmptyCode_SilentlyGivesInvariant_NotTheCallersFallback()
+    {
+        var culture = LanMountainDesktop.Services.LanguageCulture.GetOrFallback(
+            string.Empty, CultureInfo.GetCultureInfo("ja-JP"));
+
+        Assert.Equal(string.Empty, culture.Name);
+        Assert.NotSame(CultureInfo.GetCultureInfo("ja-JP"), culture);
+    }
+
+    [Fact]
+    public void LanguageCulture_MalformedButTagShapedCode_SilentlyGivesAFabricatedCulture()
+    {
+        var culture = LanMountainDesktop.Services.LanguageCulture.GetOrFallback(
+            "not-a-real-tag-xx", CultureInfo.InvariantCulture);
+
+        Assert.Equal("not", culture.Name);
     }
 
     /// <summary>

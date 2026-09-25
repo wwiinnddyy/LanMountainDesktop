@@ -912,17 +912,7 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
             : L("settings.weather.preview_unknown", "Unknown");
     }
 
-    private CultureInfo ResolveCulture()
-    {
-        try
-        {
-            return CultureInfo.GetCultureInfo(_languageCode);
-        }
-        catch (CultureNotFoundException)
-        {
-            return CultureInfo.InvariantCulture;
-        }
-    }
+    private CultureInfo ResolveCulture() => LanguageCulture.GetOrFallback(_languageCode, CultureInfo.InvariantCulture);
 }
 
 public sealed record WeatherPreviewMetric(string Label, string Value, string Glyph);

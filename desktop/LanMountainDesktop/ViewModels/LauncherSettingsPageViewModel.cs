@@ -349,17 +349,7 @@ public sealed partial class LauncherSettingsPageViewModel : ViewModelBase, IDisp
         ShowTileBackgroundDescription = L("settings.launcher.show_tile_background_desc", "Display a background card behind each app icon in the launcher.");
     }
 
-    private CultureInfo ResolveCulture()
-    {
-        try
-        {
-            return CultureInfo.GetCultureInfo(_languageCode);
-        }
-        catch (CultureNotFoundException)
-        {
-            return CultureInfo.InvariantCulture;
-        }
-    }
+    private CultureInfo ResolveCulture() => LanguageCulture.GetOrFallback(_languageCode, CultureInfo.InvariantCulture);
 
     private string L(string key, string fallback)
         => _localizationService.GetString(_languageCode, key, fallback);

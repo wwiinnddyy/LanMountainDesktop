@@ -670,17 +670,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         return _localizationService.GetString(_languageCode, key, fallback);
     }
 
-    private CultureInfo ResolveCulture()
-    {
-        try
-        {
-            return CultureInfo.GetCultureInfo(_languageCode);
-        }
-        catch
-        {
-            return CultureInfo.InvariantCulture;
-        }
-    }
+    private CultureInfo ResolveCulture() => LanguageCulture.GetOrFallback(_languageCode, CultureInfo.InvariantCulture);
 
     private double ResolveScale()
     {
