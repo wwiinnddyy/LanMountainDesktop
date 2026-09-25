@@ -19,8 +19,7 @@ AirApp 是阑山桌面**唯一**的扩展形态，桌面组件与窗口轻应用
 ## 配置包源
 
 SDK 发布在 GitHub Packages，**读取也需要认证**。在你的项目里放一份
-`NuGet.config`，并把 `USERNAME` 换成你的 GitHub 用户名、
-`TOKEN` 换成一个带 `read:packages` 权限的 PAT：
+`NuGet.config`，凭据用环境变量占位符引用（这份文件就可以提交，源地址与凭据槽只说一次）：
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
@@ -32,15 +31,23 @@ SDK 发布在 GitHub Packages，**读取也需要认证**。在你的项目里�
   </packageSources>
   <packageSourceCredentials>
     <lanmountain>
-      <add key="Username" value="USERNAME" />
-      <add key="ClearTextPassword" value="TOKEN" />
+      <add key="Username" value="%LANMOUNTAIN_PACKAGES_USER%" />
+      <add key="ClearTextPassword" value="%LANMOUNTAIN_PACKAGES_TOKEN%" />
     </lanmountain>
   </packageSourceCredentials>
 </configuration>
 ```
 
-不要把带 token 的 `NuGet.config` 提交进仓库。CI 里用
-`dotnet nuget add source ... --username x --password ${{ secrets.YOUR_PAT }}` 注入。
+本地把 `LANMOUNTAIN_PACKAGES_USER` / `LANMOUNTAIN_PACKAGES_TOKEN` 设进环境
+（PAT 需 `read:packages`）；CI 里在 workflow 的 `env:` 中把仓库 secret 注入这两个变量。
+
+**别再写 `dotnet nuget add source --name lanmountain`**：上面这份 `NuGet.config` 已经登记了同名源，
+再 add 会直接失败（实测 `The name specified has already been added to the list of available package sources.`，
+而且是在 Restore 之前就红）；换成 `update source` 又在 Linux runner 上报
+`Password encryption is not supported on .NET Core for this platform.`。
+变量没设时 `%VAR%` 替换成空串，还原报 `Value cannot be null or empty string. (Parameter 'password')`，
+所以建议在 Restore 前加一步判空、把这句话翻译成"仓库没配 LANMOUNTAIN_PACKAGES_TOKEN"。
+完整片段见宿主文档《AirApp 开发 → 快速开始 → 环境准备》。
 
 ## 安装与创建
 

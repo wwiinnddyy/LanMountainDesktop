@@ -133,11 +133,30 @@ AirApp 本地包生成：
   ② 设 `LMD_UPDATE_AIRAPP_SDK_BASELINE=1` 重录一次基线，台账会自动多出一行 `1.0.1 <新哈希>`——
   基线里唯一该变的就是 `Version=1.0.1.0` 那几处装配限定名，别的全等才说明没录错东西。
   ③ `scripts/Pack-AirAppPackages.ps1 -Configuration Release -OutputPath ./artifacts/nuget` 出三个本地包。
-  ④ 打 tag `airapp-sdk-v1.0.1` 由 CI 发（`airapp-sdk-publish.yml` 有 `packages: write`，本地没有 PAT 也能发）。
+  ④ 发版走 `airapp-sdk-publish.yml`（有 `packages: write`，本地没有 PAT 也能发）：`workflow_dispatch` 传
+  `version` 即可，不必打 tag（2026-09-25 实测 dispatch 一条路径就够，tag 触发那条同时留着）。
+  这条作业本身今天踩过三个坑，都已修并记在下面——**步骤绿不等于步骤跑了**：
+  缺 `Restore`（宿主是 Exec 方式带 `--no-restore` 构建 AirAppHost 的）；dispatch 输入直接写进 shell 行会被
+  解析成脚本；`pwsh` 里 `@('‑‑flag','值',…)` 这种**数组 splat 是按位置喂的**（实测
+  `T @('-A','x','-B','y')` 得到 `A=-A B=x C=-B`），传具名参数必须用哈希表 splat。
   ⑤ 六个外部仓库各改 `PackageReference` 版本 + `airapp.json` 的 `apiVersion` 再 Release 重建；
   还原时**别用 `--source` 覆盖**（各家 NuGet.config 是 `<clear/>` + GitHub Packages，本地没凭据），
   用 `dotnet restore <proj> -p:RestoreAdditionalProjectSources="<仓库>\artifacts\nuget"` 只加一个源。
   ⑥ 复跑 `--filter "Category=EcosystemProbe"`，目标 8/8。
+  **外部那六家的 CI 今天量出来是三层坏，一次修到底**（它们从 SDK 上 GitHub Packages 起就没绿过：
+  `LanDesktopHot` 的 Actions secrets 实测 `total_count: 0`）：
+  ① `dotnet nuget add source --name lanmountain` 与各家自己 `NuGet.config` 里同名源冲突
+  （`The name specified has already been added to the list of available package sources.`，在 Restore 之前就红）；
+  ② 改成 `update source` 又撞 `Password encryption is not supported on .NET Core for this platform.`
+  （Linux runner 上这个子命令不认 `--store-password-in-clear-text`）；
+  ③ 现在的口径是：**源地址与凭据槽只写在 NuGet.config 一处**，凭据用 `%LANMOUNTAIN_PACKAGES_USER%` /
+  `%LANMOUNTAIN_PACKAGES_TOKEN%` 占位，CI 只在 `env:` 里把仓库 secret 注入这两个变量，不再改任何配置文件。
+  替换机制实测过：把占位符指向不存在的域名，还原报 NU1301（说明替换后真去打那个地址）；设成 dummy 值，
+  GitHub Packages 回 401（说明凭据被带上去了）。各家 CI 里另加一步 `Require the packages credential`：
+  变量为空时直接 `::error::` 指出缺哪张 PAT——否则还原只会报
+  `Value cannot be null or empty string. (Parameter 'password')`，看不出是缺凭据。
+  **剩下这一条我做不了**：给六家各配一个带 `read:packages` 的仓库 secret（GitHub 不让把包发给匿名请求，
+  宿主这边的 `gh` 令牌也没有 `read:packages` 范围，所以"外部作者能不能真还原到 1.0.1"仍未被端到端证明）。
   外部那六家绑不绑得上还有个隐藏判据：`ExcludeAssets` 必须写 `"runtime;native"`——只写 `runtime` 会留下
   一个**空的 `runtimes/` 目录骨架**，宿主打包校验就拒载（实测 SchedulePlugin 就是这样，其余五家一直是对的）。
   宿主侧另外两件事：市场安装只比 **major**，装载期靠真绑定；抬 `ApiVersion` 不会把老包预先挡在门外
