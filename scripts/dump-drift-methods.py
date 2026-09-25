@@ -21,7 +21,7 @@ SKIP = ("\\obj\\", "\\bin\\", "\\artifacts\\", "\\node_modules\\")
 SIGNATURE = re.compile(
     r"^\s*(?:public|private|protected|internal)?\s*"
     r"(?:static\s+|sealed\s+|override\s+|virtual\s+|async\s+|partial\s+|new\s+)*"
-    r"(?:[A-Za-z_][\w<>\[\]?,\. ]*?\s+)?(?P<name>[A-Za-z_]\w*)\s*(?:<[^>]*>)?\s*\((?P<args>[^)]*)\)\s*(?:=>.*)?\{?\s*\}?\s*$")
+    r"(?:[A-Za-z_(][\w<>\[\]?,\.() ]*?\s+)?(?P<name>[A-Za-z_]\w*)\s*(?:<[^>]*>)?\s*\((?P<args>[^)]*)\)\s*(?:=>.*)?\{?\s*\}?\s*$")
 KEYWORDS = {
     "if", "for", "foreach", "while", "switch", "catch", "using", "lock", "return",
     "get", "set", "add", "remove", "init", "when", "where", "select", "from",

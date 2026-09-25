@@ -488,6 +488,35 @@ public sealed class DuplicateImplementationRatchetTests
     /// 已放宽为"完整标识符出现"，双向变异验过：引用留着 → 绿；把同文件两处引用都换成空 lambda → 红且只报那一处。</description></item>
     /// </list>
 
+    /// 15 → 13 收两族（都是噪声曲线控件与噪声分布面积图控件这两块自绘图表，#G1-CC）：
+    /// ① <c>BuildPlotPoints</c> 86 行逐字相同（分桶取每桶最低点与最高点的那段降采样）＋它下面的
+    /// <c>MapToPlot</c>／<c>MapDbToY</c>／<c>MapTimestampToLogicalX</c> 三小段 →
+    /// <c>StudyChartGeometry.BuildPlotPoints</c>（源数组、逻辑原点、dB 窗口、缓冲 <c>ref</c> 都由调用方给：
+    /// 曲线窗口固定 20..100，面积图跟着基线走 baseline-5..baseline+25，<b>这是内容口径差异、不是抄漏</b>，
+    /// 所以窗口留在调用方，各家用 <c>MinDisplayDb</c>／<c>WindowMinDb</c> 一份真值传进去）；
+    /// ② <c>DrawGrid</c> 7 行逐字相同，外加一把<b>看不见的</b> 25 行 <c>BuildGridGeometry</c>——
+    /// 它的签名返回元组 <c>(StreamGeometry Grid, StreamGeometry Axis)</c>，<c>AllmanSignature</c> 那条正则
+    /// 只认"类型 名字(参数)"的形状，带括号与逗号的返回类型整个不匹配，所以这两份逐字相同的几何构建
+    /// 从来没进过普查（<b>判据缺口</b>：两把尺子的签名正则里"返回类型"那一段字符集没有圆括号，
+    /// 带元组返回的声明整行不匹配）。本笔一并修：<see cref="AllmanSignature"/> 与
+    /// <see cref="DriftSignature"/> 及两份脚本同步放开括号。<b>两笔账分开记</b>——
+    /// 修判据这件事在今天这棵树上量到的新增族数是 <b>0</b>（逐字仍 13、漂移仍 ≤189，两把尺子一字未动就过了），
+    /// 也就是说这条缺口只咬过 <c>BuildGridGeometry</c> 这一对，而那对已经被本笔收掉；
+    /// 修好的判据拿种出来的正例验过：在 desktop 与 airapp 各放一份逐字相同的
+    /// <c>private static (int A, int B) ProbeTupleFamily(int seed)</c>，脚本如实报 "2x in 2 files"，验完删掉。
+    /// 网格收进 <c>StudyChartGridLayer</c> 这个<b>持有缓存的对象</b>而不是静态方法：这一层的真值就是
+    /// "几何缓存配不配当前画布尺寸"这个状态，静态方法要调用方把 <c>Rect</c> 与两个几何用 <c>ref</c> 传进来，
+    /// 而漏写 <c>_cachedGridPlot = plot</c> 这一行不报错，症状是"格子尺寸变了网格不跟着变"或"每帧重建几何"。
+    /// 代价按满输入实测（1200 点 → 420 点，两趟 <c>Stopwatch</c>：39.1 µs 与 56.9 µs）：
+    /// 两块图表每帧各跑一次占 16.7ms 预算的 <b>0.47%~0.68%</b>；这条量测钉在
+    /// <c>StudyChartGeometryTests.BuildPlotPoints_CostIsAFractionOfOneFrame_AtTheWidestRealInput</c>（上限 500 µs）。
+    /// 行为钉 <c>StudyChartGeometryTests</c> 11 格，7 个变异逐条验过：峰谷只取一边→红 1；
+    /// 末点下标偏一格→红 2；直映射不吃窗口起点→红 1；窗口起点连同 clamp 下界一起吃掉→红 1（只改偏移
+    /// 会被 <c>Math.Clamp</c> 吸收，故两行一起改才算变异）；每次重租数组→红 1。
+    /// <b>两处变异 stayed green 并已写明原因</b>：删掉 <c>second != lastSourceIndex</c> 去重守卫仍全绿——
+    /// 时间戳严格递增时它恒为真（<c>first &lt; second</c> 且 <c>lastSourceIndex ≤ first</c>），
+    /// 守的是"同一时刻重复采样"那种源，今天没有行为证据；把 clamp 下界单独改坏也全绿，因为它与上一行偏移互为冗余。
+    ///
     /// 19 → 18 收一族：<c>OnAttachedToVisualTree</c> 里每日一词 1x1 与 2x2 那两份逐字相同的四行
     /// （落"已附着"位 → 按设置起停表 → 画刷新按钮 → 立刻取一次数）→
     /// <c>ComponentRefreshLifetime.Attach</c>（这个家已有 Detach 与 Reschedule，缺的正是起的那一半），
@@ -503,7 +532,7 @@ public sealed class DuplicateImplementationRatchetTests
     /// "<c>OnSizeChanged</c> 5 处 5 文件逐字相同"，那 5 处今天已收进 <c>RefreshOnResize</c>；
     /// 现在同签名只剩 2 处（FileManager / RemovableStorage 那对空处理器），正对照改成按哈希点名。
 
-    private const int IdenticalBodyFamilyCeiling = 15;
+    private const int IdenticalBodyFamilyCeiling = 13;
 
     /// 18 → 15 一次收三族，全是同一个签名 <c>ResolveScale</c> 的三个不同体（#66 队列里那条"三对"）：
     /// <list type="bullet">
@@ -671,7 +700,7 @@ public sealed class DuplicateImplementationRatchetTests
     private static readonly string[] SkipPathParts = ["obj", "bin", "artifacts", "node_modules"];
 
     private static readonly Regex AllmanSignature = new(
-        @"^\s*(private|internal|public)\s+(static\s+)?(async\s+)?[\w<>?\[\],\. ]+?\b(?<name>[A-Za-z_]\w*)\s*\([^)]*\)\s*$",
+        @"^\s*(private|internal|public)\s+(static\s+)?(async\s+)?[\w<>?\[\],\.() ]+?\b(?<name>[A-Za-z_]\w*)\s*\([^)]*\)\s*$",
         RegexOptions.Compiled);
 
     private static readonly Regex OpeningBraceOnly = new(@"^\s*\{\s*$", RegexOptions.Compiled);
@@ -679,7 +708,7 @@ public sealed class DuplicateImplementationRatchetTests
     private static readonly Regex DriftSignature = new(
         @"^\s*(?:public|private|protected|internal)?\s*" +
         @"(?:static\s+|sealed\s+|override\s+|virtual\s+|async\s+|partial\s+|new\s+)*" +
-        @"(?:[A-Za-z_][\w<>\[\]?,\. ]*?\s+)?(?<name>[A-Za-z_]\w*)\s*(?:<[^>]*>)?\s*\([^)]*\)\s*(?:=>.*)?\{?\s*\}?\s*$",
+        @"(?:[A-Za-z_(][\w<>\[\]?,\.() ]*?\s+)?(?<name>[A-Za-z_]\w*)\s*(?:<[^>]*>)?\s*\([^)]*\)\s*(?:=>.*)?\{?\s*\}?\s*$",
         RegexOptions.Compiled);
 
     private static readonly string[] NonMethodNames =

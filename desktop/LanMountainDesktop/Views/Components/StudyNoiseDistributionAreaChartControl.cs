@@ -32,19 +32,19 @@ public sealed class StudyNoiseDistributionAreaChartControl : Control
 
     private IReadOnlyList<NoiseRealtimePoint> _points = Array.Empty<NoiseRealtimePoint>();
     private Point[]? _pointBuffer;
-    private StreamGeometry? _gridGeometry;
-    private StreamGeometry? _axisGeometry;
+    private readonly StudyChartGridLayer _gridLayer = new();
     private StreamGeometry? _staticLineGeometry;
     private StreamGeometry? _staticFillGeometry;
     private StreamGeometry? _dynamicLineGeometry;
     private StreamGeometry? _dynamicFillGeometry;
-    private Rect _cachedGridPlot;
     private Rect _cachedPlot;
     private DateTimeOffset _logicalOrigin;
     private DateTimeOffset _lastSeriesStart;
     private DateTimeOffset _lastSeriesEnd;
     private double _baselineDb = 45;
     private double _cachedBaselineDb = 45;
+    private double WindowMinDb => _baselineDb - 5d;
+    private double WindowMaxDb => _baselineDb + 25d;
     private double _cachedPixelsPerSecond;
     private double _viewportTranslateX;
     private bool _hasLogicalOrigin;
@@ -192,16 +192,10 @@ public sealed class StudyNoiseDistributionAreaChartControl : Control
         return (staticCount, dynamicCount);
     }
 
-    internal static double MapTimestampToLogicalX(DateTimeOffset timestamp, DateTimeOffset origin, double pixelsPerSecond)
-    {
-        return Math.Max(0, (timestamp - origin).TotalSeconds * pixelsPerSecond);
-    }
-
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         PointBufferPool.ReturnPoints(ref _pointBuffer);
-        _gridGeometry = null;
-        _axisGeometry = null;
+        _gridLayer.Invalidate();
         _staticLineGeometry = null;
         _staticFillGeometry = null;
         _dynamicLineGeometry = null;
@@ -228,7 +222,7 @@ public sealed class StudyNoiseDistributionAreaChartControl : Control
             height: Math.Max(1, bounds.Height - 2));
 
         DrawLevelBands(context, plot);
-        DrawGrid(context, plot);
+        _gridLayer.Draw(context, plot, GridPen, AxisPen);
 
         if (_points.Count < 2)
         {
@@ -338,56 +332,13 @@ public sealed class StudyNoiseDistributionAreaChartControl : Control
         context.DrawRectangle(QuietBandBrush, null, new Rect(plot.Left, quietTop, plot.Width, Math.Max(0, plot.Bottom - quietTop)));
     }
 
-    private void DrawGrid(DrawingContext context, Rect plot)
-    {
-        if (_gridGeometry is null || _axisGeometry is null || _cachedGridPlot != plot)
-        {
-            _cachedGridPlot = plot;
-            (_gridGeometry, _axisGeometry) = BuildGridGeometry(plot);
-        }
-
-        context.DrawGeometry(brush: null, pen: GridPen, _gridGeometry);
-        context.DrawGeometry(brush: null, pen: AxisPen, _axisGeometry);
-    }
-
-    private static (StreamGeometry Grid, StreamGeometry Axis) BuildGridGeometry(Rect plot)
-    {
-        const int horizontalDivisions = 4;
-        const int verticalDivisions = 4;
-
-        var grid = new StreamGeometry();
-        using (var builder = grid.Open())
-        {
-            for (var i = 0; i <= horizontalDivisions; i++)
-            {
-                var y = plot.Top + plot.Height * (i / (double)horizontalDivisions);
-                StudyChartGeometry.AddLine(builder, new Point(plot.Left, y), new Point(plot.Right, y));
-            }
-
-            for (var i = 0; i <= verticalDivisions; i++)
-            {
-                var x = plot.Left + plot.Width * (i / (double)verticalDivisions);
-                StudyChartGeometry.AddLine(builder, new Point(x, plot.Top), new Point(x, plot.Bottom));
-            }
-        }
-
-        var axis = new StreamGeometry();
-        using (var builder = axis.Open())
-        {
-            StudyChartGeometry.AddLine(builder, new Point(plot.Left, plot.Top), new Point(plot.Left, plot.Bottom));
-            StudyChartGeometry.AddLine(builder, new Point(plot.Left, plot.Bottom), new Point(plot.Right, plot.Bottom));
-        }
-
-        return (grid, axis);
-    }
-
     private void EnsureGeometry(Rect plot)
     {
         var visibleDurationSeconds = _isStaticSeries
             ? ResolveVisibleDurationSeconds(_points)
             : RealtimeVisibleSeconds;
         var pixelsPerSecond = plot.Width / Math.Max(0.001, visibleDurationSeconds);
-        var latestLogicalX = MapTimestampToLogicalX(_points[^1].Timestamp, _logicalOrigin, pixelsPerSecond);
+        var latestLogicalX = StudyChartGeometry.MapTimestampToLogicalX(_points[^1].Timestamp, _logicalOrigin, pixelsPerSecond);
         _viewportTranslateX = plot.Right - latestLogicalX;
 
         var metricsChanged = _cachedPlot != plot ||
@@ -435,7 +386,7 @@ public sealed class StudyNoiseDistributionAreaChartControl : Control
             ? ResolveVisibleDurationSeconds(_points)
             : RealtimeVisibleSeconds;
         var pixelsPerSecond = plot.Width / Math.Max(0.001, visibleDurationSeconds);
-        var latestLogicalX = MapTimestampToLogicalX(_points[^1].Timestamp, _logicalOrigin, pixelsPerSecond);
+        var latestLogicalX = StudyChartGeometry.MapTimestampToLogicalX(_points[^1].Timestamp, _logicalOrigin, pixelsPerSecond);
         _viewportTranslateX = plot.Right - latestLogicalX;
 
         var metricsChanged = _cachedPlot != plot ||
@@ -540,7 +491,9 @@ public sealed class StudyNoiseDistributionAreaChartControl : Control
         }
 
         var maxSamples = Math.Clamp((int)Math.Floor(plot.Width), 64, 420);
-        var pointCount = BuildPlotPoints(startIndex, endExclusive, plot, pixelsPerSecond, maxSamples);
+        var pointCount = StudyChartGeometry.BuildPlotPoints(
+            _points, startIndex, endExclusive, plot, _logicalOrigin, pixelsPerSecond,
+            WindowMinDb, WindowMaxDb, maxSamples, ref _pointBuffer);
         if (pointCount < 2 || _pointBuffer is null)
         {
             return (null, null, sourceCount);
@@ -607,134 +560,9 @@ public sealed class StudyNoiseDistributionAreaChartControl : Control
         }
     }
 
-    private int BuildPlotPoints(
-        int startIndex,
-        int endExclusive,
-        Rect plot,
-        double pixelsPerSecond,
-        int maxSamples)
-    {
-        var sourceCount = endExclusive - startIndex;
-        if (sourceCount <= 1)
-        {
-            return 0;
-        }
 
-        if (sourceCount <= maxSamples)
-        {
-            PointBufferPool.RentPointsAtLeast(ref _pointBuffer, sourceCount);
-            if (_pointBuffer is null)
-            {
-                return 0;
-            }
-
-            for (var i = 0; i < sourceCount; i++)
-            {
-                _pointBuffer[i] = MapToPlot(plot, _points[startIndex + i], pixelsPerSecond);
-            }
-
-            return sourceCount;
-        }
-
-        var bucketCount = Math.Max(1, (maxSamples - 2) / 2);
-        var targetCapacity = 2 + bucketCount * 2;
-        PointBufferPool.RentPointsAtLeast(ref _pointBuffer, targetCapacity);
-        if (_pointBuffer is null)
-        {
-            return 0;
-        }
-
-        var outputIndex = 0;
-        _pointBuffer[outputIndex++] = MapToPlot(plot, _points[startIndex], pixelsPerSecond);
-
-        var middleCount = sourceCount - 2;
-        var bucketWidth = middleCount / (double)bucketCount;
-        var lastSourceIndex = startIndex;
-
-        for (var bucket = 0; bucket < bucketCount; bucket++)
-        {
-            var rangeStart = startIndex + 1 + (int)Math.Floor(bucket * bucketWidth);
-            var rangeEnd = startIndex + 1 + (int)Math.Floor((bucket + 1) * bucketWidth);
-            if (bucket == bucketCount - 1)
-            {
-                rangeEnd = endExclusive - 1;
-            }
-
-            rangeStart = Math.Clamp(rangeStart, startIndex + 1, endExclusive - 2);
-            rangeEnd = Math.Clamp(rangeEnd, rangeStart + 1, endExclusive - 1);
-
-            var minIndex = rangeStart;
-            var maxIndex = rangeStart;
-            var minValue = _points[rangeStart].DisplayDb;
-            var maxValue = minValue;
-
-            for (var i = rangeStart + 1; i < rangeEnd; i++)
-            {
-                var value = _points[i].DisplayDb;
-                if (value < minValue)
-                {
-                    minValue = value;
-                    minIndex = i;
-                }
-
-                if (value > maxValue)
-                {
-                    maxValue = value;
-                    maxIndex = i;
-                }
-            }
-
-            if (minIndex == maxIndex)
-            {
-                if (minIndex != lastSourceIndex)
-                {
-                    _pointBuffer[outputIndex++] = MapToPlot(plot, _points[minIndex], pixelsPerSecond);
-                    lastSourceIndex = minIndex;
-                }
-
-                continue;
-            }
-
-            var first = minIndex < maxIndex ? minIndex : maxIndex;
-            var second = minIndex < maxIndex ? maxIndex : minIndex;
-
-            if (first != lastSourceIndex)
-            {
-                _pointBuffer[outputIndex++] = MapToPlot(plot, _points[first], pixelsPerSecond);
-                lastSourceIndex = first;
-            }
-
-            if (second != lastSourceIndex)
-            {
-                _pointBuffer[outputIndex++] = MapToPlot(plot, _points[second], pixelsPerSecond);
-                lastSourceIndex = second;
-            }
-        }
-
-        var finalIndex = endExclusive - 1;
-        if (finalIndex != lastSourceIndex)
-        {
-            _pointBuffer[outputIndex++] = MapToPlot(plot, _points[finalIndex], pixelsPerSecond);
-        }
-
-        return outputIndex;
-    }
-
-    private Point MapToPlot(Rect plot, NoiseRealtimePoint point, double pixelsPerSecond)
-    {
-        var x = MapTimestampToLogicalX(point.Timestamp, _logicalOrigin, pixelsPerSecond);
-        var y = MapDbToY(plot, point.DisplayDb);
-        return new Point(x, y);
-    }
-
-    private double MapDbToY(Rect plot, double displayDb)
-    {
-        var minDb = _baselineDb - 5d;
-        var maxDb = _baselineDb + 25d;
-        var normalized = (displayDb - minDb) / Math.Max(0.001, maxDb - minDb);
-        normalized = Math.Clamp(normalized, 0, 1);
-        return plot.Bottom - normalized * plot.Height;
-    }
+    private double MapDbToY(Rect plot, double displayDb) =>
+        StudyChartGeometry.MapDbToY(plot, displayDb, WindowMinDb, WindowMaxDb);
 
     private void DrawLatestPoint(DrawingContext context, Rect plot)
     {
@@ -744,7 +572,8 @@ public sealed class StudyNoiseDistributionAreaChartControl : Control
         }
 
         var latest = _points[^1];
-        var center = MapToPlot(plot, latest, _cachedPixelsPerSecond);
+        var center = StudyChartGeometry.MapToPlot(
+            plot, latest, _logicalOrigin, _cachedPixelsPerSecond, WindowMinDb, WindowMaxDb);
         var level = StudyNoiseSeriesRules.LevelOf(latest.DisplayDb, _baselineDb);
         var levelBrush = GetLevelBrush(level);
         var radius = Math.Clamp(Math.Min(plot.Width, plot.Height) / 34d, 3.5, 8);

@@ -28,7 +28,7 @@ SKIP_DIRS = {"obj", "bin", "artifacts", "node_modules"}
 name_alt = "|".join(re.escape(n) for n in NAMES) if NAMES else r"[A-Za-z_]\w*"
 SIG = re.compile(
     r"^\s*(private|internal|public)\s+(static\s+)?(?:async\s+)?"
-    r"[\w<>?\[\],\. ]+?\b(" + name_alt + r")\s*\(([^)]*)\)\s*$"
+    r"[\w<>?\[\],\.() ]+?\b(" + name_alt + r")\s*\(([^)]*)\)\s*$"
 )
 BRACE = re.compile(r"^\s*\{\s*$")
 

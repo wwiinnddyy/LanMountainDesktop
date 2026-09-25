@@ -81,16 +81,29 @@ public sealed class StudyComponentRenderingTests
     }
 
     [Fact]
-    public void CurveChart_UsesStableLogicalTimeCoordinates()
+    public void ChartGeometry_LogicalX_ScalesSecondsByPixelsPerSecond()
     {
         var origin = new DateTimeOffset(2026, 5, 6, 12, 0, 0, TimeSpan.Zero);
 
-        var x = StudyNoiseCurveChartControl.MapTimestampToLogicalX(
+        var x = StudyChartGeometry.MapTimestampToLogicalX(
             origin.AddSeconds(3),
             origin,
             pixelsPerSecond: 12);
 
         Assert.Equal(36, x);
+    }
+
+    [Fact]
+    public void ChartGeometry_LogicalX_NeverGoesNegative_BeforeTheOrigin()
+    {
+        var origin = new DateTimeOffset(2026, 5, 6, 12, 0, 0, TimeSpan.Zero);
+
+        var x = StudyChartGeometry.MapTimestampToLogicalX(
+            origin.AddSeconds(-3),
+            origin,
+            pixelsPerSecond: 12);
+
+        Assert.Equal(0, x);
     }
 
     [Fact]
@@ -109,16 +122,16 @@ public sealed class StudyComponentRenderingTests
     }
 
     [Fact]
-    public void DistributionAreaChart_UsesStableLogicalTimeCoordinates_WhenNewPointArrives()
+    public void ChartGeometry_LogicalX_IsDeterministic_WhenCalledTwiceForTheSamePoint()
     {
         var origin = new DateTimeOffset(2026, 5, 6, 12, 0, 0, TimeSpan.Zero);
         var oldPointTimestamp = origin.AddSeconds(3);
 
-        var before = StudyNoiseDistributionAreaChartControl.MapTimestampToLogicalX(
+        var before = StudyChartGeometry.MapTimestampToLogicalX(
             oldPointTimestamp,
             origin,
             pixelsPerSecond: 20);
-        var after = StudyNoiseDistributionAreaChartControl.MapTimestampToLogicalX(
+        var after = StudyChartGeometry.MapTimestampToLogicalX(
             oldPointTimestamp,
             origin,
             pixelsPerSecond: 20);

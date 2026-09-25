@@ -629,6 +629,24 @@ AirApp 子进程的语言兜底在 `AirAppSdk` 的 `AirAppLocalizer` 里，它�
 同一条守卫现在禁组件再声明 `OnStudySnapshotUpdated`。行为由 `StudyComponentRenderingTests` 两条钉住
 （不可见时不排队、可见时排队；把 `_canRender()` 判断去掉后第一条立刻红）。
 
+**自绘图表的几何只认 `Views/Components/StudyChartGeometry.cs` 与 `StudyChartGridLayer.cs` 两家**
+（2026-09-25，#G1-CC：噪声曲线与噪声分布面积图这两块控件此前各抄一份逐字相同的 86 行降采样、
+25 行网格几何与 7 行"取缓存来画"）。三条口径要记住：
+① **dB 窗口由调用方给**，不是漏收——曲线固定 `20..100`，面积图跟着基线走 `baseline-5 .. baseline+25`
+（基线本身夹在 `20..85`，所以两档窗口今天真的不同，这是内容口径差异）；各家用一份真值传进去
+（`MinDisplayDb`/`MaxDisplayDb`，或 `WindowMinDb`/`WindowMaxDb`），别在控件里再写第三份字面量。
+② **网格那一层是个持有缓存的对象，不是静态方法**：它的真值就是"几何缓存配不配当前画布尺寸"这个状态，
+静态方法要调用方把 `Rect` 与两个 `StreamGeometry` 用 `ref` 传进来，漏写"记下这次尺寸"那一行不报错，
+症状是尺寸变了网格不跟着变、或反过来每帧重建几何。控件摘下台面时记得 `_gridLayer.Invalidate()`。
+③ 这段在渲染热路径上，代价已按满输入量过（1200 点 → 420 点，实测 39.1~56.9 µs/次；两块图表每帧各跑一次
+占 16.7ms 预算的 0.47%~0.68%），量测钉在 `StudyChartGeometryTests` 那条 `CostIsAFractionOfOneFrame` 上，
+上限 500 µs。行为 11 格、7 个变异逐条验过，其中<b>两个变异 stayed green 并已写进注释</b>：
+`second != lastSourceIndex` 那类去重守卫在时间戳严格递增下恒为真（守的是同一时刻重复采样），
+而分桶偏移与紧随其后的 `Math.Clamp` 互为冗余（只改坏一行测不出来，要两行一起改才红）。
+同一天顺手修掉一把尺子的盲区：两把重复尺子的签名正则"返回类型"段没有圆括号，
+带元组返回的声明整行不匹配（`BuildGridGeometry` 那对逐字相同的 25 行就是这么躲过普查的）；
+修好后在今天这棵树上量到的新增族数是 0，正例是种出来验的（两份逐字相同的 `(int A, int B)` 方法，脚本报 2x）。
+
 **学习组件挂载那五步只认 `Views/Components/StudyComponentLifecycle.Attach` 一家**（2026-09-25：
 7 个组件各抄一遍，其中 5 份逐字相同）：落"已挂载"位 → 重读自己的显示设置 → 订快照事件 →
 重算监测租约 → 按各家口径刷新。实参留两个口子（前 1 个：语言码 or 全套显示设置；后 1 个：
