@@ -17,7 +17,6 @@ using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
 using LanMountainDesktop.Helpers;
-using LanMountainDesktop.Shared.Threading;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -48,13 +47,12 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
     private readonly Bitmap?[] _avatarBitmaps = new Bitmap?[MaxDisplayItemCount];
 
     private IRecommendationInfoService _recommendationService = DefaultRecommendationService;
-    private CancellationTokenSource? _refreshCts;
+    private readonly ComponentFeedRefresh _feed = new();
     private string _languageCode = LocalizationService.DefaultLanguageCode;
     private string _sourceType = Stcn24ForumSourceTypes.LatestCreated;
     private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private int _visibleItemCount = BaseDisplayItemCount;
     private bool _isAttached;
-    private bool _isRefreshing;
     private bool _isNightVisual = true;
 
     private sealed record ForumItemVisual(
@@ -174,7 +172,7 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        ComponentRefreshLifetime.Detach(ref _isAttached, _refreshTimer, ref _refreshCts);
+        ComponentRefreshLifetime.Detach(ref _isAttached, _refreshTimer, ref _feed.InFlight);
         DisposeAvatarBitmaps();
     }
 
@@ -213,7 +211,7 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
 
     private async void OnRefreshButtonClick(object? sender, RoutedEventArgs e)
     {
-        if (_isRefreshing)
+        if (_feed.IsBusy)
         {
             return;
         }
@@ -243,65 +241,32 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
         e.Handled = true;
     }
 
-    private async Task RefreshPostsAsync(bool forceRefresh)
-    {
-        if (!_isAttached || _isRefreshing)
-        {
-            return;
-        }
-
-        _isRefreshing = true;
-        UpdateRefreshButtonState();
-        UpdateLanguageCode();
-
-        var cts = new CancellationTokenSource();
-        var previous = Interlocked.Exchange(ref _refreshCts, cts);
-        CancellationHelper.CancelAndDispose(previous);
-
-        try
-        {
-            var query = new Stcn24ForumPostsQuery(
-                Locale: _languageCode,
-                ItemCount: _visibleItemCount,
-                SourceType: _sourceType,
-                ForceRefresh: forceRefresh);
-            var result = await _recommendationService.GetStcn24ForumPostsAsync(query, cts.Token);
-            if (!_isAttached || cts.IsCancellationRequested)
+    private async Task RefreshPostsAsync(bool forceRefresh) =>
+        await _feed.RunAsync(
+            () => _isAttached,
+            () =>
             {
-                return;
-            }
-
-            if (!result.Success || result.Data is null)
+                UpdateRefreshButtonState();
+                UpdateLanguageCode();
+            },
+            async token =>
             {
-                ApplyFailedState();
-                return;
-            }
+                var query = new Stcn24ForumPostsQuery(
+                    Locale: _languageCode,
+                    ItemCount: _visibleItemCount,
+                    SourceType: _sourceType,
+                    ForceRefresh: forceRefresh);
+                var result = await _recommendationService.GetStcn24ForumPostsAsync(query, token);
+                if (!result.Success || result.Data is null)
+                {
+                    return false;
+                }
 
-            await ApplySnapshotAsync(result.Data, cts.Token);
-        }
-        catch (OperationCanceledException)
-        {
-            // Ignore canceled requests.
-        }
-        catch
-        {
-            if (_isAttached && !cts.IsCancellationRequested)
-            {
-                ApplyFailedState();
-            }
-        }
-        finally
-        {
-            if (ReferenceEquals(_refreshCts, cts))
-            {
-                _refreshCts = null;
-            }
-
-            cts.Dispose();
-            _isRefreshing = false;
-            UpdateRefreshButtonState();
-        }
-    }
+                await ApplySnapshotAsync(result.Data, token);
+                return true;
+            },
+            ApplyFailedState,
+            UpdateRefreshButtonState);
 
     private async Task ApplySnapshotAsync(Stcn24ForumPostsSnapshot snapshot, CancellationToken cancellationToken)
     {
@@ -457,8 +422,8 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
 
     private void UpdateRefreshButtonState()
     {
-        RefreshButton.IsEnabled = !_isRefreshing;
-        RefreshButton.Opacity = _isRefreshing ? 0.58 : 1.0;
+        RefreshButton.IsEnabled = !_feed.IsBusy;
+        RefreshButton.Opacity = _feed.IsBusy ? 0.58 : 1.0;
     }
 
     private void UpdateLanguageCode() =>
@@ -567,7 +532,7 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
 
         if (_visibleItemCount != previousVisibleItemCount &&
             _isAttached &&
-            !_isRefreshing &&
+            !_feed.IsBusy &&
             _activeItems.Count < _visibleItemCount)
         {
             _ = RefreshPostsAsync(forceRefresh: false);

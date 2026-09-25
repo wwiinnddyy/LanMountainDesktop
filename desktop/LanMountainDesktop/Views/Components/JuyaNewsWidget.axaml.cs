@@ -711,21 +711,8 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
         ApplyNightModeVisual();
     }
 
-    private double ResolveScale()
-    {
-        var expectedWidth = _currentCellSize * BaseWidthCells;
-        var expectedHeight = _currentCellSize * BaseHeightCells;
-        if (expectedWidth <= 0 || expectedHeight <= 0)
-        {
-            return 1d;
-        }
-
-        var actualWidth = Bounds.Width > 1 ? Bounds.Width : expectedWidth;
-        var actualHeight = Bounds.Height > 1 ? Bounds.Height : expectedHeight;
-        var scaleX = actualWidth / expectedWidth;
-        var scaleY = actualHeight / expectedHeight;
-        return Math.Clamp(Math.Min(scaleX, scaleY), 0.72, 2.4);
-    }
+    private double ResolveScale() =>
+        ComponentDesignMetrics.ResolveFootprintScale(_currentCellSize, Bounds, BaseWidthCells, BaseHeightCells, maxScale: 2.4);
 
 }
 

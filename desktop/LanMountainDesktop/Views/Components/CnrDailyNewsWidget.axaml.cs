@@ -17,7 +17,6 @@ using Avalonia.Threading;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Helpers;
-using LanMountainDesktop.Shared.Threading;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -46,10 +45,9 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
     private IReadOnlyList<DailyNewsItemSnapshot> _activeNewsItems = [];
 
     private IRecommendationInfoService _recommendationService = DefaultRecommendationService;
-    private CancellationTokenSource? _refreshCts;
+    private readonly ComponentFeedRefresh _feed = new();
     private string _languageCode = LocalizationService.DefaultLanguageCode;
     private bool _isAttached;
-    private bool _isRefreshing;
 
     public CnrDailyNewsWidget()
     {
@@ -107,7 +105,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        ComponentRefreshLifetime.Detach(ref _isAttached, _refreshTimer, ref _refreshCts);
+        ComponentRefreshLifetime.Detach(ref _isAttached, _refreshTimer, ref _feed.InFlight);
         DisposeNewsBitmaps();
         UpdateRefreshButtonState();
     }
@@ -120,7 +118,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
             return;
         }
 
-        if (_isRefreshing)
+        if (_feed.IsBusy)
         {
             return;
         }
@@ -168,64 +166,31 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         e.Handled = true;
     }
 
-    private async Task RefreshNewsAsync(bool forceRefresh)
-    {
-        if (!_isAttached || _isRefreshing)
-        {
-            return;
-        }
-
-        _isRefreshing = true;
-        UpdateRefreshButtonState();
-        UpdateLanguageCode();
-
-        var cts = new CancellationTokenSource();
-        var previous = Interlocked.Exchange(ref _refreshCts, cts);
-        CancellationHelper.CancelAndDispose(previous);
-
-        try
-        {
-            var query = new DailyNewsQuery(
-                Locale: _languageCode,
-                ItemCount: ResolveDesiredNewsItemCount(),
-                ForceRefresh: forceRefresh);
-            var result = await _recommendationService.GetDailyNewsAsync(query, cts.Token);
-            if (!_isAttached || cts.IsCancellationRequested)
+    private async Task RefreshNewsAsync(bool forceRefresh) =>
+        await _feed.RunAsync(
+            () => _isAttached,
+            () =>
             {
-                return;
-            }
-
-            if (!result.Success || result.Data is null)
+                UpdateRefreshButtonState();
+                UpdateLanguageCode();
+            },
+            async token =>
             {
-                ApplyFailedState();
-                return;
-            }
+                var query = new DailyNewsQuery(
+                    Locale: _languageCode,
+                    ItemCount: ResolveDesiredNewsItemCount(),
+                    ForceRefresh: forceRefresh);
+                var result = await _recommendationService.GetDailyNewsAsync(query, token);
+                if (!result.Success || result.Data is null)
+                {
+                    return false;
+                }
 
-            await ApplySnapshotAsync(result.Data, cts.Token);
-        }
-        catch (OperationCanceledException)
-        {
-            // Ignore canceled requests.
-        }
-        catch
-        {
-            if (_isAttached && !cts.IsCancellationRequested)
-            {
-                ApplyFailedState();
-            }
-        }
-        finally
-        {
-            if (ReferenceEquals(_refreshCts, cts))
-            {
-                _refreshCts = null;
-            }
-
-            cts.Dispose();
-            _isRefreshing = false;
-            UpdateRefreshButtonState();
-        }
-    }
+                await ApplySnapshotAsync(result.Data, token);
+                return true;
+            },
+            ApplyFailedState,
+            UpdateRefreshButtonState);
 
     private async Task ApplySnapshotAsync(DailyNewsSnapshot snapshot, CancellationToken cancellationToken)
     {
@@ -361,7 +326,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
 
     private void UpdateRefreshButtonState()
     {
-        RefreshButton.IsEnabled = !_isRefreshing && _isAttached;
+        RefreshButton.IsEnabled = !_feed.IsBusy && _isAttached;
         RefreshButton.Opacity = _isAttached ? 1.0 : 0.6;
     }
 

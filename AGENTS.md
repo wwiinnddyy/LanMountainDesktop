@@ -457,8 +457,14 @@ await 完<b>重新问一次</b>挂载与取消、"没取到"与抛异常都画�
 **`DailyPoetryWidget` 故意没进来**：它是"画按钮 → 刷模式视觉 → 起表 → 取数"，收尾排在起表<b>之前</b>，
 套这个家等于替它换顺序（行为变更，要改另拍）。`Recording`/`WorldClock` 等没有刷新表的组件也不属于这一族。
 
-**其余 9 个组件的 `Refresh…Async(bool forceRefresh)` 是同骨架换接口**，还没逐个走过家——判它们要不要走，
-和 `ResolveScale` 三对一起挂在 #G1-BC。
+**`Refresh…Async(bool forceRefresh)` 这一族已经全部走这家（2026-09-25）**：每日一词之外又有 7 个组件
+（Baidu / Bilibili / Cnr / Ifeng / Stcn24 / 每日插画 / 汇率）各自手写同一套六条不变量，每份 56–59 行、
+共 <b>405 行</b>（59/56/58/58/59/57/58），收完之后七段实参合起来 169 行（`RunAsync(() => _isAttached, begin, request, ApplyFailedState, 收尾)`）。
+**这把重复普查从头到尾看不见这一族**——各家 payload 不同（query 类型与服务方法都不一样），所以族数不动，
+收益是"协议只有一处实现"。收口时量到的两处漂移（Bilibili 的 finally 少了画按钮、Cnr 与 Stcn24 是"先画按钮
+再换语言"）随收口自然消失。**两家故意没进来**，别再"顺手统一"：`ZhiJiaoHubWidget` 没有忙位、每次换发都是
+"取消并新建"（另一种判据，早已登记）；`JuyaNewsWidget` 有忙位但**整个文件没有任何取消令牌**，
+三条加载路径各自维护那一个布尔位——接进这家会同时给它补上取消与单飞，属行为变更，挂在 #G1-CG 等拍板。
 
 **"这段像素占几格"只认 `DesktopEditing/DesktopPlacementMath.EstimateCellSpan` 一家**（加号在前、`AwayFromZero`、
 最少 1 格、网格不合法给 1 格）：此前"桌面拖拽快照"与"组件浮窗按请求尺寸估格"两处各抄一份 5 行（4 个调用点），
@@ -466,6 +472,15 @@ await 完<b>重新问一次</b>挂载与取消、"没取到"与抛异常都画�
 的——换成默认的银行家舍入就红）。同理黄历"今天宜/忌写哪几条"也只认 `LunarCalendarService.BuildDailySelection`，
 两个日历组件此前各抄一份逐字相同的 22 行、种子 17/29 还在四处写死；种子与池长不互质会让一部分候选永远不出现
 （实测中文"忌"12 条只能出现 3 条，见 #G1-CB）。
+
+**组件"按格子算缩放"只认 `Views/Components/ComponentDesignMetrics.cs` 里那两个函数**（2026-09-25：
+6 个组件各抄一份 `ResolveScale`，三个不同体各两份）：
+`ResolveFootprintScale(格子边长, Bounds, 设计宽格数, 设计高格数, maxScale, minScale = 0.72)` 是"按设计占几格"那一派
+（热搜/新闻/聚吧：短边决定缩放、布局没落定时按 1 画、格子或格数不合法给 1 而不是拿 0 去除）；
+`ResolveDialScale(格子边长, Bounds)` 是表盘那一派（模拟时钟/计时器，两条算式不同所以没并成一个函数）。
+**设计格数与上限必须留在调用方**（2×4 / 4×4 与 2.8 / 2.4 是各家占位与视觉口径，不是复制漂移）；
+`DialCellReference = 44` 也保持原样，它不等于 `BaseCellSize`（48），统一它们属视觉决定
+（未查证过这个 44 是刻意还是历史遗留）。行为钉 `ComponentDesignMetricsTests` 7 格。
 
 **"读设置快照时什么时候可以不动盘"只认 `Services/SettingsSnapshotCache.cs` 一家**（2026-09-25：
 `AppSettingsService` 与 `LauncherSettingsService` 各有 <b>3 个逐字相同的方法</b>——探完盘信缓存、按写盘时间信缓存、

@@ -43,7 +43,7 @@ internal sealed class ComponentFeedRefresh
         Action begin,
         Func<CancellationToken, Task<bool>> request,
         Action applyFailure,
-        Action end)
+        Action? end = null)
     {
         if (!isAttached() || IsBusy)
         {

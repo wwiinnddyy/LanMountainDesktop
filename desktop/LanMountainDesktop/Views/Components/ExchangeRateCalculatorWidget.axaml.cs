@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -10,7 +9,6 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Threading;
 using LanMountainDesktop.Services;
-using LanMountainDesktop.Shared.Threading;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -45,10 +43,9 @@ public partial class ExchangeRateCalculatorWidget : UserControl, IDesktopCompone
     private string _toCurrency = "CNY";
     private string _inputText = "100";
     private decimal _currentRate = 0m;
-    private CancellationTokenSource? _refreshCts;
+    private readonly ComponentFeedRefresh _feed = new();
     private double _currentCellSize = 48d;
     private bool _isAttached;
-    private bool _isRefreshing;
 
     public ExchangeRateCalculatorWidget()
     {
@@ -99,7 +96,7 @@ public partial class ExchangeRateCalculatorWidget : UserControl, IDesktopCompone
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        ComponentRefreshLifetime.Detach(ref _isAttached, _refreshTimer, ref _refreshCts);
+        ComponentRefreshLifetime.Detach(ref _isAttached, _refreshTimer, ref _feed.InFlight);
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -163,64 +160,28 @@ public partial class ExchangeRateCalculatorWidget : UserControl, IDesktopCompone
         e.Handled = true;
     }
 
-    private async Task RefreshExchangeRateAsync(bool forceRefresh)
-    {
-        if (!_isAttached || _isRefreshing)
-        {
-            return;
-        }
-
-        _isRefreshing = true;
-        UpdateLanguageCode();
-
-        var cts = new CancellationTokenSource();
-        var previous = Interlocked.Exchange(ref _refreshCts, cts);
-        CancellationHelper.CancelAndDispose(previous);
-
-        try
-        {
-            var query = new ExchangeRateQuery(
-                BaseCurrency: _fromCurrency,
-                TargetCurrency: _toCurrency,
-                ForceRefresh: forceRefresh);
-            var result = await _recommendationService.GetExchangeRateAsync(query, cts.Token);
-            if (!_isAttached || cts.IsCancellationRequested)
+    private async Task RefreshExchangeRateAsync(bool forceRefresh) =>
+        await _feed.RunAsync(
+            () => _isAttached,
+            UpdateLanguageCode,
+            async token =>
             {
-                return;
-            }
+                var query = new ExchangeRateQuery(
+                    BaseCurrency: _fromCurrency,
+                    TargetCurrency: _toCurrency,
+                    ForceRefresh: forceRefresh);
+                var result = await _recommendationService.GetExchangeRateAsync(query, token);
+                if (!result.Success || result.Data is null)
+                {
+                    return false;
+                }
 
-            if (!result.Success || result.Data is null)
-            {
-                ApplyFailedState();
-                return;
-            }
-
-            _currentRate = result.Data.Rate;
-            StatusTextBlock.IsVisible = false;
-            UpdateAmounts();
-        }
-        catch (OperationCanceledException)
-        {
-            // Ignore canceled requests.
-        }
-        catch
-        {
-            if (_isAttached && !cts.IsCancellationRequested)
-            {
-                ApplyFailedState();
-            }
-        }
-        finally
-        {
-            if (ReferenceEquals(_refreshCts, cts))
-            {
-                _refreshCts = null;
-            }
-
-            cts.Dispose();
-            _isRefreshing = false;
-        }
-    }
+                _currentRate = result.Data.Rate;
+                StatusTextBlock.IsVisible = false;
+                UpdateAmounts();
+                return true;
+            },
+            ApplyFailedState);
 
     private void UpdateCurrencyLabels()
     {

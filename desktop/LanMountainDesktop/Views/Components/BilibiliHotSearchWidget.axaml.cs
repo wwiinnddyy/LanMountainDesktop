@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -13,7 +12,6 @@ using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
 using LanMountainDesktop.Helpers;
-using LanMountainDesktop.Shared.Threading;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -36,12 +34,11 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
     private readonly List<HotItemVisual> _hotItemVisuals = [];
 
     private IRecommendationInfoService _recommendationService = DefaultRecommendationService;
-    private CancellationTokenSource? _refreshCts;
+    private readonly ComponentFeedRefresh _feed = new();
     private string _languageCode = LocalizationService.DefaultLanguageCode;
     private string? _searchPageUrl;
     private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private bool _isAttached;
-    private bool _isRefreshing;
     private bool _isNightVisual = true;
 
     private sealed record HotItemVisual(
@@ -105,7 +102,7 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        ComponentRefreshLifetime.Detach(ref _isAttached, _refreshTimer, ref _refreshCts);
+        ComponentRefreshLifetime.Detach(ref _isAttached, _refreshTimer, ref _feed.InFlight);
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -145,62 +142,26 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
         await RefreshHotSearchAsync(forceRefresh: false);
     }
 
-    private async Task RefreshHotSearchAsync(bool forceRefresh)
-    {
-        if (!_isAttached || _isRefreshing)
-        {
-            return;
-        }
-
-        _isRefreshing = true;
-        UpdateLanguageCode();
-
-        var cts = new CancellationTokenSource();
-        var previous = Interlocked.Exchange(ref _refreshCts, cts);
-        CancellationHelper.CancelAndDispose(previous);
-
-        try
-        {
-            var query = new BilibiliHotSearchQuery(
-                Locale: _languageCode,
-                ItemCount: MaxDisplayItemCount,
-                ForceRefresh: forceRefresh);
-            var result = await _recommendationService.GetBilibiliHotSearchAsync(query, cts.Token);
-            if (!_isAttached || cts.IsCancellationRequested)
+    private async Task RefreshHotSearchAsync(bool forceRefresh) =>
+        await _feed.RunAsync(
+            () => _isAttached,
+            UpdateLanguageCode,
+            async token =>
             {
-                return;
-            }
+                var query = new BilibiliHotSearchQuery(
+                    Locale: _languageCode,
+                    ItemCount: MaxDisplayItemCount,
+                    ForceRefresh: forceRefresh);
+                var result = await _recommendationService.GetBilibiliHotSearchAsync(query, token);
+                if (!result.Success || result.Data is null)
+                {
+                    return false;
+                }
 
-            if (!result.Success || result.Data is null)
-            {
-                ApplyFailedState();
-                return;
-            }
-
-            ApplySnapshot(result.Data);
-        }
-        catch (OperationCanceledException)
-        {
-            // Ignore canceled requests.
-        }
-        catch
-        {
-            if (_isAttached && !cts.IsCancellationRequested)
-            {
-                ApplyFailedState();
-            }
-        }
-        finally
-        {
-            if (ReferenceEquals(_refreshCts, cts))
-            {
-                _refreshCts = null;
-            }
-
-            cts.Dispose();
-            _isRefreshing = false;
-        }
-    }
+                ApplySnapshot(result.Data);
+                return true;
+            },
+            ApplyFailedState);
 
     private void ApplySnapshot(BilibiliHotSearchSnapshot snapshot)
     {
@@ -447,21 +408,8 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
         return "https://search.bilibili.com/all";
     }
 
-    private double ResolveScale()
-    {
-        var expectedWidth = _currentCellSize * BaseWidthCells;
-        var expectedHeight = _currentCellSize * BaseHeightCells;
-        if (expectedWidth <= 0 || expectedHeight <= 0)
-        {
-            return 1d;
-        }
-
-        var actualWidth = Bounds.Width > 1 ? Bounds.Width : expectedWidth;
-        var actualHeight = Bounds.Height > 1 ? Bounds.Height : expectedHeight;
-        var scaleX = actualWidth / expectedWidth;
-        var scaleY = actualHeight / expectedHeight;
-        return Math.Clamp(Math.Min(scaleX, scaleY), 0.72, 2.8);
-    }
+    private double ResolveScale() =>
+        ComponentDesignMetrics.ResolveFootprintScale(_currentCellSize, Bounds, BaseWidthCells, BaseHeightCells, maxScale: 2.8);
 
     private string L(string key, string fallback)
     {

@@ -203,12 +203,6 @@ public partial class TimerWidget : UserControl, IDesktopComponentWidget
         ApplyModeVisualIfNeeded();
     }
 
-    private double ResolveScale()
-    {
-        var cellScale = Math.Clamp(_currentCellSize / 44d, 0.60, 1.90);
-        var heightScale = Bounds.Height > 1 ? Math.Clamp(Bounds.Height / 300d, 0.58, 2.0) : 1;
-        var widthScale = Bounds.Width > 1 ? Math.Clamp(Bounds.Width / 300d, 0.58, 2.0) : 1;
-        return Math.Clamp(Math.Min(cellScale, Math.Min(heightScale, widthScale) * 1.05), 0.58, 1.95);
-    }
+    private double ResolveScale() => ComponentDesignMetrics.ResolveDialScale(_currentCellSize, Bounds);
 
 }

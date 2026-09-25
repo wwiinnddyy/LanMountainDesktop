@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -16,7 +15,6 @@ using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
 using LanMountainDesktop.Helpers;
-using LanMountainDesktop.Shared.Threading;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -39,11 +37,10 @@ public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget
     private readonly List<HotItemVisual> _hotItemVisuals = [];
 
     private IRecommendationInfoService _recommendationService = DefaultRecommendationService;
-    private CancellationTokenSource? _refreshCts;
+    private readonly ComponentFeedRefresh _feed = new();
     private string _languageCode = LocalizationService.DefaultLanguageCode;
     private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private bool _isAttached;
-    private bool _isRefreshing;
     private string _sourceType = BaiduHotSearchSourceTypes.Official;
     private bool _isNightVisual = true;
     private string? _componentColorScheme;
@@ -110,7 +107,7 @@ public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        ComponentRefreshLifetime.Detach(ref _isAttached, _refreshTimer, ref _refreshCts, UpdateRefreshButtonState);
+        ComponentRefreshLifetime.Detach(ref _isAttached, _refreshTimer, ref _feed.InFlight, UpdateRefreshButtonState);
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -163,65 +160,32 @@ public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget
         e.Handled = true;
     }
 
-    private async Task RefreshHotSearchAsync(bool forceRefresh)
-    {
-        if (!_isAttached || _isRefreshing)
-        {
-            return;
-        }
-
-        _isRefreshing = true;
-        UpdateLanguageCode();
-        UpdateRefreshButtonState();
-
-        var cts = new CancellationTokenSource();
-        var previous = Interlocked.Exchange(ref _refreshCts, cts);
-        CancellationHelper.CancelAndDispose(previous);
-
-        try
-        {
-            var query = new BaiduHotSearchQuery(
-                Locale: _languageCode,
-                ItemCount: MaxDisplayItemCount,
-                SourceType: _sourceType,
-                ForceRefresh: forceRefresh);
-            var result = await _recommendationService.GetBaiduHotSearchAsync(query, cts.Token);
-            if (!_isAttached || cts.IsCancellationRequested)
+    private async Task RefreshHotSearchAsync(bool forceRefresh) =>
+        await _feed.RunAsync(
+            () => _isAttached,
+            () =>
             {
-                return;
-            }
-
-            if (!result.Success || result.Data is null)
+                UpdateLanguageCode();
+                UpdateRefreshButtonState();
+            },
+            async token =>
             {
-                ApplyFailedState();
-                return;
-            }
+                var query = new BaiduHotSearchQuery(
+                    Locale: _languageCode,
+                    ItemCount: MaxDisplayItemCount,
+                    SourceType: _sourceType,
+                    ForceRefresh: forceRefresh);
+                var result = await _recommendationService.GetBaiduHotSearchAsync(query, token);
+                if (!result.Success || result.Data is null)
+                {
+                    return false;
+                }
 
-            ApplySnapshot(result.Data);
-        }
-        catch (OperationCanceledException)
-        {
-            // Ignore canceled requests.
-        }
-        catch
-        {
-            if (_isAttached && !cts.IsCancellationRequested)
-            {
-                ApplyFailedState();
-            }
-        }
-        finally
-        {
-            if (ReferenceEquals(_refreshCts, cts))
-            {
-                _refreshCts = null;
-            }
-
-            cts.Dispose();
-            _isRefreshing = false;
-            UpdateRefreshButtonState();
-        }
-    }
+                ApplySnapshot(result.Data);
+                return true;
+            },
+            ApplyFailedState,
+            UpdateRefreshButtonState);
 
     private void ApplySnapshot(BaiduHotSearchSnapshot snapshot)
     {
@@ -401,7 +365,7 @@ public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget
 
     private void UpdateRefreshButtonState()
     {
-        var enabled = _isAttached && !_isRefreshing;
+        var enabled = _isAttached && !_feed.IsBusy;
         RefreshButton.IsEnabled = enabled;
         RefreshButton.Opacity = enabled ? 1.0 : 0.65;
     }
@@ -432,21 +396,8 @@ public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget
         ComponentRefreshLifetime.Reschedule(_refreshTimer, _isAttached, enabled, intervalMinutes);
     }
 
-    private double ResolveScale()
-    {
-        var expectedWidth = _currentCellSize * BaseWidthCells;
-        var expectedHeight = _currentCellSize * BaseHeightCells;
-        if (expectedWidth <= 0 || expectedHeight <= 0)
-        {
-            return 1d;
-        }
-
-        var actualWidth = Bounds.Width > 1 ? Bounds.Width : expectedWidth;
-        var actualHeight = Bounds.Height > 1 ? Bounds.Height : expectedHeight;
-        var scaleX = actualWidth / expectedWidth;
-        var scaleY = actualHeight / expectedHeight;
-        return Math.Clamp(Math.Min(scaleX, scaleY), 0.72, 2.8);
-    }
+    private double ResolveScale() =>
+        ComponentDesignMetrics.ResolveFootprintScale(_currentCellSize, Bounds, BaseWidthCells, BaseHeightCells, maxScale: 2.8);
 
     private string L(string key, string fallback)
     {

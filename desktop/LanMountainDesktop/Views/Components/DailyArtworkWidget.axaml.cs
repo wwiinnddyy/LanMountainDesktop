@@ -17,7 +17,6 @@ using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Helpers;
-using LanMountainDesktop.Shared.Threading;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -60,12 +59,11 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
     private readonly LocalizationService _localizationService = new();
 
     private IRecommendationInfoService _recommendationService = DefaultRecommendationService;
-    private CancellationTokenSource? _refreshCts;
+    private readonly ComponentFeedRefresh _feed = new();
     private Bitmap? _currentArtworkBitmap;
     private string _languageCode = LocalizationService.DefaultLanguageCode;
     private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private bool _isAttached;
-    private bool _isRefreshing;
     private string _componentId = BuiltInComponentIds.DesktopDailyArtwork;
     private string _placementId = string.Empty;
     private string? _currentArtworkSourceUrl;
@@ -157,7 +155,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        ComponentRefreshLifetime.Detach(ref _isAttached, _refreshTimer, ref _refreshCts);
+        ComponentRefreshLifetime.Detach(ref _isAttached, _refreshTimer, ref _feed.InFlight);
         DisposeArtworkBitmap();
     }
 
@@ -203,63 +201,30 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         e.Handled = true;
     }
 
-    private async Task RefreshArtworkAsync(bool forceRefresh)
-    {
-        if (!_isAttached || _isRefreshing)
-        {
-            return;
-        }
-
-        _isRefreshing = true;
-        UpdateLanguageCode();
-        UpdateDateLabels();
-
-        var cts = new CancellationTokenSource();
-        var previous = Interlocked.Exchange(ref _refreshCts, cts);
-        CancellationHelper.CancelAndDispose(previous);
-
-        try
-        {
-            var query = new DailyArtworkQuery(
-                Locale: _languageCode,
-                MirrorSource: ResolveMirrorSource(),
-                ForceRefresh: forceRefresh);
-            var result = await _recommendationService.GetDailyArtworkAsync(query, cts.Token);
-            if (!_isAttached || cts.IsCancellationRequested)
+    private async Task RefreshArtworkAsync(bool forceRefresh) =>
+        await _feed.RunAsync(
+            () => _isAttached,
+            () =>
             {
-                return;
-            }
-
-            if (!result.Success || result.Data is null)
+                UpdateLanguageCode();
+                UpdateDateLabels();
+            },
+            async token =>
             {
-                ApplyFailedState();
-                return;
-            }
+                var query = new DailyArtworkQuery(
+                    Locale: _languageCode,
+                    MirrorSource: ResolveMirrorSource(),
+                    ForceRefresh: forceRefresh);
+                var result = await _recommendationService.GetDailyArtworkAsync(query, token);
+                if (!result.Success || result.Data is null)
+                {
+                    return false;
+                }
 
-            await ApplySnapshotAsync(result.Data, cts.Token);
-        }
-        catch (OperationCanceledException)
-        {
-            // Ignore canceled requests.
-        }
-        catch
-        {
-            if (_isAttached && !cts.IsCancellationRequested)
-            {
-                ApplyFailedState();
-            }
-        }
-        finally
-        {
-            if (ReferenceEquals(_refreshCts, cts))
-            {
-                _refreshCts = null;
-            }
-
-            cts.Dispose();
-            _isRefreshing = false;
-        }
-    }
+                await ApplySnapshotAsync(result.Data, token);
+                return true;
+            },
+            ApplyFailedState);
 
     private async Task ApplySnapshotAsync(DailyArtworkSnapshot snapshot, CancellationToken cancellationToken)
     {

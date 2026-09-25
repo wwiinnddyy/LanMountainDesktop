@@ -503,7 +503,37 @@ public sealed class DuplicateImplementationRatchetTests
     /// "<c>OnSizeChanged</c> 5 处 5 文件逐字相同"，那 5 处今天已收进 <c>RefreshOnResize</c>；
     /// 现在同签名只剩 2 处（FileManager / RemovableStorage 那对空处理器），正对照改成按哈希点名。
 
-    private const int IdenticalBodyFamilyCeiling = 18;
+    private const int IdenticalBodyFamilyCeiling = 15;
+
+    /// 18 → 15 一次收三族，全是同一个签名 <c>ResolveScale</c> 的三个不同体（#66 队列里那条"三对"）：
+    /// <list type="bullet">
+    /// <item><description><c>BaiduHotSearchWidget</c> 与 <c>BilibiliHotSearchWidget</c> 逐字相同的 12 行、
+    /// <c>IfengNewsWidget</c> 与 <c>JuyaNewsWidget</c> 逐字相同的另一 12 行（两对只差上端那一档）→
+    /// <c>ComponentDesignMetrics.ResolveFootprintScale</c>。设计格数（2×4 / 4×4）与上限（2.8 / 2.4）
+    /// 留在调用方：那是各自占位与视觉口径，不是复制漂移。</description></item>
+    /// <item><description><c>AnalogClockWidget</c> 与 <c>TimerWidget</c> 逐字相同的表盘算式 →
+    /// <c>ComponentDesignMetrics.ResolveDialScale</c>。它与上面那条是<b>两条不同算式</b>（表盘没有
+    /// "设计占几格"这个参照），所以没有并成一个函数。算式里的 44 保留原样并起名
+    /// <c>DialCellReference</c>——它不等于 <c>BaseCellSize</c>（48），改成 48 会同时挪动两块时钟的
+    /// 字号与指针长度，那属视觉决定；<b>未查证过这两个 44 是刻意还是历史遗留</b>。</description></item>
+    /// </list>
+    /// 行为钉 <c>ComponentDesignMetricsTests</c> 7 格：短边决定缩放、上下限各夹一次、布局没落定时按 1 画、
+    /// 格子或格数为 0 给 1 而不是拿 0 去除、以及"上限由调用方给多少就夹到多少"。
+    /// 收的都是私有方法体，调用点一行没动（六家各 1 处），普查成员清单逐行比过：只掉这三族，无新名字。
+
+    /// 这一笔<b>族数不动（仍是 15）</b>，但收掉的量比前面所有笔加起来都大，而且这把尺子全程看不见它：
+    /// 7 个组件（Baidu / Bilibili / Cnr / Ifeng / Stcn24 / 每日插画 / 汇率）各写一遍的
+    /// <c>Refresh…Async</c> 取数协议（每份 56–59 行，<b>共 405 行</b>：59/56/58/58/59/57/58）改走
+    /// <c>ComponentFeedRefresh.RunAsync</c>，收完之后七段实参合起来 169 行。它们<b>不是逐字族</b>——payload 各家不同（query 类型与服务方法都不一样）。
+    /// 判"该不该走家"的依据不是族数，是那<b>六条不变量各抄了七遍</b>：入口守卫 / 忙位置起再画控件 /
+    /// 换发先换后取消旧源 / await 完重新问一次挂载与取消 / 取消静默而失败画失败态 / finally 里
+    /// "这把还是我的那把"才清字段。七份之间已经漂开（实测）：<c>BilibiliHotSearchWidget</c> 的 finally
+    /// 少了"画按钮"那一步，<c>CnrDailyNewsWidget</c> 与 <c>Stcn24ForumWidget</c> 是"先画按钮再换语言"
+    /// （按钮文案那一帧用的是旧语言）——这两处都随收口自然消失，不算行为变更（没有下游读那个旧值）。
+    /// <b>两家故意没进来</b>，各带实测到的形状差别：<c>ZhiJiaoHubWidget</c> 没有忙位、每次换发都是
+    /// "取消并新建"（AGENTS.md 早已登记它是另一种判据）；<c>JuyaNewsWidget</c> 整个没有
+    /// <c>CancellationTokenSource</c> 也没有忙位——它今天确实能在组件分离之后落地，
+    /// 接进这家等于同时给它补取消与单飞，属行为变更，已另立待办而不是顺手改。
 
     /// <summary>
     /// 今天实测：189 个方法名存在 ≥2 种体。只能降，要升必须在这里写清理由。
