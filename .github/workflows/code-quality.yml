@@ -68,17 +68,23 @@ jobs:
         shell: bash
         run: |
           set -uo pipefail
+          set +e
+          # 上一版没生效的实测教训：runner 的 shell: bash 实际是
+          # bash --noprofile --norc -e -o pipefail，**自带 -e**，于是第一趟红完就在那个管道上当场中止，
+          # 下面的分类与重跑一行都没跑到（985bacb 的日志里只有一行 Failed! 便 exit 1）。
+          # 这里显式 set +e，退出码全部手判。
           FILTER='Category!=EcosystemProbe'
           MIN_CASES=1000
           ATTEMPTS=3
           SUMMARY="${RUNNER_TEMP:-/tmp}/dotnet-test-summary.log"
-          last_rc=1
+          ok=0
 
           for attempt in $(seq 1 "$ATTEMPTS"); do
             dotnet test "$Solution_Name" -c Release --no-build -v minimal --filter "$FILTER" 2>&1 | tee "$SUMMARY"
-            last_rc="${PIPESTATUS[0]}"
-            if [ "$last_rc" -eq 0 ]; then
+            rc="${PIPESTATUS[0]}"
+            if [ "$rc" -eq 0 ]; then
               echo "Test suite green on attempt ${attempt}/${ATTEMPTS}."
+              ok=1
               break
             fi
             # 把这一趟的受害者点名出来：只有 thread-affine 那一条才是 #G1-I，别的红灯必须当缺陷查。
@@ -92,7 +98,7 @@ jobs:
             fi
           done
 
-          if [ "$last_rc" -ne 0 ]; then
+          if [ "$ok" -ne 1 ]; then
             echo "::error title=重跑 ${ATTEMPTS} 趟仍红::#G1-I 的线程归属竞态连中 ${ATTEMPTS} 次，或混进了真缺陷——见上面逐趟点名的受害者。"
             exit 1
           fi
