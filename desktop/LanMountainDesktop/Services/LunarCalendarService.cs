@@ -80,8 +80,9 @@ public sealed class LunarCalendarService
 
     /// <summary>
     /// 从候选池里按"是哪一天"挑 <paramref name="count"/> 条，拼成一行显示文案。
-    /// 起点 = 年 × 1009 + 年内日序 × 37 + 种子 × 211（取绝对值），步长 = 种子对池长取模再 +1，
-    /// 绕圈取并跳过已经取过的下标——所以同一个种子在同一天永远给同一批词。
+    /// 起点 = 年 × 1009 + 年内日序 × 37 + 种子 × 211（取绝对值），步长 = <see cref="CoprimeStep"/>
+    /// （从种子导出的起点往上找与池长互质的那一档），绕圈取并跳过已经取过的下标——
+    /// 所以同一个种子在同一天永远给同一批词，而一年内池子里每条都至少上过屏一次。
     /// </summary>
     /// <remarks>
     /// 收口前宿主的 <c>DateWidget</c>（2 个调用点）与 <c>LunarCalendarWidget</c>（2 个调用点）
@@ -105,7 +106,7 @@ public sealed class LunarCalendarService
         var selected = new List<string>(target);
         var usedIndices = new HashSet<int>();
         var cursor = Math.Abs(date.Year * 1009 + date.DayOfYear * 37 + salt * 211);
-        var step = (salt % Math.Max(1, pool.Length - 1)) + 1;
+        var step = CoprimeStep(salt, pool.Length);
 
         for (var i = 0; i < pool.Length * 3 && selected.Count < target; i++)
         {
@@ -122,6 +123,39 @@ public sealed class LunarCalendarService
         }
 
         return string.Join(useChineseSpacing ? " " : ", ", selected);
+    }
+
+    /// <summary>
+    /// 挑条目用的步长：从种子导出的起点往上找<b>与池长互质</b>的最小步长。
+    /// 抄本原本是 <c>(salt % (池长-1)) + 1</c>，池长与步长有公约数时绕圈只踩得到 <c>池长 / gcd</c> 个下标：
+    /// 2026-09-25 实测中文"忌"（池长 12、种子 29 → 步长 8、gcd=4）一年下来 12 条只出现过 3 条，
+    /// 另外 9 条是写了但用户永远看不到的词。互质之后一圈就是整池，"哪天显示哪几条"仍由日期与种子决定。
+    /// 步长一定会停下来：区间 <c>[1, 池长-1]</c> 里找不到互质数时，池长 ± 1 必与池长互质。
+    /// </summary>
+    private static int CoprimeStep(int salt, int poolLength)
+    {
+        if (poolLength <= 1)
+        {
+            return 1;
+        }
+
+        var step = (salt % (poolLength - 1)) + 1;
+        while (GreatestCommonDivisor(step, poolLength) != 1)
+        {
+            step++;
+        }
+
+        return step;
+    }
+
+    private static int GreatestCommonDivisor(int left, int right)
+    {
+        while (right != 0)
+        {
+            (left, right) = (right, left % right);
+        }
+
+        return left;
     }
 
     private static readonly string[] HeavenlyStemsZh =

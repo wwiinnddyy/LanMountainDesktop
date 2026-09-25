@@ -12,11 +12,12 @@ namespace LanMountainDesktop.Tests;
 ///
 /// 收口前 <c>DateWidget</c> 与 <c>LunarCalendarWidget</c> 各抄一份逐字相同的 22 行，四张候选池表
 /// 却早就共用同一个家了——所以漂开的只会是"怎么挑"，而两屏同一天都显示宜忌，少一条或多一条都不报错。
-/// 这里既钉住判据，也**钉住一条实测到的现状缺陷**（见 <see cref="ChineseIllicitColumn_CurrentlyReachesThreeOfTwelveWords"/>）。
+/// 这里既钉住判据，也钉住一条**已修**的缺陷（见 <see cref="EveryCandidateReachesTheBoard_WithinOneYear"/>：
+/// 修之前中文"忌"一年只上屏 12 条里的 3 条）。
 /// </summary>
 public sealed class LunarDailySelectionTests
 {
-    /// <summary>5 与两个种子的步长互质，所以这块夹具池能整池取到——判据要量的是"怎么挑"，不是"池长不幸与步长有公约数"。</summary>
+    /// <summary>夹具池只有 5 条——步长由家保证与池长互质，所以这块池能整池取到。</summary>
     private static readonly string[] Pool = ["甲", "乙", "丙", "丁", "戊"];
 
     [Fact]
@@ -75,27 +76,36 @@ public sealed class LunarDailySelectionTests
     }
 
     /// <summary>
-    /// 钉住**现状缺陷**，不是认可它：步长 <c>(salt % (池长-1)) + 1</c> 与池长不互质时，绕圈只会踩到
-    /// <c>池长 / gcd</c> 个下标。实测四张表（中文 12 条、英文 10 条）：
-    /// 宜（种子 17，步长 7）与两张英文表（步长 9 / 3）都能整池取到；
-    /// <b>中文"忌"（种子 29 → 步长 8，gcd(8,12)=4）永远只踩到 12 条里的 3 条</b>——
-    /// 另外 9 条是写了但用户看不到的死词，而"忌"那一列最多只在 4 组三元组之间换。
-    /// 为什么钉现状而不顺手改：改步长规则会让中文"忌"列的显示内容整个变掉（这是内容口径，得拍板），
-    /// 挂 #G1-CB。谁把这张表加长或换种子，这条会立刻红并要人对一遍可达数。
+    /// 四张候选池（中文 12 条、英文 10 条）一年内必须<b>整池都上过屏</b>。
+    /// 2026-09-25 之前这条不成立：步长 <c>(salt % (池长-1)) + 1</c> 与池长不互质时，绕圈只踩到
+    /// <c>池长 / gcd</c> 个下标，中文"忌"（种子 29 → 步长 8，gcd(8,12)=4）12 条只出现过 3 条，
+    /// 另外 9 条是写了用户永远看不到的词（当时登记为 #G1-CB 等拍板，本次按"互质步长"改掉）。
+    /// 家改成"从种子导出的起点往上找与池长互质的最小步长"之后，这里正向钉住可达数；
+    /// 谁把表加长或换种子导致又出现公约数，这条会红并报出实测数（而不是像以前那样悄悄少显示几条）。
     /// </summary>
-    [Fact]
-    public void ChineseIllicitColumn_CurrentlyReachesThreeOfTwelveWords()
+    [Theory]
+    [InlineData(true, 12)]
+    [InlineData(false, 10)]
+    public void EveryCandidateReachesTheBoard_WithinOneYear(bool chinese, int expectedPoolLength)
     {
-        Assert.Equal(3, MaxItemsPerDay(LunarCalendarService.JiCandidatesZh, LunarCalendarService.IllicitSalt, chinese: true));
-        Assert.Equal(LunarCalendarService.JiCandidatesZh.Length, MaxItemsPerDay(LunarCalendarService.JiCandidatesZh, LunarCalendarService.AuspiciousSalt, chinese: true));
+        var yiPool = chinese ? LunarCalendarService.YiCandidatesZh : LunarCalendarService.YiCandidatesEn;
+        var jiPool = chinese ? LunarCalendarService.JiCandidatesZh : LunarCalendarService.JiCandidatesEn;
+
+        Assert.Equal(expectedPoolLength, yiPool.Length);
+        Assert.Equal(expectedPoolLength, jiPool.Length);
+        Assert.Equal(yiPool.Length, MaxItemsPerDay(yiPool, LunarCalendarService.AuspiciousSalt, chinese));
+        Assert.Equal(jiPool.Length, MaxItemsPerDay(jiPool, LunarCalendarService.IllicitSalt, chinese));
     }
 
     [Fact]
-    public void EnglishTables_AndChineseAuspicious_ReachEveryWord()
+    public void FixingReachability_DoesNotChangeHowManyLinesShowUpPerDay()
     {
-        Assert.Equal(LunarCalendarService.YiCandidatesZh.Length, MaxItemsPerDay(LunarCalendarService.YiCandidatesZh, LunarCalendarService.AuspiciousSalt, chinese: true));
-        Assert.Equal(LunarCalendarService.YiCandidatesEn.Length, MaxItemsPerDay(LunarCalendarService.YiCandidatesEn, LunarCalendarService.AuspiciousSalt, chinese: false));
-        Assert.Equal(LunarCalendarService.JiCandidatesEn.Length, MaxItemsPerDay(LunarCalendarService.JiCandidatesEn, LunarCalendarService.IllicitSalt, chinese: false));
+        // 单天仍然只给"要的那几条"（界面那一列的宽度没变），变的是一年内换着出现哪些。
+        var text = LunarCalendarService.BuildDailySelection(
+            new DateTime(2026, 9, 25), LunarCalendarService.JiCandidatesZh, count: 4,
+            LunarCalendarService.IllicitSalt, useChineseSpacing: true);
+
+        Assert.Equal(4, text.Split(' ').Length);
     }
 
     /// <summary>
