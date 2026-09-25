@@ -39,14 +39,28 @@ SDK 发布在 GitHub Packages，**读取也需要认证**。在你的项目里�
 ```
 
 本地把 `LANMOUNTAIN_PACKAGES_USER` / `LANMOUNTAIN_PACKAGES_TOKEN` 设进环境
-（PAT 需 `read:packages`）；CI 里在 workflow 的 `env:` 中把仓库 secret 注入这两个变量。
+（PAT 需 `read:packages`）；**CI 里不需要这张 PAT**——把这两个变量指向工作流自带的
+`GITHUB_TOKEN`，并在 job 的 `permissions` 里加 `packages: read` 就够了：
+
+```yaml
+permissions:
+  contents: read
+  packages: read
+
+env:
+  LANMOUNTAIN_PACKAGES_USER: ${{ github.actor }}
+  LANMOUNTAIN_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+（实测：同一个 job、同一份 `NuGet.config`，两次还原各用全新的 `--packages` 目录加 `--no-cache`；
+假 token 报 `NU1301 / 401`，`GITHUB_TOKEN` 还原成功并落出 `lanmountaindesktop.airappsdk/1.0.1`。）
 
 **别再写 `dotnet nuget add source --name lanmountain`**：上面这份 `NuGet.config` 已经登记了同名源，
 再 add 会直接失败（实测 `The name specified has already been added to the list of available package sources.`，
 而且是在 Restore 之前就红）；换成 `update source` 又在 Linux runner 上报
 `Password encryption is not supported on .NET Core for this platform.`。
-变量没设时 `%VAR%` 替换成空串，还原报 `Value cannot be null or empty string. (Parameter 'password')`，
-所以建议在 Restore 前加一步判空、把这句话翻译成"仓库没配 LANMOUNTAIN_PACKAGES_TOKEN"。
+本地变量没设时 `%VAR%` 替换成空串，还原报 `Value cannot be null or empty string. (Parameter 'password')`，
+看着像包丢了，其实缺的是凭据。
 完整片段见宿主文档《AirApp 开发 → 快速开始 → 环境准备》。
 
 ## 安装与创建

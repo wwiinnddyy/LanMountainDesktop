@@ -150,13 +150,19 @@ AirApp 本地包生成：
   ② 改成 `update source` 又撞 `Password encryption is not supported on .NET Core for this platform.`
   （Linux runner 上这个子命令不认 `--store-password-in-clear-text`）；
   ③ 现在的口径是：**源地址与凭据槽只写在 NuGet.config 一处**，凭据用 `%LANMOUNTAIN_PACKAGES_USER%` /
-  `%LANMOUNTAIN_PACKAGES_TOKEN%` 占位，CI 只在 `env:` 里把仓库 secret 注入这两个变量，不再改任何配置文件。
+  `%LANMOUNTAIN_PACKAGES_TOKEN%` 占位；CI 只在 `env:` 里把这两个变量指向**工作流自带的 `GITHUB_TOKEN`**，
+  并在 job 的 `permissions` 里加 `packages: read`，不再改任何配置文件、也不需要仓库 secret。
   替换机制实测过：把占位符指向不存在的域名，还原报 NU1301（说明替换后真去打那个地址）；设成 dummy 值，
-  GitHub Packages 回 401（说明凭据被带上去了）。各家 CI 里另加一步 `Require the packages credential`：
-  变量为空时直接 `::error::` 指出缺哪张 PAT——否则还原只会报
-  `Value cannot be null or empty string. (Parameter 'password')`，看不出是缺凭据。
-  **剩下这一条我做不了**：给六家各配一个带 `read:packages` 的仓库 secret（GitHub 不让把包发给匿名请求，
-  宿主这边的 `gh` 令牌也没有 `read:packages` 范围，所以"外部作者能不能真还原到 1.0.1"仍未被端到端证明）。
+  GitHub Packages 回 401（说明凭据被带上去了）。
+  ④ **上一版写的"剩下做不了的一条＝给六家各配一张 `read:packages` 的仓库 secret"已被实测否证**
+  （2026-09-26，SamplePlugin run `36178925559`）：公开包的跨仓库读取 `GITHUB_TOKEN` 就够。判据是同一个 job、
+  同一份 NuGet.config 里的两次还原，各用一个全新的 `--packages` 目录加 `--no-cache`——第一次没隔离时
+  假 token 那次被 NuGet 的 http-cache 喂成了 281ms 的**假绿**，是这条反证把它逼出来的。实测：
+  假 token → `NU1301 / 401（Unauthorized）`，`GITHUB_TOKEN` → 绿并落出 `lanmountaindesktop.airappsdk/1.0.1`；
+  HTTP 层同一个 nupkg 地址匿名 `401`、`GITHUB_TOKEN` 作密码 `200`（`x-access-token` / `github-actions` /
+  `github.actor` 三个用户名都通）。于是"外部作者能不能真还原到 1.0.1"端到端的证明物就是六家 CI 本身。
+  **只有本地开发还需要那张 PAT**（宿主这边 `gh` 令牌的 scope 里确实没有 `read:packages`，
+  `gh api user/packages` 403 点名的就是它；私有包场景未实测，别当成已验证）。
   外部那六家绑不绑得上还有个隐藏判据：`ExcludeAssets` 必须写 `"runtime;native"`——只写 `runtime` 会留下
   一个**空的 `runtimes/` 目录骨架**，宿主打包校验就拒载（实测 SchedulePlugin 就是这样，其余五家一直是对的）。
   宿主侧另外两件事：市场安装只比 **major**，装载期靠真绑定；抬 `ApiVersion` 不会把老包预先挡在门外
