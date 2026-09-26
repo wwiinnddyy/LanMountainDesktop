@@ -106,14 +106,6 @@ public sealed class ZeroUseInstanceMemberRatchetTests
     /// </summary>
     private static readonly Dictionary<string, string> Accepted = new(StringComparer.Ordinal)
     {
-        // —— 组件库分类条那一套拖拽手势（G1-AW）——
-        ["MainWindow.OnComponentLibraryCategoryViewportPointerPressed"] =
-            "配套字段 _isComponentLibraryCategoryGestureActive 等只被这四个方法读写；MainWindow.axaml:681 的 " +
-            "ComponentLibraryCategoryViewport 存在，但四个指针事件一个都没接。删掉等于丢掉一个写完了的交互：" +
-            "点击翻页是活的（OnComponentLibraryCategoryItemClick），缺的是拖动平移",
-        ["MainWindow.OnComponentLibraryCategoryViewportPointerMoved"] = "同上，一套手势",
-        ["MainWindow.OnComponentLibraryCategoryViewportPointerReleased"] = "同上，一套手势",
-        ["MainWindow.OnComponentLibraryCategoryViewportPointerCaptureLost"] = "同上，一套手势",
         // —— 命令可用态重算的钩子（今天没有可重算的东西）——
         ["RelayCommand.RaiseCanExecuteChanged"] =
             "ICommand 不含这个方法，要靠宿主在条件变化时主动调；全仓（含 .axaml）零调用。" +

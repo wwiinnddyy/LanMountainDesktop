@@ -1190,6 +1190,16 @@ IDE0051（未使用私有成员）在构建里一条都不出（2026-09-22 实�
 分待办 G1-AW（分类条手势）、G1-AY（隐私同意只写不读）、G1-AZ（启动进度链 + `LoadingTimeoutHandler`
 整类没被 new）、G1-BA（磁盘余量 / 单场学习报告 / 常用时区表）、G1-BB（轻应用没有卸载路径、
 "登记外部包"这条能力整体不可达、市场版本摘要没人显示）、G1-U（Core 公开面）；**没有一条被顺手删**。
+**G1-AW 已于 2026-09-27 判掉，结论是删而不是接线**：那套分类条拖拽属于"横向翻页"设计，而分类侧的翻页
+早在 `4c3ec92`（0.2.2）就换成了竖向列表——`BuildComponentLibraryCategoryPages` 只加一条星形列、每类占一行，
+外层是竖向 ScrollViewer。实测两个字段 `_componentLibraryCategoryHostTransform` / `_componentLibraryCategoryPageWidth`
+在 HEAD 上**只被赋值过 null / 0**（全仓没有第三个写点），而四个处理器第一件事就是判 transform 非空——
+把它们接进 XAML 也一步都不会走，反倒会让 `e.Pointer.Capture(viewport)` 抢走按钮点击与列表滚动。
+删掉 4 个处理器 + 只由它们调用的 `ApplyComponentLibraryCategoryOffset` + 6 个只服务这族的字段
+（`git diff --shortstat` 实测删 104 行、增 3 行，那 3 行是"分类侧不是横向翻页"的两行注释）。
+**内侧组件翻页是另一件事，别跟着删**：它的页宽与 transform 真有赋值点（`MainWindow.ComponentSystem.cs:3551`、
+`:3605`、`:3608`），四个指针事件也确实接在 `MainWindow.axaml:744-747`。名单实测 HEAD 33 条 → 现在 **29** 条
+（此前文档里写的"29"与 HEAD 差 4，是记录漂了——登记数也要 `grep -c` 现量，别抄上一笔）。
 判据本身被修过三次：跨工程同名声明行会把调用点喂饱（Plonds 自带 `GetCatalogAsync`）、
 C# 主构造器会被当成方法声明（`class X(IProgress<…>? p)` 报成一条不存在的方法）、
 以及**用 python heredoc 写 `\b` 会落成一个退格控制字符**——规则看着在文件里，正则永远不匹配，

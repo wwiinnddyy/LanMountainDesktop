@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -41,17 +41,11 @@ public partial class MainWindow : Window
     private string? _componentLibraryActiveCategoryId;
     private int _componentLibraryCategoryIndex;
     private int _componentLibraryComponentIndex;
-    private double _componentLibraryCategoryPageWidth;
     private double _componentLibraryComponentPageWidth;
-    private TranslateTransform? _componentLibraryCategoryHostTransform;
     private TranslateTransform? _componentLibraryComponentHostTransform;
     private IReadOnlyList<ComponentLibraryCategory> _componentLibraryCategories = Array.Empty<ComponentLibraryCategory>();
     private IReadOnlyList<ComponentLibraryComponentEntry> _componentLibraryActiveComponents = Array.Empty<ComponentLibraryComponentEntry>();
-    private bool _isComponentLibraryCategoryGestureActive;
     private bool _isComponentLibraryComponentGestureActive;
-    private Point _componentLibraryCategoryGestureStartPoint;
-    private Point _componentLibraryCategoryGestureCurrentPoint;
-    private double _componentLibraryCategoryGestureBaseOffset;
     private Point _componentLibraryComponentGestureStartPoint;
     private Point _componentLibraryComponentGestureCurrentPoint;
     private double _componentLibraryComponentGestureBaseOffset;
@@ -3319,6 +3313,8 @@ public partial class MainWindow : Window
 
         _componentLibraryActiveCategoryId = _componentLibraryCategories[_componentLibraryCategoryIndex].Id;
 
+        // 分类侧是一列多行的竖向列表（外层 ScrollViewer 竖向滚动），不是组件侧那种横向翻页：
+        // 所以这里只加一条星形列，也没有 host transform 与页宽可记。
         ComponentLibraryCategoryPagesContainer.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1, GridUnitType.Star)));
         for (var i = 0; i < categoryCount; i++)
         {
@@ -3375,9 +3371,6 @@ public partial class MainWindow : Window
             Grid.SetColumn(itemButton, 0);
             ComponentLibraryCategoryPagesContainer.Children.Add(itemButton);
         }
-
-        _componentLibraryCategoryHostTransform = null;
-        _componentLibraryCategoryPageWidth = 0;
 
         if (ComponentLibraryBackTextBlock is not null)
         {
@@ -3452,16 +3445,6 @@ public partial class MainWindow : Window
         }
 
         return categoryId;
-    }
-
-    private void ApplyComponentLibraryCategoryOffset()
-    {
-        if (_componentLibraryCategoryHostTransform is null || _componentLibraryCategoryPageWidth <= 0)
-        {
-            return;
-        }
-
-        _componentLibraryCategoryHostTransform.X = -_componentLibraryCategoryIndex * _componentLibraryCategoryPageWidth;
     }
 
     private void ApplyComponentLibraryComponentOffset()
@@ -3917,90 +3900,6 @@ public partial class MainWindow : Window
 
         _componentLibraryComponentIndex = Math.Min(maxIndex, _componentLibraryComponentIndex + 1);
         ApplyComponentLibraryComponentOffset();
-    }
-
-    private void OnComponentLibraryCategoryViewportPointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (!_isComponentLibraryOpen ||
-            _componentLibraryCategories.Count == 0 ||
-            ComponentLibraryCategoryViewport is null ||
-            _componentLibraryCategoryHostTransform is null ||
-            !e.GetCurrentPoint(ComponentLibraryCategoryViewport).Properties.IsLeftButtonPressed)
-        {
-            return;
-        }
-
-        _isComponentLibraryCategoryGestureActive = true;
-        _componentLibraryCategoryGestureStartPoint = e.GetPosition(ComponentLibraryCategoryViewport);
-        _componentLibraryCategoryGestureCurrentPoint = _componentLibraryCategoryGestureStartPoint;
-        _componentLibraryCategoryGestureBaseOffset = -_componentLibraryCategoryIndex * _componentLibraryCategoryPageWidth;
-        e.Pointer.Capture(ComponentLibraryCategoryViewport);
-    }
-
-    private void OnComponentLibraryCategoryViewportPointerMoved(object? sender, PointerEventArgs e)
-    {
-        if (!_isComponentLibraryCategoryGestureActive ||
-            ComponentLibraryCategoryViewport is null ||
-            _componentLibraryCategoryHostTransform is null)
-        {
-            return;
-        }
-
-        _componentLibraryCategoryGestureCurrentPoint = e.GetPosition(ComponentLibraryCategoryViewport);
-        var deltaX = _componentLibraryCategoryGestureCurrentPoint.X - _componentLibraryCategoryGestureStartPoint.X;
-        var minOffset = -Math.Max(0, _componentLibraryCategories.Count - 1) * _componentLibraryCategoryPageWidth;
-        var tentative = _componentLibraryCategoryGestureBaseOffset + deltaX;
-        _componentLibraryCategoryHostTransform.X = Math.Clamp(tentative, minOffset, 0);
-    }
-
-    private void OnComponentLibraryCategoryViewportPointerReleased(object? sender, PointerReleasedEventArgs e)
-    {
-        if (!_isComponentLibraryCategoryGestureActive ||
-            ComponentLibraryCategoryViewport is null)
-        {
-            return;
-        }
-
-        _isComponentLibraryCategoryGestureActive = false;
-        e.Pointer.Capture(null);
-
-        var endPoint = e.GetPosition(ComponentLibraryCategoryViewport);
-        var deltaX = endPoint.X - _componentLibraryCategoryGestureStartPoint.X;
-        var deltaY = endPoint.Y - _componentLibraryCategoryGestureStartPoint.Y;
-
-        var tapThreshold = 6;
-        if (Math.Abs(deltaX) <= tapThreshold && Math.Abs(deltaY) <= tapThreshold)
-        {
-            OpenComponentLibraryCurrentCategory();
-            return;
-        }
-
-        var swipeThreshold = Math.Max(40, _componentLibraryCategoryPageWidth * 0.18);
-        if (deltaX <= -swipeThreshold)
-        {
-            _componentLibraryCategoryIndex = Math.Min(_componentLibraryCategoryIndex + 1, Math.Max(0, _componentLibraryCategories.Count - 1));
-        }
-        else if (deltaX >= swipeThreshold)
-        {
-            _componentLibraryCategoryIndex = Math.Max(_componentLibraryCategoryIndex - 1, 0);
-        }
-
-        _componentLibraryActiveCategoryId = _componentLibraryCategories.Count > 0
-            ? _componentLibraryCategories[_componentLibraryCategoryIndex].Id
-            : null;
-
-        ApplyComponentLibraryCategoryOffset();
-    }
-
-    private void OnComponentLibraryCategoryViewportPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
-    {
-        if (!_isComponentLibraryCategoryGestureActive)
-        {
-            return;
-        }
-
-        _isComponentLibraryCategoryGestureActive = false;
-        ApplyComponentLibraryCategoryOffset();
     }
 
     private void OnComponentLibraryComponentViewportPointerPressed(object? sender, PointerPressedEventArgs e)
