@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 using LanMountainDesktop.Shared.Threading;
 
@@ -12,7 +12,6 @@ public class LoadingStateManager : IDisposable
     private readonly ConcurrentDictionary<string, LoadingItem> _items = new();
     private readonly ConcurrentDictionary<string, DateTimeOffset> _startTimes = new();
     private readonly object _lock = new();
-    private readonly CancellationTokenSource _cts = new();
     
     /// <summary>
     /// 状态变更事件
@@ -23,11 +22,6 @@ public class LoadingStateManager : IDisposable
     /// 整体进度变更事件
     /// </summary>
     public event EventHandler<OverallProgressChangedEventArgs>? OverallProgressChanged;
-    
-    /// <summary>
-    /// 当前启动阶段
-    /// </summary>
-    public StartupStage CurrentStage { get; private set; } = StartupStage.Initializing;
     
     /// <summary>
     /// 整体进度百分比
@@ -123,35 +117,6 @@ public class LoadingStateManager : IDisposable
     }
     
     /// <summary>
-    /// 更新进度
-    /// </summary>
-    public void UpdateProgress(string id, int percent, string? message = null, int? estimatedRemainingSeconds = null)
-    {
-        if (!_items.TryGetValue(id, out var item))
-            return;
-        
-        var updatedItem = item with
-        {
-            ProgressPercent = Math.Clamp(percent, 0, 100),
-            Message = message ?? item.Message,
-            EstimatedRemainingSeconds = estimatedRemainingSeconds,
-            Timestamp = DateTimeOffset.UtcNow
-        };
-        
-        _items[id] = updatedItem;
-        
-        StateChanged?.Invoke(this, new LoadingStateChangedEventArgs 
-        { 
-            Item = updatedItem, 
-            PreviousState = item.State, 
-            CurrentState = updatedItem.State,
-            IsProgressUpdate = true
-        });
-        
-        UpdateOverallProgress();
-    }
-    
-    /// <summary>
     /// 完成加载
     /// </summary>
     public void CompleteItem(string id, string? message = null)
@@ -224,54 +189,6 @@ public class LoadingStateManager : IDisposable
     }
     
     /// <summary>
-    /// 标记超时
-    /// </summary>
-    public void TimeoutItem(string id, string? message = null)
-    {
-        if (!_items.TryGetValue(id, out var item))
-            return;
-        
-        var previousState = item.State;
-        var endTime = DateTimeOffset.UtcNow;
-        
-        _startTimes.TryRemove(id, out _);
-        
-        var updatedItem = item with
-        {
-            State = LoadingState.Timeout,
-            EndTime = endTime,
-            Message = message ?? $"{item.Name} 加载超时",
-            Timestamp = DateTimeOffset.UtcNow
-        };
-        
-        _items[id] = updatedItem;
-        
-        StateChanged?.Invoke(this, new LoadingStateChangedEventArgs 
-        { 
-            Item = updatedItem, 
-            PreviousState = previousState, 
-            CurrentState = updatedItem.State 
-        });
-        
-        UpdateOverallProgress();
-    }
-    
-    /// <summary>
-    /// 设置当前启动阶段
-    /// </summary>
-    public void SetStage(StartupStage stage, string? message = null)
-    {
-        CurrentStage = stage;
-        
-        OverallProgressChanged?.Invoke(this, new OverallProgressChangedEventArgs
-        {
-            Stage = stage,
-            OverallProgressPercent = OverallProgressPercent,
-            Message = message
-        });
-    }
-    
-    /// <summary>
     /// 更新整体进度
     /// </summary>
     private void UpdateOverallProgress()
@@ -292,12 +209,14 @@ public class LoadingStateManager : IDisposable
                 .Where(i => i.State == LoadingState.InProgress)
                 .Sum(i => i.ProgressPercent / 100.0);
             
+            // 阶段一律写 Initializing：这个模型只有条目状态、没有阶段推进那一维。启动阶段与百分比
+            // 走的是另一条活路径（App.axaml.cs 的 ReportStartupProgress → LauncherStartupProgress）。
             var progress = (int)((completedWeight + inProgressWeight) / totalWeight * 100);
             OverallProgressPercent = Math.Clamp(progress, 0, 100);
             
             OverallProgressChanged?.Invoke(this, new OverallProgressChangedEventArgs
             {
-                Stage = CurrentStage,
+                Stage = StartupStage.Initializing,
                 OverallProgressPercent = OverallProgressPercent
             });
         }
@@ -314,7 +233,7 @@ public class LoadingStateManager : IDisposable
         
         return new LoadingStateMessage
         {
-            Stage = CurrentStage,
+            Stage = StartupStage.Initializing,
             OverallProgressPercent = OverallProgressPercent,
             ActiveItems = activeItems,
             CompletedCount = items.Count(i => i.State == LoadingState.Completed),
@@ -334,26 +253,8 @@ public class LoadingStateManager : IDisposable
         OverallProgressPercent = 0;
     }
     
-    /// <summary>
-    /// 检查超时项
-    /// </summary>
-    public void CheckTimeouts(TimeSpan timeout)
-    {
-        var now = DateTimeOffset.UtcNow;
-        var timeoutItems = _items.Values
-            .Where(i => i.State == LoadingState.InProgress && i.StartTime.HasValue)
-            .Where(i => now - i.StartTime.Value > timeout)
-            .ToList();
-        
-        foreach (var item in timeoutItems)
-        {
-            TimeoutItem(item.Id, $"{item.Name} 加载超时（超过 {timeout.TotalSeconds} 秒）");
-        }
-    }
-    
     public void Dispose()
     {
-        CancellationHelper.CancelAndDispose(_cts);
         _items.Clear();
         _startTimes.Clear();
     }
@@ -367,7 +268,6 @@ public class LoadingStateChangedEventArgs : EventArgs
     public required LoadingItem Item { get; init; }
     public LoadingState? PreviousState { get; init; }
     public required LoadingState CurrentState { get; init; }
-    public bool IsProgressUpdate { get; init; }
 }
 
 /// <summary>

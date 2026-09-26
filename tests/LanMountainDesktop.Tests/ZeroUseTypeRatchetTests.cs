@@ -47,10 +47,6 @@ public sealed class ZeroUseTypeRatchetTests
             "且内置公钥是空串（IsConfigured=false 时 Verify 直接返回 true）——接线与内置公钥都要用户拍板",
         ["AuthenticodeVerifier"] = "实现了但安装流程没调用：WinVerifyTrust 校验没接进落盘前那道关，" +
             "EnforcementEnabled 读环境变量也没人问——接线与否要用户拍板",
-        ["LoadingTimeoutHandler"] = "整个类没被 new 过（全仓只有自家文件里的 8 处出现，6 处还是 AppLogger 的日志分类名字符串）：" +
-            "超时监控 + 重试计数这套能力从没跑过。它是本次给 IsSelfText 补「名字只在字符串里出现也算自述」" +
-            "这条规则后新报出来的唯一一个类型（另两个方向都做了变异验证），属实现了没入口，" +
-            "与启动进度那条链一起等拍板：待办 G1-AZ",
     };
 
     private static readonly string[] ProductionDirectories =

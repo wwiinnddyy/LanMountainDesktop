@@ -115,20 +115,6 @@ public sealed class ZeroUseInstanceMemberRatchetTests
         // —— Core / SDK 公开面：删除属跨二进制破坏性变更 ——
         ["PublicIpcHostService.PublishLoadingStateAsync"] = "Core 是已发布包，删公开成员要与 SDK 版本号一起定：G1-U",
         ["LanMountainDesktopIpcClient.GetSessionInfoAsync"] = "同上，Core 公开面：G1-U",
-        // —— 启动进度那条链（G1-AZ）——
-        ["LoadingTimeoutHandler.SetItemTimeout"] =
-            "所属类型整类没被 new（已在 ZeroUseTypeRatchetTests 名单）：超时监控 + 重试计数这套能力从没跑过",
-        ["LoadingTimeoutHandler.ResetRetryCount"] = "同上，没被构造的类型里的方法",
-        ["LoadingStateManager.UpdateProgress"] =
-            "manager 是活的（App.axaml.cs:235 new、239 RegisterItem、240 StartItem），但全仓只注册了 " +
-            "system.init 一个条目，这个推进度的入口没人调",
-        ["LoadingStateManager.SetStage"] = "同上：阶段切换没人推，CurrentStage 一直停在初始值",
-        ["LoadingStateManager.CheckTimeouts"] = "同上：这是超时监控的心跳，配合从没被 new 的 LoadingTimeoutHandler",
-        ["LoadingStateReporter.ReportItemProgressAsync"] =
-            "上报的活路径是事件驱动（LoadingStateReporter.Start 订阅 StateChanged/OverallProgressChanged），" +
-            "这三个 Report*Async 是\"显式调用\"版备用入口，零调用点",
-        ["LoadingStateReporter.ReportStageChangeAsync"] = "同上，事件路径已覆盖",
-        ["LoadingStateReporter.ReportErrorAsync"] = "同上，事件路径已覆盖",
         // —— 考勤模块（整模块无入口，已记在类型棘轮）——
         ["AttendanceDataStore.LoadSessions"] = "所属类型已在 ZeroUseTypeRatchetTests 名单（考勤整模块无入口）：读写侧一起定",
         ["AttendanceDataStore.UpsertSession"] = "同上",
@@ -166,11 +152,13 @@ public sealed class ZeroUseInstanceMemberRatchetTests
     /// </summary>
     private static readonly string[] CensusAnchors =
     [
-        "LoadingTimeoutHandler.SetItemTimeout",
+        "PublicIpcHostService.PublishLoadingStateAsync",
         "PrivacyAgreementService.HasUserAgreed",
         "AttendanceDataStore.LoadSessions",
         "AirAppMarketAssetCacheService.Invalidate",
-        "LoadingStateReporter.ReportErrorAsync",
+        // 换成这条：它钉的是"只有测试在调＝没接线"那个口径（2026-09-22 换口径的直接产物），
+        // 原来的 LoadingStateReporter.ReportErrorAsync 随 G1-AZ 一起删掉了。
+        "CompositionVisualAnimationService.TrySetUniformScale",
     ];
 
     [Fact]

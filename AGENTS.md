@@ -1213,6 +1213,28 @@ IDE0051（未使用私有成员）在构建里一条都不出（2026-09-22 实�
 七次 `FindSystemTimeZoneById` 一句兜底都没有，缺任一 id 的机器上第一次调用就抛。
 **教训：登记会说谎，因为它是快照**。"实现了没入口"这条名单复用时必须现量入口，不许把登记里的句子当证据抄进新判断。
 名单实测 29 → **26** 条。
+**G1-AZ 同日分掉：整条"启动超时监控"删掉，不是接线**（`LoadingTimeoutHandler.cs` 275 行 + `LoadingStateManager`
+的 `UpdateProgress`/`SetStage`/`CheckTimeouts`/`TimeoutItem`/`CurrentStage`/`_cts`/`IsProgressUpdate` +
+`LoadingStateReporter` 的三个 `Report*Async`）。三条独立证据指向同一个结论：
+① `new LoadingTimeoutHandler` 实测 **0** 处，它那三个事件（`ItemTimeout`/`ItemRetry`/`ItemFailed`）**全仓没有订阅者**，
+真接上也不会告诉任何人任何事——超时后的动作只是再调一次 `_manager.StartItem`，而那件活本来就不能重启；
+② **阶段与百分比已经有两处实现**：宿主 `App.axaml.cs:291 ReportStartupProgress` → `LauncherStartupProgress`
+（实测 14 处异步 + 6 处同步 = 20 处调用）与启动器自己造的 `HostStartupMonitor.BuildDelayedLoadingState`（连"软超时"条目都是它自己编的），
+`LoadingStateManager.SetStage` 会是**第三处**——接线等于立第二个真源；
+③ `CurrentStage` 的**唯一写点就是 `SetStage`**，而 `SetStage` 零调用，所以发出去的 `Stage` 一直是 `Initializing`：
+删掉后那三处读点原样写常量，**行为逐字节不变**，只是不再假装这里有状态。
+`Report*Async` 那三个另有一层错：它们不写 `_items` 却发 stage/百分比，发出去的数与 manager 持有的对不上；
+错误上报早就有活路径（`FailItem` → `StateChanged(Failed)` → `ReportImmediatelyAsync`，`App.axaml.cs:1340` 在用）。
+`IsProgressUpdate` 与 `TimeoutItem` 是顺带露出来的同一族：前者唯一写点是删掉的 `UpdateProgress`、后者唯一调用点是
+删掉的 `CheckTimeouts`（`LoadingState.Timeout` 因此在宿主内不再可能被置上，`OnStateChanged` 里那个 `or` 分支一起摘掉；
+枚举值本身在 Core 契约面上，留着）。`_cts` 是"造出来只被 Dispose 摸过一次"的超时心跳占位。
+**新登记一条没顺手改的**（G1-CI）：`OverallProgressChangedEventArgs` 的 `Stage` 与 `OverallProgressPercent`
+只有写点——唯一的订阅者 `LoadingStateReporter.OnOverallProgressChanged` 自己重算（`CreateDetailedProgressMessage`），
+所以这条事件带的数据没人看。要么让订阅者读事件参数，要么把这两个字段摘掉，属另一种收口，另拍。
+名单实测：实例成员 26 → **18** 条，类型棘轮 15 → **14** 条。`CensusAnchors` 两条跟着换（锚点数量不变）：
+`LoadingTimeoutHandler.SetItemTimeout` → `PublicIpcHostService.PublishLoadingStateAsync`（改钉"另一个二进制的注册面"），
+`LoadingStateReporter.ReportErrorAsync` → `CompositionVisualAnimationService.TrySetUniformScale`（改钉"只有测试在调"那个口径）——
+**这条守卫就是为这种事写的**：删掉名单里的成员时它不会跟着沉默，而是当场要求换锚点并说明理由。
 判据本身被修过三次：跨工程同名声明行会把调用点喂饱（Plonds 自带 `GetCatalogAsync`）、
 C# 主构造器会被当成方法声明（`class X(IProgress<…>? p)` 报成一条不存在的方法）、
 以及**用 python heredoc 写 `\b` 会落成一个退格控制字符**——规则看着在文件里，正则永远不匹配，

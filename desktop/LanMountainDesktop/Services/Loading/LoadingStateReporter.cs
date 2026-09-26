@@ -1,4 +1,4 @@
-using System.Timers;
+﻿using System.Timers;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 using LanMountainDesktop.Shared.IPC;
 
@@ -87,78 +87,6 @@ public class LoadingStateReporter : IDisposable
     }
 
     /// <summary>
-    /// 上报单个加载项的进度
-    /// </summary>
-    public async Task ReportItemProgressAsync(string itemId, int percent, string? message = null)
-    {
-        if (_isDisposed || _notificationPublisher == null) return;
-        
-        var item = _manager.GetAllItems().FirstOrDefault(i => i.Id == itemId);
-        if (item == null) return;
-        
-        var updatedItem = item with
-        {
-            ProgressPercent = percent,
-            Message = message ?? item.Message,
-            Timestamp = DateTimeOffset.UtcNow
-        };
-        
-        var progressMessage = new DetailedProgressMessage
-        {
-            Stage = _manager.CurrentStage,
-            ProgressPercent = _manager.OverallProgressPercent,
-            CurrentItem = updatedItem,
-            AllItems = _manager.GetAllItems().ToList(),
-            Message = message,
-            IsMajorUpdate = false
-        };
-        
-        await SendMessageAsync(progressMessage);
-    }
-
-    /// <summary>
-    /// 上报阶段变更
-    /// </summary>
-    public async Task ReportStageChangeAsync(StartupStage stage, string? message = null)
-    {
-        if (_isDisposed || _notificationPublisher == null) return;
-        
-        var progressMessage = new DetailedProgressMessage
-        {
-            Stage = stage,
-            ProgressPercent = _manager.OverallProgressPercent,
-            AllItems = _manager.GetAllItems().ToList(),
-            Message = message ?? $"进入阶段: {stage}",
-            IsMajorUpdate = true
-        };
-        
-        await SendMessageAsync(progressMessage);
-    }
-
-    /// <summary>
-    /// 上报错误
-    /// </summary>
-    public async Task ReportErrorAsync(string errorMessage, string? details = null)
-    {
-        if (_isDisposed || _notificationPublisher == null) return;
-        
-        var fullMessage = string.IsNullOrEmpty(details) 
-            ? errorMessage 
-            : $"{errorMessage}: {details}";
-        
-        var progressMessage = new DetailedProgressMessage
-        {
-            Stage = _manager.CurrentStage,
-            ProgressPercent = _manager.OverallProgressPercent,
-            AllItems = _manager.GetAllItems().ToList(),
-            Message = fullMessage,
-            IsMajorUpdate = true
-        };
-        
-        await SendMessageAsync(progressMessage);
-    }
-
-    /// <summary>
     /// 状态变更事件处理
     /// </summary>
     private void OnStateChanged(object? sender, LoadingStateChangedEventArgs e)
@@ -166,7 +94,7 @@ public class LoadingStateReporter : IDisposable
         if (_isDisposed) return;
         
         // 重要状态变更立即上报
-        if (e.CurrentState is LoadingState.Completed or LoadingState.Failed or LoadingState.Timeout)
+        if (e.CurrentState is LoadingState.Completed or LoadingState.Failed)
         {
             _ = Task.Run(async () =>
             {
@@ -266,7 +194,7 @@ public class LoadingStateReporter : IDisposable
         
         return new DetailedProgressMessage
         {
-            Stage = _manager.CurrentStage,
+            Stage = StartupStage.Initializing,
             ProgressPercent = _manager.OverallProgressPercent,
             CurrentItem = currentItem,
             AllItems = _manager.GetAllItems().ToList(),
