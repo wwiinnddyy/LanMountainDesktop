@@ -2281,6 +2281,99 @@ public sealed class SourceIntegrityTests
             $"{offenders.Count} 处绕开忙态淡出档：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
     }
 
+    /// <summary>
+    /// 桌面网格组件的外框圆角，必须与"套着它的那圈选中环"同一档（#G1-AR 拍板后的规则）。
+    ///
+    /// 重合关系是实测出来的：宿主 <c>CreateDesktopComponentHost</c>（MainWindow.ComponentSystem.cs:2154）
+    /// 把 contentHost 与外层 host 都设成 <c>GetComponentCornerRadius</c>（:2436，读
+    /// <c>CornerRadiusTokens.Component</c>）的结果，选中环就画在这个 host 的边框上（:2896 起）；
+    /// 组件自己的 RootBorder 只隔 <c>GetDesktopComponentVisualInset</c>（:2452，2~12px）。
+    /// 2026-09-26 动手前实测有 <b>10 个</b>网格组件把外框读成 <c>Lg</c> 档——默认 Balanced 风格下
+    /// 就是"24 的环抱着 28 的框"，同一屏看得见的半径不一致。
+    ///
+    /// 网格名单不是手抄的：从 <c>DesktopComponentRuntimeRegistry</c> 的工厂表达式里取（实测 44 个），
+    /// 所以以后新登记的组件自动被这条判据覆盖；取不到名单（工厂写法变了、文件改名）时覆盖面下限会红。
+    /// 反向也钉住，防这条变成"全仓禁 Lg"：任务条岛里的控件读 Lg 是<b>对的</b>——它们的容器
+    /// <c>BottomTaskbarContainer</c> 本身就是 Lg（MainWindow.axaml.cs:742），那是层级一致而不是重合。
+    /// 这条判据只问"在不在网格里"，岛上的（实测 3 个）必须继续读 Lg。
+    /// </summary>
+    [Fact]
+    public void DesktopGridWidgetFrames_UseTheTierTheirRingUses()
+    {
+        // 实测 44 个工厂；下限留 4 个余量，工厂写法变了或名单取空会当场红。
+        const int GridFactoryFloor = 40;
+        const int MinIslandLgSites = 3;
+        var registryRelative = @"desktop\LanMountainDesktop\Views\Components\DesktopComponentRuntimeRegistry.cs";
+        var factoryRe = new Regex(@"\(\) => new (?<name>[A-Za-z0-9_]+Widget)\(\)");
+        var lgCallRe = new Regex(@"ComponentChromeCornerRadiusHelper\.ResolveLgRectangle");
+
+        var gridWidgets = new HashSet<string>(StringComparer.Ordinal);
+        var offenders = new List<string>();
+        var islandLgSites = 0;
+
+        // 两趟：先在注册表里把"谁在网格里"取全，再看每个组件读的是哪一档。
+        // 写成一趟会按目录遍历顺序得出假结论——遍历到注册表之前的组件都被当成"不在网格里"放过去了
+        // （第一版就是这样，实测只报出 4 家，另外 6 家被记进岛上那一侧）。
+        var files = SourceFiles().ToList();
+        var registry = files.FirstOrDefault(
+            file => string.Equals(RelativeToRepo(file), registryRelative, StringComparison.OrdinalIgnoreCase));
+        Assert.NotNull(registry);
+        foreach (var (line, _) in CodeLines(registry!))
+        {
+            foreach (Match match in factoryRe.Matches(line))
+            {
+                gridWidgets.Add(match.Groups["name"].Value);
+            }
+        }
+
+        foreach (var file in files)
+        {
+            var relative = RelativeToRepo(file);
+            if (file == registry)
+            {
+                continue;
+            }
+
+            if (!relative.StartsWith(@"desktop\LanMountainDesktop\Views\Components", StringComparison.OrdinalIgnoreCase)
+                || !Path.GetFileName(relative).EndsWith(".axaml.cs", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var widget = Path.GetFileName(relative)[..^".axaml.cs".Length];
+            var inGrid = gridWidgets.Contains(widget);
+            foreach (var (line, number) in CodeLines(file))
+            {
+                if (!lgCallRe.IsMatch(line))
+                {
+                    continue;
+                }
+
+                if (inGrid)
+                {
+                    offenders.Add(
+                        $"{relative}:{number} 网格组件的外框读了 Lg 档——选中环画在宿主 host 上、走的是 Component 档，" +
+                        "两者只差 2~12px，默认风格下就是 24 的环抱 28 的框");
+                }
+                else
+                {
+                    islandLgSites++;
+                }
+            }
+        }
+
+        Assert.True(
+            gridWidgets.Count >= GridFactoryFloor,
+            $"从注册表取到 {gridWidgets.Count} 个网格组件，低于下限 {GridFactoryFloor}——工厂写法一变这条判据就只看少数文件，等于静默变窄");
+        Assert.True(
+            islandLgSites >= MinIslandLgSites,
+            $"不在网格里的 Lg 读点只剩 {islandLgSites} 处（下限 {MinIslandLgSites}）——任务条岛那几家该继续读 Lg，" +
+            "这里变少说明这条判据被写成了『全仓禁 Lg』");
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 个网格组件的外框与它的选中环不同档：{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
     private static readonly Regex MethodStart = new(
         @"^\s{4}(?:private|internal|public|protected|override|static|async|\[)", RegexOptions.Compiled);
 

@@ -237,7 +237,7 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
             isFourByThree = widthRatio >= 0.9 && heightRatio >= 1.35;
         }
 
-        var containerRadius = ComponentChromeCornerRadiusHelper.ResolveLgRectangle();
+        var containerRadius = ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadius();
         RootBorder.CornerRadius = containerRadius;
         RootBorder.Padding = new Thickness(0);
 

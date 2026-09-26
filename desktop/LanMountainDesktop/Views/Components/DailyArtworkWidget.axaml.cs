@@ -96,7 +96,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         _currentCellSize = Math.Max(1, cellSize);
         var scale = ResolveScale();
 
-        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.ResolveLgRectangle();
+        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadius();
 
         InfoPanel.Padding = new Thickness(
             Math.Clamp(18 * scale, 10, 28),

@@ -30,8 +30,14 @@ internal static class ComponentChromeCornerRadiusHelper
     }
 
     /// <summary>
-    /// 主面板外框用的 <c>Lg</c> 档圆角（<c>ResolveMainRectangleRadius</c> 用的是 <c>Component</c> 档，
-    /// 两档在 Balanced/Rounded/Open 三种圆角风格下数值不同——24 vs 28 这类差异是设计问题，已单独登记等拍板）。
+    /// 任务条岛那种"外框本身就大一号"的容器用的 <c>Lg</c> 档圆角；
+    /// 桌面网格组件的外框请用 <see cref="ResolveMainRectangleRadius"/>（<c>Component</c> 档）。
+    /// 2026-09-26 拍的（#G1-AR）：两档在 Balanced/Rounded/Open 下数值不同（24 vs 28 等），
+    /// 而桌面网格的选中环画在宿主 host 的边框上、读的就是 <c>Component</c> 档，组件外框只隔 2~12px——
+    /// 规则是<b>谁与谁重合就随谁</b>，所以进网格的 10 个组件外框改走 Component 档；
+    /// 任务条岛里的 Clock / TextCapsule / NetworkSpeed 继续读 Lg，因为它们的容器
+    /// <c>BottomTaskbarContainer</c> 本身就是 Lg，那是层级一致而不是重合。
+    /// 这条规则由 <c>SourceIntegrityTests.DesktopGridWidgetFrames_UseTheTierTheirRingUses</c> 双向拦。
     /// 2026-09-22 收这一族：13 个组件各自抄了一份 <c>private static double ResolveUnifiedMainRadiusValue()</c>
     /// 加 <c>private CornerRadius ResolveUnifiedMainRectangle()</c>，除了没有下面的有限性兜底，
     /// 还一律无视 <c>chromeContext</c>（宿主可以按组件下发 chrome，那 13 个组件不吃）。

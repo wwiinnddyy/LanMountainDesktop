@@ -303,7 +303,7 @@ public partial class NotificationBoxWidget : UserControl,
         var scale = Math.Clamp(_currentCellSize / ComponentDesignMetrics.BaseCellSize, 0.7, 1.8);
         var fontScale = Math.Clamp(scale, 0.8, 1.4);
 
-        var cornerRadius = ComponentChromeCornerRadiusHelper.ResolveLgRectangleRadiusValue();
+        var cornerRadius = ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadiusValue();
         RootBorder.CornerRadius = new CornerRadius(cornerRadius);
         CardBorder.CornerRadius = new CornerRadius(cornerRadius);
 

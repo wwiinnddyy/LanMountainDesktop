@@ -454,7 +454,7 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
         var totalWidth = Bounds.Width > 1 ? Bounds.Width : _currentCellSize * BaseWidthCells;
         var totalHeight = Bounds.Height > 1 ? Bounds.Height : _currentCellSize * BaseHeightCells;
 
-        var unifiedMainRectangle = ComponentChromeCornerRadiusHelper.ResolveLgRectangle();
+        var unifiedMainRectangle = ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadius();
         RootBorder.CornerRadius = unifiedMainRectangle;
         CardBorder.CornerRadius = unifiedMainRectangle;
         CardBorder.Padding = new Thickness(

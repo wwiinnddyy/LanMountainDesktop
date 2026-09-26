@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -280,7 +280,7 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
         var totalWidth = Bounds.Width > 1 ? Bounds.Width : _currentCellSize * BaseWidthCells;
         var totalHeight = Bounds.Height > 1 ? Bounds.Height : _currentCellSize * BaseHeightCells;
 
-        var unifiedMainRectangle = ComponentChromeCornerRadiusHelper.ResolveLgRectangle();
+        var unifiedMainRectangle = ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadius();
         RootBorder.CornerRadius = unifiedMainRectangle;
         RootBorder.Padding = new Thickness(0);
 
