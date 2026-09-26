@@ -673,7 +673,13 @@ public sealed class DuplicateImplementationRatchetTests
     // 没有新名字进来，其余共有族的站点数一处未变——"只动了这一族"是量出来的，不是推断的。
     // 两笔分开记：182 → 193 是改判据（一行代码没删），193 → 189 是收口（git diff --numstat 实测：
     // 两个安装器各删 73 行、各加 5 行，家加 27 行 ⇒ 净 −109），并成"净 +7"会把判据账洗掉。
-    private const int DriftFamilyCeiling = 189;
+    // 189 → 188 是**删死码删出来的**（2026-09-27，G1-AZ 那一笔 `75fc3a2`，不是有人少抄了一份实现）：
+    // 掉出去的族是 `Stop`，它在 7fdcd92 上是"3 处 / 3 种体 / 3 文件"——三个门槛各压在边界上，
+    // 少一处就整族从视野里消失（报告面按名字逐个对过：`StudyAnalyticsInternals.cs:409`、
+    // `LoadingStateReporter.cs:68`、`LoadingTimeoutHandler.cs:73` 三体各异；删掉第三个站点后剩 2 处 2 文件）。
+    // 同轮逐字面那把尺子没动（上限 11 不变），漂移认领量也没掉到下限以下——只有族数少 1，
+    // 报的红灯是"变少请记账"，不是"有人抄了新的一份"。
+    private const int DriftFamilyCeiling = 188;
 
     /// <summary>
     /// 漂移普查认领的声明处数下限（今天实测 5759）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。
