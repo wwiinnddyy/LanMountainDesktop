@@ -540,8 +540,7 @@ public partial class WorldClockWidget : UserControl,
             SetHandGeometry(entry.MinuteHand, minuteAngle, forwardLength: 33, backwardLength: 6);
             SetHandGeometry(entry.SecondHand, secondAngle, forwardLength: 37, backwardLength: 8.5);
 
-            entry.CityTextBlock.Text = ClockCityNames.ResolveForHostWidget(
-            _localizationService.IsChineseLanguage(_languageCode), zone);
+            entry.CityTextBlock.Text = ClockCityNames.ResolveByLanguage(_languageCode, zone);
             entry.DayTextBlock.Text = ResolveRelativeDayLabel((zonedNow.Date - baseNow.Date).Days);
 
             var offsetDelta = zone.GetUtcOffset(utcNow) - baseOffset;

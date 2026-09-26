@@ -259,8 +259,7 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
         SetHandGeometry(_minuteHandLine, minuteAngle, forwardLength: 76, backwardLength: 8);
         SetHandGeometry(_secondHandLine, secondAngle, forwardLength: 94, backwardLength: 18);
 
-        CityTextBlock.Text = ClockCityNames.ResolveForHostWidget(
-            _localizationService.IsChineseLanguage(_languageCode), _clockTimeZone);
+        CityTextBlock.Text = ClockCityNames.ResolveByLanguage(_languageCode, _clockTimeZone);
     }
 
     private void ApplyModeVisualIfNeeded()

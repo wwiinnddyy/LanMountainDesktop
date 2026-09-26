@@ -1,63 +1,10 @@
 using System;
-using System.Collections.Generic;
 using System.Globalization;
-using LanMountainDesktop.Shared.Contracts.Localization;
 
 namespace LanMountainDesktop.Services.ClockAirApp;
 
 public static class ClockAirAppTimeFormatter
 {
-    private static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> CityNames =
-        new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
-        {
-            [LanguageCodes.Chinese] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["China Standard Time"] = "北京",
-                ["Asia/Shanghai"] = "北京",
-                ["GMT Standard Time"] = "伦敦",
-                ["Europe/London"] = "伦敦",
-                ["AUS Eastern Standard Time"] = "悉尼",
-                ["Australia/Sydney"] = "悉尼",
-                ["Eastern Standard Time"] = "纽约",
-                ["America/New_York"] = "纽约",
-                ["Tokyo Standard Time"] = "东京",
-                ["Asia/Tokyo"] = "东京",
-                ["UTC"] = "UTC",
-                ["Etc/UTC"] = "UTC"
-            },
-            [LanguageCodes.English] = ClockCityNames.EnglishTable,
-            [LanguageCodes.Japanese] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["China Standard Time"] = "北京",
-                ["Asia/Shanghai"] = "北京",
-                ["GMT Standard Time"] = "ロンドン",
-                ["Europe/London"] = "ロンドン",
-                ["AUS Eastern Standard Time"] = "シドニー",
-                ["Australia/Sydney"] = "シドニー",
-                ["Eastern Standard Time"] = "ニューヨーク",
-                ["America/New_York"] = "ニューヨーク",
-                ["Tokyo Standard Time"] = "東京",
-                ["Asia/Tokyo"] = "東京",
-                ["UTC"] = "UTC",
-                ["Etc/UTC"] = "UTC"
-            },
-            [LanguageCodes.Korean] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["China Standard Time"] = "베이징",
-                ["Asia/Shanghai"] = "베이징",
-                ["GMT Standard Time"] = "런던",
-                ["Europe/London"] = "런던",
-                ["AUS Eastern Standard Time"] = "시드니",
-                ["Australia/Sydney"] = "시드니",
-                ["Eastern Standard Time"] = "뉴욕",
-                ["America/New_York"] = "뉴욕",
-                ["Tokyo Standard Time"] = "도쿄",
-                ["Asia/Tokyo"] = "도쿄",
-                ["UTC"] = "UTC",
-                ["Etc/UTC"] = "UTC"
-            }
-        };
-
     public static string FormatTime(DateTime time, ClockAirAppSettingsSnapshot settings, CultureInfo culture)
     {
         var use24Hour = UseTwentyFourHourClock(settings.TimeFormatMode, culture);
@@ -90,13 +37,12 @@ public static class ClockAirAppTimeFormatter
         return $"UTC{sign}{hours:D2}:{minutes:D2}";
     }
 
-    public static string ResolveCityName(TimeZoneInfo timeZone, string languageCode)
-    {
-        var normalizedLanguage = LanguageCodes.Normalize(languageCode);
-        return CityNames.TryGetValue(normalizedLanguage, out var table)
-            ? ClockCityNames.Lookup(table, timeZone)
-            : ClockCityNames.FallbackName(timeZone);
-    }
+    /// <summary>
+    /// 城市名一律走 <see cref="ClockCityNames"/>：这张表与"哪张表配哪种语言"在两处界面上出现过
+    /// 三份抄本，症状是同一颗时区在桌面上写"東京"、在 AirApp 里写 Tokyo。
+    /// </summary>
+    public static string ResolveCityName(TimeZoneInfo timeZone, string languageCode) =>
+        ClockCityNames.ResolveByLanguage(languageCode, timeZone);
 
     public static bool UseTwentyFourHourClock(string? timeFormatMode, CultureInfo culture)
     {

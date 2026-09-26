@@ -3,30 +3,52 @@ using System.Collections.Generic;
 
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.ClockAirApp;
-using LanMountainDesktop.Shared.Contracts.Localization;
 
 using Xunit;
 
 namespace LanMountainDesktop.Tests;
 
 /// <summary>
-/// 城市名表与它的兜底写法收到一处之后的行为钉。
+/// 城市名表、选表口径与兜底写法收到一处之后的行为钉。
 /// 这一族的错法全是"看着不像 bug"：表查不到就显示原始 id、兜底削多两个字就显示成空白，
 /// 而两个组件的表以前是各抄一份的——补一颗城市只补一边，同一颗时区就在两块屏幕上显示成两个名字。
+///
+/// 2026-09-26 把 G1-BL 剩的三处不一致都定了（中文表里的 UTC 写字面 "UTC"、认不出的语言落英文、
+/// ja/ko 两张表搬进本家让宿主也用上），所以这里从"钉住两端的分歧"改成"钉住两端必须一致"。
 /// </summary>
 public sealed class ClockCityNamesTests
 {
+    private static readonly string[] AllKeys =
+    [
+        "China Standard Time", "Asia/Shanghai",
+        "GMT Standard Time", "Europe/London",
+        "AUS Eastern Standard Time", "Australia/Sydney",
+        "Eastern Standard Time", "America/New_York",
+        "Tokyo Standard Time", "Asia/Tokyo",
+        "UTC", "Etc/UTC"
+    ];
+
+    /// <summary>两端的入口都收同一个语言码；空码/null 只在上面那格单独钉（AirApp 的入参类型是非空串）。</summary>
+    private static readonly string[] SharedLanguages = ["zh-CN", "en-US", "ja-JP", "ko-KR", "fr-FR", "de"];
+
     private static TimeZoneInfo Zone(string id) =>
         TimeZoneInfo.CreateCustomTimeZone(id, TimeSpan.Zero, id, id);
 
     [Theory]
-    [InlineData(true, "Asia/Shanghai", "北京")]
-    [InlineData(false, "Asia/Shanghai", "Beijing")]
-    [InlineData(true, "China Standard Time", "北京")]
-    [InlineData(false, "asia/shanghai", "Beijing")]              // 键忽略大小写：盘上/系统给的写法不止一种
-    [InlineData(false, "Etc/UTC", "UTC")]
-    public void HostWidgetResolution_PrefersTheTableOfTheRightLanguage(bool isChinese, string id, string expected) =>
-        Assert.Equal(expected, ClockCityNames.ResolveForHostWidget(isChinese, Zone(id)));
+    [InlineData("zh-CN", "Asia/Shanghai", "北京")]
+    [InlineData("en-US", "Asia/Shanghai", "Beijing")]
+    [InlineData("zh-CN", "China Standard Time", "北京")]
+    [InlineData("ja-JP", "Asia/Tokyo", "東京")]        // 中文表这里是"东京"：这一格证明取的是日文表
+    [InlineData("ja-JP", "Europe/London", "ロンドン")]
+    [InlineData("ko-KR", "Asia/Tokyo", "도쿄")]
+    [InlineData("fr-FR", "Asia/Shanghai", "Beijing")]  // 认不出的语言落英文，不再像以前那样落中文
+    [InlineData("de", "UTC", "UTC")]
+    [InlineData("", "Asia/Shanghai", "Beijing")]
+    [InlineData(null, "Asia/Shanghai", "Beijing")]
+    [InlineData("en-US", "asia/shanghai", "Beijing")]  // 键忽略大小写：盘上/系统给的写法不止一种
+    [InlineData("zh-CN", "Etc/UTC", "UTC")]            // ①的定档：中文表里也写字面 UTC
+    public void Resolution_PicksTheTableForThatLanguage(string? language, string id, string expected) =>
+        Assert.Equal(expected, ClockCityNames.ResolveByLanguage(language, Zone(id)));
 
     [Theory]
     [InlineData("Asia/Choibalsan", "Choibalsan")]                 // 取最后一段
@@ -39,52 +61,69 @@ public sealed class ClockCityNamesTests
         Assert.Equal(expected, ClockCityNames.FallbackName(Zone(id)));
 
     /// <summary>
-    /// 两个入口的表选择口径不一样，是既有事实，这一格把它钉住：
-    /// AirApp 按归一化语言取各自表（多 ja/ko），宿主组件只有"中文 / 其余一律英文"两档。
-    /// 于是同一个"表里没有的语言"（法语）两端显示不同——AirApp 跟着 <c>LanguageCodes.Default</c> 落回中文，
-    /// 宿主组件把它算成"非中文"走英文字表。这一条挂在 G1-BL 里等拍板，先不许被顺手改掉。
+    /// 两端必须给同一个答案：世界时钟/模拟时钟组件走 <see cref="ClockCityNames.ResolveByLanguage"/>，
+    /// Clock AirApp 走 <see cref="ClockAirAppTimeFormatter.ResolveCityName"/>。
+    /// 收口之前这里是有分歧的（UTC 一格、以及 fr 这类认不出的语言），那两格当时钉的是现状；
+    /// 现在 12 颗时区 × 8 种语言码全部逐格对账，任何一侧再各走各的口径就会红。
     /// </summary>
     [Fact]
-    public void TheTwoEntriesPickTheirTableByDifferentRules_AndThatIsVisibleForAnUnlistedLanguage()
+    public void TheHostWidgetEntryAndTheAirAppEntry_AgreeOnEveryZoneAndLanguage()
     {
-        Assert.Equal("北京", ClockAirAppTimeFormatter.ResolveCityName(Zone("Asia/Shanghai"), LanguageCodes.Japanese));
-        Assert.Equal("Beijing", ClockCityNames.ResolveForHostWidget(
-            isChinese: false, Zone("Asia/Shanghai")));
-        Assert.Equal("北京", ClockAirAppTimeFormatter.ResolveCityName(Zone("Asia/Shanghai"), "fr-FR"));
+        var disagreements = new List<string>();
+
+        foreach (var language in SharedLanguages)
+        {
+            foreach (var key in AllKeys)
+            {
+                var host = ClockCityNames.ResolveByLanguage(language, Zone(key));
+                var airApp = ClockAirAppTimeFormatter.ResolveCityName(Zone(key), language);
+                if (!string.Equals(host, airApp, StringComparison.Ordinal))
+                {
+                    disagreements.Add($"语言 [{language}] 时区 [{key}]：宿主={host} AirApp={airApp}");
+                }
+            }
+        }
+
+        Assert.True(
+            disagreements.Count == 0,
+            $"{disagreements.Count} 格两端不一致：{Environment.NewLine}{string.Join(Environment.NewLine, disagreements)}");
     }
 
     /// <summary>
-    /// G1-BL 的分歧锚点：中文表里 UTC 这一格两边取值不同（这边"协调世界时"、AirApp 那边写字面 "UTC"）。
-    /// 各留各的是暂时的——拍板统一成哪个词之前，这条判据保证没人顺手把它并掉。
+    /// 四张表同键同条数，且每一张的 UTC 都写字面 "UTC"。
+    /// 钉的是"补一颗城市只补一边"和"某一语言表里 UTC 又本地化回一个词"这两种静默漂移。
     /// </summary>
     [Fact]
-    public void UtcZone_StillDisagreesBetweenTheHostWidgetAndTheAirApp()
+    public void AllFourTables_CarryTheSameKeysAndTheSameUtcEntry()
     {
-        Assert.Equal("协调世界时", ClockCityNames.ResolveForHostWidget(isChinese: true, Zone("UTC")));
-        Assert.Equal("UTC", ClockAirAppTimeFormatter.ResolveCityName(Zone("UTC"), LanguageCodes.Chinese));
+        var tables = new (string Name, IReadOnlyDictionary<string, string> Table)[]
+        {
+            ("Chinese", ClockCityNames.ChineseTable),
+            ("English", ClockCityNames.EnglishTable),
+            ("Japanese", ClockCityNames.JapaneseTable),
+            ("Korean", ClockCityNames.KoreanTable),
+        };
+
+        foreach (var (name, table) in tables)
+        {
+            Assert.Equal(AllKeys.Length, table.Count);
+            foreach (var key in AllKeys)
+            {
+                Assert.True(table.ContainsKey(key), $"{name}表缺键 {key}");
+            }
+
+            Assert.Equal("UTC", table["UTC"]);
+            Assert.Equal("UTC", table["Etc/UTC"]);
+        }
     }
 
+    /// <summary>语言认不出来时不许靠 LanguageCodes 的默认值（那是中文），这一格把这条钉死。</summary>
     [Fact]
-    public void HostWidgetTables_CarryBothTheWinnamesAndTheIanaNames()
+    public void UnlistedLanguage_TakesTheEnglishTableEvenThoughTheDefaultIsChinese()
     {
-        Assert.Equal(12, ClockCityNames.ChineseTable.Count);
-        Assert.Equal(ClockCityNames.ChineseTable.Keys, ClockCityNames.EnglishTable.Keys);
-        Assert.Contains("Etc/UTC", ClockCityNames.ChineseTable);
-        Assert.Contains("Australia/Sydney", ClockCityNames.EnglishTable);
-    }
-
-    /// <summary>
-    /// 英文字表只有一份了：AirApp 的英文子表就是家的 <c>EnglishTable</c>（12 条逐键等值，所以并过去行为不变）。
-    /// 这一格钉的是"别再抄第二份英文表"——新加一颗城市只补一边，就是同一颗时区在两端显示成两个城市名。
-    /// </summary>
-    [Theory]
-    [InlineData("Asia/Shanghai", "Beijing")]
-    [InlineData("China Standard Time", "Beijing")]
-    [InlineData("Australia/Sydney", "Sydney")]
-    [InlineData("Etc/UTC", "UTC")]
-    public void AirAppEnglishPath_AndTheHostWidgetShareTheSameTable(string id, string expected)
-    {
-        Assert.Equal(expected, ClockCityNames.ResolveForHostWidget(isChinese: false, Zone(id)));
-        Assert.Equal(expected, ClockAirAppTimeFormatter.ResolveCityName(Zone(id), LanguageCodes.English));
+        Assert.Same(ClockCityNames.EnglishTable, ClockCityNames.TableFor("fr-FR"));
+        Assert.Same(ClockCityNames.JapaneseTable, ClockCityNames.TableFor("ja"));
+        Assert.Same(ClockCityNames.KoreanTable, ClockCityNames.TableFor("ko-KR"));
+        Assert.Same(ClockCityNames.ChineseTable, ClockCityNames.TableFor("zh"));
     }
 }

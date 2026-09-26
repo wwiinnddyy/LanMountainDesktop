@@ -99,10 +99,12 @@ public sealed class DuplicateImplementationRatchetTests
     /// 注入"改成区分大小写"恰好红 2 格（<c>DARK</c> 与 <c>Follow_System</c>），另 6 格不动，验过。）
     /// 50 → 49 收一族（世界时钟的城市名：两个组件各一份逐字相同的 20 行 ResolveCityName，
     /// Clock AirApp 的 ClockAirAppTimeFormatter 还有第三份同样的兜底写法——三份都进
-    /// Services/ClockCityNames（FallbackName + Lookup + ResolveForHostWidget）。
+    /// Services/ClockCityNames（FallbackName + Lookup + 当时的 ResolveForHostWidget，
+    /// 2026-09-26 起那个入口叫 ResolveByLanguage）。
     /// 顺带把两组件各抄一份的 12+12 条表并成一份（一份写中文、一份写 Unicode 转义，
     /// 逐字普查对这种数据抄本是瞎的，只能靠人对内容）。表选择口径两端本来就不同，
-    /// 没替它们统一（挂 G1-BL）。行为钉 ClockCityNamesTests 14 格：删掉裸 Time 那一步只红
+    /// 当时没替它们统一（挂 G1-BL；2026-09-26 那一笔已把三处分歧定掉，见 ClockCityNamesTests）。
+    /// 行为钉 ClockCityNamesTests 14 格：删掉裸 Time 那一步只红
     /// "Samoa Time" 一格、把英文字表的 OrdinalIgnoreCase 去掉只红 "asia/shanghai" 一格，验过。）
     /// 49 → 48 收一族（星期表头那 6 行循环：DateWidget 与 MonthCalendarWidget 各一份逐字相同，
     /// 并进 <c>CalendarWeekLabels.ApplyHeaders(isChinese, blocks)</c>，两个 <c>UpdateWeekdayHeaders</c>

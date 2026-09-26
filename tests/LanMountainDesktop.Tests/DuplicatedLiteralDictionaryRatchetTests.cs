@@ -26,9 +26,12 @@ namespace LanMountainDesktop.Tests;
 /// </summary>
 public sealed class DuplicatedLiteralDictionaryRatchetTests
 {
-    // 今天实测（C# 闸门与 python 探针两个面同为 8 / 1 / 33）：字典 indexer 写法 8 张、老式初值写法 1 张、字符串数组 33 张。
+    // 2026-09-25 实测（C# 闸门与探针两个面同为 8 / 1 / 33）：字典 indexer 写法 8 张、老式初值写法 1 张、字符串数组 33 张。
+    // 2026-09-26 掉到 6 张，逐条查过才改数：ClockAirAppTimeFormatter 那份 CityNames 被删掉
+    // （外层字典 1 张 + zh/ja/ko 三张内层字典 = 少 4 张），两张语言表搬进 ClockCityNames（多 2 张），
+    // 8 - 4 + 2 = 6，与实测对得上；Scanner_* 四格自测照常绿，说明掉的是真表数而不是正则瞎了。
     // 用途不是查新增，是查判据自己瞎了：任何一种形状掉到下限以下＝那个形状的正则又漏写法了。
-    private const int DictionaryTableFloor = 7;
+    private const int DictionaryTableFloor = 6;
     private const int OldStyleTableFloor = 1;
     private const int ArrayTableFloor = 30;
 
