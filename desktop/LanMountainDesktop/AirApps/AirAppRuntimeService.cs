@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -13,6 +13,7 @@ using LanMountainDesktop.Models;
 using LanMountainDesktop.AirApps;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.Services.AirAppMarket;
 using LanMountainDesktop.Shared.IPC;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -339,8 +340,27 @@ public sealed class AirAppRuntimeService : IDisposable
 
         RemoveAirAppFromSnapshot(airAppId);
         RemoveAirAppFromCatalog(airAppId);
+        InvalidateMarketAssetCache(airAppId);
         PendingRestartStateService.SetPending(PendingRestartStateService.AirAppCatalogReason, true);
         return true;
+    }
+
+    /// <summary>
+    /// 卸载之后把这个应用的 README / 图标从市场资产缓存里摘掉，不然删掉的轻应用会在
+    /// {数据根}/AirAppMarket/cache/assets 里永久留下几份没人再引用的文件。
+    /// 缓存清不干净不能把已经成功的卸载报成失败，所以这里只出声、不改返回值。
+    /// </summary>
+    private static void InvalidateMarketAssetCache(string airAppId)
+    {
+        try
+        {
+            using var assetCache = new AirAppMarketAssetCacheService(AppDataPathProvider.GetAirAppMarketDirectory());
+            assetCache.Invalidate(airAppId);
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("AirAppRuntime", $"Market asset cache not cleared for '{airAppId}'.", ex);
+        }
     }
 
     internal IReadOnlyList<AirAppInstalledInfo> GetInstalledAirAppsSnapshot()
@@ -436,31 +456,6 @@ public sealed class AirAppRuntimeService : IDisposable
 
         return new AirAppPackageInstallResult(manifest, ReplacedExisting: false, RestartRequired: true);
     }
-
-    // 故意留着：这是"登记外部已放进包目录的包"这条能力的唯一实现，它原来的两个公开入口实测零调用已删，
-    // 于是整条能力没入口（G1-BB：宿主没有轻应用卸载路径，缓存清理与登记外部包两条一起挂着等拍板）。
-    // 名单与理由见 tests/.../ZeroUseInstanceMemberRatchetTests.cs 的登记项——那条决定做完时，这段连着方法一起删。
-#pragma warning disable IDE0051
-    private AirAppManifest RegisterInstalledAirAppPackageCore(string packagePath)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(packagePath);
-
-        var fullPackagePath = Path.GetFullPath(packagePath);
-        if (!File.Exists(fullPackagePath))
-        {
-            throw new FileNotFoundException($"AirApp package '{fullPackagePath}' was not found.", fullPackagePath);
-        }
-
-        var manifest = AirAppPackageReader.ReadManifest(fullPackagePath);
-        _sharedContractManager.EnsureInstalled(manifest);
-        AppLogger.Info(
-            "AirAppRuntime",
-            $"Registering externally installed package. AirAppId='{manifest.Id}'; Source='{fullPackagePath}'.");
-        UpdateCatalogAfterPackageInstall(manifest, fullPackagePath);
-        PendingRestartStateService.SetPending(PendingRestartStateService.AirAppCatalogReason, true);
-        return manifest;
-    }
-#pragma warning restore IDE0051
 
     public void Dispose()
     {

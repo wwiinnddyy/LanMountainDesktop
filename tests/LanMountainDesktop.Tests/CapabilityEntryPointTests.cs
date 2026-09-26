@@ -301,6 +301,38 @@ public sealed class CapabilityEntryPointTests
         return text[openIndex..];
     }
 
+    /// <summary>
+    /// 卸载轻应用这条链，除了删包、摘目录、标重启，还有第四步：把这个应用的市场资产缓存（README 与图标）
+    /// 一起清掉。<c>AirAppMarketAssetCacheService.Invalidate</c> 的注释从写下那天起就说是给卸载用的，
+    /// 而宿主一直有卸载入口（设置页 → 轻应用 → 删除，<c>AirAppsSettingsPage.axaml:47</c> →
+    /// <c>AirAppRuntimeService.cs:306 DeleteInstalledAirApp</c>），缺的只是那一步调用。
+    /// 症状不是报错，是删掉的轻应用把几份没人再引用的文件永久留在 <c>{数据根}/AirAppMarket/cache/assets</c>。
+    ///
+    /// 判据只认一件事：<c>InvalidateMarketAssetCache(airAppId)</c> 必须写在
+    /// <c>DeleteInstalledAirAppCore</c> 的方法体里。写在 UI 层的删除按钮里不算——那按钮走的就是这个方法，
+    /// 写在方法体内才是"任何卸载路径都过这一步"。
+    /// </summary>
+    [Fact]
+    public void AirAppUninstall_AlsoClearsTheMarketAssetCache()
+    {
+        const string Relative = "desktop/LanMountainDesktop/AirApps/AirAppRuntimeService.cs";
+        var text = File.ReadAllText(Path.Combine(
+            RepoRoot(), Relative.Replace('/', Path.DirectorySeparatorChar)));
+
+        var bodyStart = text.IndexOf("private bool DeleteInstalledAirAppCore", StringComparison.Ordinal);
+        Assert.True(
+            bodyStart >= 0,
+            $"{Relative} 里找不到 DeleteInstalledAirAppCore：卸载入口改名或搬走了，这条判据要跟着改，不许删。");
+
+        var bodyEnd = text.IndexOf("\n    }", bodyStart, StringComparison.Ordinal);
+        Assert.True(bodyEnd > bodyStart, "DeleteInstalledAirAppCore 的方法体收尾判不出来（排版变了）。");
+
+        var body = text[bodyStart..bodyEnd];
+        Assert.True(
+            body.Contains("InvalidateMarketAssetCache(airAppId)", StringComparison.Ordinal),
+            "卸载链上没有清市场资产缓存这一步——删掉的轻应用会在缓存目录里留下没人再引用的 README 与图标。");
+    }
+
     private static Dictionary<string, string> LoadCorpus(string repoRoot)
     {
         var corpus = new Dictionary<string, string>(StringComparer.Ordinal);

@@ -124,20 +124,6 @@ public sealed class ZeroUseInstanceMemberRatchetTests
             "它是唯一的读取实现，删了就再看不出这里缺一道闸",
         ["PrivacyAgreementService.GetCurrentAgreementVersion"] = "同上家族：协议版本变了要不要重新征同意，没接",
         ["PrivacyAgreementService.ClearAgreement"] = "重置同意状态的能力，注释写着\"用于测试或重置\"，既没挂设置页也没挂 dev 面板",
-        // —— 轻应用包管理侧的断头路（G1-BB）——
-        ["AirAppRuntimeService.RegisterInstalledAirAppPackageCore"] =
-            "\"登记外部已放进包目录的包\"的唯一实现（ReadManifest → EnsureInstalled → 更新目录 → 标 PendingRestart）。" +
-            "它原来两个公开入口实测零调用已删（活安装路径走 facade 的 InstallPackage → InstallAirAppPackageCore(375)），" +
-            "于是整条能力不可达：留作能力证据，删不删与卸载功能一起定",
-        ["AirAppMarketAssetCacheService.Invalidate"] =
-            "注释写着\"卸载后清缓存\"，但宿主根本没有轻应用卸载路径（全仓 grep Uninstall 只有遥测事件名与启动器旧版本迁移）" +
-            "＝整条能力没入口，不是漏调。" +
-            "<b>这条登记对同名敏感</b>：本棘轮的引用计数是按名字数的（reachCount[name] 减声明行），" +
-            "任何新写的 <c>xxx.Invalidate()</c> 都会让它看起来\"有人调\"。" +
-            "2026-09-25 就真撞上过一次（图表底格缓存那个方法原本也叫 <c>Invalidate</c>，一加上调用点这条就红）——" +
-            "当时的处置是把那个方法改名成 <c>DropGeometry</c>，<b>不要</b>顺手把这条登记删掉。",
-        ["AirAppMarketAirAppEntry.GetVersionSummary"] =
-            "\"v版本 | API x | Host >= y\" 这行摘要只在这里构造，市场列表与详情面板都没地方显示",
         // —— 只有测试在调 ——
         ["AirAppLoader.LoadAll"] = "一次装载全部已装包的入口，生产按安装/启动时机增量装，只有 AirAppLoaderTests 在调",
         ["CompositionVisualAnimationService.TrySetOpacity"] =
@@ -155,7 +141,9 @@ public sealed class ZeroUseInstanceMemberRatchetTests
         "PublicIpcHostService.PublishLoadingStateAsync",
         "PrivacyAgreementService.HasUserAgreed",
         "AttendanceDataStore.LoadSessions",
-        "AirAppMarketAssetCacheService.Invalidate",
+        // 换掉 AirAppMarketAssetCacheService.Invalidate：G1-BB 判掉时它被卸载路径真调用了，
+        // 已经不在普查视野里。这条换成 AirAppLoader.LoadAll，同样钉"语料不含 tests 才算没接线"这个口径。
+        "AirAppLoader.LoadAll",
         // 换成这条：它钉的是"只有测试在调＝没接线"那个口径（2026-09-22 换口径的直接产物），
         // 原来的 LoadingStateReporter.ReportErrorAsync 随 G1-AZ 一起删掉了。
         "CompositionVisualAnimationService.TrySetUniformScale",

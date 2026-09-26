@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -812,16 +812,6 @@ internal sealed class AirAppMarketAirAppEntry
             Exports = NormalizeValues(Exports),
             MessageTypes = NormalizeValues(MessageTypes)
         };
-    }
-
-    public string GetVersionSummary()
-    {
-        return string.Format(
-            CultureInfo.InvariantCulture,
-            "v{0} | API {1} | Host >= {2}",
-            string.IsNullOrWhiteSpace(Version) ? "?" : Version,
-            string.IsNullOrWhiteSpace(ApiVersion) ? "?" : ApiVersion,
-            string.IsNullOrWhiteSpace(MinHostVersion) ? "?" : MinHostVersion);
     }
 
     public IReadOnlyList<AirAppMarketAirAppPackageSourceEntry> GetPackageSourcesInInstallOrder()

@@ -1215,7 +1215,9 @@ IDE0051（未使用私有成员）在构建里一条都不出（2026-09-22 实�
 名单实测 29 → **26** 条。
 **G1-AZ 同日分掉：整条"启动超时监控"删掉，不是接线**（`LoadingTimeoutHandler.cs` 275 行 + `LoadingStateManager`
 的 `UpdateProgress`/`SetStage`/`CheckTimeouts`/`TimeoutItem`/`CurrentStage`/`_cts`/`IsProgressUpdate` +
-`LoadingStateReporter` 的三个 `Report*Async`）。三条独立证据指向同一个结论：
+`LoadingStateReporter` 的三个 `Report*Async`；`git diff --cached --shortstat` 实测删 475 行、增 34 行＝净 **−441**。
+提交号 `75fc3a2` 的标题写的"净 −452"是估算值不是实测值，估计的那个数没在任何地方量过——记在这里，别照抄它）。
+三条独立证据指向同一个结论：
 ① `new LoadingTimeoutHandler` 实测 **0** 处，它那三个事件（`ItemTimeout`/`ItemRetry`/`ItemFailed`）**全仓没有订阅者**，
 真接上也不会告诉任何人任何事——超时后的动作只是再调一次 `_manager.StartItem`，而那件活本来就不能重启；
 ② **阶段与百分比已经有两处实现**：宿主 `App.axaml.cs:291 ReportStartupProgress` → `LauncherStartupProgress`
@@ -1235,6 +1237,28 @@ IDE0051（未使用私有成员）在构建里一条都不出（2026-09-22 实�
 `LoadingTimeoutHandler.SetItemTimeout` → `PublicIpcHostService.PublishLoadingStateAsync`（改钉"另一个二进制的注册面"），
 `LoadingStateReporter.ReportErrorAsync` → `CompositionVisualAnimationService.TrySetUniformScale`（改钉"只有测试在调"那个口径）——
 **这条守卫就是为这种事写的**：删掉名单里的成员时它不会跟着沉默，而是当场要求换锚点并说明理由。
+**G1-BB 同日判掉，它的前提是三条里错得最厉害的一条：宿主一直有卸载路径**。
+登记的判据是"全仓 grep `Uninstall` 只有遥测事件名与启动器旧版本迁移"，而**代码里的动词是 `Delete`**：
+`Views/SettingsPages/AirAppsSettingsPage.axaml:47` 的"删除"按钮 → `SettingsViewModels.cs:1493 DeleteAirApp` →
+`SettingsDomainServices.cs:1652` → `AirAppRuntimeService.cs:306 DeleteInstalledAirApp`，五步动作（解析目标、
+删除或挪进 `.pending`、摘目录与贡献、清 `DisabledAirAppIds`、标重启）早就都在。**教训要说准：按一个动词 grep
+判"这条能力不存在"，量的其实是那个动词的拼写，不是能力**。
+三条登记各自的下场：
+① `AirAppMarketAssetCacheService.Invalidate` —— **接上了**（注释从写下那天就说是给卸载用的）：
+`DeleteInstalledAirAppCore` 现在在摘完目录条目后清这个应用的市场资产（README 与图标），清不干净只出声、
+不把已经成功的卸载报成失败。这条登记里那句"对同名敏感、不要顺手删"的顾虑没有被违反——它担心的正是
+"被一个同名调用洗白成假欠账"，而这里的处置是把它**变成真调用**，红过一次（"条目已被真引用"方向）之后按真值摘掉。
+`CensusAnchors` 里那条也因此换成 `AirAppLoader.LoadAll`。
+② `AirAppRuntimeService.RegisterInstalledAirAppPackageCore` —— **删**（连同那句 `#pragma warning disable IDE0051`
+和它旁边"那条决定做完时连着方法一起删"的注释——决定今天做完了）。它是"登记一个别人手工丢进包目录的包"的唯一实现，
+而发现机制本来就是启动时枚举目录（`LoadInstalledAirApps`，`App.axaml.cs:588` 调一次），丢进去的包重启就会出现在目录里；
+没有"立刻登记"的 UI，`AirAppLoader` 也没有重扫入口（`LoadAll` 只有测试在调）。
+③ `AirAppMarketAirAppEntry.GetVersionSummary` —— **删**：那三个字段市场详情抽屉
+（`AirAppCatalogDetailDrawer.axaml:54-89`）已经逐行显示，合成一行只是同一个数的第二种写法，而没有任何地方需要它。
+**判掉之后现量到的三个新洞，各自登记、没有顺手修**：G1-CJ（manifest 按 appId 只存一条记录，README 与图标互相覆盖——
+现状钉在 `AirAppMarketAssetCacheTests.OneAirApp_CanOnlyTrackOneAssetKind_Today`）、G1-CK（删包绕开"尽力删除只认一处"那家、
+共享契约不跟着删、删除没有确认对话框）。行为钉新增 `AirAppMarketAssetCacheTests` 四格与
+`CapabilityEntryPointTests.AirAppUninstall_AlsoClearsTheMarketAssetCache`（卸载方法体里必须有那一步，注释掉即红）。
 判据本身被修过三次：跨工程同名声明行会把调用点喂饱（Plonds 自带 `GetCatalogAsync`）、
 C# 主构造器会被当成方法声明（`class X(IProgress<…>? p)` 报成一条不存在的方法）、
 以及**用 python heredoc 写 `\b` 会落成一个退格控制字符**——规则看着在文件里，正则永远不匹配，
