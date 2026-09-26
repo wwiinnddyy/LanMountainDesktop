@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -88,55 +88,6 @@ public sealed class StudyDataStore
         {
             Log($"Failed to load session reports: {ex.Message}");
             return Array.Empty<StudySessionReport>();
-        }
-    }
-
-    public bool TryGetSessionReport(string sessionId, out StudySessionReport report)
-    {
-        report = null!;
-        if (string.IsNullOrWhiteSpace(sessionId))
-        {
-            return false;
-        }
-
-        try
-        {
-            using var connection = _databaseService.OpenConnection();
-            using var command = connection.CreateCommand();
-            command.CommandText = """
-                SELECT report_json
-                FROM study_session_reports
-                WHERE session_id = $sessionId
-                LIMIT 1;
-                """;
-            command.Parameters.AddWithValue("$sessionId", sessionId.Trim());
-
-            var json = command.ExecuteScalar() as string;
-            if (string.IsNullOrWhiteSpace(json))
-            {
-                Log($"Session report not found for id: {sessionId}");
-                return false;
-            }
-
-            var parsed = JsonSerializer.Deserialize<StudySessionReport>(json, JsonOptions);
-            if (parsed is null)
-            {
-                Log($"Failed to deserialize session report for id: {sessionId}");
-                return false;
-            }
-
-            report = parsed;
-            return true;
-        }
-        catch (JsonException ex)
-        {
-            Log($"JSON deserialization error for session {sessionId}: {ex.Message}");
-            return false;
-        }
-        catch (Exception ex)
-        {
-            Log($"Failed to get session report {sessionId}: {ex.Message}");
-            return false;
         }
     }
 

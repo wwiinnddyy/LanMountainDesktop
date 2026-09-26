@@ -11,7 +11,7 @@
 
             <ui:FASettingsExpander Classes="settings-expander-card"
                                    Header="存储概览"
-                                   Description="本地应用数据的总占用及对当前磁盘的估算占比。"
+                                   Description="本地应用数据的总占用、占当前磁盘的估算比例与剩余空间。"
                                    IsExpanded="True">
                 <ui:FASettingsExpander.Footer>
                     <Button Padding="12,8"
@@ -29,7 +29,7 @@
 
                 <ui:FASettingsExpanderItem>
                     <StackPanel Spacing="14">
-                        <Grid ColumnDefinitions="*,Auto">
+                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="18">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="总占用"
                                            FontSize="13"
@@ -47,6 +47,19 @@
                                            Opacity="0.65"
                                            HorizontalAlignment="Right" />
                                 <TextBlock Text="{Binding DiskUsageText}"
+                                           FontSize="16"
+                                           FontWeight="SemiBold"
+                                           LineHeight="22"
+                                           HorizontalAlignment="Right" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2"
+                                        Spacing="2"
+                                        HorizontalAlignment="Right">
+                                <TextBlock Text="剩余空间"
+                                           FontSize="13"
+                                           Opacity="0.65"
+                                           HorizontalAlignment="Right" />
+                                <TextBlock Text="{Binding FreeSpaceText}"
                                            FontSize="16"
                                            FontWeight="SemiBold"
                                            LineHeight="22"

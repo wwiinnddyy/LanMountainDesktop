@@ -1200,6 +1200,19 @@ IDE0051（未使用私有成员）在构建里一条都不出（2026-09-22 实�
 **内侧组件翻页是另一件事，别跟着删**：它的页宽与 transform 真有赋值点（`MainWindow.ComponentSystem.cs:3551`、
 `:3605`、`:3608`），四个指针事件也确实接在 `MainWindow.axaml:744-747`。名单实测 HEAD 33 条 → 现在 **29** 条
 （此前文档里写的"29"与 HEAD 差 4，是记录漂了——登记数也要 `grep -c` 现量，别抄上一笔）。
+**G1-BA 同日分掉：一条接线、两条删，并且登记里两条的前提已经不成立**（登记写于 09-22，之后代码动过，
+现量才知道）：① `DataStorageService.GetAvailableDiskSpaceAsync` **接上了**——`DataSettingsPage` 的存储概览
+原本只印"总占用 + 占磁盘比例"，现在同一行加一列"剩余空间"（实测 1 个 `[ObservableProperty]` /
+1 处 `ScanAsync` 赋值 / 1 个 TextBlock，判据一侧由棘轮的"假欠账"方向自动变红来认账）。
+② `StudyDataStore.TryGetSessionReport` **删**：登记的"列得出历史、点不开单场报告"是旧事实，
+`Views/Components/StudySessionHistoryWidget.axaml.cs:418` 每行"查看"按钮早就开 `StudySessionReportWindow`，
+走内存列表、miss 时整表重读（两侧同以 120 条封顶）——所以它是**第二条读法**而不是缺入口。
+③ `TimeZoneService.GetCommonTimeZones` **删**：登记的"没有挑的界面"同样不成立，
+`GeneralSettingsPage.axaml:39`、`ClockComponentEditor.axaml:25`、`WorldClockComponentEditor.axaml:28/40/52/64`
+全是 ComboBox 且喂 `GetAllTimeZones()` 按偏移排序的**全量表**；那张 7 条短表除了没人用还带一个真缺陷——
+七次 `FindSystemTimeZoneById` 一句兜底都没有，缺任一 id 的机器上第一次调用就抛。
+**教训：登记会说谎，因为它是快照**。"实现了没入口"这条名单复用时必须现量入口，不许把登记里的句子当证据抄进新判断。
+名单实测 29 → **26** 条。
 判据本身被修过三次：跨工程同名声明行会把调用点喂饱（Plonds 自带 `GetCatalogAsync`）、
 C# 主构造器会被当成方法声明（`class X(IProgress<…>? p)` 报成一条不存在的方法）、
 以及**用 python heredoc 写 `\b` 会落成一个退格控制字符**——规则看着在文件里，正则永远不匹配，

@@ -138,13 +138,6 @@ public sealed class ZeroUseInstanceMemberRatchetTests
             "它是唯一的读取实现，删了就再看不出这里缺一道闸",
         ["PrivacyAgreementService.GetCurrentAgreementVersion"] = "同上家族：协议版本变了要不要重新征同意，没接",
         ["PrivacyAgreementService.ClearAgreement"] = "重置同意状态的能力，注释写着\"用于测试或重置\"，既没挂设置页也没挂 dev 面板",
-        // —— 三条能力实现完整但界面上没入口（G1-BA）——
-        ["DataStorageService.GetAvailableDiskSpaceAsync"] =
-            "全仓只有这一处算 AvailableFreeSpace：\"还剩多少磁盘\"在设置/存储页没有任何地方显示",
-        ["StudyDataStore.TryGetSessionReport"] =
-            "按 sessionId 读单场报告，同类其它读取路径是活的：列得出历史、点不开单场报告",
-        ["TimeZoneService.GetCommonTimeZones"] =
-            "那张 7 个常用时区的表只在这里构造（活路径 TimeZoneService.cs:57 是按 id 解析单个时区）：没有挑的界面",
         // —— 轻应用包管理侧的断头路（G1-BB）——
         ["AirAppRuntimeService.RegisterInstalledAirAppPackageCore"] =
             "\"登记外部已放进包目录的包\"的唯一实现（ReadManifest → EnsureInstalled → 更新目录 → 标 PendingRestart）。" +

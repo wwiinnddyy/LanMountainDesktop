@@ -60,6 +60,9 @@ public sealed partial class DataSettingsPageViewModel : ViewModelBase
     private string _diskUsageText = "--";
 
     [ObservableProperty]
+    private string _freeSpaceText = "--";
+
+    [ObservableProperty]
     private double _diskUsagePercentage;
 
     [ObservableProperty]
@@ -94,12 +97,14 @@ public sealed partial class DataSettingsPageViewModel : ViewModelBase
             var results = await _storageService.ScanAsync(token);
             var totalSize = results.Sum(r => r.SizeBytes);
             var totalDisk = await _storageService.GetTotalDiskSpaceAsync(token);
+            var freeDisk = await _storageService.GetAvailableDiskSpaceAsync(token);
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 TotalSizeText = DataStorageService.FormatBytes(totalSize);
                 DiskUsagePercentage = totalDisk > 0 ? (double)totalSize / totalDisk * 100 : 0;
                 DiskUsageText = $"占总磁盘 {DiskUsagePercentage:F1}%";
+                FreeSpaceText = DataStorageService.FormatBytes(freeDisk);
                 HasData = totalSize > 0;
 
                 foreach (var result in results)

@@ -76,22 +76,4 @@ public sealed class TimeZoneService
         
         return $"(UTC{sign}{hours:D2}:{minutes:D2}) {timeZone.DisplayName}";
     }
-
-    /// <summary>
-    /// 获取常用时区列表
-    /// </summary>
-    public TimeZoneInfo[] GetCommonTimeZones()
-    {
-        return new[]
-        {
-            TimeZoneInfo.Local, // 本地时区
-            TimeZoneInfo.FindSystemTimeZoneById("China Standard Time"), // 北京时间
-            TimeZoneInfo.FindSystemTimeZoneById("Tokyo Standard Time"), // 东京时间
-            TimeZoneInfo.FindSystemTimeZoneById("Pacific Standard Time"), // 太平洋时间
-            TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time"), // 东部时间
-            TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time"), // 中欧时间
-            TimeZoneInfo.FindSystemTimeZoneById("GMT Standard Time"), // 伦敦时间
-            TimeZoneInfo.FindSystemTimeZoneById("UTC"), // 协调世界时
-        };
-    }
 }
