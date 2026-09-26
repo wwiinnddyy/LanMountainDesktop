@@ -250,6 +250,14 @@ Check unused members 写的是 bash 而 windows runner 默认 pwsh，a387d56 才
 配套一条测量陷阱：这条命令的阈值必须与 CI 同参 `--severity hidden`——写成 `--severity info` 会把配成
 hidden 的这两条整条过滤掉，五个工程齐刷刷报 0，看着像积压清零。
 
+新判据落进闸门之后，还要在 **Actions 上**种一次违规证明它真会红（2026-09-26 run `36244278229`：
+一次性分支 `ci-guard-canary`，跑完就删）。当天新立的三条判据（桌面组件外框与选中环同档 / 忙态淡出值只住家里 /
+Views 裸色值上限）各种下一处**能编译**的违规，三趟下来只有这 3 条 3/3 全红，其余红灯是 #G1-I 的偶发
+（逐趟 2 条 → 1 条 → 0 条）。同一次跑顺带验到 Test 步骤的新算法：第三趟 thread-affine=0，
+于是当场报"红灯不是 #G1-I"并按真缺陷 exit 1，不再浪费重跑。
+为什么不能只靠本地绿：本地跑 Debug + 不带 filter（含 EcosystemProbe），CI 跑 Release +
+`Category!=EcosystemProbe`，今天实测 1235 与 1227 两个数——**只有 CI 那台才是合闸时真执行的那套用例**。
+
 **宿主给组件下推能力一律走"每能力一个小接口 + 走子树的家"**（`ITimeZoneAwareComponentWidget`、
 `IWeatherInfoAwareComponentWidget`、`IDesktopPageVisibilityAwareComponentWidget`……），
 组件外面还包着 chrome（外层 Border + 内容宿主），所以只查直接子控件会漏。
