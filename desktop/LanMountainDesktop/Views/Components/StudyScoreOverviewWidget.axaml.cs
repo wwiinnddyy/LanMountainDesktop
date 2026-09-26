@@ -113,10 +113,7 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
     private void UpdateMonitoringLeaseState() =>
         StudyMonitoringLease.Sync(ref _monitoringLease, _monitoringLeaseCoordinator, _studyEnabled, _isAttached, _isOnActivePage);
 
-    private void RefreshVisual()
-    {
-        _renderGate.Queue(_studyAnalyticsService.GetSnapshot());
-    }
+    private void RefreshVisual() => StudyComponentLifecycle.RequestRepaint(_renderGate, _studyAnalyticsService);
 
     private void ApplySnapshot(StudyAnalyticsSnapshot snapshot)
     {

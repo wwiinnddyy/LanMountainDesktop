@@ -187,10 +187,7 @@ public partial class StudySessionControlWidget : UserControl, IDesktopComponentW
         RefreshVisual();
     }
 
-    private void RefreshVisual()
-    {
-        _renderGate.Queue(_studyAnalyticsService.GetSnapshot());
-    }
+    private void RefreshVisual() => StudyComponentLifecycle.RequestRepaint(_renderGate, _studyAnalyticsService);
 
     private void ApplySnapshot(StudyAnalyticsSnapshot snapshot)
     {

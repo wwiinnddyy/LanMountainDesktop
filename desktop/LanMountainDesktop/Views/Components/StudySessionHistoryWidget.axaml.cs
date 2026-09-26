@@ -100,6 +100,16 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
         }
     }
 
+    /// <summary>
+    /// 本面板刻意<b>不</b>持监测租约（其余七个学习面板都持，见 StudyComponentLifecycle.Attach 里
+    /// updateMonitoringLeaseState 那一步）。协调器的语义量过：第一个租约把噪声监测开起来
+    /// （StudyAnalyticsMonitoringLeaseCoordinator.cs:30-48），最后一个释放就暂停（:50-63）。
+    /// 这里列的每一行都是<b>已落库的会话报告</b>（StudyAnalyticsService.cs:636 从报告表 Select 出来），
+    /// 不是实时采样缓冲；而"没有监测就不会有新会话、也就没有新行要加"——只开着历史面板时暂停监测是自洽的。
+    /// 反过来若给它加租约，等于"打开历史面板就启动噪声采样"，那是省电与隐私口径的改动，不在这条账上。
+    /// 挂载四步在这里少一步，也因此没走 StudyComponentLifecycle.Attach/Detach（硬套要塞一个空的实参，
+    /// 等于把配对判据写没）——这个例外在 ComponentLifecyclePairingRatchetTests.cs:69 有登记。
+    /// </summary>
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = true;
@@ -118,8 +128,7 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
     {
-        UpdateAdaptiveLayout();
-        RepaintWithSnapshot();
+        StudyComponentLifecycle.RefreshOnResize(RootBorder, UpdateAdaptiveLayout, _ => RepaintWithSnapshot());
     }
 
     private void OnActualThemeVariantChanged(object? sender, EventArgs e)

@@ -127,14 +127,14 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
             isOnActivePage,
             isEditMode,
             UpdateMonitoringLeaseState,
-            () => _renderGate.Queue(_studyAnalyticsService.GetSnapshot()));
+            () => StudyComponentLifecycle.RequestRepaint(_renderGate, _studyAnalyticsService));
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         StudyComponentLifecycle.Attach(
             ref _isAttached, ref _isSubscribed, _studyAnalyticsService, _renderGate,
             ReloadLanguageCode, UpdateMonitoringLeaseState,
-            () => _renderGate.Queue(_studyAnalyticsService.GetSnapshot()));
+            () => StudyComponentLifecycle.RequestRepaint(_renderGate, _studyAnalyticsService));
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
@@ -145,9 +145,8 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
     {
-        ApplyCellSize(_currentCellSize);
-        var panelColor = StudyPanelPalette.Resolve(this, RootBorder.Background);
-        ApplyTypographyByBackground(panelColor);
+        StudyComponentLifecycle.RefreshOnResize(
+            RootBorder, () => ApplyCellSize(_currentCellSize), ApplyTypographyByBackground);
     }
 
     private void OnActualThemeVariantChanged(object? sender, EventArgs e)
@@ -156,7 +155,7 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
         ApplyTypographyByBackground(panelColor);
         ApplyStatusBadgeStyle(StatusVisualKind.Default, panelColor);
 
-        _renderGate.Queue(_studyAnalyticsService.GetSnapshot());
+        StudyComponentLifecycle.RequestRepaint(_renderGate, _studyAnalyticsService);
     }
 
     private bool CanRenderSnapshot()

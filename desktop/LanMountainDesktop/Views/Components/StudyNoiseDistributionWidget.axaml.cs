@@ -74,7 +74,7 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
         ApplyCellSize(_currentCellSize);
         ApplyDefaultXAxisLabels();
         ApplyLocalizedAxisLabels();
-        _renderGate.Queue(_studyAnalyticsService.GetSnapshot());
+        StudyComponentLifecycle.RequestRepaint(_renderGate, _studyAnalyticsService);
     }
 
     public void ApplyCellSize(double cellSize)
@@ -89,14 +89,14 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
             isOnActivePage,
             isEditMode,
             UpdateMonitoringLeaseState,
-            () => _renderGate.Queue(_studyAnalyticsService.GetSnapshot()));
+            () => StudyComponentLifecycle.RequestRepaint(_renderGate, _studyAnalyticsService));
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         StudyComponentLifecycle.Attach(
             ref _isAttached, ref _isSubscribed, _studyAnalyticsService, _renderGate,
             ReloadLanguageCode, UpdateMonitoringLeaseState,
-            () => _renderGate.Queue(_studyAnalyticsService.GetSnapshot()));
+            () => StudyComponentLifecycle.RequestRepaint(_renderGate, _studyAnalyticsService));
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
@@ -112,7 +112,7 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
 
     private void OnActualThemeVariantChanged(object? sender, EventArgs e)
     {
-        _renderGate.Queue(_studyAnalyticsService.GetSnapshot());
+        StudyComponentLifecycle.RequestRepaint(_renderGate, _studyAnalyticsService);
     }
 
     private void UpdateMonitoringLeaseState() =>
