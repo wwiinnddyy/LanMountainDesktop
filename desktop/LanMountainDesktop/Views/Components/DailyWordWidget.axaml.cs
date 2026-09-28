@@ -117,13 +117,13 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
         CardBorder.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#1B2129") : Color.Parse("#FCFBFA"));
 
         WordTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#FF9D6C") : Color.Parse("#F07541"));
-        PronunciationTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#6B7078"));
+        PronunciationTextBlock.Foreground = ComponentRoleBrushes.SecondaryText(this);
         MeaningTextBlock.Foreground = ComponentRoleBrushes.PrimaryText(this);
         ExampleTextBlock.Foreground = ComponentRoleBrushes.PrimaryText(this);
-        ExampleTranslationTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#7A8088"));
+        ExampleTranslationTextBlock.Foreground = ComponentRoleBrushes.SecondaryText(this);
 
         RefreshButton.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#2D3440") : Color.Parse("#14A0A6AF"));
-        RefreshIcon.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#626870"));
+        RefreshIcon.Foreground = ComponentRoleBrushes.SecondaryText(this);
 
         StatusTextBlock.Foreground = ComponentRoleBrushes.MutedText(this);
     }

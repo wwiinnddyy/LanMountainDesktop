@@ -852,9 +852,9 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 `CancellationHelper` 已搬到 Core（与 `AtomicFileWriter`、`FileOperationRetryHelper` 同一先例：同一动作散在多个二进制里就住 Core），
 启动器与安装器现在够得到它，守卫也据此覆盖全部二进制。
 
-**组件里的裸色值开始一族一族烧掉（#G1-AF，2026-09-29 第一族）**：判据是
+**组件里的裸色值开始一族一族烧掉（#G1-AF，2026-09-29 已烧三族）**：判据是
 `tests/LanMountainDesktop.Tests/ColorLiteralRatchetTests.cs`，现在钉着**两面**——
-`.cs` 引号内字面量（上限 **625**：2026-09-26 记的 677，同日先烧状态文字 −18 得 659，再烧正文 −34 得 625）与
+`.cs` 引号内字面量（上限 **591**：2026-09-26 记的 677，同日烧掉状态文字 −18、正文 −34、次要文字/图标 −34）与
 `.axaml` 属性上的颜色（新立的，实测 412 处 / 40 个文件）。第二面此前**根本没被看过**（那条判据只扫 *.cs），
 所以"组件里没几个色值了"这种话可以同时意味着标记里还攒着 412 处——同一句"0 不是状态"的教训换了个面重演。
 第一族是状态文字：原来 10 处各写一遍 `_isNightVisual ? 夜档 : 日档`（其中 7 处逐字相同、分布在 6 个文件，
@@ -865,17 +865,27 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 而且六种都不随壁纸走；改走 `ComponentRoleBrushes.PrimaryText`。一处**故意没并进来**：
 `NotificationBoxWidget.cs:376` 的 `#E8EAED` 是当 `Background` 用的（图标底），那是面板角色不是文字角色，
 按文字角色并过去等于把它换成错的一档。
+第三族是次要文字与图标字形，17 处 / 34 个字面量：**夜档 17 处全是 `#A8B1C2`，日档漂成 11 个值**
+（`#5E6671` `#5A6069` `#6B7078` `#7A8088` `#8A9099` `#626870` `#A4A9B2` `#B2B7C0` `#4A5466` `#646C79` `#7A7F89`），
+改走 `ComponentRoleBrushes.SecondaryText`；同族里剩下的一处 `RecordingWidget.cs:166` 的 `FutureLine.Background`
+是装饰线的底，不是文字，按次要文字并过去同样是换错档。
+三族共同的形状值得记一句：**夜档每一族内部完全一致，日档却是十几五个各写各的值**——
+也就是说这批"深色模式配色"其实只有一份判断被抄了 44 遍，而它对应的那三个角色主题层早就算好了。
 **为什么不是"把那两个数统一成一对常量"**：主题的 muted 是按 `surfaceRaised` 混色后再 `EnsureContrast` 算的
 （`ThemeColorSystemService.cs:124`），写死三元组正是绕过那道保证的那只手——换浅色壁纸时"夜里那支亮灰字"
-会压在亮底上。行为钉 `ComponentRoleBrushesTests` 是 **两角色 × 明暗 = 4 行**：拿到的必须就是窗口上真正注册的那支
+会压在亮底上。行为钉 `ComponentRoleBrushesTests` 是 **三个角色 × 明暗 = 6 行**：拿到的必须就是窗口上真正注册的那支
 画笔，且对面板底色对比度达到该角色自己的门槛（正文 4.5:1、状态 3:1——这两个数就是主题层造值时用的档）；
-把家里的键换成 `TextSecondaryBrush` → 只有 primary 那两行红、muted 两行照绿，验过（这就是"键接错"的形状）。
+把家里的键接错各验过一次：`PrimaryText` 指向 `TextSecondaryBrush` → 只有 primary 两行红；
+`SecondaryText` 指向 `TextMutedBrush` → 只有 secondary 两行红，其余四行照绿（这就是"键接错"的形状，
+每一行只认自己那一个键，不会因为别的角色也错就一起红）。
 **这一面的两个覆盖边界如实记下**：① 兜底那支中性灰**测不到**——视觉底座把 `Adaptive*` 注册在应用级资源表上（#44），
 任何控件沿作用域都找得到，测试里造不出"取不到键"；② 标记面的红是靠**放一个能编译的 scratch .axaml** 验出来的
 （第一版注入改的是既有元素的属性，顺带把 XAML 编译弄坏了 2 个错误——那种红分不清是判据还是编译，不算证据）。
 剩下最集中的标记文件（下次烧的候选，实测值）：`Stcn24ForumWidget.axaml=38`、`SettingsPages/WallpaperSettingsPage.axaml=37`、
 `MusicControlWidget.axaml=33`、`ComponentEditorWindow.axaml=26`、`StudySessionReportWindow.axaml=23`；
-组件代码侧最集中的是 `MusicControlWidget.axaml.cs=39`、`WorldClockWidget.axaml.cs=37`。
+组件代码侧三族烧完最集中的是 `MusicControlWidget.axaml.cs=39`、`TimerWidget.axaml.cs=32`、
+`ClassScheduleWidget.axaml.cs=32`、`WorldClockWidget.axaml.cs=31`、`DailyNewsView.axaml.cs=29`、
+`AnalogClockWidget.axaml.cs=27`（2026-09-29 现量，别引用旧数）。
 **判据文档里那句"677 处 / 31 个文件"的 31 也是数错的**（同一总数实际分布在 41 个文件里），已就地更正——
 上限/下限是常量、说明文字是 prose，两者都会漂，引用之前现跑一遍。
 

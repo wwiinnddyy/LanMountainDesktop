@@ -38,16 +38,21 @@ public sealed class ColorLiteralRatchetTests
     // 混色后再 EnsureContrast）。677 − 18 = 659。
     // 同日烧掉第二族：正文那族 17 处调用点、34 个字面量（夜档一律 #E8EAED，日档漂成 6 个近黑值：
     // #202327 / #2B2F35 / #11151D / #141922 / #151922 / #20232A），改走 ComponentRoleBrushes.PrimaryText。
-    // 659 − 34 = 625。NotificationBox 那处"日档 #E8EAED 当 Background 用"没并进来——它是面板角色不是文字角色。
-    private const int ColorLiteralCeiling = 625;
+    // 659 − 34 = 625。
+    // 同日第三族：次要文字与图标字形 17 处 / 34 个字面量（夜档一律 #A8B1C2，日档漂成 11 个值：
+    // #5E6671 #5A6069 #6B7078 #7A8088 #8A9099 #626870 #A4A9B2 #B2B7C0 #4A5466 #646C79 #7A7F89），
+    // 改走 ComponentRoleBrushes.SecondaryText。625 − 34 = 591。
+    // 那一族里剩下的唯一一处 #A8B1C2 故意没并进来：RecordingWidget.cs:166 的 FutureLine.Background
+    // 是装饰线的底色（面板/线条角色），按文字角色并过去是换错档。
+    private const int ColorLiteralCeiling = 591;
 
     // 2026-09-26 实测：剩下这些分布在 31 个文件里。
     // ↑ 这句今天核对是错的：677 处实际分布在 **41** 个文件里（当时把"组件目录"与"整个 Views"两份清单
     // 数混了）。下限仍是 30，别把它当实测值引用——要实测值就现跑。
     private const int ScannedFileFloor = 30;
 
-    // 2026-09-29 实测的总数对账值（组件 625 + 豁免 559，两族烧完共 −34），文件被改名/挪走时这条会先红。
-    private const int MeasuredGrandTotal = 1184;
+    // 2026-09-29 实测的总数对账值（组件 591 + 豁免 559，三族烧完共 −68），文件被改名/挪走时这条会先红。
+    private const int MeasuredGrandTotal = 1150;
 
     // 2026-09-29 新量的一面：.axaml 里的颜色属性此前这条判据**完全看不见**（只扫 *.cs）。
     // 量出来是 412 处 / 40 个文件——比组件里剩下的 659 少不到一半，绝不是"边角料"。

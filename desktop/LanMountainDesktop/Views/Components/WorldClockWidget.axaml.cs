@@ -231,12 +231,10 @@ public partial class WorldClockWidget : UserControl,
 
         entry.IsSystemNightApplied = isSystemNight;
 
-        var dayForeground = isSystemNight ? "#A8B1C2" : "#646C79";
-        var offsetForeground = isSystemNight ? "#A8B1C2" : "#7A7F89";
 
         entry.CityTextBlock.Foreground = ComponentRoleBrushes.PrimaryText(this);
-        entry.DayTextBlock.Foreground = ComponentPaint.CreateBrush(dayForeground);
-        entry.OffsetTextBlock.Foreground = ComponentPaint.CreateBrush(offsetForeground);
+        entry.DayTextBlock.Foreground = ComponentRoleBrushes.SecondaryText(this);
+        entry.OffsetTextBlock.Foreground = ComponentRoleBrushes.SecondaryText(this);
     }
 
     private void OnTimeZoneChanged(object? sender, EventArgs e)

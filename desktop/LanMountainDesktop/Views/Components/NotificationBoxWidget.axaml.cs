@@ -407,7 +407,7 @@ public class NotificationItemControl : Border
             {
                 Text = _item.Content,
                 FontSize = 11,
-                Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#5E6671")),
+                Foreground = ComponentRoleBrushes.SecondaryText(this),
                 TextTrimming = TextTrimming.CharacterEllipsis,
                 MaxLines = 2,
                 TextWrapping = TextWrapping.Wrap

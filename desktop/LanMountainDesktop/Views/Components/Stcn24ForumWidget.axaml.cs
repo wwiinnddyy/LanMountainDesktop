@@ -196,13 +196,13 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
         HeaderDot.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#FF6B6B") : Color.Parse("#FF4D4F"));
 
         RefreshButton.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#2D3440") : Color.Parse("#EFF1F5"));
-        RefreshGlyphIcon.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#5E6671"));
+        RefreshGlyphIcon.Foreground = ComponentRoleBrushes.SecondaryText(this);
 
         foreach (var visual in _itemVisuals)
         {
             visual.Host.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#2D3440") : Color.Parse("#F7F8FA"));
             visual.AvatarHost.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#3D4451") : Color.Parse("#E7EBF4"));
-            visual.AvatarFallbackText.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#4A5466"));
+            visual.AvatarFallbackText.Foreground = ComponentRoleBrushes.SecondaryText(this);
             visual.TitleTextBlock.Foreground = ComponentRoleBrushes.PrimaryText(this);
         }
 

@@ -112,11 +112,11 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
         CardBorder.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#1B2129") : Color.Parse("#FCFBFA"));
 
         WordTextBlock.Foreground = ComponentRoleBrushes.PrimaryText(this);
-        MeaningTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#5A6069"));
-        HiddenHintTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#8A9099"));
+        MeaningTextBlock.Foreground = ComponentRoleBrushes.SecondaryText(this);
+        HiddenHintTextBlock.Foreground = ComponentRoleBrushes.SecondaryText(this);
 
         RefreshButton.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#2D3440") : Color.Parse("#EEF1F4"));
-        RefreshIcon.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#5E6671"));
+        RefreshIcon.Foreground = ComponentRoleBrushes.SecondaryText(this);
 
         StatusTextBlock.Foreground = ComponentRoleBrushes.MutedText(this);
     }

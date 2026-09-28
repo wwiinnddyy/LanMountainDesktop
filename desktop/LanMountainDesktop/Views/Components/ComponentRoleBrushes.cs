@@ -45,4 +45,13 @@ internal static class ComponentRoleBrushes
     /// </remarks>
     internal static IBrush PrimaryText(IResourceHost host) =>
         AdaptiveTokens.Brush(host, ThemeResourceKeys.TextPrimaryBrush, MutedTextFallback);
+
+    /// <summary>
+    /// 次要文字与刷新/搜索这类图标字形（比正文淡一档，但仍要读得清）。
+    /// 第三族（2026-09-29）：夜档 17 处全是同一支 <c>#A8B1C2</c>，日档漂成
+    /// 『#5E6671』『#5A6069』『#6B7078』『#7A8088』『#8A9099』『#626870』『#A4A9B2』『#B2B7C0』
+    /// 『#4A5466』『#646C79』『#7A7F89』共 11 个值。
+    /// </summary>
+    internal static IBrush SecondaryText(IResourceHost host) =>
+        AdaptiveTokens.Brush(host, ThemeResourceKeys.TextSecondaryBrush, MutedTextFallback);
 }

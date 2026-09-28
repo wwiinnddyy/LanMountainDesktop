@@ -16,10 +16,10 @@ using Xunit;
 namespace LanMountainDesktop.Tests;
 
 /// <summary>
-/// 组件"文字角色色"的落点。已烧两族：状态文字（10 处）与正文（17 处），原来各处都写着
-/// <c>_isNightVisual ? 夜档 : 日档</c> 三元组（正文那族夜档全是同一支 <c>#E8EAED</c>，日档却漂成
-/// 6 个不同的近黑值），现在一律问主题层要 <c>AdaptiveTextMutedBrush</c> / <c>AdaptiveTextPrimaryBrush</c>
-/// （见 <c>ComponentRoleBrushes</c>）。
+/// 组件"文字角色色"的落点。已烧三族：状态文字（10 处）、正文（17 处）、次要文字与图标字形（17 处），
+/// 原来各处都写着 <c>_isNightVisual ? 夜档 : 日档</c> 三元组——夜档每族内部一模一样
+/// （<c>#8B95A5</c> / <c>#E8EAED</c> / <c>#A8B1C2</c>），日档却各自漂开（正文 6 个值、次要 11 个值），
+/// 现在一律走 <c>ComponentRoleBrushes</c> 问主题层要对应角色那支 <c>Adaptive*Text*</c> 画笔。
 /// 这里钉的不是"等于某个十六进制"，而是**换壁纸/换档之后仍然读得清**：主题层的这些值是按
 /// surfaceRaised 混色后再 EnsureContrast 算的（ThemeColorSystemService.cs:117-124），
 /// 所以断言落在"跟随注册值"＋"与面板底色对比度达到该角色的门槛"两件事上。
@@ -40,7 +40,7 @@ public sealed class ComponentRoleBrushesTests
         IsNightMode: true);
 
     /// <summary>
-    /// 每个角色 × 明暗两档各一行：拿到的必须就是窗口上真正注册的那支画笔（键接错会红），
+    /// 三个角色 × 明暗两档 = 6 行：拿到的必须就是窗口上真正注册的那支画笔（键接错会红），
     /// 而且对面板底色的对比度不低于该角色自己的门槛（主题没算够也会红）。
     /// <c>textPrimary</c> 在生产里按 4.5:1 造，<c>textMuted</c> 按 3:1（大字号/次要文字档）。
     /// </summary>
@@ -49,6 +49,8 @@ public sealed class ComponentRoleBrushesTests
     [InlineData(true, "muted", ThemeResourceKeys.TextMutedBrush, 3.0)]
     [InlineData(false, "primary", ThemeResourceKeys.TextPrimaryBrush, 4.5)]
     [InlineData(true, "primary", ThemeResourceKeys.TextPrimaryBrush, 4.5)]
+    [InlineData(false, "secondary", ThemeResourceKeys.TextSecondaryBrush, 3.0)]
+    [InlineData(true, "secondary", ThemeResourceKeys.TextSecondaryBrush, 3.0)]
     public void RoleBrush_FollowsTheThemeAndStaysReadableOnThePanel(
         bool night, string role, string key, double floor)
     {
@@ -89,6 +91,7 @@ public sealed class ComponentRoleBrushesTests
     {
         "muted" => ComponentRoleBrushes.MutedText(host),
         "primary" => ComponentRoleBrushes.PrimaryText(host),
+        "secondary" => ComponentRoleBrushes.SecondaryText(host),
         _ => throw new ArgumentException($"未知的角色名 {role}", nameof(role)),
     };
 

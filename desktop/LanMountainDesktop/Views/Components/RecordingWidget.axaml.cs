@@ -162,7 +162,7 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget, IDe
         RootBorder.BorderBrush = new SolidColorBrush(_isNightVisual ? Color.Parse("#33FFFFFF") : Color.Parse("#D9DEE7"));
 
         TitleTextBlock.Foreground = ComponentRoleBrushes.PrimaryText(this);
-        TimerTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#A4A9B2"));
+        TimerTextBlock.Foreground = ComponentRoleBrushes.SecondaryText(this);
         FutureLine.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#A3A8B3"));
 
         DiscardButtonBorder.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#2D3440") : Color.Parse("#F8FAFD"));
@@ -323,11 +323,11 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget, IDe
 
         if (!isSupported)
         {
-            TimerTextBlock.Foreground = ComponentPaint.CreateBrush(_isNightVisual ? "#A8B1C2" : "#B2B7C0");
+            TimerTextBlock.Foreground = ComponentRoleBrushes.SecondaryText(this);
         }
         else if (isReady)
         {
-            TimerTextBlock.Foreground = ComponentPaint.CreateBrush(_isNightVisual ? "#A8B1C2" : "#A4A9B2");
+            TimerTextBlock.Foreground = ComponentRoleBrushes.SecondaryText(this);
         }
         else
         {
