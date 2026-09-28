@@ -161,17 +161,17 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget, IDe
         RootBorder.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#1B2129") : Color.Parse("#ECEFF3"));
         RootBorder.BorderBrush = new SolidColorBrush(_isNightVisual ? Color.Parse("#33FFFFFF") : Color.Parse("#D9DEE7"));
 
-        TitleTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#11151D"));
+        TitleTextBlock.Foreground = ComponentRoleBrushes.PrimaryText(this);
         TimerTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#A4A9B2"));
         FutureLine.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#A3A8B3"));
 
         DiscardButtonBorder.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#2D3440") : Color.Parse("#F8FAFD"));
         DiscardButtonBorder.BorderBrush = new SolidColorBrush(_isNightVisual ? Color.Parse("#3D4451") : Color.Parse("#E0E5EC"));
-        DiscardIcon.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#141922"));
+        DiscardIcon.Foreground = ComponentRoleBrushes.PrimaryText(this);
 
         SaveButtonBorder.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#2D3440") : Color.Parse("#F8FAFD"));
         SaveButtonBorder.BorderBrush = new SolidColorBrush(_isNightVisual ? Color.Parse("#3D4451") : Color.Parse("#E0E5EC"));
-        SaveIcon.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#141922"));
+        SaveIcon.Foreground = ComponentRoleBrushes.PrimaryText(this);
 
         HintTextBlock.Foreground = ComponentRoleBrushes.MutedText(this);
     }
@@ -331,7 +331,7 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget, IDe
         }
         else
         {
-            TimerTextBlock.Foreground = ComponentPaint.CreateBrush(_isNightVisual ? "#E8EAED" : "#151922");
+            TimerTextBlock.Foreground = ComponentRoleBrushes.PrimaryText(this);
         }
         HintTextBlock.IsVisible = !isReady || !isSupported;
 

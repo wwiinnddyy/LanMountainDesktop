@@ -386,7 +386,7 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
             _titleTextBlock = new TextBlock
             {
                 Text = CompactText.Normalize(item.Title),
-                Foreground = new SolidColorBrush(isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327")),
+                Foreground = ComponentRoleBrushes.PrimaryText(this),
                 FontWeight = FontWeight.SemiBold,
                 TextWrapping = TextWrapping.Wrap,
                 TextTrimming = TextTrimming.CharacterEllipsis,
@@ -460,7 +460,7 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
 
         public void ApplyNightMode(bool isNightVisual)
         {
-            _titleTextBlock.Foreground = new SolidColorBrush(isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327"));
+            _titleTextBlock.Foreground = ComponentRoleBrushes.PrimaryText(this);
             _imageHost.Background = new SolidColorBrush(isNightVisual ? Color.Parse("#3D4250") : Color.Parse("#E6E8EC"));
         }
 

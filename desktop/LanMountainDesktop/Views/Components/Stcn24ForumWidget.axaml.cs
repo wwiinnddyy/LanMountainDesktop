@@ -192,7 +192,7 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
         CardBorder.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#1B2129") : Color.Parse("#FCFCFD"));
         RootBorder.BorderBrush = new SolidColorBrush(_isNightVisual ? Color.Parse("#33FFFFFF") : Color.Parse("#00000000"));
 
-        HeaderTitleTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327"));
+        HeaderTitleTextBlock.Foreground = ComponentRoleBrushes.PrimaryText(this);
         HeaderDot.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#FF6B6B") : Color.Parse("#FF4D4F"));
 
         RefreshButton.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#2D3440") : Color.Parse("#EFF1F5"));
@@ -203,7 +203,7 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
             visual.Host.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#2D3440") : Color.Parse("#F7F8FA"));
             visual.AvatarHost.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#3D4451") : Color.Parse("#E7EBF4"));
             visual.AvatarFallbackText.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#4A5466"));
-            visual.TitleTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327"));
+            visual.TitleTextBlock.Foreground = ComponentRoleBrushes.PrimaryText(this);
         }
 
         StatusTextBlock.Foreground = ComponentRoleBrushes.MutedText(this);

@@ -383,7 +383,7 @@ public class NotificationItemControl : Border
                 VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
                 FontSize = 12,
                 FontWeight = FontWeight.SemiBold,
-                Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327"))
+                Foreground = ComponentRoleBrushes.PrimaryText(this)
             };
             grid.Children.Add(iconBorder);
         }
@@ -398,7 +398,7 @@ public class NotificationItemControl : Border
             FontSize = 12,
             TextTrimming = TextTrimming.CharacterEllipsis,
             MaxLines = 1,
-            Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327"))
+            Foreground = ComponentRoleBrushes.PrimaryText(this)
         });
 
         if (!string.IsNullOrWhiteSpace(_item.Content))

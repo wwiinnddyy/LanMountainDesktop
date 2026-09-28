@@ -142,7 +142,7 @@ public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget
         foreach (var visual in _hotItemVisuals)
         {
             visual.IndexTextBlock.Foreground = new SolidColorBrush(brandColor);
-            visual.TitleTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327"));
+            visual.TitleTextBlock.Foreground = ComponentRoleBrushes.PrimaryText(this);
         }
 
         StatusTextBlock.Foreground = ComponentRoleBrushes.MutedText(this);

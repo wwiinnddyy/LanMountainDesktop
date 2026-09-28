@@ -30,4 +30,19 @@ internal static class ComponentRoleBrushes
     /// <summary>状态行、"正在加载…"、时间戳这类提示性文字的颜色。</summary>
     internal static IBrush MutedText(IResourceHost host) =>
         AdaptiveTokens.Brush(host, ThemeResourceKeys.TextMutedBrush, MutedTextFallback);
+
+    /// <summary>
+    /// 面板上的标题 / 正文 / 与正文同色的图标字形。
+    /// 第二族（2026-09-29）：此前 17 处各写一遍 <c>_isNightVisual ? 夜档 : 日档</c>，
+    /// 夜档全是同一支 <c>#E8EAED</c>，日档却各自漂开成 6 个不同的近黑值
+    /// （『#202327』『#2B2F35』『#11151D』『#141922』『#151922』『#20232A』）——
+    /// 同一个"正文"在不同组件里是 6 种深浅，且四种都不随壁纸走。
+    /// </summary>
+    /// <remarks>
+    /// 主题层算 textPrimary 时兜的是 <c>surfaceRaised</c> 的对比度（ThemeColorSystemService.cs:117），
+    /// 而有些组件的文字压在 <c>surfaceOverlay</c> 或自家渐变底上——这一族（以及次要、状态两族）
+    /// 都继承了同一个近似，不是这次改动新引入的；真要精确，得让主题层按"实际底"出文字色，另说。
+    /// </remarks>
+    internal static IBrush PrimaryText(IResourceHost host) =>
+        AdaptiveTokens.Brush(host, ThemeResourceKeys.TextPrimaryBrush, MutedTextFallback);
 }
