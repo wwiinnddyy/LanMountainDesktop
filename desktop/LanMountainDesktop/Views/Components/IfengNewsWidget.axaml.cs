@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -130,8 +130,8 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
         RefreshButton.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#2D3440") : Color.Parse("#EFF1F5"));
         RefreshGlyphIcon.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#5E6671"));
 
-        StatusTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#8B95A5") : Color.Parse("#6A6F77"));
-        LoadingTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#8B95A5") : Color.Parse("#6A6F77"));
+        StatusTextBlock.Foreground = ComponentRoleBrushes.MutedText(this);
+        LoadingTextBlock.Foreground = ComponentRoleBrushes.MutedText(this);
 
         foreach (var control in _itemControls)
         {

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -206,7 +206,7 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
             visual.TitleTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327"));
         }
 
-        StatusTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#8B95A5") : Color.Parse("#6A6F77"));
+        StatusTextBlock.Foreground = ComponentRoleBrushes.MutedText(this);
     }
 
     private async void OnRefreshButtonClick(object? sender, RoutedEventArgs e)

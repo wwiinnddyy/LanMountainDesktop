@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -173,7 +173,7 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget, IDe
         SaveButtonBorder.BorderBrush = new SolidColorBrush(_isNightVisual ? Color.Parse("#3D4451") : Color.Parse("#E0E5EC"));
         SaveIcon.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#141922"));
 
-        HintTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#8B95A5") : Color.Parse("#7A818E"));
+        HintTextBlock.Foreground = ComponentRoleBrushes.MutedText(this);
     }
 
     private void OnUiTick(object? sender, EventArgs e)

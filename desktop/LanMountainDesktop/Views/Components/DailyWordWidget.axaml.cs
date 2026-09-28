@@ -125,7 +125,7 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
         RefreshButton.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#2D3440") : Color.Parse("#14A0A6AF"));
         RefreshIcon.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#626870"));
 
-        StatusTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#8B95A5") : Color.Parse("#6A6F77"));
+        StatusTextBlock.Foreground = ComponentRoleBrushes.MutedText(this);
     }
 
     private async void OnRefreshButtonClick(object? sender, RoutedEventArgs e)

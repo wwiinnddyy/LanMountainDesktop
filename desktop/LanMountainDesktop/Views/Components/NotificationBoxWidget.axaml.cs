@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
@@ -200,7 +200,7 @@ public partial class NotificationBoxWidget : UserControl,
                 Text = group.Key,
                 FontWeight = FontWeight.SemiBold,
                 FontSize = 11,
-                Foreground = new SolidColorBrush(Color.Parse("#8B95A5")),
+                Foreground = ComponentRoleBrushes.MutedText(this),
                 Margin = new Thickness(0, 6, 0, 3)
             });
 
@@ -424,7 +424,7 @@ public class NotificationItemControl : Border
                     ? GetRelativeTime(_item.ReceivedTime)
                     : _item.ReceivedTime.ToString("HH:mm"),
                 FontSize = 10,
-                Foreground = new SolidColorBrush(Color.Parse("#8B95A5")),
+                Foreground = ComponentRoleBrushes.MutedText(this),
                 VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
                 Margin = new Thickness(6, 0, 0, 0)
             };

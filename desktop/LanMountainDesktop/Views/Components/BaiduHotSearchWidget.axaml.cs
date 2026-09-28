@@ -145,7 +145,7 @@ public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget
             visual.TitleTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327"));
         }
 
-        StatusTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#8B95A5") : Color.Parse("#6A6F77"));
+        StatusTextBlock.Foreground = ComponentRoleBrushes.MutedText(this);
     }
 
     private async void OnRefreshTimerTick(object? sender, EventArgs e)

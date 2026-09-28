@@ -852,6 +852,27 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 `CancellationHelper` 已搬到 Core（与 `AtomicFileWriter`、`FileOperationRetryHelper` 同一先例：同一动作散在多个二进制里就住 Core），
 启动器与安装器现在够得到它，守卫也据此覆盖全部二进制。
 
+**组件里的裸色值开始一族一族烧掉（#G1-AF，2026-09-29 第一族）**：判据是
+`tests/LanMountainDesktop.Tests/ColorLiteralRatchetTests.cs`，现在钉着**两面**——
+`.cs` 引号内字面量（上限 659，2026-09-26 记的 677 烧掉 18 处）与 `.axaml` 属性上的颜色
+（新立的，实测 412 处 / 40 个文件）。第二面此前**根本没被看过**（那条判据只扫 *.cs），
+所以"组件里没几个色值了"这种话可以同时意味着标记里还攒着 412 处——同一句"0 不是状态"的教训换了个面重演。
+第一族是状态文字：原来 10 处各写一遍 `_isNightVisual ? 夜档 : 日档`（其中 7 处逐字相同、分布在 6 个文件，
+另外几处日档还各自漂开成 `#6A6F77` 之外的 `#7A818E`，`NotificationBoxWidget` 那两处连日档都没有），
+现在一律 `ComponentRoleBrushes.MutedText(this)` → 问主题层要 `AdaptiveTextMutedBrush`。
+**为什么不是"把那两个数统一成一对常量"**：主题的 muted 是按 `surfaceRaised` 混色后再 `EnsureContrast` 算的
+（`ThemeColorSystemService.cs:124`），写死三元组正是绕过那道保证的那只手——换浅色壁纸时"夜里那支亮灰字"
+会压在亮底上。行为钉 `ComponentRoleBrushesTests`（明暗各一行：等于窗口上真正注册的那支画笔，
+且对面板底色对比度 ≥3:1；把家里的键换成 `TextSecondaryBrush` 两行同时红，验过）。
+**这一面的两个覆盖边界如实记下**：① 兜底那支中性灰**测不到**——视觉底座把 `Adaptive*` 注册在应用级资源表上（#44），
+任何控件沿作用域都找得到，测试里造不出"取不到键"；② 标记面的红是靠**放一个能编译的 scratch .axaml** 验出来的
+（第一版注入改的是既有元素的属性，顺带把 XAML 编译弄坏了 2 个错误——那种红分不清是判据还是编译，不算证据）。
+剩下最集中的标记文件（下次烧的候选，实测值）：`Stcn24ForumWidget.axaml=38`、`SettingsPages/WallpaperSettingsPage.axaml=37`、
+`MusicControlWidget.axaml=33`、`ComponentEditorWindow.axaml=26`、`StudySessionReportWindow.axaml=23`；
+组件代码侧最集中的是 `MusicControlWidget.axaml.cs=39`、`WorldClockWidget.axaml.cs=37`。
+**判据文档里那句"677 处 / 31 个文件"的 31 也是数错的**（同一总数实际分布在 41 个文件里），已就地更正——
+上限/下限是常量、说明文字是 prose，两者都会漂，引用之前现跑一遍。
+
 **组件与时区服务之间那对订阅/退订只认一处**：一律走 `desktop/LanMountainDesktop/Views/Components/TimeZoneServiceBinding.cs`
 的 `Replace` / `Clear`（两个方法都返回新的字段值，语义与原来逐字一致：换服务时先退旧再订新，退订不刷新），
 不要在组件里手写 `TimeZoneChanged += / -=`。收口前 10 个时钟/日历组件各抄了一份 Set 与一份 Clear（20 个方法体，
