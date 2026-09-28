@@ -104,6 +104,69 @@ public sealed class HostAppSettingsOobeMergerTests
         }
     }
 
+    /// <summary>
+    /// 动因：向导第五步的两个遥测开关以前只写进启动器自己目录里的 <c>privacy-config.json</c>，
+    /// 而那份文件全仓没有读者——宿主的两道闸读的是 settings.json 上的
+    /// <c>UploadAnonymousCrashData</c> / <c>UploadAnonymousUsageData</c>。
+    /// 用户在向导里选了"不开"，宿主从来没被告知过。
+    /// </summary>
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(false, false)]
+    public void MergePrivacyChoices_WritesWhatTheUserAnswered(bool crash, bool usage)
+    {
+        var (path, dir) = NewSettingsFile();
+        try
+        {
+            HostAppSettingsOobeMerger.MergePrivacyChoices(path, crash, usage);
+
+            using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
+
+            Assert.Equal(crash, doc.RootElement.GetProperty(HostAppSettingsOobeMerger.UploadAnonymousCrashDataKey).GetBoolean());
+            Assert.Equal(usage, doc.RootElement.GetProperty(HostAppSettingsOobeMerger.UploadAnonymousUsageDataKey).GetBoolean());
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    /// <summary>
+    /// 两次合并必须互相保留。写成"另起一个 JSON 对象再整个覆盖"的话，症状不是崩而是
+    /// 先答的启动/主题设置被后答的那一步抹掉——向导第五步在最后，用户会以为前面的回答没存上。
+    /// </summary>
+    [Fact]
+    public void MergePrivacyChoices_KeepsThePresentationKeysWrittenEarlier()
+    {
+        var (path, dir) = NewSettingsFile();
+        try
+        {
+            HostAppSettingsOobeMerger.MergeStartupPresentation(
+                path,
+                new HostAppSettingsStartupChoices(
+                    ShowInTaskbar: false,
+                    EnableFadeTransition: true,
+                    EnableSlideTransition: false,
+                    FusedPopupExperience: false,
+                    AutoStartWithWindows: false,
+                    ThemeMode: HostAppSettingsOobeMerger.ThemeModeDarkValue));
+            HostAppSettingsOobeMerger.MergePrivacyChoices(path, crashTelemetryEnabled: false, usageTelemetryEnabled: false);
+
+            using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
+            var root = doc.RootElement;
+
+            Assert.Equal(HostAppSettingsOobeMerger.ThemeModeDarkValue, root.GetProperty(HostAppSettingsOobeMerger.ThemeModeKey).GetString());
+            Assert.False(root.GetProperty(HostAppSettingsOobeMerger.ShowInTaskbarKey).GetBoolean());
+            Assert.False(root.GetProperty(HostAppSettingsOobeMerger.UploadAnonymousCrashDataKey).GetBoolean());
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
     private static (string SettingsPath, string Root) NewSettingsFile()
     {
         var root = Path.Combine(Path.GetTempPath(), "LMD.OobeMerge", Guid.NewGuid().ToString("N"));

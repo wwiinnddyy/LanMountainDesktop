@@ -44,8 +44,14 @@ public sealed class OobeSessionCommitServiceTests : IDisposable
 
         Assert.True(result.Success);
         Assert.True(File.Exists(resolver.ResolveConfigPath()));
-        Assert.True(File.Exists(HostAppSettingsOobeMerger.GetSettingsFilePath(dataRoot)));
-        Assert.True(File.Exists(Path.Combine(resolver.ResolveLauncherDataPath(), "privacy-config.json")));
+        var settingsPath = HostAppSettingsOobeMerger.GetSettingsFilePath(dataRoot);
+        Assert.True(File.Exists(settingsPath));
+
+        // 向导第五步的两个开关必须落在宿主读的那份文件上（此前它们写进 privacy-config.json，全仓没有读者）。
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(settingsPath));
+        Assert.False(doc.RootElement.GetProperty(HostAppSettingsOobeMerger.UploadAnonymousCrashDataKey).GetBoolean());
+        Assert.False(doc.RootElement.GetProperty(HostAppSettingsOobeMerger.UploadAnonymousUsageDataKey).GetBoolean());
+
         Assert.True(File.Exists(Path.Combine(resolver.ResolveLauncherDataPath(), "privacy-agreement.state.json")));
         Assert.True(File.Exists(GetCompletedStatePath(dataRoot)));
     }

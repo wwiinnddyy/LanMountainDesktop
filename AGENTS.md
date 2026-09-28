@@ -1259,6 +1259,23 @@ IDE0051（未使用私有成员）在构建里一条都不出（2026-09-22 实�
 现状钉在 `AirAppMarketAssetCacheTests.OneAirApp_CanOnlyTrackOneAssetKind_Today`）、G1-CK（删包绕开"尽力删除只认一处"那家、
 共享契约不跟着删、删除没有确认对话框）。行为钉新增 `AirAppMarketAssetCacheTests` 四格与
 `CapabilityEntryPointTests.AirAppUninstall_AlsoClearsTheMarketAssetCache`（卸载方法体里必须有那一步，注释掉即红）。
+**G1-AY 同日只做完一半，另一半登记成 G1-CL——先把症状和病分开**：登记写的"同意状态只写不读"是真的，
+但它只是症状；现量到的病在**向导第五步没有出口**：那两个遥测开关只写进启动器自己目录下的
+`privacy-config.json`，而全仓（含两份实现、测试、文档）**没有任何读者**，宿主的两道闸读的是
+`AppSettingsSnapshot.UploadAnonymousCrashData` / `UploadAnonymousUsageData`（`SettingsDomainServices.cs:748-757` 写、
+`PostHogUsageTelemetryService.cs:77` 与 `SentryCrashTelemetryService.cs:71` 读）——用户在向导里选"不开"，
+宿主从来没被告知过，照旧上报。现在 `HostAppSettingsOobeMerger.MergePrivacyChoices` 把答案直接落到宿主那份
+`settings.json`（键名＝宿主属性名，`OobeHostSettingsContractTests` 逐个核对，取键下限 8 → **10**），
+并尽力清掉遗留的 `privacy-config.json`；新增 5 格行为钉（四种答案组合各一格 + "两次合并互不覆盖"那一格——
+写成"另起一个 JSON 对象整份覆盖"的症状不是崩，而是前面答的启动/主题设置被最后一步抹掉）。
+**这一步会改变真正发出去的字节**（选了"不开"的人从此真的不再上报），是本轮第一个改变网络行为的决定。
+剩下的三条读侧方法（`HasUserAgreed` / `GetCurrentAgreementVersion` / `ClearAgreement`）**既不删也不硬接**，
+因为它们建不起来：`SaveAgreement` 连 `isAgreed=false` 一起持久化，于是"用户拒绝"与"从没问过"在同一份文件里是
+同一个 `false`，而"协议版本变了要重新征同意"必须先分清这两者；`HasUserAgreed` 又把"HMAC 可信校验"（篡改就删文件）
+与"版本比对"揉进同一个 bool。同日另外量到的两条相关事实，写在登记里当依据：勾选**连导航都不拦**
+（`OobeWindow.axaml.cs:660-665` 不检查就进下一步，它只启用/禁用那两个开关）；今天所谓"重跑向导"是手工删
+`oobe-state.json`（`docs/00-快速开始/02-快速安装.md:196`），那条路径不清这两份隐私文件＝重置后旧同意还在。
+名单**条数不变（15 条）**——三条读侧仍零调用，只是理由全部改写成指向 G1-CL，别把它当"待接线"读成"接一下就好"。
 判据本身被修过三次：跨工程同名声明行会把调用点喂饱（Plonds 自带 `GetCatalogAsync`）、
 C# 主构造器会被当成方法声明（`class X(IProgress<…>? p)` 报成一条不存在的方法）、
 以及**用 python heredoc 写 `\b` 会落成一个退格控制字符**——规则看着在文件里，正则永远不匹配，

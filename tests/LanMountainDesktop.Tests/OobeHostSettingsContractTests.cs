@@ -34,8 +34,9 @@ public sealed class OobeHostSettingsContractTests
             .ToArray();
 
         // 取键的反射规则一旦失效（改名、换成属性），这条测试就会静默地什么都不检查。
+        // 下限随实测抬高：2026-09-27 加进两个遥测键（UploadAnonymousCrashData / UploadAnonymousUsageData）后是 10。
         Assert.True(
-            writtenKeys.Length >= 8,
+            writtenKeys.Length >= 10,
             $"只量到 {writtenKeys.Length} 个 *Key 常量，取键的反射规则失效了，这条守卫不能算通过。");
 
         var orphans = writtenKeys

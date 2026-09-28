@@ -118,12 +118,18 @@ public sealed class ZeroUseInstanceMemberRatchetTests
         // —— 考勤模块（整模块无入口，已记在类型棘轮）——
         ["AttendanceDataStore.LoadSessions"] = "所属类型已在 ZeroUseTypeRatchetTests 名单（考勤整模块无入口）：读写侧一起定",
         ["AttendanceDataStore.UpsertSession"] = "同上",
-        // —— 隐私同意只写不读（G1-AY）——
+        // —— 隐私同意只写不读（G1-AY 前半已做完，剩下的等 G1-CL）——
         ["PrivacyAgreementService.HasUserAgreed"] =
-            "写侧 SaveAgreement 是活的（OobeSessionCommitService.cs:67 落盘），但没人回头查这个位＝同意状态只写不读。" +
-            "它是唯一的读取实现，删了就再看不出这里缺一道闸",
-        ["PrivacyAgreementService.GetCurrentAgreementVersion"] = "同上家族：协议版本变了要不要重新征同意，没接",
-        ["PrivacyAgreementService.ClearAgreement"] = "重置同意状态的能力，注释写着\"用于测试或重置\"，既没挂设置页也没挂 dev 面板",
+            "写侧 SaveAgreement 是活的（OobeSessionCommitService.cs:75 落盘），但没人回头查这个位＝同意状态只写不读。" +
+            "它是唯一的读取实现，删了就再看不出这里缺一道闸。" +
+            "2026-09-27 现量：向导第五步那两个遥测开关已经改落宿主 settings.json（那个才是真缺陷，已修），" +
+            "这条读侧留着是因为<b>记录形状撑不起它</b>——SaveAgreement 连 isAgreed=false 一起持久化，" +
+            "于是\"用户拒绝\"与\"从没问过\"在这份文件里是同一个 false，而版本变更重新征问必须先分清这两者：见待办 G1-CL",
+        ["PrivacyAgreementService.GetCurrentAgreementVersion"] = "同上家族：协议版本变了要不要重新征同意，没接（等 G1-CL 定记录形状）",
+        ["PrivacyAgreementService.ClearAgreement"] =
+            "重置同意状态的能力，注释写着\"用于测试或重置\"，既没挂设置页也没挂 dev 面板。" +
+            "顺带量到的一条事实：今天所谓\"重跑向导\"是手工删 oobe-state.json（docs/00-快速开始/02-快速安装.md:196），" +
+            "那条路径不清这两份隐私文件＝重置之后旧同意仍在——真要接，接的就是那个重置点（也归 G1-CL 一起定）",
         // —— 只有测试在调 ——
         ["AirAppLoader.LoadAll"] = "一次装载全部已装包的入口，生产按安装/启动时机增量装，只有 AirAppLoaderTests 在调",
         ["CompositionVisualAnimationService.TrySetOpacity"] =

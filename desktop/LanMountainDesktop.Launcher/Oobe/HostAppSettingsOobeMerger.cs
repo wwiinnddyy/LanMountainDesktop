@@ -22,6 +22,14 @@ public static class HostAppSettingsOobeMerger
     public const string ThemeModeKey = "ThemeMode";
 
     /// <summary>
+    /// 两个遥测开关的键名＝宿主 <c>AppSettingsSnapshot</c> 的属性名（跨二进制只靠字符串对齐，
+    /// 拼错一个字母不报错，症状是"向导里选了不开、宿主照旧上报"）。
+    /// 由 <c>OobeHostSettingsContractTests</c> 逐个核对宿主有没有这个属性。
+    /// </summary>
+    public const string UploadAnonymousCrashDataKey = "UploadAnonymousCrashData";
+    public const string UploadAnonymousUsageDataKey = "UploadAnonymousUsageData";
+
+    /// <summary>
     /// 主题档的取值是宿主的口径（<c>AppSettingsSnapshot.ThemeMode</c>）。
     /// 这里能取到宿主常量类的话就该换成常量；取不到是因为 Launcher 与宿主是两个二进制，
     /// 由 <c>OobeHostSettingsContractTests</c> 钉住这两个字面量与宿主常量一致。
@@ -93,29 +101,7 @@ public static class HostAppSettingsOobeMerger
 
     public static void MergeStartupPresentation(string settingsPath, HostAppSettingsStartupChoices choices)
     {
-        var directory = Path.GetDirectoryName(settingsPath);
-        if (!string.IsNullOrWhiteSpace(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-
-        JsonObject root;
-        if (File.Exists(settingsPath))
-        {
-            try
-            {
-                root = JsonNode.Parse(File.ReadAllText(settingsPath))?.AsObject() ?? new JsonObject();
-            }
-            catch (Exception ex)
-            {
-                Logger.Warn($"HostAppSettingsOobeMerger: replacing invalid JSON at '{settingsPath}'. {ex.Message}");
-                root = new JsonObject();
-            }
-        }
-        else
-        {
-            root = new JsonObject();
-        }
+        var root = ReadOrCreateSettingsObject(settingsPath);
 
         var normalized = StartupVisualPreferencesResolver.FromFlags(
             choices.EnableFadeTransition,
@@ -131,6 +117,56 @@ public static class HostAppSettingsOobeMerger
             ? ThemeModeLightValue
             : choices.ThemeMode;
 
+        WriteSettingsObject(settingsPath, root);
+    }
+
+    /// <summary>
+    /// 把向导第五步答的两个遥测开关落到<b>宿主自己读的那份</b> settings.json 上。
+    /// 这两个键此前只写进向导目录里的 <c>privacy-config.json</c>，而全仓没有任何读者，
+    /// 宿主的两道闸读的是 <c>AppSettingsSnapshot.UploadAnonymousCrashData</c> /
+    /// <c>UploadAnonymousUsageData</c>——于是用户在向导里选了"不开"，宿主照旧上报。
+    /// 与 <see cref="MergeStartupPresentation"/> 同样是覆盖写：重跑向导就是重新回答，
+    /// 与启动/主题那几个键一个口径。
+    /// </summary>
+    public static void MergePrivacyChoices(
+        string settingsPath,
+        bool crashTelemetryEnabled,
+        bool usageTelemetryEnabled)
+    {
+        var root = ReadOrCreateSettingsObject(settingsPath);
+
+        root[UploadAnonymousCrashDataKey] = crashTelemetryEnabled;
+        root[UploadAnonymousUsageDataKey] = usageTelemetryEnabled;
+
+        WriteSettingsObject(settingsPath, root);
+    }
+
+    private static JsonObject ReadOrCreateSettingsObject(string settingsPath)
+    {
+        var directory = Path.GetDirectoryName(settingsPath);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        if (!File.Exists(settingsPath))
+        {
+            return new JsonObject();
+        }
+
+        try
+        {
+            return JsonNode.Parse(File.ReadAllText(settingsPath))?.AsObject() ?? new JsonObject();
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"HostAppSettingsOobeMerger: replacing invalid JSON at '{settingsPath}'. {ex.Message}");
+            return new JsonObject();
+        }
+    }
+
+    private static void WriteSettingsObject(string settingsPath, JsonObject root)
+    {
         var options = new JsonSerializerOptions { WriteIndented = true };
         AtomicFileWriter.WriteText(settingsPath, root.ToJsonString(options), "OOBE");
     }

@@ -1,4 +1,3 @@
-using System.Text.Json;
 using LanMountainDesktop.Launcher.Models;
 using LanMountainDesktop.Shared.IO;
 
@@ -59,9 +58,18 @@ internal sealed class OobeSessionCommitService
             var launcherDataPath = _dataLocationResolver.ResolveLauncherDataPath();
             Directory.CreateDirectory(launcherDataPath);
 
-            var privacyConfigPath = Path.Combine(launcherDataPath, "privacy-config.json");
-            var privacyJson = JsonSerializer.Serialize(draft.PrivacyConfig, AppJsonContext.Default.PrivacyConfig);
-            AtomicFileWriter.WriteText(privacyConfigPath, privacyJson, "OOBE");
+            // 两个遥测开关写进宿主自己读的那份 settings.json。此前它们只落在本目录的
+            // privacy-config.json，而全仓没有读者——用户在向导里选了"不开"，宿主照旧上报。
+            HostAppSettingsOobeMerger.MergePrivacyChoices(
+                HostAppSettingsOobeMerger.GetSettingsFilePath(dataRoot),
+                draft.PrivacyConfig.CrashTelemetryEnabled,
+                draft.PrivacyConfig.UsageTelemetryEnabled);
+
+            // 老版本把这两个开关写在 launcher 数据目录下的 privacy-config.json 里，而那份文件从来没有读者。
+            // 答案现在落在 settings.json，这里把遗留文件尽力清掉，免得日后有人以为它还是真源。
+            FileOperationRetryHelper.TryDeleteFile(
+                Path.Combine(launcherDataPath, "privacy-config.json"),
+                "OOBE");
 
             var agreementService = new PrivacyAgreementService(launcherDataPath);
             if (!agreementService.SaveAgreement(
