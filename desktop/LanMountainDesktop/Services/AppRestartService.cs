@@ -273,7 +273,7 @@ public static class AppRestartService
             builder.Append(' ');
         }
 
-        builder.Append($"--{LauncherIpcConstants.LaunchSourceOptionName}=restart");
+        builder.Append($"--{LauncherIpcConstants.LaunchSourceOptionName}={LauncherLaunchSources.Restart}");
         builder.Append($" --{LauncherIpcConstants.RestartParentPidOptionName}={Environment.ProcessId}");
         builder.Append(
             $" --{LauncherIpcConstants.RestartPresentationOptionName}={LauncherRuntimeMetadata.FormatRestartPresentation(restartPresentationMode)}");

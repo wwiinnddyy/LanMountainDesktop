@@ -50,9 +50,14 @@ public sealed class ZeroUseMemberRatchetTests
             + "删除属跨二进制破坏性变更，跟 SDK 版本号一起定：待办 G1-U",
         ["ServiceCollectionExtensions.AddPublicIpcService"] = "同上，另一套 IPC 注册入口：待办 G1-U",
         ["LauncherRuntimeMetadata.GetLauncherProcessId"] = "启动器两侧都写了 LMD_LAUNCHER_PID（HostLaunchPlan 的 env + --参数），"
-            + "宿主侧读取为零：单侧契约，要不要拿它做父进程监视是产品/架构决定",
-        ["LauncherRuntimeMetadata.GetRestartParentProcessId"] = "重启时 --restart-parent-pid 由 AppRestartService 写入，读取为零："
-            + "同上，属写了一半的跨进程契约",
+            + "解析函数生产零调用。2026-09-30 现量：真正需要这个 PID 的是 AirApp 运行时的看门狗"
+            + "（AirAppRuntimeLifetime.ShouldKeepAlive），而它的值由启动器直接给"
+            + "（Launcher/Shell/AirAppRuntimeBridge.cs:256 组 AirAppRuntimeStartRequest），不经过这条 env/CLI 通道——"
+            + "所以这条是同一事实的第二通道，要不要删写侧等 G1-AO 一起判",
+        ["LauncherRuntimeMetadata.GetRestartParentProcessId"] = "重启时 --restart-parent-pid 由 AppRestartService 写入，解析函数零调用。"
+            + "2026-09-30 现量：它当初要解决的问题（新宿主撞上正在退出的旧宿主）改由别的一条规则承担了——"
+            + "启动器在 launch-source=restart 时整段跳过已存在宿主的探测（HostActivationPolicy.cs:20），"
+            + "自己起的宿主另有 HostStartupMonitor 握着 Process 句柄等退出。所以这条是遗留的第二真源：待办 G1-AO",
     };
 
     private static readonly string[] HostDirectories =

@@ -1414,7 +1414,7 @@ public partial class App : Application
 
     private bool TryApplyStartupPresentation(MainWindow mainWindow)
     {
-        if (!string.Equals(_launchSource, "restart", StringComparison.OrdinalIgnoreCase) ||
+        if (!string.Equals(_launchSource, LauncherLaunchSources.Restart, StringComparison.OrdinalIgnoreCase) ||
             _requestedRestartPresentationMode is null ||
             _requestedRestartPresentationMode == RestartPresentationMode.Foreground)
         {

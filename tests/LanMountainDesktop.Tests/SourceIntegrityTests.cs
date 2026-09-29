@@ -167,6 +167,77 @@ public sealed class SourceIntegrityTests
     }
 
     /// <summary>
+    /// "这次启动是怎么来的"这张跨进程词表只许住在 <c>core/.../Launcher/LauncherIpc.cs</c>
+    /// （<c>LauncherLaunchSources</c> 与 <c>LaunchSourceOptionName</c>）。
+    /// 写的一侧是宿主的重启路径，读的一侧实测有六处、跨两个二进制：启动器判"要不要先探已存在的宿主"、
+    /// 判协调器命令走 Attach 还是 ActivateDesktop、记启动成败、OOBE 跳过判定，宿主自己也判"这次是不是重启"。
+    /// 收口前这些点各写各的字面量，<c>"launch-source"</c> 这个选项名在启动器里还另有一份私有 const——
+    /// 拼错一个字母不报错，症状是那条判定永远不成立；最狠的是 <c>restart</c> 对不上时启动器会去唤醒
+    /// 那个正在退出的旧宿主，用户点"重启"就变成"什么也没发生"。
+    ///
+    /// 判据分两条，因为 <c>"restart"</c> 这个词在别处有正当用途：
+    /// 选项名与那四个不歧义的值一律禁；<c>"restart"</c> 只在同一行提到 LaunchSource 时才禁
+    /// （<c>SentryCrashTelemetryService</c> 的 shutdown_intent 标签也用 "restart" 这个串，那不是这张词表）。
+    /// <c>"normal"</c> 不进禁令——太通用，扫它只会造噪声，它的真源由 <c>LauncherLaunchSources.Normal</c>
+    /// 的调用点各自引用保证。
+    /// </summary>
+    [Fact]
+    public void LaunchSourceVocabulary_LivesInExactlyOnePlace()
+    {
+        var home = "core" + Path.DirectorySeparatorChar +
+            "LanMountainDesktop.Core" + Path.DirectorySeparatorChar +
+            "Launcher" + Path.DirectorySeparatorChar + "LauncherIpc.cs";
+        var unconditional = new[]
+        {
+            "\"launch-source\"", "\"postinstall\"", "\"plugin-install\"", "\"debug-preview\"",
+        };
+
+        var scanned = 0;
+        var offenders = new List<string>();
+
+        foreach (var file in SourceFiles())
+        {
+            if (string.Equals(RelativeToRepo(file).Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar),
+                    home, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            scanned++;
+            var lines = File.ReadAllLines(file);
+            for (var index = 0; index < lines.Length; index++)
+            {
+                var line = lines[index];
+                if (line.TrimStart().StartsWith("//", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                foreach (var literal in unconditional.Where(literal => line.Contains(literal, StringComparison.Ordinal)))
+                {
+                    offenders.Add($"{RelativeToRepo(file)}:{index + 1} 写了 {literal}");
+                }
+
+                if (line.Contains("\"restart\"", StringComparison.Ordinal) &&
+                    line.Contains("LaunchSource", StringComparison.Ordinal))
+                {
+                    offenders.Add($"{RelativeToRepo(file)}:{index + 1} 写了启动来源 \"restart\"");
+                }
+            }
+        }
+
+        Assert.True(
+            scanned >= 700,
+            $"这一跑只扫到 {scanned} 个生产 .cs（2026-09-30 实测 781 个，不含家自己）：目录口径坏了这条判据会安静地失业");
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} 处把启动来源词表写在了家外面，应改走 LauncherLaunchSources 常量" +
+            $"（选项名用 LauncherIpcConstants.LaunchSourceOptionName）：" +
+            $"{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+    }
+
+    /// <summary>
     /// WCAG 亮度/对比度算式必须只有 <c>ColorMath</c> 一份。此前 15 个组件各自复制了
     /// CalculateRelativeLuminance，6 个学习组件又各自复制了 RelativeLuminance /
     /// ToOpaqueAgainst / MinContrastRatio，MainWindow 还有第四份；四份之间阈值都不一样

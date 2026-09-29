@@ -1,4 +1,5 @@
 using System.Text.Json;
+using LanMountainDesktop.Shared.Contracts.Launcher;
 using LanMountainDesktop.Shared.Data;
 using LanMountainDesktop.Launcher.Models;
 using LanMountainDesktop.Shared.IO;
@@ -102,7 +103,7 @@ internal sealed class OobeStateService
 
     private OobeLaunchDecision EvaluateCore(CommandContext context)
     {
-        if (string.Equals(context.LaunchSource, "debug-preview", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(context.LaunchSource, LauncherLaunchSources.DebugPreview, StringComparison.OrdinalIgnoreCase))
         {
             return BuildSuppressedDecision(context, "debug_preview", "oobe_suppressed_debug_preview");
         }
@@ -143,7 +144,7 @@ internal sealed class OobeStateService
                 }
             }
 
-            if (string.Equals(context.LaunchSource, "postinstall", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(context.LaunchSource, LauncherLaunchSources.PostInstall, StringComparison.OrdinalIgnoreCase))
             {
                 return BuildDecision(context, OobeStateStatus.FirstRun, shouldShowOobe: true);
             }

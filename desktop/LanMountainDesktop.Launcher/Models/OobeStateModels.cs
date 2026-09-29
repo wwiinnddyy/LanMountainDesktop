@@ -1,3 +1,5 @@
+using LanMountainDesktop.Shared.Contracts.Launcher;
+
 namespace LanMountainDesktop.Launcher.Models;
 
 internal enum OobeStateStatus
@@ -29,7 +31,7 @@ internal sealed class OobeLaunchDecision
 
     public string StatePath { get; init; } = string.Empty;
 
-    public string LaunchSource { get; init; } = "normal";
+    public string LaunchSource { get; init; } = LauncherLaunchSources.Normal;
 
     public bool IsElevated { get; init; }
 

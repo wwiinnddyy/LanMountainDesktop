@@ -17,7 +17,7 @@ internal static class HostActivationPolicy
             return false;
         }
 
-        return !string.Equals(context.LaunchSource, "restart", StringComparison.OrdinalIgnoreCase);
+        return !string.Equals(context.LaunchSource, LauncherLaunchSources.Restart, StringComparison.OrdinalIgnoreCase);
     }
 
     internal static bool IsExistingHostReadyForLauncherDecision(PublicShellStatus? status) =>

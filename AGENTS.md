@@ -1119,6 +1119,23 @@ Avalonia 的 Border 只在厚度 >0 时描边，所以**这 5 行从写下那天
 写文件名用 `BuildDumpFileName(DateTime.Now)`（它保证名字落在 `DumpFilePattern` 里）。
 守卫 `SourceIntegrityTests.CrashDumpContract_LivesInExactlyOnePlace`。
 
+**"这次启动是怎么来的"那张词表只认 Core 的 `LauncherLaunchSources` 一家**（`core/LanMountainDesktop.Core/Launcher/LauncherIpc.cs`，
+选项名在同文件的 `LauncherIpcConstants.LaunchSourceOptionName`）：值只有 `normal`／`restart`／`postinstall`／
+`plugin-install`／`debug-preview` 五个，跨进程传的就是这些串。写的一侧是宿主 `AppRestartService`，读的一侧实测六处、
+跨两个二进制——启动器判"要不要先探已存在的宿主"（`HostActivationPolicy.cs:20`）、判协调器命令走 Attach 还是
+ActivateDesktop、记启动成败、OOBE 跳过判定（两处），宿主自己判"这次是不是重启"（`App.axaml.cs:1417`）。
+收口前六处各写各的字面量，选项名在启动器里还另有一份私有 const。为什么值得收：这些判定**对不上时不报错**，
+最狠的一处是 `restart`——它失效时启动器会去唤醒那个正在退出的旧宿主，用户点"重启"变成"什么也没发生"。
+守卫 `SourceIntegrityTests.LaunchSourceVocabulary_LivesInExactlyOnePlace`：选项名与四个不歧义的值一律禁，
+`"restart"` 只在同一行提到 `LaunchSource` 时才禁（`SentryCrashTelemetryService` 的 `shutdown_intent` 标签也用
+"restart" 这个串，那不是这张词表）；`"normal"` 不进禁令（太通用，扫它只造噪声）。
+四个变异逐条量过：把 `restart` 写回判据 → 红并点名；在别处写死 `postinstall` → 红并点名；覆盖面下限抬到看不见 → 红；
+**差分**：同一条写回 + 摘掉判据里 `restart` 那一半 → 绿（证明管的正是那一半，而不是别的东西顺带红了）。
+顺带把 #G1-AO 的登记按现量改写：那两个 PID 解析函数确实零调用，但"没读者"不等于"没替代"——
+AirApp 运行时看门狗要的 launcher PID 由启动器直接组请求（`AirAppRuntimeBridge.cs:256`），
+"新宿主撞上正在退出的旧宿主"由 `launch-source=restart` 时跳过探测这条规则承担，
+所以那两条通道是遗留的第二真源，删不删与 #G1-AO 一起判。
+
 **数据位置配置的磁盘契约只认一处**：`{安装根}/.Launcher/data-location.config.json` 由启动器写、
 启动器与宿主两侧读，字段是 `dataLocationMode` / `systemDataPath` / `portableDataPath`，模式值只有
 `System` / `Portable`——一律走 `core/LanMountainDesktop.Core/Data/DataLocationContract.cs`

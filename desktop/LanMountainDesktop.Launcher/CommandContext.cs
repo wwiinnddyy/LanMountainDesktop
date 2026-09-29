@@ -1,9 +1,9 @@
+using LanMountainDesktop.Shared.Contracts.Launcher;
+
 namespace LanMountainDesktop.Launcher;
 
 internal sealed class CommandContext
 {
-    private const string LaunchSourceOptionName = "launch-source";
-
     private static readonly string[] GuiCommands =
     [
         "launch",
@@ -29,7 +29,7 @@ internal sealed class CommandContext
         Options.ContainsKey("plugins-dir") &&
         Options.ContainsKey("result");
 
-    public string LaunchSource => NormalizeLaunchSource(GetOption(LaunchSourceOptionName)) ?? InferLaunchSource();
+    public string LaunchSource => NormalizeLaunchSource(GetOption(LauncherIpcConstants.LaunchSourceOptionName)) ?? InferLaunchSource();
 
     /// <summary>
     /// 是否处于调试模式（从 Rider/VS 等 IDE 启动）
@@ -60,7 +60,7 @@ internal sealed class CommandContext
         GuiCommands.Contains(Command, StringComparer.OrdinalIgnoreCase);
 
     public bool IsMaintenanceCommand =>
-        string.Equals(LaunchSource, "plugin-install", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(LaunchSource, LauncherLaunchSources.PluginInstall, StringComparison.OrdinalIgnoreCase) ||
         string.Equals(Command, "plugin", StringComparison.OrdinalIgnoreCase);
 
     public string? ExplicitAppRoot => GetOption("app-root");
@@ -95,15 +95,15 @@ internal sealed class CommandContext
     {
         if (IsPreviewCommand)
         {
-            return "debug-preview";
+            return LauncherLaunchSources.DebugPreview;
         }
 
         if (IsLegacyAirAppInstall || string.Equals(Command, "plugin", StringComparison.OrdinalIgnoreCase))
         {
-            return "plugin-install";
+            return LauncherLaunchSources.PluginInstall;
         }
 
-        return "normal";
+        return LauncherLaunchSources.Normal;
     }
 
     private static string? NormalizeLaunchSource(string? raw)
@@ -115,11 +115,11 @@ internal sealed class CommandContext
 
         return raw.Trim().ToLowerInvariant() switch
         {
-            "normal" => "normal",
-            "restart" => "restart",
-            "postinstall" => "postinstall",
-            "plugin-install" => "plugin-install",
-            "debug-preview" => "debug-preview",
+            LauncherLaunchSources.Normal => LauncherLaunchSources.Normal,
+            LauncherLaunchSources.Restart => LauncherLaunchSources.Restart,
+            LauncherLaunchSources.PostInstall => LauncherLaunchSources.PostInstall,
+            LauncherLaunchSources.PluginInstall => LauncherLaunchSources.PluginInstall,
+            LauncherLaunchSources.DebugPreview => LauncherLaunchSources.DebugPreview,
             _ => null
         };
     }

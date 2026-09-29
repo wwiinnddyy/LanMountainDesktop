@@ -26,7 +26,7 @@ internal sealed class StartupSuccessTracker
     public StartupSuccessTracker(CommandContext context)
     {
         var restartPresentation = LauncherRuntimeMetadata.GetRestartPresentationMode(context.RawArgs);
-        var isRestartLaunch = string.Equals(context.LaunchSource, "restart", StringComparison.OrdinalIgnoreCase);
+        var isRestartLaunch = string.Equals(context.LaunchSource, LauncherLaunchSources.Restart, StringComparison.OrdinalIgnoreCase);
 
         _policy = !isRestartLaunch
             ? LaunchSuccessPolicy.Foreground

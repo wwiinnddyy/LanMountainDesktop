@@ -206,7 +206,7 @@ internal static class LauncherGuiCoordinator
         if (activeCoordinatorAttempt is not null &&
             !string.IsNullOrWhiteSpace(activeCoordinatorAttempt.CoordinatorPipeName))
         {
-            var command = string.Equals(context.LaunchSource, "restart", StringComparison.OrdinalIgnoreCase)
+            var command = string.Equals(context.LaunchSource, LauncherLaunchSources.Restart, StringComparison.OrdinalIgnoreCase)
                 ? LauncherCoordinatorCommands.Attach
                 : LauncherCoordinatorCommands.ActivateDesktop;
             var request = new LauncherCoordinatorRequest
