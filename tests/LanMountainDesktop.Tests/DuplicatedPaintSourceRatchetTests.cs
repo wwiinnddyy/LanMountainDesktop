@@ -31,6 +31,13 @@ public sealed class DuplicatedPaintSourceRatchetTests
 {
     // 2026-09-29 实测基线 122 处；本笔把其中 35 处（代码那一侧已经走 ComponentRoleBrushes 的那些）
     // 改成 {DynamicResource Adaptive…Brush}，标记与代码从此说同一个角色键 → **87**。
+    //
+    // **这条 87 是下界，不是全量**：判据按「x:Name + 属性名」在 code-behind 里找接收者，
+    // 而组件常把控件塞进记录/数组再由字段重画（`visual.TitleTextBlock.Foreground = PrimaryText(this)`，
+    // 字段名与 x:Name 不同）。同一天第九笔在 Baidu/Bilibili/Stcn24 里现量到 **24 处**这种形状——
+    // 它们本该被这条判据算进来，却因为换了接收者而隐身。那 24 处的字面量已经被烧掉，
+    // 所以账面数字没变；盲区留在这里，是为了下一个人不把 87 读成"只剩 87"。
+    // 数不认接收者的那一面（ColorLiteralRatchetTests 的标记面）没有这个盲区，两条一起看才是全貌。
     private const int DuplicatedPaintCeiling = 87;
 
     // 总数对账：与上限分开钉，是因为这条**先于上限红**——

@@ -59,7 +59,7 @@
                         <TextBlock x:Name="EmptyStateText"
                                    Text="暂无通知"
                                    HorizontalAlignment="Center"
-                                   Foreground="#8B95A5"
+                                   Foreground="{DynamicResource AdaptiveTextMutedBrush}"
                                    FontSize="13"
                                    TextWrapping="Wrap"
                                    TextAlignment="Center" />
@@ -78,9 +78,9 @@
                         <StackPanel HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
                                     Spacing="6">
-                            <fi:SymbolIcon Symbol="{x:Static symbol:Symbol.EyeOff}" FontSize="24" Foreground="#8B95A5" />
+                            <fi:SymbolIcon Symbol="{x:Static symbol:Symbol.EyeOff}" FontSize="24" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
                             <TextBlock Text="隐私模式已隐藏通知内容"
-                                       Foreground="#8B95A5"
+                                       Foreground="{DynamicResource AdaptiveTextMutedBrush}"
                                        FontSize="12" />
                         </StackPanel>
                     </Border>
@@ -88,7 +88,7 @@
                     <TextBlock x:Name="StatusTextBlock"
                                Grid.Row="2"
                                FontSize="11"
-                               Foreground="#8B95A5"
+                               Foreground="{DynamicResource AdaptiveTextMutedBrush}"
                                Margin="0,6,0,0" />
                 </Grid>
             </Border>

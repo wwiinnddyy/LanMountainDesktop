@@ -86,10 +86,17 @@ public sealed class ColorLiteralRatchetTests
     // DuplicatedPaintSourceRatchetTests，基线 122 → 87）：代码那一侧早已改走 ComponentRoleBrushes，
     // 标记里还留着换壁纸前的具体值——第一次主题刷新后它就再也不生效了。
     // 现在标记改成 {DynamicResource Adaptive…Brush}，用的是代码那个角色键的同一个键。
-    private const int MarkupColorLiteralCeiling = 377;
+    // 同日第二笔（标记面）：349 = 377 − 28。这 28 处是**只在标记里写着的文字颜色**——
+    // 热搜条目 8 处（百度 4 + B 站 4，都是 `#202327`）、Stcn24 帖子标题 8 处同一值、
+    // 头像占位字 8 处 `#4A5466`、通知盒空状态 3 处 `#8B95A5` + 1 处眼睛图标字形
+    // （那一处按"图标字形走次要文字"的既有口径给 secondary，不是 muted）。
+    // 其中 24 处代码那一侧其实**也在重画**，只是接收者不是 x:Name 而是记录字段
+    // （`visual.TitleTextBlock.Foreground = PrimaryText(this)`），下一条判据按名字匹配看不见它们——
+    // 那里记的 87 因此是**下界**，不是全量；这一面（按字面量数、不认接收者）没有这个盲区。
+    private const int MarkupColorLiteralCeiling = 349;
 
     // 总数对账（与 .cs 面同一个套路：这条先于上限红，用来分"真收口"与"判据少看一片"）。
-    private const int MarkupMeasuredTotal = 377;
+    private const int MarkupMeasuredTotal = 349;
 
     private const int MarkupFileFloor = 38;
 

@@ -961,6 +961,18 @@ Avalonia 的 Border 只在厚度 >0 时描边，所以**这 5 行从写下那天
 剩下 87 处两侧都还是字面色值（`TimerWidget`、`AnalogClockWidget`、`WhiteboardWidget`、学习面板那几件……）
 ，要先给那批组件建角色映射才谈得上并——那是 #G1-AF 的账，不是判据缺口。
 
+**标记面第二笔：28 处「只在标记里写着的文字颜色」改走 DynamicResource（377 → 349，#G1-AF 第九笔，2026-09-29）**。
+形状是热搜条目 8 处 + Stcn24 帖子标题 8 处（都是 `#202327`）、头像占位字 8 处 `#4A5466`、通知盒空状态 3 处 `#8B95A5` 加 1 处眼睛图标字形
+（那一处按『图标字形走次要文字』的既有口径给 secondary 而不是 muted——值同族不等于角色同族）。
+**这一笔里有 4 处真的改了像素**：`NotificationBoxWidget` 的代码从头到尾没有一处 `.Foreground =`（现量 grep 为空），
+所以标记值就是最终值——`#8B95A5` 压在那张白卡 `#FCFCFD` 上实测对比度 **2.95:1**，正好掉在主题给次要/状态文字定的 3.0:1 门槛之下；
+改走 `AdaptiveTextMutedBrush` 之后那一档由主题保证（`EnsureContrast`，`ThemeColorSystemService.cs:117-124`），且随壁纸走。
+另外 24 处改的是**过期副本**：代码早就把它们重画过了，只是接收者不是 x:Name 而是记录字段
+（`visual.TitleTextBlock.Foreground = ComponentRoleBrushes.PrimaryText(this)`）——**这正是上一条判据的盲区**：
+它按「x:Name + 属性名」找接收者，所以这 24 处本该算双真源却隐着身。账面 87 因此是**下界不是全量**，
+这句话写进守卫注释里，别让下一个人把 87 读成『只剩 87』；而数**字面量**的那一面不认接收者，没有这个盲区——两条一起看才是全貌。
+新增的 28 个 {DynamicResource Adaptive…} 请求由既有守卫 `EveryAdaptiveResourceRequested_IsAlsoRegistered` 兜住（要有人问就得有人注册）。
+
 **组件与时区服务之间那对订阅/退订只认一处**：一律走 `desktop/LanMountainDesktop/Views/Components/TimeZoneServiceBinding.cs`
 的 `Replace` / `Clear`（两个方法都返回新的字段值，语义与原来逐字一致：换服务时先退旧再订新，退订不刷新），
 不要在组件里手写 `TimeZoneChanged += / -=`。收口前 10 个时钟/日历组件各抄了一份 Set 与一份 Clear（20 个方法体，
