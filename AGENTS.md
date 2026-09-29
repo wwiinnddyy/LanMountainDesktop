@@ -1491,6 +1491,29 @@ Sharp 与 Fluent 才相同。也就是说默认风格下桌面组件面板本来
 统一成哪一种都是对外行为变更；② 除 `Plonds/PlondsHttpClientFactory`（现拼程序集版本，会随发布走）以外，
 其余 6 份身份里的 `/1.0` 全是写死的，产品版本涨了就没人动它。
 
+**下载请求以前报的是库的名字，不是这个产品的**（#G1-BF 判掉，2026-09-29）。
+`ResumableDownloadService(HttpClient)` 收下调用方的 client 然后一个字没用（构造体是空的，登记在
+`EmptyImplementationWithCallerRatchetTests` 的「等拍板」名单里）。先反射量清楚这条路存不存在，再决定怎么修
+——**「这平台拿不到 X」这类话必须有实测根据**：Downloader 5.9.4 的公开表面里没有任何成员收 HttpClient
+（`DownloadService` 只有 `(DownloadConfiguration, ILoggerFactory)` 与 `(ILoggerFactory)` 两个构造，
+整个程序集里以 HttpClient 为参数或返回值的公开成员 0 个）。能配的是 `DownloadConfiguration` 上的
+`RequestConfiguration.UserAgent`/`Headers` 与 `HttpClientTimeout`，实测出厂值：UA `Downloader/5.9.4`、
+HttpClientTimeout 100000 毫秒、BlockTimeout 5000、ConnectTimeout 30000。
+所以「把 client 传下去」在这里不是偷懒，是**没有那个入口**；搬得动的只有身份本身——从 client 的默认头里取 UA 写进配置。
+**超时故意不搬**：三处调用方给的是 API 请求的预算（20s / 30s / 2min，`AirAppMarketInstallService.cs:33`、
+`GitHubReleaseUpdateService.cs:69`、`UpdateOrchestrator.cs:31`），而这里下的是几十 MB 的更新包与市场包——
+照搬等于把「慢慢下完」改成「20 秒中断」，那是改下载语义，不是修身份。这条决定由一格测试钉住
+（client 说 20 秒时 `HttpClientTimeout` 必须仍是库的 100000），谁哪天要接上先得把代价说清。
+验证没停在「字段赋值对了」：`ResumableDownloadIdentityTests` 里有一格用环回 TcpListener 搭了个最小白应答服务，
+真跑一次 `DownloadAsync` 把线上的请求头抓下来——**改前实测是 `Downloader/5.9.4`，改后是应用 UA**。
+用 TcpListener 而不是 `HttpListener`：后者在 Windows 上要 URL 保留，CI 里会以「拒绝访问」红成假缺陷。
+变异两向：把身份映射改成空操作 → 两格同时红，Actual 正是 `Downloader/5.9.4`
+（这格存在的意义就是证明库真的把 `RequestConfiguration.UserAgent` 用出去了，只测赋值的话这条是盲的）；还原重建 → 绿。
+被自家守卫拦下一次：`HttpRequestIdentityStrings_LiveInOnePlace` 把 `string.Join(" ", …)` 里那个空格字面量当成
+「这个文件自带一份请求身份」。处置是改用 char 重载，不给它加免检——这条守卫比想象中严，严的方向是对的。
+登记条目从名单里摘掉（构造体不再为空；留着会按「假欠账」方向红）。
+**这一步改变了真正发出去的字节**：下行请求的 UA 从库名换成应用身份，与 #G1-AY 那笔同属要如实报出去的对外行为变更。
+
 **同一个 using 块里不许把同一条指令写两遍**（编译器 CS0105）。守卫
 `UsingDirectives_AreNotDeclaredTwiceInAFile`，只查文件开头那段 using（namespace 块内部的 using 只对自身生效，
 删兄弟块的同名指令会真的改变解析结果）。2026-09-21 那次 `plugin → airapp` 批量改名按目录补 using，

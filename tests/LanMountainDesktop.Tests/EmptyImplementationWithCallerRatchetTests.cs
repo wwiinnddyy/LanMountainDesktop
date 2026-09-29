@@ -105,11 +105,6 @@ public sealed class EmptyImplementationWithCallerRatchetTests
             "也就是整体不参与格子缩放；要不要跟着缩放是产品判断，等他拍。",
         ["RssReaderWidget.axaml.cs|ApplyCellSize"] =
             "G1-BE：声明了缩放契约却什么都不干——格子变大时 RSS 条目字号/行数不跟着变。怎么缩放是产品设计，等他拍。",
-        ["ResumableDownloadService.cs|ResumableDownloadService"] =
-            "G1-BF：构造参数 httpClient 在整个文件里被用了 0 次（ResumableDownloadService.cs:36），实际传输走 Downloader 库" +
-            "（:286 的 CreateConfiguration 没有 Timeout / UserAgent 字段）。三处调用方各自设的 20s/30s/2min 超时与 UA" +
-            "（AirAppMarketInstallService.cs:33、GitHubReleaseUpdateService.cs:68、UpdateOrchestrator.cs:30）对下载请求不生效。" +
-            "接上会改变下载语义（大包超时失败），删掉参数则抹掉一份意图——等他拍。",
     };
 
     /// <summary>一行方法签名（参数表不跨行）：抓名字，并把 <c>)</c> 之后的残余留给 <see cref="IsEmptyBody"/> 判体形。</summary>

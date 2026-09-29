@@ -33,8 +33,15 @@ public sealed class ResumableDownloadService
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> DestinationGates =
         new(StringComparer.OrdinalIgnoreCase);
 
+    private readonly System.Net.Http.HttpClient _httpClient;
+
+    /// <summary>
+    /// 调用方那个 client 的**身份**（User-Agent）会带上下载请求；它的 <c>Timeout</c> 故意不带过去，理由在下面。
+    /// </summary>
     public ResumableDownloadService(System.Net.Http.HttpClient httpClient)
     {
+        ArgumentNullException.ThrowIfNull(httpClient);
+        _httpClient = httpClient;
     }
 
     public async Task<DownloadResult> DownloadAsync(
@@ -199,7 +206,7 @@ public sealed class ResumableDownloadService
 
         var usedResume = HasDownloaderResumeArtifacts(destinationFilePath);
         var usedParallelDownload = ShouldUseParallelDownload(options);
-        var configuration = CreateConfiguration(options, usedParallelDownload);
+        var configuration = CreateConfiguration(options, usedParallelDownload, _httpClient);
         using var downloader = new DownloadService(configuration);
 
         downloader.DownloadProgressChanged += (_, args) =>
@@ -283,9 +290,12 @@ public sealed class ResumableDownloadService
         await destinationStream.FlushAsync(cancellationToken);
     }
 
-    private static DownloadConfiguration CreateConfiguration(DownloadOptions options, bool useParallelDownload)
+    internal static DownloadConfiguration CreateConfiguration(
+        DownloadOptions options,
+        bool useParallelDownload,
+        System.Net.Http.HttpClient httpClient)
     {
-        return new DownloadConfiguration
+        var configuration = new DownloadConfiguration
         {
             BufferBlockSize = options.BufferSize,
             ChunkCount = useParallelDownload ? options.MaxParallelSegments : 1,
@@ -298,6 +308,37 @@ public sealed class ResumableDownloadService
             FileExistPolicy = FileExistPolicy.Delete,
             DownloadFileExtension = ".part"
         };
+
+        ApplyRequestIdentity(configuration, httpClient);
+        return configuration;
+    }
+
+    /// <summary>
+    /// 把调用方 client 上的**对外身份**搬到传输层去。
+    ///
+    /// 为什么只能这么搬：Downloader 5.9.4 的公开表面里**没有任何成员收 HttpClient**
+    /// （反射实测：<c>DownloadService</c> 只有 <c>(DownloadConfiguration, ILoggerFactory)</c> 与
+    /// <c>(ILoggerFactory)</c> 两个构造，整个程序集里以 HttpClient 为参数/返回值的公开成员 0 个）。
+    /// 原来那个构造函数收下 client 然后一个字没用，症状就是**下载请求报的是库的 UA**
+    /// （<c>RequestConfiguration.UserAgent</c> 的出厂值是 <c>Downloader/5.9.4</c>），
+    /// 而本仓自己那条规矩是"对外报出去的身份只有一处字面量、都来自 <c>HttpUserAgents</c>"。
+    ///
+    /// <c>Timeout</c> **故意不搬**：三处调用方给的是 API 请求的预算（20s/30s/2min），
+    /// 而这里传的是几十 MB 的更新包与市场包；照搬会把"慢慢下完"变成"20 秒中断"，
+    /// 那是改下载语义、不是修身份。库的 <c>HttpClientTimeout</c> 出厂 100000 毫秒（实测）继续用。
+    /// </summary>
+    internal static void ApplyRequestIdentity(
+        DownloadConfiguration configuration,
+        System.Net.Http.HttpClient httpClient)
+    {
+        var request = configuration.RequestConfiguration ??= new RequestConfiguration();
+        // 分隔符用 char 而不是 " "：那条"对外身份只有一处字面量"的守卫按引号串认 UA，
+        // 一个空格字符串会被它当成"这个文件自己带了一份请求身份"。
+        var userAgent = string.Join(' ', httpClient.DefaultRequestHeaders.UserAgent);
+        if (!string.IsNullOrWhiteSpace(userAgent))
+        {
+            request.UserAgent = userAgent;
+        }
     }
 
     private static DownloadProgressInfo MapProgress(
