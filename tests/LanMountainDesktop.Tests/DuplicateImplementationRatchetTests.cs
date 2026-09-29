@@ -691,7 +691,13 @@ public sealed class DuplicateImplementationRatchetTests
     // `LoadingStateReporter.cs:68`、`LoadingTimeoutHandler.cs:73` 三体各异；删掉第三个站点后剩 2 处 2 文件）。
     // 同轮逐字面那把尺子没动（上限 11 不变），漂移认领量也没掉到下限以下——只有族数少 1，
     // 报的红灯是"变少请记账"，不是"有人抄了新的一份"。
-    private const int DriftFamilyCeiling = 188;
+    // 188 → 187 是**真收口**（2026-09-30）：`OnColorSchemeSelectionChanged` 原本 3 处 / 2 种体
+    // （课程表与学习环境逐字相同、可移动存储把取值内联进赋值语句），三份改调
+    // Views/ComponentEditors/ComponentColorSchemeSelection.Resolve → 同一个名字只剩一种实现，族消失。
+    // 同笔逐字面**不动**（10 → 10）：那三份现在字面相同，从"2x in 2 files"变成"3x in 3 files"，
+    // 仍是一个族——这一笔的收益在"三份抄本里两份用 IsNullOrEmpty、一份用 IsNullOrWhiteSpace，
+    // 同一个存档值在两个面板显示成两种档"这件事只有一处说法，不在族数上。
+    private const int DriftFamilyCeiling = 187;
 
     /// <summary>
     /// 漂移普查认领的声明处数下限（今天实测 5759）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。

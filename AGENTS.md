@@ -59,7 +59,12 @@ AirApp 本地包生成：
 - 至少检查构建和与改动相关的测试
 - 做过变异实验（`cp` 备份 → 改坏 → 跑断言 → 还原）之后，**第一件事是重建**：
   `--no-build` 会拿改动前那份 dll，把已经改回好代码的仓库测出真缺陷（2026-09-23 自己踩的，
-  表现为 `Collection: [True, True]`，正是那条变异该产出的形状）
+  表现为 `Collection: [True, True]`，正是那条变异该产出的形状）。
+  **2026-09-30 量到这条坑有第二个入口，而且更阴**：`cp` / `shutil.copy2` 还原文件时**连 mtime 一起还原**，
+  于是被变异过的那份 dll 比"改回原样"的源码更新，增量构建判定无需重编——`dotnet build` 报 0 错误、
+  跑完测试红在源码里根本不存在的判据上（当天实测 4 红里 2 红就是这么来的，两条红正好是变异该产出的形状，
+  而文件内容已经是对的）。所以还原之后要么 `touch` 被改过的文件，要么 `--no-incremental`，
+  别信"构建 0 错误"——它只是在说"没什么要编的"。
 - 怀疑撞上 headless 偶发红灯时，用快速复现而不是两分钟全量：把 filter 拼成
   `--filter "FullyQualifiedName~<每个含 [AvaloniaFact] 的类>"`，约 15 秒一趟，实测 3 趟 2 红；
   要证明"不是本次改动引入的"，用**排除法 + 这个快速子集**（把新写的类整个排除也照样红，只是受害者换人），
@@ -390,6 +395,22 @@ en/ja/ko 还缺 25/313/275 条，只许降不许升；补翻译就把数字改�
 （设置页 view model 与主题领域服务各一份）——读的一侧与写的一侧各有口径时，
 同一个设置在界面上显示成一档、落盘被另一档覆盖，不报错。盘上有早期写的 `Dark`，
 所以"忽略大小写"这格漂不得（行为钉 `ThemeAppearanceValuesTests` 8 格，改成区分大小写恰好红 2 格）。
+
+**组件「配色档」的下拉与磁盘值之间那对换算只认 `Views/ComponentEditors/ComponentColorSchemeSelection.cs` 一家**
+（`IsFollowSystem(磁盘值)` 与 `Resolve(选中项)`）。此前三个编辑器各写一份（课程表、学习环境、可移动存储），
+**而且已经漂开**：读侧判"没设置"时两份用 `IsNullOrEmpty`、一份用 `IsNullOrWhiteSpace`——
+一个只含空白的存档在两个面板里显示成两种档。家取的是**较宽的那一份**（行为钉
+`ComponentColorSchemeSelectionTests`：空白、null、空串、认不出的串、带 Tag 但不是 `ComboBoxItem` 的控件各一格；
+把它改回窄判据恰好红两格，放宽到 `ContentControl` 只红"只认 ComboBoxItem"那一格）。
+下拉的两个 Tag 就是 `follow_system`／`native`，兜底也落常量，所以空白值今天没有任何写点会产出——
+那条口径钉的是"家选哪一份"，不是"界面上今天会出什么"。守卫 `ColorSchemeMapping_LivesOnlyInTheHome`
+不许编辑器再引用 `ThemeAppearanceValues.ColorScheme*`（种一份真复发→红，覆盖面下限 15/实测 16 个文件）。
+**这笔没替你选的一件事**（登记 #G1-CP）：组件真正渲染时读这个值的是
+`ComponentSystem/ComponentColorSchemeHelper.ShouldUseMonetColor`，它对"认不出的值（含未设置）"走第三种规则——
+退回看全局色彩档，而全局档的默认值就是 `default_neutral`（`AppSettingsSnapshot.cs:28`）。
+于是**每一个刚放上桌面、从没配过的组件**都是"面板显示『跟随系统』、画面用组件自带配色"；
+手动拨一次下拉两边才对上。两种改法都改可见行为（要么编辑器把未设置显示成『组件自定义』，
+要么渲染侧把未设置当跟随系统），属产品口径，不在这类收口里代做。
 
 **学习分析参数的合法区间只认 `StudyAnalyticsConfig.ClampedToLegalRanges()` 一家**（`Models/StudyAnalyticsModels.cs`）。
 此前"十个字段各钳一遍"的 23 行在 `NoiseFramePipeline` 与 `StudyAnalyticsService` 各抄一份逐字相同——

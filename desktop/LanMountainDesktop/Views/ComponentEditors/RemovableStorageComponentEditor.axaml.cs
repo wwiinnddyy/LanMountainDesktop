@@ -41,11 +41,9 @@ public partial class RemovableStorageComponentEditor : ComponentEditorViewBase
             "The widget automatically watches for removable drives and switches to the newest inserted USB drive.");
 
         _suppressEvents = true;
-        ColorSchemeComboBox.SelectedItem =
-            string.IsNullOrWhiteSpace(colorSchemeSource) ||
-            string.Equals(colorSchemeSource, ThemeAppearanceValues.ColorSchemeFollowSystem, StringComparison.OrdinalIgnoreCase)
-                ? FollowSystemColorSchemeItem
-                : UseNativeColorSchemeItem;
+        ColorSchemeComboBox.SelectedItem = ComponentColorSchemeSelection.IsFollowSystem(colorSchemeSource)
+            ? FollowSystemColorSchemeItem
+            : UseNativeColorSchemeItem;
         _suppressEvents = false;
     }
 
@@ -59,9 +57,7 @@ public partial class RemovableStorageComponentEditor : ComponentEditorViewBase
         }
 
         var snapshot = LoadSnapshot();
-        snapshot.ColorSchemeSource = ColorSchemeComboBox.SelectedItem is ComboBoxItem item && item.Tag is string tag
-            ? tag
-            : ThemeAppearanceValues.ColorSchemeFollowSystem;
+        snapshot.ColorSchemeSource = ComponentColorSchemeSelection.Resolve(ColorSchemeComboBox.SelectedItem);
         SaveSnapshot(snapshot, nameof(ComponentSettingsSnapshot.ColorSchemeSource));
     }
 }

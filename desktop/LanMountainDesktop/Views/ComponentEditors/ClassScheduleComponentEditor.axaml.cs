@@ -86,11 +86,9 @@ public partial class ClassScheduleComponentEditor : ComponentEditorViewBase
         EmptyStateTextBlock.Text = L("schedule.settings.empty", "No imported schedules yet.");
 
         _suppressEvents = true;
-        ColorSchemeComboBox.SelectedItem =
-            string.IsNullOrEmpty(colorSchemeSource) ||
-            string.Equals(colorSchemeSource, ThemeAppearanceValues.ColorSchemeFollowSystem, StringComparison.OrdinalIgnoreCase)
-                ? FollowSystemColorSchemeItem
-                : UseNativeColorSchemeItem;
+        ColorSchemeComboBox.SelectedItem = ComponentColorSchemeSelection.IsFollowSystem(colorSchemeSource)
+            ? FollowSystemColorSchemeItem
+            : UseNativeColorSchemeItem;
 
         if (snapshot.SemesterStartDate.HasValue)
         {
@@ -119,12 +117,8 @@ public partial class ClassScheduleComponentEditor : ComponentEditorViewBase
             return;
         }
 
-        var colorSchemeSource = ColorSchemeComboBox.SelectedItem is ComboBoxItem item && item.Tag is string tag
-            ? tag
-            : ThemeAppearanceValues.ColorSchemeFollowSystem;
-
         var snapshot = LoadSnapshot();
-        snapshot.ColorSchemeSource = colorSchemeSource;
+        snapshot.ColorSchemeSource = ComponentColorSchemeSelection.Resolve(ColorSchemeComboBox.SelectedItem);
         SaveSnapshot(snapshot, nameof(ComponentSettingsSnapshot.ColorSchemeSource));
     }
 

@@ -49,11 +49,9 @@ public partial class StudyEnvironmentComponentEditor : ComponentEditorViewBase
         HintTextBlock.Text = L("study.environment.settings.hint", "At least one display mode must stay enabled.");
 
         _suppressEvents = true;
-        ColorSchemeComboBox.SelectedItem =
-            string.IsNullOrEmpty(colorSchemeSource) ||
-            string.Equals(colorSchemeSource, ThemeAppearanceValues.ColorSchemeFollowSystem, StringComparison.OrdinalIgnoreCase)
-                ? FollowSystemColorSchemeItem
-                : UseNativeColorSchemeItem;
+        ColorSchemeComboBox.SelectedItem = ComponentColorSchemeSelection.IsFollowSystem(colorSchemeSource)
+            ? FollowSystemColorSchemeItem
+            : UseNativeColorSchemeItem;
         DisplayDbToggleSwitch.IsChecked = showDisplayDb;
         DbfsToggleSwitch.IsChecked = showDbfs;
         _suppressEvents = false;
@@ -68,12 +66,8 @@ public partial class StudyEnvironmentComponentEditor : ComponentEditorViewBase
             return;
         }
 
-        var colorSchemeSource = ColorSchemeComboBox.SelectedItem is ComboBoxItem item && item.Tag is string tag
-            ? tag
-            : ThemeAppearanceValues.ColorSchemeFollowSystem;
-
         var snapshot = LoadSnapshot();
-        snapshot.ColorSchemeSource = colorSchemeSource;
+        snapshot.ColorSchemeSource = ComponentColorSchemeSelection.Resolve(ColorSchemeComboBox.SelectedItem);
         SaveSnapshot(snapshot, nameof(ComponentSettingsSnapshot.ColorSchemeSource));
     }
 
