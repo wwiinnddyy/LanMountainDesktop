@@ -66,4 +66,15 @@ internal static class ComponentRoleBrushes
         AdaptiveTokens.Brush(host, ThemeResourceKeys.SurfaceRaisedBrush, MutedTextFallback);
 
 
+
+    /// <summary>
+    /// 压在面板/卡片之上的那一层控件底（刷新按钮、搜索框、录音的存与弃按钮、头像占位格）。
+    /// 第五族（2026-09-29）：夜档 10 处全是 <c>#2D3440</c>，日档 6 个值
+    /// 『#EFF1F5』『#ECF2FA』『#EEF1F4』『#14A0A6AF』『#F5F5F5』『#F8FAFD』『#F7F8FA』。
+    /// 映射到 <c>surfaceOverlay</c> 的依据不是"值接近"，而是阶梯方向：
+    /// 今天芯片夜里比卡片亮、白天比卡片暗，而 <c>SurfaceLadder_KeepsTheControlReadableOnTheCard</c>
+    /// 实测主题的 raised/overlay 正是同一个方向（第三族落地时就钉过）。
+    /// </summary>
+    internal static IBrush OverlaySurface(IResourceHost host) =>
+        AdaptiveTokens.Brush(host, ThemeResourceKeys.SurfaceOverlayBrush, MutedTextFallback);
 }

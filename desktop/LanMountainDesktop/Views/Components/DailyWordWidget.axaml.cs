@@ -122,7 +122,7 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
         ExampleTextBlock.Foreground = ComponentRoleBrushes.PrimaryText(this);
         ExampleTranslationTextBlock.Foreground = ComponentRoleBrushes.SecondaryText(this);
 
-        RefreshButton.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#2D3440") : Color.Parse("#14A0A6AF"));
+        RefreshButton.Background = ComponentRoleBrushes.OverlaySurface(this);
         RefreshIcon.Foreground = ComponentRoleBrushes.SecondaryText(this);
 
         StatusTextBlock.Foreground = ComponentRoleBrushes.MutedText(this);

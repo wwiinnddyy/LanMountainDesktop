@@ -165,11 +165,11 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget, IDe
         TimerTextBlock.Foreground = ComponentRoleBrushes.SecondaryText(this);
         FutureLine.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#A3A8B3"));
 
-        DiscardButtonBorder.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#2D3440") : Color.Parse("#F8FAFD"));
+        DiscardButtonBorder.Background = ComponentRoleBrushes.OverlaySurface(this);
         DiscardButtonBorder.BorderBrush = new SolidColorBrush(_isNightVisual ? Color.Parse("#3D4451") : Color.Parse("#E0E5EC"));
         DiscardIcon.Foreground = ComponentRoleBrushes.PrimaryText(this);
 
-        SaveButtonBorder.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#2D3440") : Color.Parse("#F8FAFD"));
+        SaveButtonBorder.Background = ComponentRoleBrushes.OverlaySurface(this);
         SaveButtonBorder.BorderBrush = new SolidColorBrush(_isNightVisual ? Color.Parse("#3D4451") : Color.Parse("#E0E5EC"));
         SaveIcon.Foreground = ComponentRoleBrushes.PrimaryText(this);
 

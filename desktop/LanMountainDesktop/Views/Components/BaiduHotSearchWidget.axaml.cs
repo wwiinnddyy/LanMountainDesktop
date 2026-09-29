@@ -136,7 +136,7 @@ public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget
 
         BrandTextBlock.Foreground = new SolidColorBrush(brandColor);
 
-        RefreshButton.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#2D3440") : Color.Parse("#EFF1F5"));
+        RefreshButton.Background = ComponentRoleBrushes.OverlaySurface(this);
         RefreshGlyphIcon.Foreground = ComponentRoleBrushes.SecondaryText(this);
 
         foreach (var visual in _hotItemVisuals)

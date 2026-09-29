@@ -94,9 +94,9 @@ public sealed class ComponentRoleBrushesTests
     /// 白档芯片『#EFF1F5』类又比卡片『#FCFCFD』**暗**。也就是说这两个值编码的是一条相对关系，
     /// 烧成 token 必须保住方向，否则"控件贴在卡片上"会糊成一片。
     /// 主题的三层里 <c>surfaceOverlay</c> 正是这个方向，所以这里钉方向、不钉具体像素（值本该随壁纸漂）。
-    /// 组件侧只验 <c>RaisedSurface</c> 真的取自 registered 的 raised——overlay 那一半等第五族
-    /// 真有调用点时再收成组件方法（提前加 API 会被 <c>ZeroUseStaticClassMembers</c> 判成零引用成员，
-    /// 这次就被判过：加早了红的是自己）。
+    /// 组件侧两个方法各验一次"取自自己那个键"——接错键两档都会红。
+    /// （<c>OverlaySurface</c> 是在第五族那 10 个调用点同一笔里加的：先加方法后接线会被
+    /// <c>ZeroUseStaticClassMembers</c> 判成零引用成员，这个坑第四族就踩过一次。）
     /// </summary>
     [AvaloniaTheory]
     [InlineData(true)]
@@ -112,8 +112,7 @@ public sealed class ComponentRoleBrushesTests
         {
             var card = LuminanceOf(ComponentRoleBrushes.RaisedSurface(window),
                 window, ThemeResourceKeys.SurfaceRaisedBrush);
-            var chip = LuminanceOf(AdaptiveTokens.Brush(window, ThemeResourceKeys.SurfaceOverlayBrush,
-                    ComponentRoleBrushes.RaisedSurface(window)),
+            var chip = LuminanceOf(ComponentRoleBrushes.OverlaySurface(window),
                 window, ThemeResourceKeys.SurfaceOverlayBrush);
 
             var direction = night ? $"夜档芯片层应比卡片层亮（实际 {chip:F3} vs {card:F3}）"

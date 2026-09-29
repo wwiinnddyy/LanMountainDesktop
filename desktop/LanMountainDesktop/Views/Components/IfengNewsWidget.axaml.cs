@@ -127,7 +127,7 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
         BrandTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#FF6B5A") : Color.Parse("#E24B2D"));
         NewsBadge.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#FF6B5A") : Color.Parse("#E24B2D"));
 
-        RefreshButton.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#2D3440") : Color.Parse("#EFF1F5"));
+        RefreshButton.Background = ComponentRoleBrushes.OverlaySurface(this);
         RefreshGlyphIcon.Foreground = ComponentRoleBrushes.SecondaryText(this);
 
         StatusTextBlock.Foreground = ComponentRoleBrushes.MutedText(this);

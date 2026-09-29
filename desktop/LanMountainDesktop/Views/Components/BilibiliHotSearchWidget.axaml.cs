@@ -121,7 +121,7 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
         CardBorder.Background = ComponentRoleBrushes.RaisedSurface(this);
         RootBorder.BorderBrush = new SolidColorBrush(_isNightVisual ? Color.Parse("#33FFFFFF") : Color.Parse("#00000000"));
 
-        SearchBoxBorder.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#2D3440") : Color.Parse("#ECF2FA"));
+        SearchBoxBorder.Background = ComponentRoleBrushes.OverlaySurface(this);
         SearchBoxBorder.BorderBrush = new SolidColorBrush(_isNightVisual ? Color.Parse("#3FFFFFFF") : Color.Parse("#22000000"));
         SearchEntryTextBlock.Foreground = ComponentRoleBrushes.PrimaryText(this);
         SearchGlyphIcon.Foreground = ComponentRoleBrushes.SecondaryText(this);

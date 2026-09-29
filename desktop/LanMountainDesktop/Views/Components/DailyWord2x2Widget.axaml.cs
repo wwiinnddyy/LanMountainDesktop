@@ -115,7 +115,7 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
         MeaningTextBlock.Foreground = ComponentRoleBrushes.SecondaryText(this);
         HiddenHintTextBlock.Foreground = ComponentRoleBrushes.SecondaryText(this);
 
-        RefreshButton.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#2D3440") : Color.Parse("#EEF1F4"));
+        RefreshButton.Background = ComponentRoleBrushes.OverlaySurface(this);
         RefreshIcon.Foreground = ComponentRoleBrushes.SecondaryText(this);
 
         StatusTextBlock.Foreground = ComponentRoleBrushes.MutedText(this);

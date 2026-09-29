@@ -881,6 +881,13 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 **顺手记下被自己的闸门拦下的一次**：这一笔里我先加了 `OverlaySurface`（第五族还没动），
 `ZeroUseStaticClassMembers_MatchTheAcceptedList` 当场红"新增零引用静态成员 1 个"——
 提前加的 API 就是零引用成员，退回第五族一起落地。这条棘轮不只拦别人留下的死码，也拦自己。
+**第五族是控件底**（9 处 / 18 个字面量，573 → 555）：刷新按钮、搜索框、录音的存/弃按钮、头像占位格
+都写死夜档 `#2D3440`，日档 6 个值（其中一个是半透明 `#14A0A6AF`），改走 `ComponentRoleBrushes.OverlaySurface`——
+用的就是第四族钉下的那条阶梯方向，不是"值看着接近"。**这一族留下一处硬并不得**：
+`NotificationBoxWidget.cs:355-358` 的未读/已读两层，未读在**昼夜都要比已读亮**（夜 `#3D4250` > `#2D3440`、
+昼 `#FFFFFF` > `#F5F5F5`），而主题的 raised/overlay 白天方向是反的（overlay `#F1F4F8` 比 raised `#FFFFFF` 暗）——
+1:1 映射不存在，硬并等于替产品决定"哪个状态更显眼"，所以留着并写明原因。
+烧完这一族 `DailyWord2x2Widget.axaml.cs` 一处不剩，带裸色值的文件数 **41 → 40**（下限 30 那条不动）。
 **为什么不是"把那两个数统一成一对常量"**：主题的 muted 是按 `surfaceRaised` 混色后再 `EnsureContrast` 算的
 （`ThemeColorSystemService.cs:124`），写死三元组正是绕过那道保证的那只手——换浅色壁纸时"夜里那支亮灰字"
 会压在亮底上。行为钉 `ComponentRoleBrushesTests` 是 **三个角色 × 明暗 = 6 行**：拿到的必须就是窗口上真正注册的那支
