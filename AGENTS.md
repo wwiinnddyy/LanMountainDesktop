@@ -948,6 +948,19 @@ Avalonia 的 Border 只在厚度 >0 时描边，所以**这 5 行从写下那天
 不是色值替换——所以这里只删死行，不改任何看得见的边。
 **教训通用**：删之前先问"这行真会被读到吗"。计数型判据（色值、族数、引用数）量的是文本，不是渲染前提。
 
+**标记里还藏着一种双真源：同一个元素的同一个画笔属性，标记写死一份、code-behind 又赋一份**（#G1-AF 第八笔，2026-09-29）。
+量法是把 .axaml 里的十六进制颜色属性按 **x:Name + 属性名**回到配对的 .axaml.cs 里查同名元素的同属性赋值——命中 **122 处**（python 普查与 C# 判据两面各跑一遍，逐处相同）。
+其中 35 处的那一行代码早就改走 `ComponentRoleBrushes.*`（问主题层要角色画笔），而标记里还留着换壁纸前的具体值：这句话在同一文件里有两种说法，**而且标记那一种第一次主题刷新后就不再生效**。
+改法是让标记也问同一个键（`Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"` 等），标记面 412 → **377**、双真源 122 → **87**。
+动之前先确认过这件事成立的前提：`App.axaml.cs:1153` 把 `Adaptive*` 注册在**应用级**资源表上（`App.axaml` 自己的样式也这么用）
+，所以 DynamicResource 在任何窗口——包括组件库预览与编辑器浮窗——都解得出，不会退化成 null 前景色。
+守卫 `tests/LanMountainDesktop.Tests/DuplicatedPaintSourceRatchetTests.cs`：上限 87、**总数对账 87**、覆盖面下限 88（实测 Views 下 93 个 .axaml 全部有配对 .axaml.cs）
+。验过的三件事：① 基线那格先钉 122 跑出**等值绿**（只写上限的话，"判据少看一片"也会绿——这条轴的账是等值那条先红的）
+；② 变异两向：把其中一处改回字面色值 → 双真源报 88、标记色值面同时报 378（两面各数一次，互不认账）
+；③ 出口形态不算进来：注入格里 `DynamicResource` 版本、只有标记、只有代码、属性不同、元素没名字，五种都不许报。
+剩下 87 处两侧都还是字面色值（`TimerWidget`、`AnalogClockWidget`、`WhiteboardWidget`、学习面板那几件……）
+，要先给那批组件建角色映射才谈得上并——那是 #G1-AF 的账，不是判据缺口。
+
 **组件与时区服务之间那对订阅/退订只认一处**：一律走 `desktop/LanMountainDesktop/Views/Components/TimeZoneServiceBinding.cs`
 的 `Replace` / `Clear`（两个方法都返回新的字段值，语义与原来逐字一致：换服务时先退旧再订新，退订不刷新），
 不要在组件里手写 `TimeZoneChanged += / -=`。收口前 10 个时钟/日历组件各抄了一份 Set 与一份 Clear（20 个方法体，
@@ -1192,6 +1205,7 @@ Avalonia 的 Border 只在厚度 >0 时描边，所以**这 5 行从写下那天
 批量改写方法体时还踩到一个更危险的：只比"前两行相同"就替换到收尾 `}`，
 把 `StudySessionHistoryWidget.ApplyCellSize` 尾巴上那段 `if (_currentSnapshot is not null) RenderSnapshot(...)`
 连行吞掉（编译都不过）。**批量改方法体必须逐字匹配整段方法体**，并核对 `git diff --stat` 的增删行数对称。
+同一轮批量改写还有个只出现在 `git diff` 首行的坑：用 python 以 `encoding="utf-8-sig"` **写回**会给原本没有 BOM 的文件**加上** BOM（读的时候它只是把 BOM 剥掉，所以自查"BOM=True"看不出问题）。2026-09-29 一次标记面批量替换给 7 个 `.axaml` 各添了一个 BOM，是逐文件看 diff 第一行才发现的——写回要么用 `encoding="utf-8"`，要么先读原文件前三个字节按原样决定。
 两把尺子的位置参数都改成"目录不存在就直接退出"（`dump-dup-methods.py` 的 `NAMES` 是**环境变量**不是参数，
 把它当参数传会被当成目录、扫 0 个文件报一个假的 0——这就是我自己上当的那一次）。
 `dump-dup-methods.py` 的正对照：<b>按 body 哈希点名，别按方法名</b>——2026-09-25 实测当前在档的逐字族是

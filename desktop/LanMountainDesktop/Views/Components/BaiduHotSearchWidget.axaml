@@ -16,7 +16,7 @@
             Padding="0">
         <Grid>
             <Border x:Name="CardBorder"
-                    Background="#FCFCFD"
+                    Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
                     CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
                     BorderBrush="Transparent"
                     BorderThickness="0"
@@ -42,7 +42,7 @@
                                 Width="34"
                                 Height="34"
                                 CornerRadius="17"
-                                Background="#EFF1F5"
+                                Background="{DynamicResource AdaptiveSurfaceOverlayBrush}"
                                 BorderBrush="Transparent"
                                 BorderThickness="0"
                                 Padding="0"
@@ -180,7 +180,7 @@
             <TextBlock x:Name="StatusTextBlock"
                        IsVisible="False"
                        Text="Loading"
-                       Foreground="#6A6F77"
+                       Foreground="{DynamicResource AdaptiveTextMutedBrush}"
                        FontSize="16"
                        HorizontalAlignment="Center"
                        VerticalAlignment="Center" />

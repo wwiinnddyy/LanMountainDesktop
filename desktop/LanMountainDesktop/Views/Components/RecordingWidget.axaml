@@ -12,7 +12,7 @@
             CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
             Padding="0"
             ClipToBounds="True"
-            Background="#ECEFF3"
+            Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
             BorderBrush="#D9DEE7"
             BorderThickness="1">
         <Viewbox Stretch="Uniform">
@@ -35,7 +35,7 @@
                                    Text="Recorder"
                                    FontSize="19"
                                    FontWeight="SemiBold"
-                                   Foreground="#11151D"
+                                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
                                    HorizontalAlignment="Center"
                                    IsVisible="False" />
 
@@ -45,7 +45,7 @@
                                    Text="00:00"
                                    FontSize="66"
                                    FontWeight="SemiBold"
-                                   Foreground="#A4A9B2"
+                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
                                    HorizontalAlignment="Center" />
 
                         <Grid x:Name="WaveformRowGrid"
@@ -91,7 +91,7 @@
                                     Width="54"
                                     Height="54"
                                     CornerRadius="27"
-                                    Background="#F8FAFD"
+                                    Background="{DynamicResource AdaptiveSurfaceOverlayBrush}"
                                     BorderBrush="#E0E5EC"
                                     BorderThickness="1"
                                     Cursor="Hand"
@@ -144,7 +144,7 @@
                                     Width="54"
                                     Height="54"
                                     CornerRadius="27"
-                                    Background="#F8FAFD"
+                                    Background="{DynamicResource AdaptiveSurfaceOverlayBrush}"
                                     BorderBrush="#E0E5EC"
                                     BorderThickness="1"
                                     Cursor="Hand"
@@ -166,7 +166,7 @@
                                    TextAlignment="Center"
                                    FontSize="13"
                                    FontWeight="Medium"
-                                   Foreground="#7A818E"
+                                   Foreground="{DynamicResource AdaptiveTextMutedBrush}"
                                    Text="Tap red button to record"
                                    IsVisible="False" />
                     </Grid>

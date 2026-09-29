@@ -81,7 +81,16 @@ public sealed class ColorLiteralRatchetTests
     // 2026-09-29 新量的一面：.axaml 里的颜色属性此前这条判据**完全看不见**（只扫 *.cs）。
     // 量出来是 412 处 / 40 个文件——比组件里剩下的 659 少不到一半，绝不是"边角料"。
     // 单独一个上限、单独一个测试，是为了红的时候直接说出是哪一面瞎了或涨了。
-    private const int MarkupColorLiteralCeiling = 412;
+    // 同日第一笔（标记面）：412 − 35 = **377**。这 35 处不是"新发现的角色色"，而是
+    // **同一个元素的同一个画笔属性在标记与代码里各写一份**的那一族（守卫见
+    // DuplicatedPaintSourceRatchetTests，基线 122 → 87）：代码那一侧早已改走 ComponentRoleBrushes，
+    // 标记里还留着换壁纸前的具体值——第一次主题刷新后它就再也不生效了。
+    // 现在标记改成 {DynamicResource Adaptive…Brush}，用的是代码那个角色键的同一个键。
+    private const int MarkupColorLiteralCeiling = 377;
+
+    // 总数对账（与 .cs 面同一个套路：这条先于上限红，用来分"真收口"与"判据少看一片"）。
+    private const int MarkupMeasuredTotal = 377;
+
     private const int MarkupFileFloor = 38;
 
     /// <summary>
@@ -189,6 +198,10 @@ public sealed class ColorLiteralRatchetTests
             files >= MarkupFileFloor,
             $"只扫到 {files} 个带颜色属性的 .axaml（下限 {MarkupFileFloor}，2026-09-29 实测 40）——" +
             "glob 变窄或目录改名会让这一面安静地瞎掉，那种绿不算证据");
+        Assert.True(
+            total == MarkupMeasuredTotal,
+            $"标记面实测 {total} 处，账上记的是 {MarkupMeasuredTotal} 处。降了说明真烧了一族——" +
+            "把对账值与上限一起改小并留理由；升了说明又在标记里写死了新颜色");
         Assert.True(
             total <= MarkupColorLiteralCeiling,
             $"Views 的标记里手写颜色属性实测 {total} 处，上限 {MarkupColorLiteralCeiling}。" +

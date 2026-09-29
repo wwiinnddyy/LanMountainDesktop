@@ -10,7 +10,7 @@
             ClipToBounds="True">
         <Grid>
             <Border x:Name="CardBorder"
-                    Background="#FCFCFD"
+                    Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
                     CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
                     Padding="12,10">
                 <Grid RowDefinitions="Auto,*,Auto">

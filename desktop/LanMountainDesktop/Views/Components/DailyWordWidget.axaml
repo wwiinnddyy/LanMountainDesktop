@@ -17,7 +17,7 @@
             Padding="0">
         <Grid>
             <Border x:Name="CardBorder"
-                    Background="#FCFCFD"
+                    Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
                     CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
                     BorderBrush="Transparent"
                     BorderThickness="0"
@@ -61,7 +61,7 @@
                                     Width="38"
                                     Height="38"
                                     CornerRadius="19"
-                                    Background="#14A0A6AF"
+                                    Background="{DynamicResource AdaptiveSurfaceOverlayBrush}"
                                     BorderBrush="Transparent"
                                     BorderThickness="0"
                                     Padding="0"
@@ -77,7 +77,7 @@
                         <TextBlock x:Name="PronunciationTextBlock"
                                    Grid.Row="1"
                                    Text="英 /ˈɪləstreɪt/ · 美 /ˈɪləstreɪt/"
-                                   Foreground="#6B7078"
+                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
                                    FontSize="27"
                                    FontWeight="SemiBold"
                                    TextTrimming="CharacterEllipsis"
@@ -86,7 +86,7 @@
                         <TextBlock x:Name="MeaningTextBlock"
                                    Grid.Row="2"
                                    Text="vt. 说明；阐明；举例证明；加插图"
-                                   Foreground="#2B2F35"
+                                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
                                    FontSize="25"
                                    FontWeight="SemiBold"
                                    TextWrapping="Wrap"
@@ -98,7 +98,7 @@
                                     Spacing="2">
                             <TextBlock x:Name="ExampleTextBlock"
                                        Text="One example will suffice to illustrate the point."
-                                       Foreground="#2B2F35"
+                                       Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
                                        FontSize="22"
                                        FontWeight="Medium"
                                        TextWrapping="Wrap"
@@ -106,7 +106,7 @@
                                        MaxLines="2" />
                             <TextBlock x:Name="ExampleTranslationTextBlock"
                                        Text="一个例子就足以说明这个观点。"
-                                       Foreground="#7A8088"
+                                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
                                        FontSize="20"
                                        FontWeight="Medium"
                                        TextWrapping="Wrap"
@@ -120,7 +120,7 @@
             <TextBlock x:Name="StatusTextBlock"
                        IsVisible="False"
                        Text="Loading"
-                       Foreground="#6A6F77"
+                       Foreground="{DynamicResource AdaptiveTextMutedBrush}"
                        FontSize="16"
                        HorizontalAlignment="Center"
                        VerticalAlignment="Center" />
