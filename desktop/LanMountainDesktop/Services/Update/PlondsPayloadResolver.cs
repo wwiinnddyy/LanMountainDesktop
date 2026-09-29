@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using LanMountainDesktop.Shared.Contracts.Update;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanMountainDesktop.Services.Update;
 
@@ -31,7 +32,7 @@ internal sealed class PlondsPayloadResolver(PlondsApplyPaths paths)
         foreach (var relativePath in candidates.Distinct(StringComparer.OrdinalIgnoreCase))
         {
             var fullPath = Path.GetFullPath(Path.Combine(paths.IncomingRoot, relativePath));
-            if (!fullPath.StartsWith(Path.GetFullPath(paths.IncomingRoot), StringComparison.OrdinalIgnoreCase))
+            if (!PathContainment.IsSameOrChild(paths.IncomingRoot, fullPath))
             {
                 continue;
             }

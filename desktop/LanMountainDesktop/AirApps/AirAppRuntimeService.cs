@@ -624,12 +624,12 @@ public sealed class AirAppRuntimeService : IDisposable
 
     private IEnumerable<string> EnumerateCandidatePaths(string searchPattern)
     {
-        var runtimeRootDirectory = PathSeparators.EnsureTrailingSeparator(Path.Combine(Path.GetFullPath(AirAppsDirectory), AirAppSdkInfo.RuntimeDirectoryName));
+        var runtimeRootDirectory = Path.Combine(Path.GetFullPath(AirAppsDirectory), AirAppSdkInfo.RuntimeDirectoryName);
 
         return Directory
             .EnumerateFiles(AirAppsDirectory, searchPattern, SearchOption.AllDirectories)
             .Select(Path.GetFullPath)
-            .Where(path => !path.StartsWith(runtimeRootDirectory, StringComparison.OrdinalIgnoreCase))
+            .Where(path => !PathContainment.IsSameOrChild(runtimeRootDirectory, path))
             .OrderBy(path => path, StringComparer.OrdinalIgnoreCase);
     }
 

@@ -664,12 +664,12 @@ public sealed class AirAppLoader
 
     private IEnumerable<string> EnumerateCandidatePaths(string airAppsRootDirectory, string searchPattern)
     {
-        var runtimeRootDirectory = PathSeparators.EnsureTrailingSeparator(Path.GetFullPath(GetRuntimeRootDirectory(airAppsRootDirectory)));
+        var runtimeRootDirectory = Path.GetFullPath(GetRuntimeRootDirectory(airAppsRootDirectory));
 
         return Directory
             .EnumerateFiles(airAppsRootDirectory, searchPattern, SearchOption.AllDirectories)
             .Select(Path.GetFullPath)
-            .Where(path => !path.StartsWith(runtimeRootDirectory, StringComparison.OrdinalIgnoreCase))
+            .Where(path => !PathContainment.IsSameOrChild(runtimeRootDirectory, path))
             .OrderBy(path => path, StringComparer.OrdinalIgnoreCase);
     }
 

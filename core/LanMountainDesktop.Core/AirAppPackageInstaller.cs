@@ -41,14 +41,14 @@ public sealed class AirAppPackageInstaller
         string stagingPath,
         AirAppPackageInstallOptions options)
     {
-        var runtimeRootDirectory = PathSeparators.EnsureTrailingSeparator(
-            Path.Combine(Path.GetFullPath(airAppsDirectory), AirAppPackagingConstants.RuntimeDirectoryName));
+        var runtimeRootDirectory = Path.Combine(
+            Path.GetFullPath(airAppsDirectory), AirAppPackagingConstants.RuntimeDirectoryName);
         var pendingDeletionDir = AirAppPendingDeletionDirectory.PathFor(airAppsDirectory);
         Directory.CreateDirectory(pendingDeletionDir);
 
         foreach (var existingPackagePath in EnumerateExistingPackages(airAppsDirectory, options)
                      .Select(Path.GetFullPath)
-                     .Where(path => !path.StartsWith(runtimeRootDirectory, StringComparison.OrdinalIgnoreCase)))
+                     .Where(path => !PathContainment.IsSameOrChild(runtimeRootDirectory, path)))
         {
             try
             {

@@ -89,8 +89,8 @@ internal sealed class AirAppInstallerService
             allowedRoot = PathSeparators.EnsureTrailingSeparator(Path.Combine(Path.GetFullPath(localAppData), UserDataRoot.FolderName));
         }
 
-        var normalizedAirAppsDirectory = PathSeparators.EnsureTrailingSeparator(Path.GetFullPath(airAppsDirectory));
-        if (normalizedAirAppsDirectory.StartsWith(allowedRoot, StringComparison.OrdinalIgnoreCase))
+        var normalizedAirAppsDirectory = Path.GetFullPath(airAppsDirectory);
+        if (PathContainment.IsSameOrChild(allowedRoot, normalizedAirAppsDirectory))
         {
             return null;
         }
@@ -117,7 +117,7 @@ internal sealed class AirAppInstallerService
 
     private void RemoveExistingAirAppPackages(string airAppsDirectory, string airAppId, string destinationPath, string stagingPath)
     {
-        var runtimeRootDirectory = PathSeparators.EnsureTrailingSeparator(Path.Combine(Path.GetFullPath(airAppsDirectory), RuntimeDirectoryName));
+        var runtimeRootDirectory = Path.Combine(Path.GetFullPath(airAppsDirectory), RuntimeDirectoryName);
         var pendingDeletionDir = AirAppPendingDeletionDirectory.PathFor(airAppsDirectory);
         Directory.CreateDirectory(pendingDeletionDir);
 
@@ -127,7 +127,7 @@ internal sealed class AirAppInstallerService
                      .Where(path =>
                          path.EndsWith(PackageFileExtension, StringComparison.OrdinalIgnoreCase) ||
                          path.EndsWith(LegacyPackageFileExtension, StringComparison.OrdinalIgnoreCase))
-                     .Where(path => !path.StartsWith(runtimeRootDirectory, StringComparison.OrdinalIgnoreCase)))
+                     .Where(path => !PathContainment.IsSameOrChild(runtimeRootDirectory, path)))
         {
             try
             {

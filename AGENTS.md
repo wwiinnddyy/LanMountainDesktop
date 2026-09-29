@@ -600,6 +600,24 @@ await 完<b>重新问一次</b>挂载与取消、"没取到"与抛异常都画�
 "父比子深"和"共享前缀的兄弟目录"两类假阳性有取真值/假值对钉住（`PathContainmentTests`），三种错法逐个量过：
 只比前缀不补分隔符红 2 格、去掉末尾分隔符的 `TrimEnd` 红 2 格、方向写反红 5 格。
 
+**#G1-BI 判掉了：登记说「两个方向都会错」，实测只有一向、而且不是 8 处都有错（2026-09-29）**。
+把生产语料（810 个 .cs，排除 bin/obj/tests）里「拿前缀比路径」的点全数出来是 20 处，逐处读之后分三类。
+① 3 处真的敞开：`UpdatePathGuard.EnsurePathWithinRoot`——异常文案写的是 Path traversal detected，
+可裸 `target.StartsWith(root)` 对 `C:\pkg-evil\payload.zip` 是放行的，**文案与实行相反**；
+`PlondsPayloadResolver` 那道「这个对象文件能不能读」的过滤同形；
+`AppVersionProvider` 判「这个 exe 目录属不属于包根」，算错的症状是启动器挑中一个不在包根下的版本目录。
+② 5 处今天没错，但靠的是相邻那一行 `PathSeparators.EnsureTrailingSeparator` 恰好给根补了分隔符——
+没有任何东西保证下一行还在，所以一起收进家，那 5 次补分隔符调用一并删掉（补分隔符由家负责）。
+③ 10 处根本不是在比路径：比的是目录名前缀（`DeploymentDirectoryPrefix`、`app-`、`包名_`）或清单里的相对键。
+启发式必然误报，所以免检名单按「文件名 + 那一行的稳定片段」点名，**不只按文件**：
+第一版只按文件免检，同文件里的真缺陷就跟着被洗白——基线少报了 ① 里那两处（`AppVersionProvider.cs` 与 `PlondsPayloadResolver.cs` 各有两条命中，一条比名字、一条比路径）。
+判据还被自己的注释咬过一次：解释这条改动的那行注释里写着 `target.StartsWith(root)`，被当成命中——**注释不是代码，扫描要排掉整行注释**。
+新守卫 `RawPathContainmentRatchetTests`：无理由命中数必须 0、免检条目不再命中也算红（过期登记同样是债）、覆盖面下限 760/实测 810。
+行为钉 `PathContainmentCallSiteTests` 三格只钉**调用点**（家早就被 `PathContainmentTests` 钉过）：参数写序反了不会编译报错，只会让那道闸静默敞开。
+变异双向验过：把三处裸前缀放回去 → 正是这三格红，守卫同时红「3 处没有理由」；还原重建 → 全绿。
+钉不住的一处照实说：夹具第一版给包内/包外两个文件起了**同一个文件名**，而解析器的候选里有一条 `objects/<文件名>`，于是负例被包内那份顶掉、「没抛异常」测的其实是别人——是测试自己红出来才看到的。同一条教训第二次出现：**两种写法结果相同时要数副作用，别只比返回值**。
+仍未决的是家那条 `OrdinalIgnoreCase`（在大小写敏感文件系统上会放宽）；这条守卫只保证这个口径只有一处实现，没替谁改它。
+
 **WinRT 异步操作"结果类型是谁"只认 `Services/WinRtOperationResult.cs` 一家**（`ResolveType(operationType)`）：
 先看操作类型自己的一元泛型实参（**必须判 arity**，只判 `IsGenericType` 会把两元类型的第一个实参当成结果类型），
 再看它实现的 `Windows.Foundation.IAsyncOperation`1`，两边都不对给 `null`。此前 `LocationService`、

@@ -225,7 +225,7 @@ public static class AppVersionProvider
         {
             var executableDirectory = ExistingPath.DirectoryOrNull(Path.GetDirectoryName(normalizedExecutablePath));
             if (!string.IsNullOrWhiteSpace(executableDirectory) &&
-                executableDirectory.StartsWith(normalizedPackageRoot, StringComparison.OrdinalIgnoreCase))
+                PathContainment.IsSameOrChild(normalizedPackageRoot, executableDirectory))
             {
                 return executableDirectory;
             }
