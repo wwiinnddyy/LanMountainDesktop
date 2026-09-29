@@ -256,6 +256,32 @@ public sealed class AirAppRuntimeService : IDisposable
                 $"No AirApp packages or loose manifests were discovered under '{AirAppsDirectory}'.");
             Debug.WriteLine($"[AirAppRuntime] No .laapp packages or loose AirApp manifests found under '{AirAppsDirectory}'.");
         }
+
+        PruneUnusedSharedContracts();
+    }
+
+    /// <summary>
+    /// 回收没人再引用的共享契约（磁盘只涨不减的那一处，G1-CO）。
+    /// 清不干净只出声：这些文件是可重下的依赖，不该让一次启动或一次成功的卸载因为它们而失败。
+    /// </summary>
+    private void PruneUnusedSharedContracts()
+    {
+        try
+        {
+            var deleted = _sharedContractManager.PruneUnused(
+                _catalog.Select(entry => entry.Manifest).ToList());
+
+            if (deleted > 0)
+            {
+                AppLogger.Info(
+                    "AirAppRuntime",
+                    $"Pruned unused shared contracts. Removed={deleted}; Directory='{_sharedContractManager.ContractsDirectory}'.");
+            }
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("AirAppRuntime", "Shared contract pruning did not complete.", ex);
+        }
     }
 
     public bool SetAirAppEnabled(string airAppId, bool isEnabled)
@@ -341,6 +367,8 @@ public sealed class AirAppRuntimeService : IDisposable
         RemoveAirAppFromSnapshot(airAppId);
         RemoveAirAppFromCatalog(airAppId);
         InvalidateMarketAssetCache(airAppId);
+        // 这个应用刚被摘出清单，它独占的那些契约从这一刻起没人引用——就地回收，别等下次启动。
+        PruneUnusedSharedContracts();
         PendingRestartStateService.SetPending(PendingRestartStateService.AirAppCatalogReason, true);
         return true;
     }

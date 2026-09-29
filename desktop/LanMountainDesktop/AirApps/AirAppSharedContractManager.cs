@@ -102,6 +102,90 @@ internal sealed class AirAppSharedContractManager : IDisposable
         _indexService.Dispose();
     }
 
+    /// <summary>
+    /// 把没有任何现存包再引用的契约程序集从盘上摘掉，连带收掉空掉的两层目录。返回真删掉的文件数。
+    /// </summary>
+    /// <remarks>
+    /// 这里原本<b>一条删除路径都没有</b>（全仓在 <c>SharedContracts</c> 上唯一的删除是同文件
+    /// <c>:163</c> 清 <c>.download</c> 临时文件）：契约按 <c>{id}/{version}/{assembly}</c> 落盘、
+    /// 跨应用共享，市场每滚一版就永久多留一份旧程序集，谁也不会回收它。
+    /// 保留集合取"盘上现存包（含被禁用的）的清单引用"——<b>禁用不是卸载</b>，
+    /// 按启用状态来删会让用户重新启用一个应用时面对一个下载不回来的契约。
+    /// 内存里已加载的那条也一律保留：<see cref="AssemblyLoadContext"/> 已经把它钉在本进程里，
+    /// 删了既不会真的释放磁盘（Windows 上文件被占用），又可能让后续加载走到半路。
+    /// </remarks>
+    /// <param name="installedManifests">现存包的清单（含禁用的）。空集合按"没量到"处理，直接不扫。</param>
+    public int PruneUnused(IReadOnlyList<AirAppManifest> installedManifests)
+    {
+        ArgumentNullException.ThrowIfNull(installedManifests);
+
+        // 空清单是"发现环节本身坏了"的更合理解释，而不是"用户把所有包都卸了"。
+        // 拿这个猜下去会把所有契约删光——离线用户就此修不回来，所以宁可什么都不删。
+        if (installedManifests.Count == 0 || !Directory.Exists(_contractsDirectory))
+        {
+            return 0;
+        }
+
+        var referenced = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var manifest in installedManifests)
+        {
+            if (manifest.SharedContracts is not { Count: > 0 })
+            {
+                continue;
+            }
+
+            foreach (var reference in manifest.SharedContracts)
+            {
+                referenced.Add(GetInstalledAssemblyPath(reference));
+            }
+        }
+
+        List<string> loadedPaths;
+        lock (_gate)
+        {
+            loadedPaths = _loadedContracts.Values
+                .Select(contract => contract.AssemblyPath)
+                .ToList();
+        }
+
+        var deleted = 0;
+        foreach (var file in Directory.EnumerateFiles(_contractsDirectory, "*", SearchOption.AllDirectories))
+        {
+            var fullPath = Path.GetFullPath(file);
+            if (referenced.Contains(fullPath))
+            {
+                continue;
+            }
+
+            if (loadedPaths.Contains(fullPath, StringComparer.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (FileOperationRetryHelper.TryDeleteFile(fullPath, "AirAppSharedContracts"))
+            {
+                deleted++;
+                AppLogger.Info(
+                    "AirAppSharedContracts",
+                    $"Removed unused shared contract. Path='{fullPath}'.");
+            }
+        }
+
+        RemoveEmptyDirectories();
+        return deleted;
+    }
+
+    private void RemoveEmptyDirectories()
+    {
+        // 由深到浅：先收版本目录，再收 id 目录，最深的那层先空。
+        foreach (var directory in Directory
+                     .EnumerateDirectories(_contractsDirectory, "*", SearchOption.AllDirectories)
+                     .OrderByDescending(path => path.Length))
+        {
+            FileOperationRetryHelper.TryDeleteDirectory(directory, recursive: false, "AirAppSharedContracts");
+        }
+    }
+
     private void EnsureInstalled(
         AirAppMarketIndexDocument document,
         AirAppSharedContractReference reference,

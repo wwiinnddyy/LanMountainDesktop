@@ -1403,6 +1403,21 @@ IDE0051（未使用私有成员）在构建里一条都不出（2026-09-22 实�
 注册条目本身就发一条（那时条目还没有消息），所以"取第一条到达的上报"断言不到进度那条的内容——
 第一版就是这么假红了一次；改成**按条件等**。
 变异：把 `Message = currentItem?.Message` 改成 `null` → 第一格红，消息就是那句"等不到符合条件的上报"。
+
+**G1-CO 判掉：共享契约从此有回收（这块盘以前只涨不减）**。
+`{data}/SharedContracts/{id}/{version}/{assembly}` 上原本**一条删除路径都没有**
+（全仓唯一的删除是同文件里清 `.download` 临时文件），市场每滚一版就多留一份旧程序集。
+也不能按"卸载就删"来修：契约是**跨应用共享**的（同一 id+version 只落一份、多个包都指它），
+所以保留集合定成"**盘上现存包（含被禁用的）的清单引用**"——禁用不是卸载，按启用状态删会让用户
+重新启用时面对一个下载不回来的契约；内存里已加载过的那条也一律保留（`AssemblyLoadContext` 已把它
+钉在本进程里）。挂在两处：整轮加载收尾、以及卸载把那个应用摘出清单之后（就地回收，不等下次启动）。
+**一条刻意保守的规则值得单独记**：清单为空时**什么都不删**。空清单更像是"发现环节坏了"，
+而不是"用户把所有包都卸了"——拿这个猜下去会把所有契约删光，离线用户就此修不回来。
+这条由一格测试钉住（`PruneUnused_WithNoPackagesOnDisk_DeletesNothingAtAll`），
+变异验向：把那个 `Count == 0` 守卫摘掉 → 正是这一格红，其余三格照绿。
+行为钉 `SharedContractPruningTests` 四格（留下的/删掉的/空目录跟着收/多包共享不误删）。
+未覆盖的一处如实说：**"内存里已加载的那条不删"这一支没测**——要走到它得真加载一个托管程序集
+（`AssemblyLoadContext.GetAssemblyName` 只认有效 PE），临时目录里造不出可信夹具；没测不等于没写。
 名单实测：实例成员 26 → **18** 条，类型棘轮 15 → **14** 条。`CensusAnchors` 两条跟着换（锚点数量不变）：
 `LoadingTimeoutHandler.SetItemTimeout` → `PublicIpcHostService.PublishLoadingStateAsync`（改钉"另一个二进制的注册面"），
 `LoadingStateReporter.ReportErrorAsync` → `CompositionVisualAnimationService.TrySetUniformScale`（改钉"只有测试在调"那个口径）——
