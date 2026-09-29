@@ -603,17 +603,14 @@ public sealed partial class ClockAirAppView : UserControl
         UpdateTimer(DateTimeOffset.Now);
     }
 
+    // 两个事件参数类型走的其实是同一件事：把控件当前值存下来（保存动作只在 SaveSettingsFromControls 一份）。
+    // 两边刻意写成同一句形状：一条是箭头体、一条是"丢弃参数 + 调用"两条语句的话，
+    // 这把尺子会从"逐字相同"改口成"同名不同体"——族数没降，只是换了个名单被数一次。
     private void OnSettingsChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        _ = e;
-        SaveSettingsFromControls(sender);
-    }
+        => SaveSettingsFromControls(sender);
 
     private void OnSettingsChanged(object? sender, RoutedEventArgs e)
-    {
-        _ = e;
-        SaveSettingsFromControls(sender);
-    }
+        => SaveSettingsFromControls(sender);
 
     private void SaveSettingsFromControls(object? sender)
     {

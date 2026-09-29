@@ -553,7 +553,19 @@ public sealed class DuplicateImplementationRatchetTests
     /// 三条实测语义边界写在家注释里，因为它们决定"退档到底盖不盖得住"：<c>GetCultureInfo("")</c> <b>不抛</b>（给不变区域，所以调用方传的 fallback 对空码不起作用——今天 5 个调用点传的都先过 <c>LanguageCodes.Normalize</c>，够不到）；纯空白与汉字串才抛 <c>CultureNotFoundException</c>；而 <c>"not-a-real-tag-xx"</c> <b>成功</b>返回 <c>Name="not"</c>——拼错语言码的症状不是退档，是安静地用一个不存在的档位，要防它得在码表那一头。后两条按现状钉成测试（<c>LanguageCulture_…</c> 4 格），哪天有人收紧码表，这两格会红着提醒。
     /// 守卫 <c>CultureResolution_LivesInExactlyOnePlace</c> 拦两条（家外出现该 catch、或 <c>ResolveCulture</c> 自己还接失败），两个方向都变异验过：把 Launcher 那份内联抄本装回去→红并点名 2 处；只把判据里的家路径改成一个不存在的名字→红（家被改名后守卫会永远绿，这条自己也要有红点）。允许 <c>=&gt; LanguageCulture.GetOrFallback(…)</c> 的一行转手壳：调用点实测 15 处，把壳全拆了会让"我这档退哪儿"在每条现场再写一遍，那才是第二个真源。
 
-    private const int IdenticalBodyFamilyCeiling = 11;
+    /// 11 → 10（2026-09-29）：三处"同一个文件里两个重载逐字相同"收掉一处，另外两处只降了语义没降数字，
+    /// 如实分开记：<c>ClockAirAppView</c> 的两个 <c>OnSettingsChanged</c>（事件参数类型不同、事相同）
+    /// 合成一处转手 → 族数 -1；
+    /// <c>AirAppAppearanceExtensions</c> 的圆角钳位（<c>new CornerRadius(Math.Max(0d, v))</c> 五处各写一遍）
+    /// 与 <c>AirAppLocalizer.Create</c> 的构造入口各提了一个私有原语（<c>Clamped</c> / <c>CreateFrom</c>），
+    /// <b>规则只剩一处了，但两个公开壳的语句文本仍然逐字相同</b>——这把尺子数的是字面语句，
+    /// 把壳写得彼此不同只会把数字做下来，不是收口。
+    /// 剩下 10 族里 8 族是"两个文件、各 2-3 个语句的薄壳，只差保存哪份状态"（时钟/世界时钟两个编辑器一对、
+    /// 学习面板两个 Dispose、两个设置页 OnNavigatedTo……），逐处读过：<b>为它们建家属于改数字不属于收口</b>；
+    /// 3 个"没判回填守卫"的处理器也逐处核过（两个是用户点击、一个自己管标志），不是漏网的缺陷。
+    /// 真正还值得动的只有跨二进制那两族（<c>ResolveManifestUrl</c>、<c>OnCloseClick</c>），
+    /// 它们各自牵扯 SDK 版本线与安装器边界，留在下面的待办里。
+    private const int IdenticalBodyFamilyCeiling = 10;
 
     /// 18 → 15 一次收三族，全是同一个签名 <c>ResolveScale</c> 的三个不同体（#66 队列里那条"三对"）：
     /// <list type="bullet">

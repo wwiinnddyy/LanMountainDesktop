@@ -30,14 +30,20 @@ public sealed class AirAppLocalizer
     public static AirAppLocalizer Create(IAirAppRuntimeContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
-        return new AirAppLocalizer(context.AirAppDirectory, ResolveLanguageCode(context.Properties));
+        return CreateFrom(context.AirAppDirectory, context.Properties);
     }
 
     public static AirAppLocalizer Create(AirAppComponentContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
-        return new AirAppLocalizer(context.AirAppDirectory, ResolveLanguageCode(context.Properties));
+        return CreateFrom(context.AirAppDirectory, context.Properties);
     }
+
+    // 两个重载各自的只有"空检查 + 取那两个属性"，真正的构造规则在这里一份。
+    private static AirAppLocalizer CreateFrom(
+        string airAppDirectory,
+        IReadOnlyDictionary<string, object?> properties)
+        => new(airAppDirectory, ResolveLanguageCode(properties));
 
     public string GetString(string key, string fallback)
     {

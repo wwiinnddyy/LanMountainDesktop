@@ -32,8 +32,7 @@ public static class AirAppAppearanceExtensions
         AirAppCornerRadiusPreset preset)
     {
         ArgumentNullException.ThrowIfNull(context);
-        var value = context.ResolveCornerRadius(preset);
-        return new CornerRadius(Math.Max(0d, value));
+        return Clamped(context.ResolveCornerRadius(preset));
     }
 
     public static CornerRadius ResolveCornerRadius(
@@ -43,8 +42,7 @@ public static class AirAppAppearanceExtensions
         double maximum)
     {
         ArgumentNullException.ThrowIfNull(context);
-        var value = context.ResolveCornerRadius(preset, minimum, maximum);
-        return new CornerRadius(Math.Max(0d, value));
+        return Clamped(context.ResolveCornerRadius(preset, minimum, maximum));
     }
 
     public static CornerRadius ResolveScaledCornerRadius(
@@ -52,8 +50,7 @@ public static class AirAppAppearanceExtensions
         double baseRadius)
     {
         ArgumentNullException.ThrowIfNull(context);
-        var value = context.ResolveScaledCornerRadius(baseRadius);
-        return new CornerRadius(Math.Max(0d, value));
+        return Clamped(context.ResolveScaledCornerRadius(baseRadius));
     }
 
     public static CornerRadius ResolveScaledCornerRadius(
@@ -63,8 +60,7 @@ public static class AirAppAppearanceExtensions
         double maximum)
     {
         ArgumentNullException.ThrowIfNull(context);
-        var value = context.ResolveScaledCornerRadius(baseRadius, minimum, maximum);
-        return new CornerRadius(Math.Max(0d, value));
+        return Clamped(context.ResolveScaledCornerRadius(baseRadius, minimum, maximum));
     }
 
     public static CornerRadius ResolveCornerRadius(
@@ -74,9 +70,15 @@ public static class AirAppAppearanceExtensions
         double maximum)
     {
         ArgumentNullException.ThrowIfNull(context);
-        var value = context.ResolveCornerRadius(preset, minimum, maximum);
-        return new CornerRadius(Math.Max(0d, value));
+        return Clamped(context.ResolveCornerRadius(preset, minimum, maximum));
     }
+
+    /// <summary>
+    /// "半径不能是负的"这条钳位规则只有一处。此前五个公开方法各写一遍
+    /// <c>new CornerRadius(Math.Max(0d, value))</c>——改口径要数五处，漏一处的症状是
+    /// 某一档圆角在缩放后变成负数而被主题层拒掉。
+    /// </summary>
+    private static CornerRadius Clamped(double value) => new(Math.Max(0d, value));
 
     public static AirAppAppearanceSnapshot GetAppearanceSnapshot(
         this AirAppComponentContext context)
