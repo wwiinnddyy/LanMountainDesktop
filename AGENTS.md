@@ -922,6 +922,32 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 **先 `ColorMath.ToOpaqueAgainst` 合成到卡片底、再比亮度**；变异重验过：把控件底接成 raised 键，
 两档都红（消息里给出合成后的两个亮度值）。教训通用：**比"叠上去之后的观感"必须先把 α 算进去**。
 
+**数色值的尺子看不见"这行根本画不出来"（#G1-AF 第七笔，2026-09-29）**：`#33FFFFFF` 那 11 处逐处读到底之后，
+第一个判断（"这几处绕过了 chrome，删掉本地描边让 `ComponentChromePanel`/`glass-panel` 接管"）**被实测否证**：
+这 10 个文件里 `ComponentChromePanel.` 出现 **0 次**（家全仓只有 3 处调用：`ClockWidget`、`NetworkSpeedWidget`、
+`TextCapsuleWidget`）、`glass-panel` 也是 0 次——它们是自己手画根框的，删赋值只会得到无边框的组件，不是交给样式。
+继续读每一处的**渲染前提**，量出第二类东西：4 处（`BaiduHotSearchWidget:135`、`BilibiliHotSearchWidget:122`、
+`IfengNewsWidget:125`、`Stcn24ForumWidget:193`）所在的 `RootBorder` 在标记里写着 `BorderThickness="0"`，
+而 code-behind 从没抬过厚度；隔壁 `BilibiliHotSearchWidget:125` 的搜索框（`#3FFFFFFF`，不在这个族里）同形。
+Avalonia 的 Border 只在厚度 >0 时描边，所以**这 5 行从写下那天起没画过一个像素**——
+按色值计数它们长得像"待烧的角色色"，真要烧就是"我把一条看不见的边接进了主题层"，还会顺手写下"夜档描边已统一"这种谎。
+处置是删除（不是接线）：`.cs` 面 **553 → 543**（5 处 × 三元组两侧 = 10 个字面量），总数对账 1112 → **1102**。
+**新守卫 `tests/LanMountainDesktop.Tests/DeadBorderPaintRatchetTests.cs`**：上限 0（实测基线 5）、
+覆盖面下限 90/实测 **97 对** `(axaml, axaml.cs)`。口径保守到宁可漏报：只认标记里的**字面量** `BorderThickness="0"`、
+元素带类名就跳过（`GlassModule.axaml` 里 `Border.surface-*=1.2/1.5` 能把厚度抬起来）、
+代码里给同名元素赋过 `BorderThickness` 也跳过——三条豁免实测一个都没沾上。
+判据先在真树上红过（报出那 5 处 file:line，与我另写的 python 普查逐处相同），再把 5 行删掉才绿；
+反向变异：把其中一行种回去 → 红"实测 1 处"。扫描器被仓库格与注入格**共用一份实现**，
+所以注入格是它的正/反例校具（thickness 0/1、代码后抬厚度、两种类名写法、`Width="0"` 不误判），不是第二条独立判据。
+**剩下 7 处是真活着的描边/蒙层，一笔都没动**，登记为 **G1-CM**：3 处确实画得出边
+（`RecordingWidget:162` 标记本就 thickness 1；`WorldClockWidget:217` 与 `BrowserWidget:177` 的标记已经
+请求了 `AdaptiveButtonBorderBrush`，**代码把那一次主题请求整个覆盖掉**，日档还各自漂成
+`#D9DEE7` / `#16000000` / `#22000000`）；4 处是半透明白蒙层/徽章底（`StudySessionHistoryWidget:251`/`:551`、
+`MusicControlWidget:300`、`WhiteboardWidget:452`），主题那 64 个键里**没有"蒙层/描边"这一档**，
+1:1 映射不存在。"组件外框到底谁画、该不该有边"是 chrome 设计决定（透明档今天只给时钟/网速/文字胶囊三件），
+不是色值替换——所以这里只删死行，不改任何看得见的边。
+**教训通用**：删之前先问"这行真会被读到吗"。计数型判据（色值、族数、引用数）量的是文本，不是渲染前提。
+
 **组件与时区服务之间那对订阅/退订只认一处**：一律走 `desktop/LanMountainDesktop/Views/Components/TimeZoneServiceBinding.cs`
 的 `Replace` / `Clear`（两个方法都返回新的字段值，语义与原来逐字一致：换服务时先退旧再订新，退订不刷新），
 不要在组件里手写 `TimeZoneChanged += / -=`。收口前 10 个时钟/日历组件各抄了一份 Set 与一份 Clear（20 个方法体，

@@ -63,15 +63,20 @@ public sealed class ColorLiteralRatchetTests
     //   · 1 处是调用方兜底值（RemovableStorage 的 OnAccent 兜底），规则明说兜底归调用方；
     //   · 3 处是家与假数据（StudyPanelPalette.White、自绘图表的最新点、MainWindow 设计期预览卡参数）。
     // 全仓 553 处分箱实测：候选表 106 / 算法常数 23 / 其余 424（含真角色色，下族 #33FFFFFF 11 处）。
-    private const int ColorLiteralCeiling = 553;
+    // 同日第七笔：#33FFFFFF 那 11 处逐处读下来，4 处（+隔壁 1 处 #3FFFFFFF）根本画不出来——
+    // 所在边框在标记里写着 BorderThickness="0"，而 code-behind 从没抬过厚度。
+    // 这 5 行不是"颜色漂了"，是死赋值，删掉即 553 − 10 = 543（每行带三元组两侧共 2 个字面量）。
+    // 判据与普查落在 DeadBorderPaintRatchetTests（上限 0，覆盖面 97 对），别再把它当角色色烧。
+    private const int ColorLiteralCeiling = 543;
 
     // 2026-09-26 实测：剩下这些分布在 31 个文件里。
     // ↑ 这句今天核对是错的：677 处实际分布在 **41** 个文件里（当时把"组件目录"与"整个 Views"两份清单
     // 数混了）。下限仍是 30，别把它当实测值引用——要实测值就现跑。
     private const int ScannedFileFloor = 30;
 
-    // 2026-09-29 实测的总数对账值（组件 555 + 豁免 559，五族烧完共 −104），文件被改名/挪走时这条会先红。
-    private const int MeasuredGrandTotal = 1112;
+    // 总数对账值：组件 543 + 豁免 559 = 1102（2026-09-29 死描边那 5 行删除后重跑）。
+    // ↑ 这条会先于上限红，是为了让"文件被改名/挪走导致判据少看一片"和"真烧了一族"分得开。
+    private const int MeasuredGrandTotal = 1102;
 
     // 2026-09-29 新量的一面：.axaml 里的颜色属性此前这条判据**完全看不见**（只扫 *.cs）。
     // 量出来是 412 处 / 40 个文件——比组件里剩下的 659 少不到一半，绝不是"边角料"。

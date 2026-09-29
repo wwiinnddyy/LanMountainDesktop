@@ -190,7 +190,6 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
     private void ApplyNightModeVisual()
     {
         CardBorder.Background = ComponentRoleBrushes.RaisedSurface(this);
-        RootBorder.BorderBrush = new SolidColorBrush(_isNightVisual ? Color.Parse("#33FFFFFF") : Color.Parse("#00000000"));
 
         HeaderTitleTextBlock.Foreground = ComponentRoleBrushes.PrimaryText(this);
         HeaderDot.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#FF6B6B") : Color.Parse("#FF4D4F"));
