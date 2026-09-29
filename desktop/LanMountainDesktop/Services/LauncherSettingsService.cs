@@ -178,24 +178,9 @@ public sealed class LauncherSettingsService
     private static LauncherSettingsSnapshot NormalizeSnapshot(LauncherSettingsSnapshot? snapshot)
     {
         var normalized = snapshot?.Clone() ?? new LauncherSettingsSnapshot();
-        normalized.HiddenLauncherFolderPaths = NormalizeKeys(normalized.HiddenLauncherFolderPaths);
-        normalized.HiddenLauncherAppPaths = NormalizeKeys(normalized.HiddenLauncherAppPaths);
+        normalized.HiddenLauncherFolderPaths = LauncherHiddenItemNames.NormalizeKeys(normalized.HiddenLauncherFolderPaths);
+        normalized.HiddenLauncherAppPaths = LauncherHiddenItemNames.NormalizeKeys(normalized.HiddenLauncherAppPaths);
         return normalized;
-    }
-
-    private static List<string> NormalizeKeys(IReadOnlyList<string>? values)
-    {
-        if (values is null || values.Count == 0)
-        {
-            return [];
-        }
-
-        return values
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Select(value => value.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
-            .ToList();
     }
 
     private void UpdateCache(LauncherSettingsSnapshot snapshot, DateTime writeTimeUtc, DateTime probeTimeUtc) =>

@@ -206,10 +206,9 @@ public sealed partial class LauncherSettingsPageViewModel : ViewModelBase, IDisp
 
         CollectHiddenItems(root, snapshot, items, seenFolders, seenApps);
 
-        foreach (var key in snapshot.HiddenLauncherFolderPaths.OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+        foreach (var normalizedKey in LauncherHiddenItemNames.NormalizeKeys(snapshot.HiddenLauncherFolderPaths))
         {
-            var normalizedKey = NormalizeLauncherHiddenKey(key);
-            if (string.IsNullOrWhiteSpace(normalizedKey) || !seenFolders.Add(normalizedKey))
+            if (!seenFolders.Add(normalizedKey))
             {
                 continue;
             }
@@ -220,10 +219,9 @@ public sealed partial class LauncherSettingsPageViewModel : ViewModelBase, IDisp
                 LauncherHiddenItemNames.FallbackDisplayName(normalizedKey)));
         }
 
-        foreach (var key in snapshot.HiddenLauncherAppPaths.OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+        foreach (var normalizedKey in LauncherHiddenItemNames.NormalizeKeys(snapshot.HiddenLauncherAppPaths))
         {
-            var normalizedKey = NormalizeLauncherHiddenKey(key);
-            if (string.IsNullOrWhiteSpace(normalizedKey) || !seenApps.Add(normalizedKey))
+            if (!seenApps.Add(normalizedKey))
             {
                 continue;
             }
@@ -249,7 +247,7 @@ public sealed partial class LauncherSettingsPageViewModel : ViewModelBase, IDisp
     {
         foreach (var subFolder in folder.Folders)
         {
-            var folderKey = NormalizeLauncherHiddenKey(subFolder.RelativePath);
+            var folderKey = LauncherHiddenItemNames.NormalizeKey(subFolder.RelativePath);
             if (!string.IsNullOrWhiteSpace(folderKey) &&
                 snapshot.HiddenLauncherFolderPaths.Contains(folderKey, StringComparer.OrdinalIgnoreCase) &&
                 seenFolders.Add(folderKey))
@@ -265,7 +263,7 @@ public sealed partial class LauncherSettingsPageViewModel : ViewModelBase, IDisp
 
         foreach (var app in folder.Apps)
         {
-            var appKey = NormalizeLauncherHiddenKey(app.RelativePath);
+            var appKey = LauncherHiddenItemNames.NormalizeKey(app.RelativePath);
             if (string.IsNullOrWhiteSpace(appKey) ||
                 !snapshot.HiddenLauncherAppPaths.Contains(appKey, StringComparer.OrdinalIgnoreCase) ||
                 !seenApps.Add(appKey))
@@ -305,7 +303,7 @@ public sealed partial class LauncherSettingsPageViewModel : ViewModelBase, IDisp
     private void RestoreHiddenItem(LauncherHiddenItemViewModel item)
     {
         var snapshot = _settingsFacade.LauncherPolicy.Get()?.Clone() ?? new LauncherSettingsSnapshot();
-        var normalizedKey = NormalizeLauncherHiddenKey(item.Key);
+        var normalizedKey = LauncherHiddenItemNames.NormalizeKey(item.Key);
         if (string.IsNullOrWhiteSpace(normalizedKey))
         {
             return;
@@ -353,9 +351,6 @@ public sealed partial class LauncherSettingsPageViewModel : ViewModelBase, IDisp
 
     private string L(string key, string fallback)
         => _localizationService.GetString(_languageCode, key, fallback);
-
-    private static string NormalizeLauncherHiddenKey(string? key)
-        => string.IsNullOrWhiteSpace(key) ? string.Empty : key.Trim();
 
     private static bool RemoveKey(ICollection<string> values, string key)
     {

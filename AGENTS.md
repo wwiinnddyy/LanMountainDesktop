@@ -1157,6 +1157,22 @@ Avalonia 的 Border 只在厚度 >0 时描边，所以**这 5 行从写下那天
 当基准的字面量（16 处 `_currentCellSize / 48d` 一类缩放换算、23 处 `double _currentCellSize = 48;` 字段默认值），
 改基准时它们不会跟着动，症状就是"一半组件缩放不对"。现已全部指向 `ComponentDesignMetrics.BaseCellSize`，
 同一条守卫把三种形态（重复声明 / 除法基准字面量 / 字段默认值）一起拦——每立一个家，都要单独数一遍调用点。
+
+**启动台"隐藏项"的键也只认一家**（`Services/LauncherHiddenItemNames.cs`，#G1-BH，2026-09-29）。
+收口前是三份：写盘侧 `LauncherSettingsService.NormalizeKeys`（去空白/去重/排序）、
+设置页读侧**又**自己排一遍序再去重、外加 `NormalizeLauncherHiddenKey` **两份同语义不同写法**
+（一份表达式体、一份块体）。为什么这一族值得收：那个键是**磁盘上的值**
+（`launcher-settings.json` 里那两个列表），写的时候怎么去重、按什么排，决定读侧两行会不会长成同一条；
+两份口径漂开的症状不是崩，而是"明明隐藏过的项目又在启动台出现一次"。
+大小写不敏感是这条规则里唯一容易被"顺手改严谨"的地方：Windows 上 `C:\Apps\A` 与 `C:\apps\a`
+是同一个目录，让两条都留下就是两行。
+**这条收口在普查账上是零**：`NormalizeLauncherHiddenKey` 那两份都是单条 `return`，
+而"逐字相同"那把尺子按**语句数 ≥2** 算族（同 `Reschedule` 那笔先例），所以逐字与漂移两个数一动不动——
+收益在"改一处两边都改"，别把它记成"普查又降了一档"。
+行为钉 `LauncherHiddenItemNamesTests` 从 1 组扩到 15 格（键清洗、列表去重排序、原有兜底名各一组）。
+其中落盘那格读的是 **JSON 文件本身**而不是 `Load()` 的返回值：这个服务带静态快照缓存，
+走 API 只能证明"内存里对"，证不了落到磁盘的字节已经去重。
+变异验证：把 `Distinct` 的比较器改成 `Ordinal`（即认大小写）→ **正是**去重格与落盘格两格红，其余 13 格照绿。
 找下一族的手段是量出来的，不是凭印象：`python scripts/dump-dup-methods.py`（不带参数扫全部二进制，
 按"方法名 + 归一化方法体"分组，报 `Nx 方法名 (行数, body#hash)` 加每个站点的 file:line；
 传目录只扫那些文件，`NAMES=A,B` 换要查的方法名）。**这条探针必须先拿已知样本验过再用**：

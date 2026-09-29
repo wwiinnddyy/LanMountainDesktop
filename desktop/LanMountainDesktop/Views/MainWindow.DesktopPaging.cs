@@ -100,7 +100,7 @@ public partial class MainWindow : Window
         {
             foreach (var folderPath in snapshot.HiddenLauncherFolderPaths)
             {
-                var key = NormalizeLauncherHiddenKey(folderPath);
+                var key = LauncherHiddenItemNames.NormalizeKey(folderPath);
                 if (!string.IsNullOrWhiteSpace(key))
                 {
                     _hiddenLauncherFolderPaths.Add(key);
@@ -113,7 +113,7 @@ public partial class MainWindow : Window
         {
             foreach (var appPath in snapshot.HiddenLauncherAppPaths)
             {
-                var key = NormalizeLauncherHiddenKey(appPath);
+                var key = LauncherHiddenItemNames.NormalizeKey(appPath);
                 if (!string.IsNullOrWhiteSpace(key))
                 {
                     _hiddenLauncherAppPaths.Add(key);
@@ -1015,7 +1015,7 @@ public partial class MainWindow : Window
         var title = folder.Name;
         var subtitle = Lf("launcher.folder_items_format", "{0} apps", folder.TotalAppCount);
         var folderIconBitmap = GetLauncherFolderIconBitmap();
-        var folderKey = NormalizeLauncherHiddenKey(folder.RelativePath);
+        var folderKey = LauncherHiddenItemNames.NormalizeKey(folder.RelativePath);
         return CreateLauncherTileButton(
             title,
             subtitle,
@@ -1030,7 +1030,7 @@ public partial class MainWindow : Window
     {
         var iconBitmap = GetLauncherIconBitmap(app);
         var monogram = Monogram.From(app.DisplayName);
-        var appKey = NormalizeLauncherHiddenKey(app.RelativePath);
+        var appKey = LauncherHiddenItemNames.NormalizeKey(app.RelativePath);
         return CreateLauncherTileButton(
             app.DisplayName,
             subtitle: string.Empty,
@@ -1179,20 +1179,15 @@ public partial class MainWindow : Window
         return button;
     }
 
-    private static string NormalizeLauncherHiddenKey(string? key)
-    {
-        return string.IsNullOrWhiteSpace(key) ? string.Empty : key.Trim();
-    }
-
     private bool IsLauncherFolderVisible(StartMenuFolderNode folder)
     {
-        var key = NormalizeLauncherHiddenKey(folder.RelativePath);
+        var key = LauncherHiddenItemNames.NormalizeKey(folder.RelativePath);
         return string.IsNullOrWhiteSpace(key) || !_hiddenLauncherFolderPaths.Contains(key);
     }
 
     private bool IsLauncherAppVisible(StartMenuAppEntry app)
     {
-        var key = NormalizeLauncherHiddenKey(app.RelativePath);
+        var key = LauncherHiddenItemNames.NormalizeKey(app.RelativePath);
         return string.IsNullOrWhiteSpace(key) || !_hiddenLauncherAppPaths.Contains(key);
     }
 
@@ -1208,7 +1203,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var normalizedKey = NormalizeLauncherHiddenKey(entryKey);
+        var normalizedKey = LauncherHiddenItemNames.NormalizeKey(entryKey);
         if (string.IsNullOrWhiteSpace(normalizedKey))
         {
             return;
@@ -1370,7 +1365,7 @@ public partial class MainWindow : Window
     {
         foreach (var subFolder in folder.Folders)
         {
-            var folderKey = NormalizeLauncherHiddenKey(subFolder.RelativePath);
+            var folderKey = LauncherHiddenItemNames.NormalizeKey(subFolder.RelativePath);
             if (!string.IsNullOrWhiteSpace(folderKey) &&
                 _hiddenLauncherFolderPaths.Contains(folderKey) &&
                 seenFolders.Add(folderKey))
@@ -1388,7 +1383,7 @@ public partial class MainWindow : Window
 
         foreach (var app in folder.Apps)
         {
-            var appKey = NormalizeLauncherHiddenKey(app.RelativePath);
+            var appKey = LauncherHiddenItemNames.NormalizeKey(app.RelativePath);
             if (string.IsNullOrWhiteSpace(appKey) ||
                 !_hiddenLauncherAppPaths.Contains(appKey) ||
                 !seenApps.Add(appKey))
