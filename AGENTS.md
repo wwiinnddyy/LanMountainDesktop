@@ -263,6 +263,20 @@ Views 裸色值上限）各种下一处**能编译**的违规，三趟下来只�
 为什么不能只靠本地绿：本地跑 Debug + 不带 filter（含 EcosystemProbe），CI 跑 Release +
 `Category!=EcosystemProbe`，今天实测 1235 与 1227 两个数——**只有 CI 那台才是合闸时真执行的那套用例**。
 
+**CI 的 Test 步骤判的是"红灯的签名"，不是"有没有一趟全绿"（2026-09-30 改，run `36599708485` 是反例）**：
+那一版只认 `rc -eq 0`，于是三趟各挂 1 条、受害者各不相同（`SecondHandChoice` → `VisualTestAppHarness` →
+`ComponentRefreshLifetime`）、全是 #G1-I 清理期签名的 push 被挡下——它要求的那个"全绿趟"按当天的偶发率
+可能根本不存在。现在的口径：**一趟里每条红灯都带 `Test Case Cleanup Failure` + 线程归属消息就算这趟过**
+（用例本体是绿的，失败在 runner 收尾），并留信封值 4 条（2026-09-23 六趟实测的上界）——超出信封仍红，
+因为那更像有人新加了一批 `[AvaloniaFact]` 会话（见"新增 Avalonia 用例要按会话数算成本"）。
+三种"不许当偶发"的红仍然立刻 exit 1：一条签名都没有、签名数少于失败数（混进真缺陷）、
+以及退出码非 0 却读不到 `Failed:` 计数（看不清产物的绿/红都不算结论）。
+判据用 `Failed=` 而不是 grep 消息行数：同一签名在输出里出现两行（头一行与错误消息行），按行会翻倍。
+七种形状有可复跑的验法：`python scripts/check-ci-test-step.py`（把 workflow 里那段脚本原文抠出来，
+用假 `dotnet` 逐次喂七种输出，比"退出码 + dotnet 被调用几次"两组期望值；改 Test 步骤之后就跑一次。
+它不进 CI——这台与 runner 都不假设装了 python）。七格现状：全绿 / 一趟纯签名放行且不再多跑 /
+三趟纯签名放行 / 混真缺陷 1 趟即红 / 超信封跑满 3 趟才红 / 读不到计数即红 / 无签名即红，全部对上。
+
 **宿主给组件下推能力一律走"每能力一个小接口 + 走子树的家"**（`ITimeZoneAwareComponentWidget`、
 `IWeatherInfoAwareComponentWidget`、`IDesktopPageVisibilityAwareComponentWidget`……），
 组件外面还包着 chrome（外层 Border + 内容宿主），所以只查直接子控件会漏。

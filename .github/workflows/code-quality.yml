@@ -62,7 +62,13 @@ jobs:
       #    tests/LanMountainDesktop.Tests/AssemblyInfo.Xunit.cs 里改正过的诊断）；② 一次重跑不够——
       #    35b75b6 与 e7604b7 两个 push 都是"第一趟红、重跑还是红"，各挂 1~3 条，全落在
       #    ComponentRefreshLifetime / SecondHandChoice / DailyWordAutoRefresh 这些用 [AvaloniaFact] 的类上。
-      # 所以这里给 3 趟：每一趟红都先把"挂了几条、挂的是谁"打进日志，全绿才算过；
+      # 所以这里给 3 趟：每一趟红都先把"挂了几条、挂的是谁"打进日志。**过/不过按红灯的签名判，不按"有没有一趟全绿"**——
+      # 2026-09-29 的 36599708485 实测：三趟各挂 1 条、三趟受害者各不相同
+      # （SecondHandChoice → VisualTestAppHarness → ComponentRefreshLifetime），全部是 #G1-I 的清理期签名，
+      # 而旧写法只认"某一趟 Failed=0"，于是这条 push 被一个从未发生过的"全绿趟"要求挡住。
+      # 判据改成：一趟里 **每条红灯都带清理期线程归属签名** 就算这趟过（用例本体都是绿的），
+      # 并留一个信封值（≤4 条，2026-09-23 六趟实测的上界）——超出信封仍是红，因为那更像是
+      # 有人新加了大批 [AvaloniaFact] 会话（见 AGENTS 里"新增 Avalonia 用例要按会话数算成本"）。
       # 真缺陷要连红三趟才可能溜过去，而 #G1-I 的偶发不再每天咬交付节奏。
       - name: Test
         shell: bash
@@ -76,6 +82,7 @@ jobs:
           FILTER='Category!=EcosystemProbe'
           MIN_CASES=1000
           ATTEMPTS=3
+          FLAKY_ENVELOPE=4
           SUMMARY="${RUNNER_TEMP:-/tmp}/dotnet-test-summary.log"
           ok=0
 
@@ -88,18 +95,27 @@ jobs:
               break
             fi
             # 把这一趟的受害者点名出来：只有 thread-affine 那一条才是 #G1-I，别的红灯必须当缺陷查。
-            flaky="$(grep -cE 'The calling thread cannot access this object' "$SUMMARY" || true)"
             failed="$(grep -oE 'Failed: *[0-9]+' "$SUMMARY" | tail -1 | tr -dc '0-9')"
-            echo "::warning title=Flaky headless test run::attempt ${attempt}/${ATTEMPTS} red: Failed=${failed:-?} thread-affine=${flaky:-0} 条（#G1-I）"
+            victims="$(grep -oE 'Test Case Cleanup Failure \([^)]*\)' "$SUMMARY" | sort -u | wc -l | tr -dc '0-9')"
+            echo "::warning title=Flaky headless test run::attempt ${attempt}/${ATTEMPTS} red: Failed=${failed:-?} thread-affine victims=${victims:-0}（#G1-I，信封 ${FLAKY_ENVELOPE}）"
             grep -oE 'Test Case Cleanup Failure \([^)]*\)' "$SUMMARY" | sed 's/^/  victim: /' | sort -u
-            if [ "${flaky:-0}" -eq 0 ]; then
-              echo "::error title=红灯不是 #G1-I::这一趟没有线程归属失败，重跑不算兜底，按真缺陷查。"
+            if [ -z "${failed:-}" ]; then
+              echo "::error title=读不到失败计数::这一趟退出码非 0 却拿不到 Failed 数，不能判成偶发——按真缺陷查（也可能是 dotnet test 自己崩了）。"
               exit 1
+            fi
+            if [ "${victims:-0}" -lt "${failed}" ]; then
+              echo "::error title=红灯不全是 #G1-I::Failed=${failed} 而带清理期签名的只有 ${victims:-0} 条，剩下的是真缺陷，重跑不算兜底。"
+              exit 1
+            fi
+            if [ "${failed}" -le "${FLAKY_ENVELOPE}" ]; then
+              echo "::notice title=按签名放行的偶发趟::attempt ${attempt}/${ATTEMPTS}：${failed} 条全是 #G1-I 的用例清理期线程归属失败（用例本体绿），受害者见上面 victim 列表。"
+              ok=1
+              break
             fi
           done
 
           if [ "$ok" -ne 1 ]; then
-            echo "::error title=重跑 ${ATTEMPTS} 趟仍红::#G1-I 的线程归属竞态连中 ${ATTEMPTS} 次，或混进了真缺陷——见上面逐趟点名的受害者。"
+            echo "::error title=重跑 ${ATTEMPTS} 趟仍红::#G1-I 每趟都超出信封值（${FLAKY_ENVELOPE}），或混进了真缺陷——见上面逐趟点名的受害者与计数。"
             exit 1
           fi
 
