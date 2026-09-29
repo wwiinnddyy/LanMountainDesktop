@@ -1389,6 +1389,20 @@ IDE0051（未使用私有成员）在构建里一条都不出（2026-09-22 实�
 **新登记一条没顺手改的**（G1-CI）：`OverallProgressChangedEventArgs` 的 `Stage` 与 `OverallProgressPercent`
 只有写点——唯一的订阅者 `LoadingStateReporter.OnOverallProgressChanged` 自己重算（`CreateDetailedProgressMessage`），
 所以这条事件带的数据没人看。要么让订阅者读事件参数，要么把这两个字段摘掉，属另一种收口，另拍。
+
+**G1-CI 判掉（2026-09-29）：那条事件三个字段两头都没对接，整体摘掉。**
+登记只说了两个（`Stage` 只有写点、`OverallProgressPercent` 没人读），现量到的形状更大：
+`Stage` 在 #G1-AZ 之后**只能是常量** `Initializing`（那条模型没有"阶段推进"这一维），
+`OverallProgressPercent` 被订阅者无视（它自己从条目重算详单），
+而第三个字段 `Message` 是**反向的死**——订阅者读它（`CreateDetailedProgressMessage(e.Message)`），
+全仓却没有任何地方写过它，等于每轮都传一个恒 null 的覆盖参数。
+处置：事件退回 `EventHandler`（不带话），`CreateDetailedProgressMessage` 的可选参数一并删——
+那条分支谁也走不到，留着是在暗示"有人能覆盖文案"，而事实是**只有一个来源：当前活动条目的消息**。
+钉在 `LoadingProgressReportTests` 两格（上报里的文案取条目消息 / 条目没带消息时仍带计数照报）。
+写这两格时踩到自己一个错判，值得留：**这条链上 `StateChanged` 与 `OverallProgressChanged` 都会触发上报**，
+注册条目本身就发一条（那时条目还没有消息），所以"取第一条到达的上报"断言不到进度那条的内容——
+第一版就是这么假红了一次；改成**按条件等**。
+变异：把 `Message = currentItem?.Message` 改成 `null` → 第一格红，消息就是那句"等不到符合条件的上报"。
 名单实测：实例成员 26 → **18** 条，类型棘轮 15 → **14** 条。`CensusAnchors` 两条跟着换（锚点数量不变）：
 `LoadingTimeoutHandler.SetItemTimeout` → `PublicIpcHostService.PublishLoadingStateAsync`（改钉"另一个二进制的注册面"），
 `LoadingStateReporter.ReportErrorAsync` → `CompositionVisualAnimationService.TrySetUniformScale`（改钉"只有测试在调"那个口径）——

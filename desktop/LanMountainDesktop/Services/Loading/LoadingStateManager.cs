@@ -19,9 +19,13 @@ public class LoadingStateManager : IDisposable
     public event EventHandler<LoadingStateChangedEventArgs>? StateChanged;
     
     /// <summary>
-    /// 整体进度变更事件
+    /// 整体进度变了。**不带货**：原来那条事件参数里 <c>Stage</c> 永远是
+    /// <c>StartupStage.Initializing</c>（写死的常量，#G1-AZ 之后这条模型根本没有"阶段推进"那一维）、
+    /// <c>OverallProgressPercent</c> 没人读（订阅者自己从条目重算详单）、
+    /// <c>Message</c> 反过来**从来没人写**（读了个恒 null）。三个字段两头都没对接上，
+    /// 留着等于让"进度在哪一阶段"这句话在事件签名里冒充有答案。
     /// </summary>
-    public event EventHandler<OverallProgressChangedEventArgs>? OverallProgressChanged;
+    public event EventHandler? OverallProgressChanged;
     
     /// <summary>
     /// 整体进度百分比
@@ -214,11 +218,7 @@ public class LoadingStateManager : IDisposable
             var progress = (int)((completedWeight + inProgressWeight) / totalWeight * 100);
             OverallProgressPercent = Math.Clamp(progress, 0, 100);
             
-            OverallProgressChanged?.Invoke(this, new OverallProgressChangedEventArgs
-            {
-                Stage = StartupStage.Initializing,
-                OverallProgressPercent = OverallProgressPercent
-            });
+            OverallProgressChanged?.Invoke(this, EventArgs.Empty);
         }
     }
     
@@ -268,14 +268,4 @@ public class LoadingStateChangedEventArgs : EventArgs
     public required LoadingItem Item { get; init; }
     public LoadingState? PreviousState { get; init; }
     public required LoadingState CurrentState { get; init; }
-}
-
-/// <summary>
-/// 整体进度变更事件参数
-/// </summary>
-public class OverallProgressChangedEventArgs : EventArgs
-{
-    public StartupStage Stage { get; init; }
-    public int OverallProgressPercent { get; init; }
-    public string? Message { get; init; }
 }

@@ -118,11 +118,11 @@ public class LoadingStateReporter : IDisposable
     /// <summary>
     /// 整体进度变更事件处理
     /// </summary>
-    private void OnOverallProgressChanged(object? sender, OverallProgressChangedEventArgs e)
+    private void OnOverallProgressChanged(object? sender, EventArgs e)
     {
         if (_isDisposed) return;
-        
-        QueueMessage(CreateDetailedProgressMessage(e.Message));
+
+        QueueMessage(CreateDetailedProgressMessage());
     }
 
     /// <summary>
@@ -187,18 +187,21 @@ public class LoadingStateReporter : IDisposable
     /// <summary>
     /// 创建详细的进度消息
     /// </summary>
-    private DetailedProgressMessage CreateDetailedProgressMessage(string? message = null)
+    private DetailedProgressMessage CreateDetailedProgressMessage()
     {
         var activeItems = _manager.GetActiveItems().ToList();
         var currentItem = activeItems.FirstOrDefault();
-        
+
         return new DetailedProgressMessage
         {
             Stage = StartupStage.Initializing,
             ProgressPercent = _manager.OverallProgressPercent,
             CurrentItem = currentItem,
             AllItems = _manager.GetAllItems().ToList(),
-            Message = message ?? currentItem?.Message,
+            // 只有一个来源：当前条目的消息。原来这里还有一个 message 覆盖参数，
+            // 而它唯一的供应方是那条事件里从来没被写过的 Message 字段（恒 null），
+            // 等于一条谁也走不到的分支。
+            Message = currentItem?.Message,
             IsMajorUpdate = false
         };
     }
