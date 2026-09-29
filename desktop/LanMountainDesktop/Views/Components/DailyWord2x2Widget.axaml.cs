@@ -109,7 +109,7 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
 
     private void ApplyNightModeVisual()
     {
-        CardBorder.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#1B2129") : Color.Parse("#FCFBFA"));
+        CardBorder.Background = ComponentRoleBrushes.RaisedSurface(this);
 
         WordTextBlock.Foreground = ComponentRoleBrushes.PrimaryText(this);
         MeaningTextBlock.Foreground = ComponentRoleBrushes.SecondaryText(this);

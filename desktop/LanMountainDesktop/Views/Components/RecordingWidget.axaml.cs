@@ -158,7 +158,7 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget, IDe
 
     private void ApplyNightModeVisual()
     {
-        RootBorder.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#1B2129") : Color.Parse("#ECEFF3"));
+        RootBorder.Background = ComponentRoleBrushes.RaisedSurface(this);
         RootBorder.BorderBrush = new SolidColorBrush(_isNightVisual ? Color.Parse("#33FFFFFF") : Color.Parse("#D9DEE7"));
 
         TitleTextBlock.Foreground = ComponentRoleBrushes.PrimaryText(this);

@@ -54,4 +54,16 @@ internal static class ComponentRoleBrushes
     /// </summary>
     internal static IBrush SecondaryText(IResourceHost host) =>
         AdaptiveTokens.Brush(host, ThemeResourceKeys.TextSecondaryBrush, MutedTextFallback);
+
+    /// <summary>
+    /// 组件自己的那层面板底（根框与内层卡片——今天这两层用的是同一个值）。
+    /// 第四族（2026-09-29）：9 处各写一遍夜档 <c>#1B2129</c>、日档 <c>#FCFCFD</c>/<c>#FCFBFA</c>/
+    /// <c>#ECEFF3</c>/<c>#F4F5F7</c>。选 <c>surfaceRaised</c> 而不是随手挑一层，理由要说清：
+    /// 主题那三个文字角色的对比度全是**按 raised 算的**（ThemeColorSystemService.cs:117-124），
+    /// 而这一层上正好放的就是那些文字——底与字用同一块基准，那道保证才真的成立。
+    /// </summary>
+    internal static IBrush RaisedSurface(IResourceHost host) =>
+        AdaptiveTokens.Brush(host, ThemeResourceKeys.SurfaceRaisedBrush, MutedTextFallback);
+
+
 }

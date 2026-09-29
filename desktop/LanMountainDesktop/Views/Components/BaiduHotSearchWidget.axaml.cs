@@ -131,7 +131,7 @@ public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget
             ? (_isNightVisual ? Color.Parse("#9FABFF") : Color.Parse("#4F6BEB"))
             : (_isNightVisual ? Color.Parse("#5D93FF") : Color.Parse("#2932E1"));
 
-        CardBorder.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#1B2129") : Color.Parse("#FCFCFD"));
+        CardBorder.Background = ComponentRoleBrushes.RaisedSurface(this);
         RootBorder.BorderBrush = new SolidColorBrush(_isNightVisual ? Color.Parse("#33FFFFFF") : Color.Parse("#00000000"));
 
         BrandTextBlock.Foreground = new SolidColorBrush(brandColor);

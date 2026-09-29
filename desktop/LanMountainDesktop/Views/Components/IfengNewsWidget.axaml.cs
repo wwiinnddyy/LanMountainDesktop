@@ -121,7 +121,7 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
 
     private void ApplyNightModeVisual()
     {
-        CardBorder.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#1B2129") : Color.Parse("#FCFCFD"));
+        CardBorder.Background = ComponentRoleBrushes.RaisedSurface(this);
         RootBorder.BorderBrush = new SolidColorBrush(_isNightVisual ? Color.Parse("#33FFFFFF") : Color.Parse("#00000000"));
 
         BrandTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#FF6B5A") : Color.Parse("#E24B2D"));

@@ -307,7 +307,7 @@ public partial class NotificationBoxWidget : UserControl,
         RootBorder.CornerRadius = new CornerRadius(cornerRadius);
         CardBorder.CornerRadius = new CornerRadius(cornerRadius);
 
-        CardBorder.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#1B2129") : Color.Parse("#FCFCFD"));
+        CardBorder.Background = ComponentRoleBrushes.RaisedSurface(this);
 
         HeaderTextBlock.FontSize = 15 * fontScale;
         HeaderIcon.FontSize = 16 * fontScale;

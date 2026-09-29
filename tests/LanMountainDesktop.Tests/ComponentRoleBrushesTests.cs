@@ -16,7 +16,8 @@ using Xunit;
 namespace LanMountainDesktop.Tests;
 
 /// <summary>
-/// 组件"文字角色色"的落点。已烧三族：状态文字（10 处）、正文（17 处）、次要文字与图标字形（17 处），
+/// 组件角色色的落点。已烧四族：状态文字（10 处）、正文（17 处）、次要文字与图标字形（17 处）、
+/// 卡片与根面板底（9 处），
 /// 原来各处都写着 <c>_isNightVisual ? 夜档 : 日档</c> 三元组——夜档每族内部一模一样
 /// （<c>#8B95A5</c> / <c>#E8EAED</c> / <c>#A8B1C2</c>），日档却各自漂开（正文 6 个值、次要 11 个值），
 /// 现在一律走 <c>ComponentRoleBrushes</c> 问主题层要对应角色那支 <c>Adaptive*Text*</c> 画笔。
@@ -85,6 +86,54 @@ public sealed class ComponentRoleBrushesTests
             window.Close();
             Dispatcher.UIThread.RunJobs();
         }
+    }
+
+    /// <summary>
+    /// 表面阶梯（第四族映射到 raised、第五族打算映射到 overlay 的共同依据）。
+    /// 组件今天写死了两层底：卡片『#1B2129』、控件芯片『#2D3440』——夜档芯片比卡片**亮**；
+    /// 白档芯片『#EFF1F5』类又比卡片『#FCFCFD』**暗**。也就是说这两个值编码的是一条相对关系，
+    /// 烧成 token 必须保住方向，否则"控件贴在卡片上"会糊成一片。
+    /// 主题的三层里 <c>surfaceOverlay</c> 正是这个方向，所以这里钉方向、不钉具体像素（值本该随壁纸漂）。
+    /// 组件侧只验 <c>RaisedSurface</c> 真的取自 registered 的 raised——overlay 那一半等第五族
+    /// 真有调用点时再收成组件方法（提前加 API 会被 <c>ZeroUseStaticClassMembers</c> 判成零引用成员，
+    /// 这次就被判过：加早了红的是自己）。
+    /// </summary>
+    [AvaloniaTheory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void SurfaceLadder_KeepsTheControlReadableOnTheCard(bool night)
+    {
+        var window = new Window();
+        ThemeColorSystemService.ApplyThemeResources(window.Resources, night ? NightContext : DayContext);
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        try
+        {
+            var card = LuminanceOf(ComponentRoleBrushes.RaisedSurface(window),
+                window, ThemeResourceKeys.SurfaceRaisedBrush);
+            var chip = LuminanceOf(AdaptiveTokens.Brush(window, ThemeResourceKeys.SurfaceOverlayBrush,
+                    ComponentRoleBrushes.RaisedSurface(window)),
+                window, ThemeResourceKeys.SurfaceOverlayBrush);
+
+            var direction = night ? $"夜档芯片层应比卡片层亮（实际 {chip:F3} vs {card:F3}）"
+                                  : $"白档芯片层应比卡片层暗（实际 {chip:F3} vs {card:F3}）";
+            Assert.True(night ? chip > card : chip < card, direction);
+        }
+        finally
+        {
+            window.Close();
+            Dispatcher.UIThread.RunJobs();
+        }
+    }
+
+    /// <summary>取到颜色之前先确认拿到的就是那个键注册的画笔（接错键要红，而不是"亮度碰巧对"）。</summary>
+    private static double LuminanceOf(IBrush resolved, IResourceHost host, string key)
+    {
+        Assert.True(AdaptiveTokens.TryGet<IBrush>(host, key, out var registered));
+        var actual = Assert.IsAssignableFrom<ISolidColorBrush>(resolved).Color;
+        Assert.Equal(Assert.IsAssignableFrom<ISolidColorBrush>(registered).Color, actual);
+        return ColorMath.RelativeLuminance(actual);
     }
 
     private static IBrush Resolve(IResourceHost host, string role) => role switch

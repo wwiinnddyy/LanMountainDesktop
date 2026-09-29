@@ -114,7 +114,7 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
 
     private void ApplyNightModeVisual()
     {
-        CardBorder.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#1B2129") : Color.Parse("#FCFBFA"));
+        CardBorder.Background = ComponentRoleBrushes.RaisedSurface(this);
 
         WordTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#FF9D6C") : Color.Parse("#F07541"));
         PronunciationTextBlock.Foreground = ComponentRoleBrushes.SecondaryText(this);

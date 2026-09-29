@@ -871,6 +871,16 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 是装饰线的底，不是文字，按次要文字并过去同样是换错档。
 三族共同的形状值得记一句：**夜档每一族内部完全一致，日档却是十几五个各写各的值**——
 也就是说这批"深色模式配色"其实只有一份判断被抄了 44 遍，而它对应的那三个角色主题层早就算好了。
+**第四族是面板底**（9 处 / 18 个字面量，591 → 573）：卡片与根框都写死夜档 `#1B2129`，日档 4 个值
+（`#FCFCFD` `#FCFBFA` `#ECEFF3` `#F4F5F7`），改走 `ComponentRoleBrushes.RaisedSurface`。
+选 `surfaceRaised` 不是随手挑一层：主题那三个文字角色的对比度**全是按 raised 算的**
+（`ThemeColorSystemService.cs:117-124`），而这一层上放的正是那些文字——底与字用同一块基准，
+那道保证才真成立。这一族留了一层可验的依据：组件今天其实编码了"芯片比卡片亮(夜)/暗(昼)"这条
+**相对关系**，`SurfaceLadder_KeepsTheControlReadableOnTheCard` 两行钉方向（夜里 overlay 更亮、
+白天更暗——实测成立），第五族的控件底因此才映射到 `surfaceOverlay`。
+**顺手记下被自己的闸门拦下的一次**：这一笔里我先加了 `OverlaySurface`（第五族还没动），
+`ZeroUseStaticClassMembers_MatchTheAcceptedList` 当场红"新增零引用静态成员 1 个"——
+提前加的 API 就是零引用成员，退回第五族一起落地。这条棘轮不只拦别人留下的死码，也拦自己。
 **为什么不是"把那两个数统一成一对常量"**：主题的 muted 是按 `surfaceRaised` 混色后再 `EnsureContrast` 算的
 （`ThemeColorSystemService.cs:124`），写死三元组正是绕过那道保证的那只手——换浅色壁纸时"夜里那支亮灰字"
 会压在亮底上。行为钉 `ComponentRoleBrushesTests` 是 **三个角色 × 明暗 = 6 行**：拿到的必须就是窗口上真正注册的那支

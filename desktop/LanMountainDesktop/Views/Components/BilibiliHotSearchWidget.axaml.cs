@@ -118,7 +118,7 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
 
     private void ApplyNightModeVisual()
     {
-        CardBorder.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#1B2129") : Color.Parse("#FCFCFD"));
+        CardBorder.Background = ComponentRoleBrushes.RaisedSurface(this);
         RootBorder.BorderBrush = new SolidColorBrush(_isNightVisual ? Color.Parse("#33FFFFFF") : Color.Parse("#00000000"));
 
         SearchBoxBorder.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#2D3440") : Color.Parse("#ECF2FA"));
