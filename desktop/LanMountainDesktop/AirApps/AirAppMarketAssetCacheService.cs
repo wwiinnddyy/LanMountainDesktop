@@ -17,6 +17,10 @@ namespace LanMountainDesktop.Services.AirAppMarket;
 /// </summary>
 public sealed class AirAppMarketAssetCacheService : IDisposable
 {
+    private const string ReadmeKeySuffix = "/readme";
+
+    private const string IconKeySuffix = "/icon";
+
     private static readonly JsonSerializerOptions ManifestSerializerOptions = new()
     {
         WriteIndented = true,
@@ -47,7 +51,7 @@ public sealed class AirAppMarketAssetCacheService : IDisposable
     /// </summary>
     public string? TryGetReadme(string airAppId, string sourceUrl, string airAppVersion)
     {
-        return TryGetAsset(airAppId, sourceUrl, airAppVersion, "readme", _readmeDirectory, ".md");
+        return TryGetAsset(airAppId, sourceUrl, airAppVersion, AssetKind.Readme, _readmeDirectory, ".md");
     }
 
     public async Task StoreReadmeAsync(
@@ -71,7 +75,7 @@ public sealed class AirAppMarketAssetCacheService : IDisposable
     public string? TryGetIcon(string airAppId, string sourceUrl, string airAppVersion)
     {
         var extension = InferIconExtension(sourceUrl);
-        return TryGetAsset(airAppId, sourceUrl, airAppVersion, "icon", _iconsDirectory, extension);
+        return TryGetAsset(airAppId, sourceUrl, airAppVersion, AssetKind.Icon, _iconsDirectory, extension);
     }
 
     public async Task StoreIconAsync(
@@ -96,7 +100,9 @@ public sealed class AirAppMarketAssetCacheService : IDisposable
     {
         lock (_manifestGate)
         {
-            if (!_manifest.Entries.Remove(airAppId))
+            var removedReadme = _manifest.Entries.Remove(BuildEntryKey(airAppId, AssetKind.Readme));
+            var removedIcon = _manifest.Entries.Remove(BuildEntryKey(airAppId, AssetKind.Icon));
+            if (!removedReadme && !removedIcon)
             {
                 return;
             }
@@ -135,19 +141,18 @@ public sealed class AirAppMarketAssetCacheService : IDisposable
         string airAppId,
         string sourceUrl,
         string airAppVersion,
-        string assetLabel,
+        AssetKind assetKind,
         string directory,
         string extension)
     {
         lock (_manifestGate)
         {
-            if (!_manifest.Entries.TryGetValue(airAppId, out var entry))
+            if (!_manifest.Entries.TryGetValue(BuildEntryKey(airAppId, assetKind), out var entry))
             {
                 return null;
             }
 
-            var expectedAsset = assetLabel == "readme" ? AssetKind.Readme : AssetKind.Icon;
-            if (entry.AssetKind != expectedAsset)
+            if (entry.AssetKind != assetKind)
             {
                 return null;
             }
@@ -167,7 +172,7 @@ public sealed class AirAppMarketAssetCacheService : IDisposable
     {
         lock (_manifestGate)
         {
-            _manifest.Entries[airAppId] = new AssetCacheEntry(
+            _manifest.Entries[BuildEntryKey(airAppId, assetKind)] = new AssetCacheEntry(
                 assetKind,
                 sourceUrl,
                 airAppVersion,
@@ -176,6 +181,23 @@ public sealed class AirAppMarketAssetCacheService : IDisposable
 
         SaveManifest();
     }
+
+    /// <summary>
+    /// 清单的键是 <c>{appId}/readme</c> 与 <c>{appId}/icon</c> 两条，不是一个 appId 一条。
+    /// </summary>
+    /// <remarks>
+    /// 改这一处之前，同一个应用的 README 与图标在清单里互相覆盖：存完图标再问 README 就得到
+    /// "没缓存"，于是每次打开详情都重下一遍 README，而那个 <c>.md</c> 早就静静躺在盘上
+    /// （文件是分目录存的，所以盘上没坏，坏的是"新鲜与否"这条记录）。
+    /// 键里带种类之后 <see cref="LoadManifest"/> 会把读不出种类的旧键丢掉——这是缓存，
+    /// 丢掉的代价是那一份资产重下一次，比留着一条永远对不上的旧记录便宜。
+    /// </remarks>
+    private static string BuildEntryKey(string airAppId, AssetKind assetKind) =>
+        $"{airAppId}{(assetKind == AssetKind.Readme ? ReadmeKeySuffix : IconKeySuffix)}";
+
+    private static bool IsEntryKeyOfKind(string key, string suffix) =>
+        key.EndsWith(suffix, StringComparison.OrdinalIgnoreCase) &&
+        key.Length > suffix.Length;
 
     private AssetCacheManifest LoadManifest()
     {
@@ -187,8 +209,20 @@ public sealed class AirAppMarketAssetCacheService : IDisposable
             }
 
             var json = File.ReadAllText(_manifestPath);
-            return JsonSerializer.Deserialize<AssetCacheManifest>(json, ManifestSerializerOptions)
+            var loaded = JsonSerializer.Deserialize<AssetCacheManifest>(json, ManifestSerializerOptions)
                 ?? new AssetCacheManifest();
+
+            // 旧格式（一个 appId 一条记录，键里不带种类）读进来直接丢掉：那类记录对不上任何一次查询，
+            // 留着只会让"这条资产到底缓存了什么"在文件里多留一份没人认领的旧事实。
+            // 丢掉的实际代价是那份资产重下一次——缓存重建得起，读错代价不该由正确性付。
+            foreach (var key in loaded.Entries.Keys
+                         .Where(k => !IsEntryKeyOfKind(k, ReadmeKeySuffix) && !IsEntryKeyOfKind(k, IconKeySuffix))
+                         .ToArray())
+            {
+                loaded.Entries.Remove(key);
+            }
+
+            return loaded;
         }
         catch
         {

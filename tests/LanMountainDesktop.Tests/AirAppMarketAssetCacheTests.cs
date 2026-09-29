@@ -88,28 +88,69 @@ public sealed class AirAppMarketAssetCacheTests : IDisposable
     }
 
     /// <summary>
-    /// <b>钉的是现状，不是理想行为</b>：manifest 按 appId 存<b>一条</b>记录、记录里带资产种类，
-    /// 所以同一个应用的 README 与图标互相覆盖——存完图标再问 README，答案是"没缓存"，
-    /// 于是每次看详情都重下一遍 README，而那个 .md 文件已经静静躺在盘上。
-    /// 这条形状已登记（G1-CJ）：要修得先改 manifest 的结构（一个 id 两条记录），属磁盘格式变更。
-    /// 把这条测试改绿之前请先看那条登记，别在这里顺手改成"两个都在"。
+    /// 同一个应用的 README 与图标各自有记录，互不覆盖（#G1-CJ，2026-09-29 改掉）。
+    ///
+    /// 改之前的形状是清单按 appId 存<b>一条</b>记录、记录里带种类：存完图标再问 README 就得到
+    /// "没缓存"，于是每次打开详情都重下一遍 README，而那个 <c>.md</c> 早就静静躺在盘上
+    /// （文件是分目录存的，所以盘上没坏，坏的是"这条资产新鲜与否"的记录）。
+    /// 这一格以前钉的是那个现状（<c>OneAirApp_CanOnlyTrackOneAssetKind_Today</c>），现在钉的是修好以后的样子。
     /// </summary>
     [Fact]
-    public async Task OneAirApp_CanOnlyTrackOneAssetKind_Today()
+    public async Task BothAssetKinds_StayCachedForTheSameAirApp()
     {
         await StoreReadmeAsync("demo.airapp");
 
         using (var cache = new AirAppMarketAssetCacheService(_marketDirectory))
         {
-            Assert.NotNull(cache.TryGetReadme("demo.airapp", ReadmeUrl, Version));
+            using var icon = new MemoryStream([1, 2, 3, 4]);
+            await cache.StoreIconAsync("demo.airapp", IconUrl, Version, icon, CancellationToken.None);
+
+            Assert.NotNull(cache.TryGetIcon("demo.airapp", IconUrl, Version));
+            Assert.NotNull(
+                cache.TryGetReadme("demo.airapp", ReadmeUrl, Version));
         }
+
+        // 换一个实例重读盘：钉的是两条记录都真写进了 manifest.json，不只是内存里并存。
+        using (var reloaded = new AirAppMarketAssetCacheService(_marketDirectory))
+        {
+            Assert.NotNull(reloaded.TryGetReadme("demo.airapp", ReadmeUrl, Version));
+            Assert.NotNull(reloaded.TryGetIcon("demo.airapp", IconUrl, Version));
+        }
+    }
+
+    /// <summary>
+    /// 旧格式清单（键里不带种类）读进来要丢掉，而不是留着当"缓存过"的证据。
+    /// 丢掉付的代价是那一份资产重下一次；留着付的代价是文件里多一条永远对不上的旧事实。
+    /// </summary>
+    [Fact]
+    public async Task LegacyManifestEntry_IsDroppedAndReplacedByTheTypedKey()
+    {
+        var manifestDirectory = Path.Combine(_marketDirectory, "cache", "assets");
+        Directory.CreateDirectory(manifestDirectory);
+        File.WriteAllText(Path.Combine(manifestDirectory, "manifest.json"), """
+        {
+          "entries": {
+            "demo.airapp": {
+              "assetKind": 0,
+              "sourceUrl": "https://example.test/demo/readme.md",
+              "pluginVersion": "1.0.0",
+              "cachedAt": "2026-09-27T00:00:00+00:00"
+            }
+          }
+        }
+        """);
 
         using (var cache = new AirAppMarketAssetCacheService(_marketDirectory))
         {
-            var icon = new MemoryStream([1, 2, 3, 4]);
-            await cache.StoreIconAsync("demo.airapp", IconUrl, Version, icon, CancellationToken.None);
+            // 旧键不能再被当成"这条资产缓存过了"。
             Assert.Null(cache.TryGetReadme("demo.airapp", ReadmeUrl, Version));
         }
+
+        await StoreReadmeAsync("demo.airapp");
+
+        var saved = File.ReadAllText(Path.Combine(manifestDirectory, "manifest.json"));
+        Assert.Contains("demo.airapp/readme", saved, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"demo.airapp\":", saved, StringComparison.Ordinal);
     }
 
     public void Dispose()
