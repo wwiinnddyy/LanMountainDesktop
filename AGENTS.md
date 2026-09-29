@@ -1399,6 +1399,24 @@ IDE0051（未使用私有成员）在构建里一条都不出（2026-09-22 实�
 现状钉在 `AirAppMarketAssetCacheTests.OneAirApp_CanOnlyTrackOneAssetKind_Today`）、G1-CK（删包绕开"尽力删除只认一处"那家、
 共享契约不跟着删、删除没有确认对话框）。行为钉新增 `AirAppMarketAssetCacheTests` 四格与
 `CapabilityEntryPointTests.AirAppUninstall_AlsoClearsTheMarketAssetCache`（卸载方法体里必须有那一步，注释掉即红）。
+
+**G1-CK 第一条判掉：卸载删包从此走"尽力删除"那家，而且会说为什么删不动（2026-09-29）**。
+`TryDeleteAirAppTarget` 原来是一份手写抄本：空的 `catch` 直接 `return false`。两个后果都能测：
+只读的包文件删不掉（`File.Delete` 对只读属性抛 `UnauthorizedAccessException`，而
+`FileOperationRetryHelper.TryDeleteFile` 会先清属性），以及**删不动的原因不出声**——
+症状是"卸载跑完了，`AppData` 里还留着那个应用的目录"，日志里一行都查不到。
+行为钉 `AirAppUninstallDeleteTests` 三格；变异按差分量：把抄本放回去 →
+**正是**"只读文件"与"要说清为什么失败"两格红，"路径本来就不存在算删成功"那格照绿
+（两个版本在这点上行为相同，所以它不该红、也确实没红——这就是"差分校正"的意义）。
+另外两条**没有顺手改**，但登记里的说法要按实测改写：
+① 登记写"共享契约不跟着删"——真相不是"该删没删"：`SharedContracts` 按 **(契约 id, 版本)** 存、
+**跨应用共享**，卸载时直接删会把别的在用应用弄坏；量到的实际缺口是**这里从来没有 GC**
+（全仓 `SharedContracts` 目录上的删除点 0 个，唯一的删除是 `.download` 临时文件），
+所以市场版本一路滚就一直涨。要修的是"按盘上现存包所引用的 (id,版本) 清扫，且不碰内存里已加载的"，
+另立 G1-CO，不混在本笔里改。
+② 登记写"删除没有确认对话框"——今天的事实比这句更大：**整个宿主没有任何确认可用的形态**
+（`MessageBox`/`ShowDialog`/`class *Confirm*` 在设置页 VM 与全宿主里 grep 均 0 命中），
+所以这不是补一行确认，是**新建一种交互**（连带本地化，#22 的 ja/ko 欠账还没清）。属产品决定，没替谁做。
 **G1-AY 同日只做完一半，另一半登记成 G1-CL——先把症状和病分开**：登记写的"同意状态只写不读"是真的，
 但它只是症状；现量到的病在**向导第五步没有出口**：那两个遥测开关只写进启动器自己目录下的
 `privacy-config.json`，而全仓（含两份实现、测试、文档）**没有任何读者**，宿主的两道闸读的是

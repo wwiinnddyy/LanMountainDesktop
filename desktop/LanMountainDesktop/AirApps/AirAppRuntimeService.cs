@@ -874,25 +874,30 @@ public sealed class AirAppRuntimeService : IDisposable
         return fullSourcePath;
     }
 
-    private static bool TryDeleteAirAppTarget(string targetPath)
+    /// <summary>
+    /// 删掉这个应用落在磁盘上的包（解压目录或 <c>.airapp</c> 文件），走"尽力删除只认一处"那家。
+    /// </summary>
+    /// <remarks>
+    /// 原来这里是一份手写抄本：空的 <c>catch</c> 直接 <c>return false</c>。两个后果都实拍过——
+    /// ① 删不动的原因从来不出声（所以"卸载跑完 AppData 里还留着文件"这种残留查不到根因，
+    /// 家那段注释量的正是这类残留）；② 只读文件删不掉（<c>File.Delete</c> 对只读属性抛
+    /// <c>UnauthorizedAccessException</c>，而 <c>TryDeleteFile</c> 会先清属性）。
+    /// "路径本来就不存在"仍算删成功：返回 false 会让调用方把这个根本不存在的路径记进
+    /// <c>.pending</c>，下次启动再白跑一趟。
+    /// </remarks>
+    internal static bool TryDeleteAirAppTarget(string targetPath)
     {
-        try
+        if (File.Exists(targetPath))
         {
-            if (File.Exists(targetPath))
-            {
-                File.Delete(targetPath);
-            }
-            else if (Directory.Exists(targetPath))
-            {
-                Directory.Delete(targetPath, recursive: true);
-            }
+            return FileOperationRetryHelper.TryDeleteFile(targetPath, "AirAppRuntime");
+        }
 
-            return !File.Exists(targetPath) && !Directory.Exists(targetPath);
-        }
-        catch
+        if (Directory.Exists(targetPath))
         {
-            return false;
+            return FileOperationRetryHelper.TryDeleteDirectory(targetPath, recursive: true, "AirAppRuntime");
         }
+
+        return true;
     }
 
     private void RegisterPendingAirAppDeletion(string targetPath)
