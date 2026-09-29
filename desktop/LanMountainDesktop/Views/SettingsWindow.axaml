@@ -101,8 +101,6 @@
                 <SolidColorBrush x:Key="NavigationViewContentGridBorderBrush" Color="Transparent" />
                 <SolidColorBrush x:Key="NavigationViewDefaultPaneBackground" Color="Transparent" />
                 <SolidColorBrush x:Key="NavigationViewExpandedPaneBackground" Color="Transparent" />
-                <SolidColorBrush x:Key="NavigationViewMinimalPaneBackground" Color="Transparent" />
-                <SolidColorBrush x:Key="NavigationViewPaneBackground" Color="Transparent" />
                 <SolidColorBrush x:Key="NavigationViewTopPaneBackground" Color="Transparent" />
             </ui:FANavigationView.Resources>
 

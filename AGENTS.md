@@ -1128,22 +1128,44 @@ Avalonia 的 Border 只在厚度 >0 时描边，所以**这 5 行从写下那天
 唯一挂名的欠账是 `Assets/endfiled`：24 张表情图 / 1.27MB 全仓零引用，也没有代码按目录枚举它们——
 删掉整套是产品决定，先用配额冻住（24 张 / 1303 KiB），不许再扩大。
 
-**同一条轴在 XAML 资源键上还没有过基线，2026-09-23 补上了**：`x:Key` 也是一种符号——
+**同一条轴在 XAML 资源键上还没有过基线，2026-09-23 补上了；2026-09-30 重做了一遍，并把一条瞎掉的尺子当场作废**：`x:Key` 也是一种符号——
 它不在 C# 侧任何棘轮的视野里，也不会因缺失而报错。守卫
 `tests/LanMountainDesktop.Tests/UnreferencedXamlResourceKeyRatchetTests.cs`，
-实测 **104 个键 / 183 个定义点（同一键常有明暗两份）/ 7 个无人引用**。
-7 个先按理由登记，不删：`AppFontFamilyJP`／`AppFontFamilyKR`（中日韩字体覆盖，接不接与 G1-K 同一个决定）、
-`AirAppWindowBorderBrush`（AirAppHost 自己声明的边框画刷，全仓零取用），
-以及 4 个"照着 WinUI 的名字猜写的"死覆盖——
-`NavigationViewPaneBackground`／`NavigationViewMinimalPaneBackground`／`NavigationViewItemIconBoxHeight`／
-`PaneToggleButtonHeightGridLength`：**仓库里搜不到取用点，`avalonia.themes.fluent`、`avalonia`、
-`fluentavaloniaui` 三个包里也 grep 不到这些名字**（同一文件里的 `PaneToggleButtonWidth`／
-`PaneToggleButtonHeight` 却在 FluentAvalonia 里命中 8 / 4 个文件，所以它们是库按名取用的真覆盖，
-另立 `LibraryOwnedKeys` 豁免——这类键的引用在编译好的样式里，文本口径看不见，只能显式登记）。
-两处当场纠正的错法，别再犯：① 第一版探针把"带 `x:Key` 的那一行"整行跳过，于是同一行里的
+09-23 实测 **104 个键 / 183 个定义点（同一键常有明暗两份）/ 7 个无人引用**。
+7 个先按理由登记、不删，其中 3 个到今天仍然成立（`AppFontFamilyJP`／`AppFontFamilyKR` 与 G1-K 同一个决定、
+`AirAppWindowBorderBrush` 属外观决定），**另外 4 个"照 WinUI 的名字猜写的死覆盖"里有 1 个判错了**：
+`NavigationViewPaneBackground`／`NavigationViewMinimalPaneBackground`／`NavigationViewItemIconBoxHeight`
+确实是死覆盖（2026-09-30 删掉，删的只是文本——宿主输出目录那 125 份程序集里，两种编码各搜一遍都没出现过这三个名字，
+那三行从写下那天起一个像素都不影响），
+而 `PaneToggleButtonHeightGridLength` **是库真认的键**，被同一句"包里 grep 不到"错判成了死的；
+另外 5 个同样是真键的导航壳覆盖则走了另一种隐身——被一句文本盖章测试喂成"有人引用"。两种形状出自同一把瞎尺子。
+
+**判错的根因是一条瞎掉的量法，这条比那三行删除值钱**：登记里那句"三个主题包里都 grep 不到这个名字"
+是**拿 UTF-8 字节去搜编译好的程序集**。Avalonia 把编译后的 XAML 载荷（含模板里 `StaticResource`/`DynamicResource`
+的键名字符串表）与 C# 字符串字面量一起存成 **UTF-16**，所以那种搜法对**任何**键名都报 0——拿我们自己那份
+`LanMountainDesktop.dll` 反证，`glass-panel`、`page-title-container` 同样 0 命中；而当时算作正例的
+`PaneToggleButtonWidth` 那 7 次命中根本是 **CLR 成员名**（`get_PaneToggleButtonWidth`、`s_resPaneToggleButtonWidth`），
+不是资源键：一条假正例 + 一把恒假的尺子，够把 6 条真覆盖说成死的。换 UTF-16 重搜，真值一次看全——
+库的键表里读得到 `NavigationViewContentBackground`／`…ContentGridBorderBrush`／`…DefaultPaneBackground`／
+`…ExpandedPaneBackground`／`…TopPaneBackground`／`PaneToggleButtonHeightGridLength`（最后这条与
+`NavigationViewCompactPaneLength` 并排躺在同一张表里），读不到那 3 个被删的名字。第 3 条还顺带量出它**与库里真名只差一个词**：
+库那条叫 `NavigationViewItemOnLeftIconBoxHeight`，写成 `NavigationViewItem…` 就静默不生效
+（要不要真把导航项图标框收进 20 高属改外观，另拍，这一笔只删不接）。
+
+**豁免从此不许自称，逐条与二进制核对**：`LibraryOwnedKeys` 现在 10 条（导航壳 5 + 瓦片按钮 3 + Fluent 圆角档 2），
+每格跑两个方向——登记为"库有的"必须在 `FluentAvalonia.dll`／`Avalonia.Themes.Fluent.dll` 里真读得到，
+登记为"库没有的"（正是删掉的那 3 个名字）必须读不到；后一半是探针自己的金丝雀，编码假设哪天漂了、
+或判据被放宽到恒真，它先红。另一格钉"名单里的键我们这边必须还在定义"，于是"删掉一行真会改到外观的覆盖"
+不再是编译管不到的事（编译根本不检查 `x:Key`）。四个变异逐条量过：名单里塞一个库不认的名字 → 红两格；
+反向对照换成库真认的名字 → 红；从标记里删掉 `PaneToggleButtonWidth` → 只有"仍在定义"那格红；
+**把判据退回 UTF-8 搜法 → 正例整条红**（这一笔就是当年那句结论的复现，不是推测）。
+原有的两条错法仍然成立，别再犯：① 第一版探针把"带 `x:Key` 的那一行"整行跳过，同一行里的
 `{StaticResource X}` 不算引用，把 5 个真在用的 AirApp 颜色键报成孤儿——只能抠掉 `x:Key="…"` 的值本身；
-② 名单文件自己会被自己的语料喂饱（豁免条目里写的就是键名），所以引用语料要排除 `*RatchetTests.cs`；
-`docs/` 也不算引用（文档提一次不等于 UI 取用，这条与零使用棘轮同一个教训）。
+② 名单文件自己会被自己的语料喂饱（豁免条目里写的就是键名），所以引用语料要排除 `*RatchetTests.cs`，
+`docs/` 也不算引用。**第三条是这次新增的**：宽算引用把 `tests/` 也算使用者，于是一句"标记里必须写着这行"的
+文本盖章测试就能把键喂成"有人用"——把 `tests` 从语料里摘掉现量，多出的正是 `ControlCornerRadius`／
+`OverlayCornerRadius` 两个（它们今天的"引用"只是 `CornerRadiusStyleTests` 里的一句注释；导航壳那 5 个在摘掉之前
+就已经改走二进制判据了）。这类"库认不认识"的事不该由文本口径裁决，两边都换成了上面那把能看见 UTF-16 的尺子。
 方向都验过：新增一个没人用的键 → 红并点名；让名单里的键真被引用 → 红（假欠账）；删掉临时文件 → 回绿。
 
 **一个数只有一个家**：组件自缩放基准 `ComponentDesignMetrics.BaseCellSize`（此前 12 个组件各写一份

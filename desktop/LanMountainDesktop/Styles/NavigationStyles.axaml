@@ -6,7 +6,6 @@
     <Styles.Resources>
         <x:Double x:Key="PaneToggleButtonWidth">40</x:Double>
         <x:Double x:Key="PaneToggleButtonHeight">40</x:Double>
-        <x:Double x:Key="NavigationViewItemIconBoxHeight">20</x:Double>
         <GridLength x:Key="PaneToggleButtonHeightGridLength">40</GridLength>
     </Styles.Resources>
 
