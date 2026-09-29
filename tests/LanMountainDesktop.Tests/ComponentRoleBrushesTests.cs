@@ -1,9 +1,9 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
-using Avalonia.Threading;
 
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
@@ -16,15 +16,24 @@ using Xunit;
 namespace LanMountainDesktop.Tests;
 
 /// <summary>
-/// 组件角色色的落点。已烧四族：状态文字（10 处）、正文（17 处）、次要文字与图标字形（17 处）、
-/// 卡片与根面板底（9 处），
-/// 原来各处都写着 <c>_isNightVisual ? 夜档 : 日档</c> 三元组——夜档每族内部一模一样
-/// （<c>#8B95A5</c> / <c>#E8EAED</c> / <c>#A8B1C2</c>），日档却各自漂开（正文 6 个值、次要 11 个值），
-/// 现在一律走 <c>ComponentRoleBrushes</c> 问主题层要对应角色那支 <c>Adaptive*Text*</c> 画笔。
-/// 这里钉的不是"等于某个十六进制"，而是**换壁纸/换档之后仍然读得清**：主题层的这些值是按
-/// surfaceRaised 混色后再 EnsureContrast 算的（ThemeColorSystemService.cs:117-124），
-/// 所以断言落在"跟随注册值"＋"与面板底色对比度达到该角色的门槛"两件事上。
-/// 写死的三元组恰恰两件事都不保证——它就是绕过后者才存在的。
+/// 组件角色色的落点。已烧五族：状态文字（10 处）、正文（17 处）、次要文字与图标字形（17 处）、
+/// 卡片与根面板底（9 处）、控件底（10 处里的 9 处）——原来各处都写着
+/// <c>_isNightVisual ? 夜档 : 日档</c> 三元组：夜档每族内部一模一样
+/// （<c>#8B95A5</c> / <c>#E8EAED</c> / <c>#A8B1C2</c> / <c>#1B2129</c> / <c>#2D3440</c>），
+/// 日档却各自漂开（正文 6 个值、次要 11 个值、控件底 6 个值），
+/// 现在一律走 <c>ComponentRoleBrushes</c> 问主题层要对应角色的那一支画笔。
+///
+/// 钉的是两件事，不是"等于某个十六进制"：**跟着注册值走**（键接错要红）与
+/// **换壁纸/换档之后仍然读得清**（对比度达到该角色自己的门槛，或阶梯方向没反）。
+/// 主题那些值是按 surfaceRaised 混色后再 EnsureContrast 算的
+/// （<c>ThemeColorSystemService.cs:117-124</c>），而写死的三元组两件事都不保证——它就是绕过后者才存在的。
+///
+/// <b>为什么全类只开一个测试、内部逐档循环</b>：这是实测出来的取舍。原先写成
+/// <c>[AvaloniaTheory]</c> 9 行（三角色 × 明暗 6 + 阶梯 2 + 同作用域 1），push 之后 Actions 三趟全红，
+/// 每趟"失败数 == 线程归属失败数"，而受害者正是这些新用例：
+/// <c>Test Case Cleanup Failure … different thread owns it</c>（就是 #G1-I）。
+/// 每多一格 Avalonia 用例就多一次会话参与，而 #20 已量过"同形会话多开即复现"。
+/// 合并成单会话后断言一条不少（每条失败都点名档位与角色），偶发面从 9 次降到 1 次。
 /// </summary>
 public sealed class ComponentRoleBrushesTests
 {
@@ -40,134 +49,126 @@ public sealed class ComponentRoleBrushesTests
         IsLightNavBackground: false,
         IsNightMode: true);
 
-    /// <summary>
-    /// 三个角色 × 明暗两档 = 6 行：拿到的必须就是窗口上真正注册的那支画笔（键接错会红），
-    /// 而且对面板底色的对比度不低于该角色自己的门槛（主题没算够也会红）。
-    /// <c>textPrimary</c> 在生产里按 4.5:1 造，<c>textMuted</c> 按 3:1（大字号/次要文字档）。
-    /// </summary>
-    [AvaloniaTheory]
-    [InlineData(false, "muted", ThemeResourceKeys.TextMutedBrush, 3.0)]
-    [InlineData(true, "muted", ThemeResourceKeys.TextMutedBrush, 3.0)]
-    [InlineData(false, "primary", ThemeResourceKeys.TextPrimaryBrush, 4.5)]
-    [InlineData(true, "primary", ThemeResourceKeys.TextPrimaryBrush, 4.5)]
-    [InlineData(false, "secondary", ThemeResourceKeys.TextSecondaryBrush, 3.0)]
-    [InlineData(true, "secondary", ThemeResourceKeys.TextSecondaryBrush, 3.0)]
-    public void RoleBrush_FollowsTheThemeAndStaysReadableOnThePanel(
-        bool night, string role, string key, double floor)
+    /// <summary>文字角色 → (键, 门槛)。门槛不是一条通用值：primary 生产按 4.5 造，另两档按 3。</summary>
+    private static readonly (string Role, string Key, double Floor)[] TextRoles =
+    [
+        ("muted", ThemeResourceKeys.TextMutedBrush, 3.0),
+        ("primary", ThemeResourceKeys.TextPrimaryBrush, 4.5),
+        ("secondary", ThemeResourceKeys.TextSecondaryBrush, 3.0),
+    ];
+
+    [AvaloniaFact]
+    public void RoleBrushes_FollowTheTheme_AndStayReadable_InBothModes()
     {
-        var context = night ? NightContext : DayContext;
-        var window = new Window();
-        ThemeColorSystemService.ApplyThemeResources(window.Resources, context);
-        window.Show();
-        Dispatcher.UIThread.RunJobs();
+        var failures = new List<string>();
 
-        try
+        foreach (var sample in new (bool Night, ThemeColorContext Context)[] { (false, DayContext), (true, NightContext) })
         {
-            var resolved = Assert.IsAssignableFrom<ISolidColorBrush>(Resolve(window, role));
-            Assert.True(
-                AdaptiveTokens.TryGet<IBrush>(window, key, out var registered),
-                $"主题服务没注册 {key}——那 {role} 角色的所有调用点会一起落到中性灰，看着像\"颜色淡了\"");
-            Assert.Equal(
-                Assert.IsAssignableFrom<ISolidColorBrush>(registered).Color,
-                resolved.Color);
+            var mode = sample.Night ? "夜" : "昼";
+            var host = ThemedHost(sample.Context);
 
-            Assert.True(
-                AdaptiveTokens.TryGet<IBrush>(window, ThemeResourceKeys.SurfaceRaisedBrush, out var surface));
-            var contrast = ColorMath.ContrastRatio(
-                resolved.Color,
-                Assert.IsAssignableFrom<ISolidColorBrush>(surface).Color);
-            Assert.True(
-                contrast >= floor,
-                $"{(night ? "夜" : "昼")}档 {role} 文字对面板底色只有 {contrast:F2}:1，低于 {floor}:1"
-                + "——这一族族烧成 token 的全部理由就是这条保证不再由组件自己绕过");
+            if (Registered(host, ThemeResourceKeys.SurfaceRaisedBrush) is not Color panel)
+            {
+                failures.Add($"{mode}档：主题没注册纯色 surfaceRaised，文字对比度无从判定");
+                continue;
+            }
+
+            foreach (var role in TextRoles)
+            {
+                if (Resolved(host, role.Role) is not Color solid)
+                {
+                    failures.Add($"{mode}档 {role.Role}：拿到的不是纯色画笔");
+                    continue;
+                }
+
+                if (Registered(host, role.Key) is not Color registered)
+                {
+                    failures.Add($"{mode}档 {role.Role}：主题没注册 {role.Key}，该角色所有调用点会一起落到中性灰");
+                    continue;
+                }
+
+                if (solid != registered)
+                {
+                    failures.Add($"{mode}档 {role.Role}：取到的不是 {role.Key} 注册的那支"
+                        + $"（{solid} vs {registered}）——家里的键接错了");
+                    continue;
+                }
+
+                var contrast = ColorMath.ContrastRatio(solid, panel);
+                if (contrast < role.Floor)
+                {
+                    failures.Add($"{mode}档 {role.Role} 对面板底色只有 {contrast:F2}:1，低于 {role.Floor}:1"
+                        + "——烧成 token 的全部理由就是这条保证不再由组件自己绕过");
+                }
+            }
+
+            // 两层底的阶梯方向：夜里控件底比面板底亮、白天比它暗。组件写死的卡片『#1B2129』与
+            // 控件底『#2D3440』编码的就是这条相对关系；保住方向就够了，值本该随壁纸漂，所以不钉像素。
+            // 必须**先合成再比**：主题的 surfaceOverlay 自带 α（0xE8 / 0xF2），
+            // 拿不含 α 的 RGB 亮度判方向会高估那一层——看着更亮、压到卡片上其实没那么亮。
+            var card = Resolved(host, "card");
+            var chip = Resolved(host, "chip");
+            if (card is null || chip is null)
+            {
+                failures.Add($"{mode}档：卡片底或控件底没拿到纯色");
+                continue;
+            }
+
+            var cardLum = ColorMath.RelativeLuminance(card.Value);
+            var chipLum = ColorMath.RelativeLuminance(ColorMath.ToOpaqueAgainst(chip.Value, card.Value));
+            var ladderHolds = sample.Night ? chipLum > cardLum : chipLum < cardLum;
+            if (!ladderHolds)
+            {
+                failures.Add($"{mode}档阶梯反了：控件底合成到卡片底之后 {chipLum:F3} 对卡片 {cardLum:F3}"
+                    + $"（应{(sample.Night ? "更亮" : "更暗")}）——控件与面板会糊成一片");
+            }
         }
-        finally
+
+        // 同一作用域里两个控件必须拿到同一支颜色：家若退回"只看自己那本子字典"（TryGetResource 那个坑），
+        // 没上屏的控件会各自失色——这里正是"没上屏"的形状。
         {
-            window.Close();
-            Dispatcher.UIThread.RunJobs();
+            var first = new TextBlock();
+            var second = new TextBlock();
+            var scoped = new Border { Resources = new ResourceDictionary() };
+            ThemeColorSystemService.ApplyThemeResources(scoped.Resources, DayContext);
+            scoped.Child = new StackPanel { Children = { first, second } };
+
+            var left = ResolvedFrom(ComponentRoleBrushes.MutedText(first));
+            var right = ResolvedFrom(ComponentRoleBrushes.MutedText(second));
+            if (left is null || right is null || left != right)
+            {
+                failures.Add($"同作用域两个控件拿到不同颜色（{left} vs {right}）");
+            }
         }
+
+        Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures));
     }
 
-    /// <summary>
-    /// 表面阶梯（第四族映射到 raised、第五族打算映射到 overlay 的共同依据）。
-    /// 组件今天写死了两层底：卡片『#1B2129』、控件芯片『#2D3440』——夜档芯片比卡片**亮**；
-    /// 白档芯片『#EFF1F5』类又比卡片『#FCFCFD』**暗**。也就是说这两个值编码的是一条相对关系，
-    /// 烧成 token 必须保住方向，否则"控件贴在卡片上"会糊成一片。
-    /// 主题的三层里 <c>surfaceOverlay</c> 正是这个方向，所以这里钉方向、不钉具体像素（值本该随壁纸漂）。
-    /// 组件侧两个方法各验一次"取自自己那个键"——接错键两档都会红。
-    /// （<c>OverlaySurface</c> 是在第五族那 10 个调用点同一笔里加的：先加方法后接线会被
-    /// <c>ZeroUseStaticClassMembers</c> 判成零引用成员，这个坑第四族就踩过一次。）
-    /// </summary>
-    [AvaloniaTheory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void SurfaceLadder_KeepsTheControlReadableOnTheCard(bool night)
-    {
-        var window = new Window();
-        ThemeColorSystemService.ApplyThemeResources(window.Resources, night ? NightContext : DayContext);
-        window.Show();
-        Dispatcher.UIThread.RunJobs();
-
-        try
-        {
-            var card = LuminanceOf(ComponentRoleBrushes.RaisedSurface(window),
-                window, ThemeResourceKeys.SurfaceRaisedBrush);
-            var chip = LuminanceOf(ComponentRoleBrushes.OverlaySurface(window),
-                window, ThemeResourceKeys.SurfaceOverlayBrush);
-
-            var direction = night ? $"夜档芯片层应比卡片层亮（实际 {chip:F3} vs {card:F3}）"
-                                  : $"白档芯片层应比卡片层暗（实际 {chip:F3} vs {card:F3}）";
-            Assert.True(night ? chip > card : chip < card, direction);
-        }
-        finally
-        {
-            window.Close();
-            Dispatcher.UIThread.RunJobs();
-        }
-    }
-
-    /// <summary>取到颜色之前先确认拿到的就是那个键注册的画笔（接错键要红，而不是"亮度碰巧对"）。</summary>
-    private static double LuminanceOf(IBrush resolved, IResourceHost host, string key)
-    {
-        Assert.True(AdaptiveTokens.TryGet<IBrush>(host, key, out var registered));
-        var actual = Assert.IsAssignableFrom<ISolidColorBrush>(resolved).Color;
-        Assert.Equal(Assert.IsAssignableFrom<ISolidColorBrush>(registered).Color, actual);
-        return ColorMath.RelativeLuminance(actual);
-    }
-
-    private static IBrush Resolve(IResourceHost host, string role) => role switch
+    /// <summary>组件侧取到的颜色（角色名 → 家的方法），取不到或不是纯色返回 null。</summary>
+    private static Color? Resolved(IResourceHost host, string role) => ResolvedFrom(role switch
     {
         "muted" => ComponentRoleBrushes.MutedText(host),
         "primary" => ComponentRoleBrushes.PrimaryText(host),
         "secondary" => ComponentRoleBrushes.SecondaryText(host),
+        "card" => ComponentRoleBrushes.RaisedSurface(host),
+        "chip" => ComponentRoleBrushes.OverlaySurface(host),
         _ => throw new ArgumentException($"未知的角色名 {role}", nameof(role)),
-    };
+    });
+
+    private static Color? ResolvedFrom(IBrush brush) => brush is ISolidColorBrush solid ? solid.Color : null;
+
+    /// <summary>注册值本身。断言"组件拿到的 == 这个键注册的"，接错键才会红，而不是"亮度碰巧对"。</summary>
+    private static Color? Registered(IResourceHost host, string key) =>
+        AdaptiveTokens.TryGet<IBrush>(host, key, out var brush) ? ResolvedFrom(brush) : null;
 
     /// <summary>
-    /// 兜底那一支（拿不到键给中性灰）**没有单独一格测试**，理由是实测的而不是偷懒：
-    /// 视觉底座已把 Adaptive* 注册在应用级资源表上（#44 那条），任何控件沿作用域往上找都拿得到，
-    /// 因此在测试里造不出"取不到键"的场景。这条兜底只在生产里主题服务没起来时才可能被读到。
+    /// 带着主题资源、但没上屏的宿主：查找走的还是生产那条作用域链，只是不开窗口
+    /// （<c>Window</c> + <c>Show()</c> 要多占一份合成器，正是要避开的东西）。
     /// </summary>
-    [AvaloniaFact]
-    public void MutedText_IsTheSameBrushForEveryCallerInOneWindow()
+    private static Border ThemedHost(ThemeColorContext context)
     {
-        var first = new TextBlock();
-        var second = new TextBlock();
-        var window = new Window { Content = new StackPanel { Children = { first, second } } };
-        ThemeColorSystemService.ApplyThemeResources(window.Resources, DayContext);
-        window.Show();
-        Dispatcher.UIThread.RunJobs();
-
-        try
-        {
-            var left = Assert.IsAssignableFrom<ISolidColorBrush>(ComponentRoleBrushes.MutedText(first));
-            var right = Assert.IsAssignableFrom<ISolidColorBrush>(ComponentRoleBrushes.MutedText(second));
-            Assert.Equal(left.Color, right.Color);
-        }
-        finally
-        {
-            window.Close();
-            Dispatcher.UIThread.RunJobs();
-        }
+        var host = new Border();
+        ThemeColorSystemService.ApplyThemeResources(host.Resources, context);
+        return host;
     }
 }

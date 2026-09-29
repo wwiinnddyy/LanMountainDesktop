@@ -54,7 +54,16 @@ public sealed class ColorLiteralRatchetTests
     // 它白天是"未读更亮"、夜里是"未读更亮"，而主题的 raised/overlay 两层在白昼方向相反
     // （白天 overlay 比 raised 暗）——1:1 映射不存在，硬并会替产品决定"哪个状态更显眼"。
     // 烧完这一族，DailyWord2x2Widget.axaml.cs 一处不剩：带裸色值的文件数 41 -> 40。
-    private const int ColorLiteralCeiling = 555;
+    // 同日第六笔（#FFF 那族）只烧得动一处：BrowserWidget 的地址框底 → OverlaySurface。555 − 2 = 553。
+    // 这一族的产出是"剩下的分箱"，不是总数：23 处 #FFFFFFFF 逐处读过——
+    //   · 9 处在学习组件的 *ColorCandidates 数组里（那是给对比度挑选器喂的候选，不是角色色），
+    //     这批表总共 **106 处 / 7 个文件**，属已登记的 G1-CD（采样派 vs 主题资源派）没并的剩余部分；
+    //   · 7 处是 ColorMath.Blend / WithAlpha / GradientStop 的参数（往白提亮的算法常数）；
+    //   · 2 处是内容底（WebView 视口、白板画布）——不是 UI 角色，跟着壁纸走会把网页/画纸染色；
+    //   · 1 处是调用方兜底值（RemovableStorage 的 OnAccent 兜底），规则明说兜底归调用方；
+    //   · 3 处是家与假数据（StudyPanelPalette.White、自绘图表的最新点、MainWindow 设计期预览卡参数）。
+    // 全仓 553 处分箱实测：候选表 106 / 算法常数 23 / 其余 424（含真角色色，下族 #33FFFFFF 11 处）。
+    private const int ColorLiteralCeiling = 553;
 
     // 2026-09-26 实测：剩下这些分布在 31 个文件里。
     // ↑ 这句今天核对是错的：677 处实际分布在 **41** 个文件里（当时把"组件目录"与"整个 Views"两份清单
@@ -62,7 +71,7 @@ public sealed class ColorLiteralRatchetTests
     private const int ScannedFileFloor = 30;
 
     // 2026-09-29 实测的总数对账值（组件 555 + 豁免 559，五族烧完共 −104），文件被改名/挪走时这条会先红。
-    private const int MeasuredGrandTotal = 1114;
+    private const int MeasuredGrandTotal = 1112;
 
     // 2026-09-29 新量的一面：.axaml 里的颜色属性此前这条判据**完全看不见**（只扫 *.cs）。
     // 量出来是 412 处 / 40 个文件——比组件里剩下的 659 少不到一半，绝不是"边角料"。

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -188,7 +188,7 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
             button.BorderThickness = new Thickness(0);
         }
 
-        AddressTextBox.Background = new SolidColorBrush(isNightMode ? Color.Parse("#1F000000") : Color.Parse("#FFFFFFFF"));
+        AddressTextBox.Background = ComponentRoleBrushes.OverlaySurface(this);
         AddressTextBox.BorderBrush = new SolidColorBrush(isNightMode ? Color.Parse("#2FFFFFFF") : Color.Parse("#22000000"));
         AddressTextBox.Foreground = idleForeground;
         AddressTextBox.CaretBrush = idleForeground;
