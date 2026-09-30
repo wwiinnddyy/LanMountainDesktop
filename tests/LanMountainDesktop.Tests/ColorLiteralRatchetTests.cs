@@ -115,13 +115,22 @@ public sealed class ColorLiteralRatchetTests
     // ② Clear／Backspace 两个键的 `#D9DDE4` 比其它键深一档——主题的 raised/overlay 只有两档表面，
     //    而这块键盘有三层（卡底／普通键／特殊键），1:1 映射不存在，硬并等于把三层压成两层
     //    （与 `NotificationBoxWidget` 未读/已读那两处同形）。
-    // 剩下 3 处是 `<Style>` 里的 `Setter Value="#..."`（键盘默认底/边/字），这一笔**没动**：
-    // `Setter` 里能不能解析 `DynamicResource` 我没实测过，没验过就不改（改了有可能静默退化成默认画笔，
-    // 那比写死更糟），要接先立一格"真实例上解析得到主题画刷"的钉。
-    private const int MarkupColorLiteralCeiling = 336;
+    // 同日第四笔（同一文件，接着烧）：336 − 3 = **333**——`<Style>` 里那三条键盘 Setter。
+    // 这里要**当场改正上面那句**："Setter 能不能解析 DynamicResource 我没实测过、不动"已经被实测否证：
+    // 临时把其中两条换成 `{DynamicResource …}`、在真实例上读到键盘 15 个按钮的 Background 全是夜档 overlay
+    // `#e81e242d`、Foreground 是夜档正文 `#fff8fafc`（探针跑完即删，结论改钉进 `ExchangeRateCalculatorThemeTests`）。
+    // 所以 Setter 这条路是通的，别再把"未查证"当成"不能做"。第三条 `BorderBrush="#00000000"` 换成 `Transparent`
+    // （语义逐字相同，字面量少一条）。
+    // 这个文件现在只剩 3 处，两类**硬并不得**（各带理由，别当"漏烧"补，登记在 #G1-CY）：
+    // ① 输入金额 `#F08D20` 是这一组件的产品色（全仓就这一处，`grep F08D20` 只命中它），并到 `TextAccent`
+    //    等于替产品决定"输入值该跟着壁纸变色"；
+    // ② Clear／Backspace 两个键的 `#D9DDE4` 比其它键深一档——主题的 raised/overlay 只有两档表面，
+    //    而这块键盘有三层（卡底／普通键／特殊键），1:1 映射不存在，硬并等于把三层压成两层
+    //    （与 `NotificationBoxWidget` 未读/已读那两处同形）。
+    private const int MarkupColorLiteralCeiling = 333;
 
     // 总数对账（与 .cs 面同一个套路：这条先于上限红，用来分"真收口"与"判据少看一片"）。
-    private const int MarkupMeasuredTotal = 336;
+    private const int MarkupMeasuredTotal = 333;
 
     private const int MarkupFileFloor = 38;
 

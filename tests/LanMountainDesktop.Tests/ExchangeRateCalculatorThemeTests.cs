@@ -114,12 +114,46 @@ public sealed class ExchangeRateCalculatorThemeTests
                 }
             }
 
+            // 键盘那 15 个按钮的颜色来自 <Style>/<Setter Value="{DynamicResource …}">。
+            // 这一格同时钉两件事：Setter 里 DynamicResource 真的会解析（2026-09-30 实测之前这一点是"未查证"，
+            // 一度据此不动那三条字面量），以及接的是哪两个键——接错档（比如把控件底接成正文色）要红。
+            // 键盘数字键的颜色只可能来自 <Style>/<Setter Value="{DynamicResource …}">：
+            // 它们自己没有元素级 Background/Foreground（`SwapCurrencyButton` 有，所以必须按"内容是数字"挑，
+            // 否则取到换币键、钉的就又是元素属性那一行——第一版就是这么假绿的）。
+            var keypad = widget.GetVisualDescendants().OfType<Button>()
+                .FirstOrDefault(button => button.Content is string digits
+                    && digits.Length == 1
+                    && char.IsAsciiDigit(digits[0]));
+            if (keypad is null)
+            {
+                failures.Add($"{mode}档：可视树里找不到数字键，Setter 那一族没验到");
+            }
+            else
+            {
+                var overlayKey = Registered(host, ThemeResourceKeys.SurfaceOverlayBrush);
+                var primary = Registered(host, ThemeResourceKeys.TextPrimaryBrush);
+                var keypadBack = (keypad.Background as ISolidColorBrush)?.Color;
+                var keypadInk = (keypad.Foreground as ISolidColorBrush)?.Color;
+                if (overlayKey is null || primary is null || keypadBack != overlayKey || keypadInk != primary)
+                {
+                    failures.Add(
+                        $"{mode}档：键盘按钮没接上 Setter 该接的两档" +
+                        $"（底 {keypadBack} 应为 {overlayKey}；字 {keypadInk} 应为 {primary}）");
+                }
+            }
+
             window.Close();
             Dispatcher.UIThread.RunJobs();
         }
 
         Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures));
     }
+
+    /// <summary>主题在那一层作用域上注册的值本身——"组件拿到的 == 注册的那支"，接错档才会红。</summary>
+    private static Color? Registered(IResourceHost host, string key) =>
+        AdaptiveTokens.TryGet<IBrush>(host, key, out var brush) && brush is ISolidColorBrush solid
+            ? solid.Color
+            : null;
 
     /// <summary>沿可视树按 x:Name 找控件，取那个属性的纯色；没命名、不是纯色或缺键都回 null。</summary>
     private static Color? SolidColor(Avalonia.Visual root, string name, string property)

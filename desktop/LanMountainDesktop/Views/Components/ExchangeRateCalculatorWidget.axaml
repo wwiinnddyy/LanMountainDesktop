@@ -10,12 +10,12 @@
     <UserControl.Styles>
         <Style Selector="Button">
             <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusSm}" />
-            <Setter Property="Background" Value="#F8F9FB" />
-            <Setter Property="BorderBrush" Value="#00000000" />
+            <Setter Property="Background" Value="{DynamicResource AdaptiveSurfaceOverlayBrush}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="FontSize" Value="26" />
             <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="#111723" />
+            <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
             <Setter Property="Padding" Value="0" />
         </Style>
     </UserControl.Styles>
