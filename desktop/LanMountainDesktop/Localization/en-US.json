@@ -241,6 +241,7 @@
     "settings.appearance.theme_mode.dark":  "Dark",
     "settings.appearance.theme_mode.follow_system":  "Follow system",
     "settings.color.use_system_chrome_toggle":  "Use system window chrome",
+    "component.color_scheme.default":  "Use the global color scheme",
     "component.color_scheme.follow_system":  "Follow system color scheme",
     "component.color_scheme.native":  "Use component custom color scheme",
     "component.settings.color_scheme":  "Color Scheme",

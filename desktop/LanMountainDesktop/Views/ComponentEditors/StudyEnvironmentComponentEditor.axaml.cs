@@ -41,7 +41,7 @@ public partial class StudyEnvironmentComponentEditor : ComponentEditorViewBase
             "Configure the realtime audio level information shown on the right side.");
 
         ColorSchemeHeaderTextBlock.Text = L("component.settings.color_scheme", "Color Scheme");
-        FollowSystemColorSchemeItem.Content = L("component.color_scheme.follow_system", "Follow system color scheme");
+        DefaultColorSchemeItem.Content = L("component.color_scheme.default", "Use the global color scheme");        FollowSystemColorSchemeItem.Content = L("component.color_scheme.follow_system", "Follow system color scheme");
         UseNativeColorSchemeItem.Content = L("component.color_scheme.native", "Use component custom color scheme");
 
         DisplayDbToggleSwitch.Content = L("study.environment.settings.show_display_db", "Show display dB");
@@ -49,9 +49,11 @@ public partial class StudyEnvironmentComponentEditor : ComponentEditorViewBase
         HintTextBlock.Text = L("study.environment.settings.hint", "At least one display mode must stay enabled.");
 
         _suppressEvents = true;
-        ColorSchemeComboBox.SelectedItem = ComponentColorSchemeSelection.IsFollowSystem(colorSchemeSource)
-            ? FollowSystemColorSchemeItem
-            : UseNativeColorSchemeItem;
+        ColorSchemeComboBox.SelectedItem = ComponentColorSchemeSelection.ResolveSelection(
+            colorSchemeSource,
+            DefaultColorSchemeItem,
+            FollowSystemColorSchemeItem,
+            UseNativeColorSchemeItem);
         DisplayDbToggleSwitch.IsChecked = showDisplayDb;
         DbfsToggleSwitch.IsChecked = showDbfs;
         _suppressEvents = false;

@@ -74,7 +74,7 @@ public partial class ClassScheduleComponentEditor : ComponentEditorViewBase
             "Import a ClassIsland CSES schedule file and choose which one to use.");
 
         ColorSchemeHeaderTextBlock.Text = L("component.settings.color_scheme", "Color Scheme");
-        FollowSystemColorSchemeItem.Content = L("component.color_scheme.follow_system", "Follow system color scheme");
+        DefaultColorSchemeItem.Content = L("component.color_scheme.default", "Use the global color scheme");        FollowSystemColorSchemeItem.Content = L("component.color_scheme.follow_system", "Follow system color scheme");
         UseNativeColorSchemeItem.Content = L("component.color_scheme.native", "Use component custom color scheme");
 
         SemesterSettingsHeaderTextBlock.Text = L("schedule.settings.semester.title", "Semester Settings");
@@ -86,9 +86,11 @@ public partial class ClassScheduleComponentEditor : ComponentEditorViewBase
         EmptyStateTextBlock.Text = L("schedule.settings.empty", "No imported schedules yet.");
 
         _suppressEvents = true;
-        ColorSchemeComboBox.SelectedItem = ComponentColorSchemeSelection.IsFollowSystem(colorSchemeSource)
-            ? FollowSystemColorSchemeItem
-            : UseNativeColorSchemeItem;
+        ColorSchemeComboBox.SelectedItem = ComponentColorSchemeSelection.ResolveSelection(
+            colorSchemeSource,
+            DefaultColorSchemeItem,
+            FollowSystemColorSchemeItem,
+            UseNativeColorSchemeItem);
 
         if (snapshot.SemesterStartDate.HasValue)
         {

@@ -416,21 +416,31 @@ en/ja/ko 还缺 25/313/275 条，只许降不许升；补翻译就把数字改�
 同一个设置在界面上显示成一档、落盘被另一档覆盖，不报错。盘上有早期写的 `Dark`，
 所以"忽略大小写"这格漂不得（行为钉 `ThemeAppearanceValuesTests` 8 格，改成区分大小写恰好红 2 格）。
 
-**组件「配色档」的下拉与磁盘值之间那对换算只认 `Views/ComponentEditors/ComponentColorSchemeSelection.cs` 一家**
-（`IsFollowSystem(磁盘值)` 与 `Resolve(选中项)`）。此前三个编辑器各写一份（课程表、学习环境、可移动存储），
+**组件「配色档」的下拉与磁盘值之间那套换算只认 `Views/ComponentEditors/ComponentColorSchemeSelection.cs` 一家**
+（`ResolveSelection(磁盘值, 三个项)` 与 `Resolve(选中项)`；判档 `Classify` 故意不对外开——
+外面只该问"选哪一项、落什么盘"，把第三种口径留在家里）。此前三个编辑器各写一份（课程表、学习环境、可移动存储），
 **而且已经漂开**：读侧判"没设置"时两份用 `IsNullOrEmpty`、一份用 `IsNullOrWhiteSpace`——
 一个只含空白的存档在两个面板里显示成两种档。家取的是**较宽的那一份**（行为钉
 `ComponentColorSchemeSelectionTests`：空白、null、空串、认不出的串、带 Tag 但不是 `ComboBoxItem` 的控件各一格；
 把它改回窄判据恰好红两格，放宽到 `ContentControl` 只红"只认 ComboBoxItem"那一格）。
-下拉的两个 Tag 就是 `follow_system`／`native`，兜底也落常量，所以空白值今天没有任何写点会产出——
-那条口径钉的是"家选哪一份"，不是"界面上今天会出什么"。守卫 `ColorSchemeMapping_LivesOnlyInTheHome`
+守卫 `ColorSchemeMapping_LivesOnlyInTheHome`
 不许编辑器再引用 `ThemeAppearanceValues.ColorScheme*`（种一份真复发→红，覆盖面下限 15/实测 16 个文件）。
-**这笔没替你选的一件事**（登记 #G1-CP）：组件真正渲染时读这个值的是
-`ComponentSystem/ComponentColorSchemeHelper.ShouldUseMonetColor`，它对"认不出的值（含未设置）"走第三种规则——
-退回看全局色彩档，而全局档的默认值就是 `default_neutral`（`AppSettingsSnapshot.cs:28`）。
-于是**每一个刚放上桌面、从没配过的组件**都是"面板显示『跟随系统』、画面用组件自带配色"；
-手动拨一次下拉两边才对上。两种改法都改可见行为（要么编辑器把未设置显示成『组件自定义』，
-要么渲染侧把未设置当跟随系统），属产品口径，不在这类收口里代做。
+**#G1-CP 已于 2026-09-30 定案并落地：下拉改三档，家改成 `Classify`＋`ResolveSelection`＋`Resolve`**
+（`IsFollowSystem` 这个二档时代的入口已删除）。渲染侧读同一个磁盘值的 `ShouldUseMonetColor` 本来就有**三种走法**：
+`native` 永不走 Monet、`follow_system` 永远走、**其余（没设置、空白、认不出的串）退回看全局色彩档**
+（而全局档默认就是 `default_neutral`，`AppSettingsSnapshot.cs:28`）。两档下拉配三种走法，
+症状是**每一个刚放上桌面、从没配过的组件**都"面板说『跟随系统』、画面用组件自带配色"，拨一次才对上。
+第三项 `DefaultColorSchemeItem` 的 `Tag` 就是**空串**——那是"从没设置过"在盘上的原样，
+所以这一笔**一个像素都不改**，改的只是面板怎么说自己；认不出选项时的兜底也一起从 `follow_system`
+改成空串（两档时代的残留，三档之后"认不出"与"没设置"必须是同一个值）。
+新增 4 格行为钉（未设置／空白／认不出→第三项、两个具名值各归各位、三档往返一致且第三档落盘是空串、
+**三家 .axaml 都必须真有第三项且写的是 `Tag=""`**），`ComponentColorSchemeSelectionTests` 现在 19 格。
+本地化新键 `component.color_scheme.default` 四份词表**同时加**（zh/en/ja/ko 键数 1124/1099/811/849），
+所以 `LocalizationParityRatchetTests` 记的缺 25/313/275 一格没动。
+五个变异逐个量过：兜底改回 `follow_system` → 红 3 个方法；空白当成跟随系统 → 红 2；
+认不出当成组件自定义 → 红 2；`native` 选错项 → 红 2；第三项的 Tag 写成 `"default"`（就成了渲染侧
+三种走法之外的第四种值）→ 红 1（正是"三家都有第三项且 Tag 是空串"那一格）。
+画面那一半仍然由 `ComponentColorSchemeHelperTests` 钉（`null + default_neutral → false` 那格没动）。
 
 **学习分析参数的合法区间只认 `StudyAnalyticsConfig.ClampedToLegalRanges()` 一家**（`Models/StudyAnalyticsModels.cs`）。
 此前"十个字段各钳一遍"的 23 行在 `NoiseFramePipeline` 与 `StudyAnalyticsService` 各抄一份逐字相同——
@@ -993,6 +1003,14 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 （都是 `VisualTestAppHarnessTests.HeadlessSession_BootsTheRealApplication` 的清理期线程归属，单独跑该类 12/12 绿；
 趟时从 ~3 分钟被拉到 6 分钟、11 分 42 秒），把别的活停掉独占 CPU 再跑一趟就 **0 红 / 10 分 6 秒**。
 所以判"是不是我改坏的"之前先看趟时——红 1 格且趟时翻倍，基本就是这条。
+**同日傍晚这条启发式被自己的量推翻了一半，改正如下**：另一趟 1304 格只红 1 格、趟时是**正常的 3 分 6 秒**，
+受害者换成了 `SecondHandChoiceTests`；把该类单独重跑三趟是 **红 / 红 / 绿**（红的那两趟受害者还各不相同：
+`Enforce_PickingSweep_ClearsTick` 与 `Enforce_NobodyPickedAndNothingChecked_FallsBackToTick`，都是 `[1 ms]`
+的清理期失败、其余用例照常过）。也就是说**"趟时没翻倍"不能当"不是这条"的证据**——
+可靠的判据只有那三条：消息签名是 `Test Case Cleanup Failure … different thread owns it`、
+重跑时受害者会换人、用例本体全过（失败挂在 1 毫秒的收尾上）。
+负载与并发只影响**命中率**（今天从"独占一趟 0 红"到"抢 CPU 两趟各 1 红"到"单类三趟 2 红"都见过），
+不影响定性。
 **同一轮还量到自己测试的一个真判断洞**：主题的 `surfaceOverlay` 自带 α（0xE8 / 0xF2），
 而我拿不含 α 的 RGB 亮度判"控件底比卡片底亮/暗"——会高估那一层。改成
 **先 `ColorMath.ToOpaqueAgainst` 合成到卡片底、再比亮度**；变异重验过：把控件底接成 raised 键，

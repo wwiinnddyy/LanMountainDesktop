@@ -187,6 +187,7 @@
     "settings.appearance.theme_mode.dark":  "ダーク",
     "settings.appearance.theme_mode.follow_system":  "システムに従う",
     "settings.color.use_system_chrome_toggle":  "システムのウィンドウクロームを使用",
+    "component.color_scheme.default":  "全体のカラースキームを使用",
     "component.color_scheme.follow_system":  "システムのカラースキームに従う",
     "component.color_scheme.native":  "コンポーネントのカスタムカラースキームを使用",
     "settings.appearance.restart_message":  "テーマソースとシステムマテリアルの変更にはアプリの再起動が必要です。",

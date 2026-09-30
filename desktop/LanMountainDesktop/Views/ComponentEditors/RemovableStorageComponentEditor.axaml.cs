@@ -33,7 +33,7 @@ public partial class RemovableStorageComponentEditor : ComponentEditorViewBase
             "removable_storage.settings.desc",
             "Show a connected USB drive with quick open and eject actions.");
         ColorSchemeHeaderTextBlock.Text = L("component.settings.color_scheme", "Color Scheme");
-        FollowSystemColorSchemeItem.Content = L("component.color_scheme.follow_system", "Follow system color scheme");
+        DefaultColorSchemeItem.Content = L("component.color_scheme.default", "Use the global color scheme");        FollowSystemColorSchemeItem.Content = L("component.color_scheme.follow_system", "Follow system color scheme");
         UseNativeColorSchemeItem.Content = L("component.color_scheme.native", "Use component custom color scheme");
         BehaviorHeaderTextBlock.Text = L("removable_storage.settings.behavior_title", "Behavior");
         BehaviorTextBlock.Text = L(
@@ -41,9 +41,11 @@ public partial class RemovableStorageComponentEditor : ComponentEditorViewBase
             "The widget automatically watches for removable drives and switches to the newest inserted USB drive.");
 
         _suppressEvents = true;
-        ColorSchemeComboBox.SelectedItem = ComponentColorSchemeSelection.IsFollowSystem(colorSchemeSource)
-            ? FollowSystemColorSchemeItem
-            : UseNativeColorSchemeItem;
+        ColorSchemeComboBox.SelectedItem = ComponentColorSchemeSelection.ResolveSelection(
+            colorSchemeSource,
+            DefaultColorSchemeItem,
+            FollowSystemColorSchemeItem,
+            UseNativeColorSchemeItem);
         _suppressEvents = false;
     }
 

@@ -241,6 +241,7 @@
     "settings.appearance.theme_mode.dark":  "夜间",
     "settings.appearance.theme_mode.follow_system":  "跟随系统",
     "settings.color.use_system_chrome_toggle":  "使用系统窗口标题栏",
+    "component.color_scheme.default":  "按全局配色档",
     "component.color_scheme.follow_system":  "跟随系统配色",
     "component.color_scheme.native":  "使用组件自定义配色",
     "component.settings.color_scheme":  "配色方案",

@@ -28,6 +28,9 @@
                           Classes="component-editor-select"
                           HorizontalAlignment="Stretch"
                           SelectionChanged="OnColorSchemeSelectionChanged">
+                    <ComboBoxItem x:Name="DefaultColorSchemeItem"
+                                  Classes="component-editor-select-item"
+                                  Tag="" />
                     <ComboBoxItem x:Name="FollowSystemColorSchemeItem"
                                   Classes="component-editor-select-item"
                                   Tag="follow_system" />
