@@ -526,8 +526,19 @@ await 完<b>重新问一次</b>挂载与取消、"没取到"与抛异常都画�
 收尾只在"这把还是我的那把"时清字段并复位。取数那半步（组 query 调哪个接口、"成功但载荷为空也算没取到"）
 在 `Views/Components/DailyWordFeed.cs`，落地（往各自控件上画）留在组件里——两块屏幕控件不同，那是本来的差别。
 抄本少抄一句不会报错：少那句"重新问一次"就是往已分离的可视树上落地，少 finally 里那句复位就是按钮永久灰着。
-行为钉 `ComponentFeedRefreshTests` 7 格 + `DailyWordFeedTests` 4 格；"先换发再取消旧源"那一支**没钉**并写明原因
+行为钉 `ComponentFeedRefreshTests` 8 格 + `DailyWordFeedTests` 4 格；"先换发再取消旧源"那一支**没钉**并写明原因
 （单飞守卫下从公开入口走不到，属防御性写法，别当成已验证的路径）。
+**这家自己带过一条真缺陷（2026-09-30 由用户实机跑出来的日志抓到，不是测试发现的）**：
+finally 里当时写的是裸 `end();`，而签名里 `end` 是 `Action? = null`——12 个调用点实测 **5 个不传**
+（Bilibili 热搜、每日插画、汇率、聚吧新闻的首载与追加），于是这 4 个组件每刷一次就往
+`TaskScheduler.UnobservedTaskException` 丢一条 `NullReferenceException`（Sentry 也收到一条同样的）。
+症状不是崩：数据照样落地、忙位照样复位，肉眼完全看不出来，只有日志知道。旁边同形状的
+`ComponentRefreshLifetime.Detach` 写的是 `afterDetach?.Invoke()`，一家对一家错——**收口时把可选调用点
+写成裸调用，是这类"家"最便宜也最容易漏的一种错法**。教训具体到做法：
+签名里带默认值的委托参数，测试必须专门留一格"不传它"；原来那 7 格全都传了 `end`，
+所以这条从 09-24 收口那天起一直没被看见。修法 `end?.Invoke()` + 新格
+`RunAsync_WithoutAnEndCallback_CompletesAndResetsBusy`（不传收尾口子仍要画失败态、复位忙、清空在飞的源），
+变异验向：把 `end?.Invoke()` 改回 `end();` → 8 格里恰好只有新格红，报的正是那条 NRE。
 
 **"把忙态画到刷新按钮上"只认 `Views/Components/ComponentBusyVisual.cs` 一家**（2026-09-25：七个组件各写两份
 语句，`Baidu` 与 `Ifeng` 逐字相同、其余五家各漂开一点）：`Apply(button, enabled, dimmedOpacity)` 是默认形状

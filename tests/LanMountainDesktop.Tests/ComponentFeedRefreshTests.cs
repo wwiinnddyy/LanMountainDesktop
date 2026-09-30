@@ -171,4 +171,28 @@ public sealed class ComponentFeedRefreshTests
         Assert.False(feed.IsBusy);
         Assert.Null(feed.InFlight);
     }
+
+    /// <summary>
+    /// 收尾口子是可选的，所以"不传"这条路径必须有格子——2026-09-30 真机日志里
+    /// <c>ExchangeRateCalculatorWidget</c> 每次刷新都抛一次 <c>NullReferenceException</c>：
+    /// finally 里当时写的是裸 <c>end();</c>，而 12 个调用点里有 5 个根本不传这个参数
+    /// （Bilibili 热搜、每日插画、汇率、聚吧新闻两条路径）。症状不是崩，是每次刷新都往
+    /// 未观察异常里丢一条 NRE（Sentry 噪声），而上面那六格全都传了 <c>end</c>，所以闸门一直看不见。
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_WithoutAnEndCallback_CompletesAndResetsBusy()
+    {
+        var feed = new ComponentFeedRefresh();
+        var failurePainted = false;
+
+        await feed.RunAsync(
+            () => true,
+            () => { },
+            _ => Task.FromResult(false),
+            () => failurePainted = true);
+
+        Assert.True(failurePainted, "没取到数据仍要画失败态，这一条与有没有收尾口子无关");
+        Assert.False(feed.IsBusy);
+        Assert.Null(feed.InFlight);
+    }
 }

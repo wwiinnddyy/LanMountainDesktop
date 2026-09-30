@@ -90,7 +90,7 @@ internal sealed class ComponentFeedRefresh
 
             cts.Dispose();
             IsBusy = false;
-            end();
+            end?.Invoke();
         }
     }
 }
