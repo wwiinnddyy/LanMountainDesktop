@@ -55,7 +55,10 @@ public sealed class PostHogUsageTelemetryService : IDisposable
 
         _isInitialized = true;
 
-        EnsureBaselineEventSent();
+        // 先读开关、再决定要不要上报：EnsureBaselineEventSent 挪到 RefreshEnabledState 的"已启用"分支里。
+        // 原来它排在这行之前，于是首启基线事件（install_id / telemetry_id / OS 版本 / 设备型号 / 渲染档）
+        // 在用户把用量遥测关掉的情况下照样发出去——2026-09-30 真机日志同一秒里两条都在：
+        // "Sent first-launch baseline event via SDK" 与 "Usage telemetry initialized. Enabled=False"。
         RefreshEnabledState(forceSessionStart: true);
 
         _flushTimer = new Timer(
@@ -88,6 +91,9 @@ public sealed class PostHogUsageTelemetryService : IDisposable
             if (_isUsageEnabled)
             {
                 StartSession("usage_enabled");
+                // 首启基线只有这一次机会：没启用时不标"已上报"，所以用户后来在设置里打开用量遥测，
+                // 这条还会补发（MarkBaselineReported 只在真发成功之后调用）。
+                EnsureBaselineEventSent();
                 return;
             }
 
@@ -304,10 +310,20 @@ public sealed class PostHogUsageTelemetryService : IDisposable
         }
     }
 
+    /// <summary>
+    /// 首启基线事件：只在用量遥测已启用时发。这条闸**目前没有测试钉住**——`PostHogClient` 在构造函数里
+    /// 直接 new（带真 project key 与真 host），没有任何可替换的接缝，测试里跑它等于真往 PostHog 发数据；
+    /// 要补钉得先加接缝，已登记 #G1-CV。
+    /// </summary>
     private void EnsureBaselineEventSent()
     {
         try
         {
+            if (!_isUsageEnabled)
+            {
+                return;
+            }
+
             var identity = TelemetryIdentityService.Instance;
             if (identity.HasReportedBaseline)
             {

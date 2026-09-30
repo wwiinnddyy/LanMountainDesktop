@@ -1596,6 +1596,22 @@ IDE0051（未使用私有成员）在构建里一条都不出（2026-09-22 实�
 （`OobeWindow.axaml.cs:660-665` 不检查就进下一步，它只启用/禁用那两个开关）；今天所谓"重跑向导"是手工删
 `oobe-state.json`（`docs/00-快速开始/02-快速安装.md:196`），那条路径不清这两份隐私文件＝重置后旧同意还在。
 名单**条数不变（15 条）**——三条读侧仍零调用，只是理由全部改写成指向 G1-CL，别把它当"待接线"读成"接一下就好"。
+
+**"关掉的遥测就不该发"这条闸漏了首启那一条（2026-09-30 真机日志抓到并修）**：上面那笔把开关接到了宿主，
+但 `PostHogUsageTelemetryService.Initialize()` 里 `EnsureBaselineEventSent()` 排在 `RefreshEnabledState()` **之前**，
+而那个方法自己只判"有没有报过基线"、不判"该不该报"——于是 `UploadAnonymousUsageData=false` 的机器
+照样发出首启基线事件（同一秒的日志两条并存：`Sent first-launch baseline event via SDK` 与
+`Usage telemetry initialized. Enabled=False`），载荷含 install_id／telemetry_id／app_version／
+os_name／os_version／os_build／device_model／device_arch／runtime_version／language／clr_version／render_mode。
+其它上报路径（`CaptureEvent`、会话那条）都有 `!_isUsageEnabled` 早退，只有这一条没有。
+改法：先读开关再决定发不发，发送点挪进 `RefreshEnabledState` 的"已启用"分支，`EnsureBaselineEventSent`
+内部再判一次（多一个调用点也不会绕回旧行为）。**附带一条语义**：没启用时不调 `MarkBaselineReported`，
+所以"先关后开"的用户在打开那一刻补发首启基线（走 `OnSettingsChanged → RefreshEnabledState`）。
+这条改动**减少真正发出去的字节**，与 G1-AY 同属要如实报出去的对外行为变更。
+**但它没有测试钉住**：`PostHogClient` 在构造函数里直接 new（真 project key、真 host），没有可替换接缝，
+测试里跑它等于真往 PostHog 发数据——要补钉得先加接缝，已登记 **#G1-CV**。
+在那之前，这条闸的证据只有"日志 + 读码"两级，别当成被闸门守住了。
+
 判据本身被修过三次：跨工程同名声明行会把调用点喂饱（Plonds 自带 `GetCatalogAsync`）、
 C# 主构造器会被当成方法声明（`class X(IProgress<…>? p)` 报成一条不存在的方法）、
 以及**用 python heredoc 写 `\b` 会落成一个退格控制字符**——规则看着在文件里，正则永远不匹配，
