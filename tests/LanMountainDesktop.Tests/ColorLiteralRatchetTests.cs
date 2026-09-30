@@ -90,9 +90,12 @@ public sealed class ColorLiteralRatchetTests
     // 热搜条目 8 处（百度 4 + B 站 4，都是 `#202327`）、Stcn24 帖子标题 8 处同一值、
     // 头像占位字 8 处 `#4A5466`、通知盒空状态 3 处 `#8B95A5` + 1 处眼睛图标字形
     // （那一处按"图标字形走次要文字"的既有口径给 secondary，不是 muted）。
-    // 其中 24 处代码那一侧其实**也在重画**，只是接收者不是 x:Name 而是记录字段
-    // （`visual.TitleTextBlock.Foreground = PrimaryText(this)`），下一条判据按名字匹配看不见它们——
-    // 那里记的 87 因此是**下界**，不是全量；这一面（按字面量数、不认接收者）没有这个盲区。
+    // 其中 24 处代码那一侧其实**也在重画**，只是重画走的是记录字段、字段名与 x:Name 不同
+    // （`visual.TitleTextBlock.Foreground = PrimaryText(this)`，那几行的 x:Name 是 `HotItem1TextBlock`…），
+    // 下一条判据按名字匹配看不见它们——那里记的 87 因此是**下界**，不是全量；
+    // 这条盲区 2026-09-30 用独立实现复算并定性过（限定接收者不是问题、跨文件同名会撞出 223 处假阳，
+    // 要补得做名字解析），细节写在 `DuplicatedPaintSourceRatchetTests` 的头注里。
+    // 这一面（按字面量数、不认接收者）没有这个盲区。
     private const int MarkupColorLiteralCeiling = 349;
 
     // 总数对账（与 .cs 面同一个套路：这条先于上限红，用来分"真收口"与"判据少看一片"）。

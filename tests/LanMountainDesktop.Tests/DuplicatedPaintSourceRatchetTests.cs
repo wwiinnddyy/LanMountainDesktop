@@ -32,12 +32,24 @@ public sealed class DuplicatedPaintSourceRatchetTests
     // 2026-09-29 实测基线 122 处；本笔把其中 35 处（代码那一侧已经走 ComponentRoleBrushes 的那些）
     // 改成 {DynamicResource Adaptive…Brush}，标记与代码从此说同一个角色键 → **87**。
     //
-    // **这条 87 是下界，不是全量**：判据按「x:Name + 属性名」在 code-behind 里找接收者，
+    // **这条 87 是下界，不是全量**：判据按「x:Name + 属性名」在 code-behind 里找赋值，
     // 而组件常把控件塞进记录/数组再由字段重画（`visual.TitleTextBlock.Foreground = PrimaryText(this)`，
-    // 字段名与 x:Name 不同）。同一天第九笔在 Baidu/Bilibili/Stcn24 里现量到 **24 处**这种形状——
-    // 它们本该被这条判据算进来，却因为换了接收者而隐身。那 24 处的字面量已经被烧掉，
+    // 字段名与 x:Name 不同——那一行的 x:Name 其实是 `HotItem1TextBlock`…`HotItem8TextBlock`，
+    // 一个记录字段扇出 8 个标记字面量）。同一天第九笔在 Baidu/Bilibili/Stcn24 里现量到 **24 处**这种形状——
+    // 它们本该被这条判据算进来，却因为换了名字而隐身。那 24 处的字面量已经被烧掉，
     // 所以账面数字没变；盲区留在这里，是为了下一个人不把 87 读成"只剩 87"。
     // 数不认接收者的那一面（ColorLiteralRatchetTests 的标记面）没有这个盲区，两条一起看才是全貌。
+    //
+    // 2026-09-30 拿一份独立实现（python，同一套 x:Name 区间归属 + 属性字面量判据）复算，
+    // **逐条对上 87**，并量到两件修正这条盲区的方向感的事：
+    // ① **盲区不是"限定接收者看不见"**：把判据改成"只认裸接收者"（前面不许有点）仍是 87，差 0 处——
+    //    现在用的 `\b<Name>\.<属性>\s*=` 里 `\b` 在 `visual.Title` 这个点后面照样成立，
+    //    所以 `visual.<字段>.Foreground =` 这种形状本来就看得见，看不见只因为**名字不同**。
+    // ② 按"跨文件同名"硬扩也做不了这条判据：把配对范围放宽到 Views 下全部 .axaml，多出 **223 处**候选，
+    //    绝大多数是同名字段撞出来的假阳（`AnalogClockWidget.axaml.cs` 把 DailyArtwork / DailyPoetry /
+    //    ZhiJiaoHub 各自的 `RootBorder.Background` 都算成自己重画过）。
+    // 真要补这条盲区，得把"记录字段 → 构造实参里那几个 x:Name"解出来（`new HotItemVisual(…, HotItem1TextBlock)`)，
+    // 那是名字解析、不是文本匹配。按现在这把尺子的美学（宁可不报也不报假的），留给那一笔单独做。
     private const int DuplicatedPaintCeiling = 87;
 
     // 总数对账：与上限分开钉，是因为这条**先于上限红**——
