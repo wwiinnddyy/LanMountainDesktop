@@ -81,8 +81,7 @@ public sealed class EmptyImplementationWithCallerRatchetTests
         ["ActionObserver.cs|OnError"] =
             "同上。",
         ["SystemWallpaperProvider.cs|Dispose"] =
-            "这个类不持有需要释放的东西——读注册表那几句是就地 using 释放的；IDisposable 只为 HostSystemWallpaperProvider 的静态实例生命周期而挂。" +
-            "（顺带记着：它的 WallpaperChanged 事件全仓既不 raise 也不 subscribe，那是另一条轴的账。）",
+            "这个类不持有需要释放的东西——读注册表那几句是就地 using 释放的；IDisposable 只为 HostSystemWallpaperProvider 的静态实例生命周期而挂。",
 
         // —— SDK 的虚基类默认行为：轻应用不覆写就是不做事，宿主照常调用 ——
         ["AirAppWindowBase.cs|OnWindowOpened"] =

@@ -1755,7 +1755,14 @@ HttpClientTimeout 100000 毫秒、BlockTimeout 5000、ConnectTimeout 30000。
 `NullMainWindowDesktopLayerService` / `NoOpAudioRecorderService` / `EmptySettingsPageRegistry` /
 `UpdateProgressSubject.EmptyDisposable` / `ActionObserver`）、SDK 虚基类默认行为 4 处、
 反序列化无参构造 1 处、挂账待办 3 处（G1-BE 的 RSS 缩放、G1-BF 的下载 client，加 `SystemWallpaperProvider.Dispose`
-旁边那条"事件既没人 raise 也没人 subscribe"另立 G1-BG）。**清掉两处迁移遗留的空壳**（`git diff --shortstat` 实测删 11 行、增 0 行）：
+旁边那条"事件既没人 raise 也没人 subscribe"另立 G1-BG）。
+**G1-BG 已于 2026-09-30 闭环：删的是那条事件，不是补实现。** 现量：`ISystemWallpaperProvider.WallpaperChanged`
+与实现类上的那一个 `event` 是全仓唯二出现处（`AirAppSdk/AppearanceChangedEvent.WallpaperChanged` 是另一个东西，
+它是属性且有真用法），既没 `?.Invoke` 也没 `+=`；"桌面壁纸换了"这件事今天由 `MaterialColorService` 承担——
+它自己轮询（`_wallpaperPollingActive`）也吃原生变更事件（`UseNativeWallpaperChangeEvents`），并且它那两个事件
+（`MaterialColorChanged` / `AppearanceThemeChanged`）**真有订阅者**。所以这条不是"能力只有类型没有实现"，
+是同一件事的第二具尸体；删除法的终判＝编译 0 错误（任何 `+=` 或 `Invoke` 留着都编不过）。
+`Dispose` 那条登记里的顺带说明随之删掉（指向不存在的东西就是腐烂）。**清掉两处迁移遗留的空壳**（`git diff --shortstat` 实测删 11 行、增 0 行）：
 `InitializeSettingsIcons`——它当年是给 MainWindow 内嵌设置页的 expander 刷图标，那批控件在 XAML/C# 里已经
 一处都不剩（设置页早就硬切进 `SettingsWindow`，图标由 `CreateSettingsIconSource`/`MapIcon` 负责）；
 `EnsureComponentLibraryPreviewWarmup`——`git log -S` 查到实现 `WarmComponentLibraryPreviewsSeriallyAsync`

@@ -10,14 +10,11 @@ public interface ISystemWallpaperProvider
 {
     bool IsSupported { get; }
     string? GetWallpaperPath();
-    event EventHandler? WallpaperChanged;
 }
 
 internal sealed class SystemWallpaperProvider : ISystemWallpaperProvider, IDisposable
 {
     public bool IsSupported => RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-
-    public event EventHandler? WallpaperChanged;
 
     public string? GetWallpaperPath()
     {
