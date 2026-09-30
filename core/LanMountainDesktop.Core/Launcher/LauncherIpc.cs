@@ -28,8 +28,6 @@ public record StartupProgressMessage
 
 public static class LauncherIpcConstants
 {
-    public const string LauncherPidEnvVar = "LMD_LAUNCHER_PID";
-
     public const string PackageRootEnvVar = "LMD_PACKAGE_ROOT";
 
     public const string VersionEnvVar = "LMD_VERSION";
@@ -37,8 +35,6 @@ public static class LauncherIpcConstants
     public const string CodenameEnvVar = "LMD_CODENAME";
 
     public const string LaunchSourceOptionName = "launch-source";
-
-    public const string RestartParentPidOptionName = "restart-parent-pid";
 
     public const string RestartPresentationOptionName = "restart-presentation";
 }

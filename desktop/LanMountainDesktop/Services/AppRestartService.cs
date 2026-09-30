@@ -248,9 +248,7 @@ public static class AppRestartService
         }
 
         var shouldSkip = string.Equals(key, LauncherIpcConstants.LaunchSourceOptionName, StringComparison.OrdinalIgnoreCase) ||
-                         string.Equals(key, LauncherIpcConstants.RestartParentPidOptionName, StringComparison.OrdinalIgnoreCase) ||
                          string.Equals(key, LauncherIpcConstants.RestartPresentationOptionName, StringComparison.OrdinalIgnoreCase) ||
-                         string.Equals(key, LauncherIpcConstants.LauncherPidEnvVar, StringComparison.OrdinalIgnoreCase) ||
                          string.Equals(key, LauncherIpcConstants.PackageRootEnvVar, StringComparison.OrdinalIgnoreCase) ||
                          string.Equals(key, LauncherIpcConstants.VersionEnvVar, StringComparison.OrdinalIgnoreCase) ||
                          string.Equals(key, LauncherIpcConstants.CodenameEnvVar, StringComparison.OrdinalIgnoreCase);
@@ -274,7 +272,6 @@ public static class AppRestartService
         }
 
         builder.Append($"--{LauncherIpcConstants.LaunchSourceOptionName}={LauncherLaunchSources.Restart}");
-        builder.Append($" --{LauncherIpcConstants.RestartParentPidOptionName}={Environment.ProcessId}");
         builder.Append(
             $" --{LauncherIpcConstants.RestartPresentationOptionName}={LauncherRuntimeMetadata.FormatRestartPresentation(restartPresentationMode)}");
     }

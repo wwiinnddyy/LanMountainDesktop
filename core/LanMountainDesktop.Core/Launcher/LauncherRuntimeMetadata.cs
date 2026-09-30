@@ -1,4 +1,3 @@
-using System.Globalization;
 using LanMountainDesktop.Shared.Text;
 
 namespace LanMountainDesktop.Shared.Contracts.Launcher;
@@ -75,21 +74,6 @@ public static class LauncherRuntimeMetadata
         return GetOptionValue(LauncherIpcConstants.LaunchSourceOptionName, commandLineArgs);
     }
 
-    public static int? GetLauncherProcessId(IReadOnlyList<string>? commandLineArgs = null)
-    {
-        var rawValue = TextValue.FirstNonEmpty(
-            Environment.GetEnvironmentVariable(LauncherIpcConstants.LauncherPidEnvVar),
-            GetOptionValue(LauncherIpcConstants.LauncherPidEnvVar, commandLineArgs));
-
-        return TryParsePositiveInt(rawValue);
-    }
-
-    public static int? GetRestartParentProcessId(IReadOnlyList<string>? commandLineArgs = null)
-    {
-        var rawValue = GetOptionValue(LauncherIpcConstants.RestartParentPidOptionName, commandLineArgs);
-        return TryParsePositiveInt(rawValue);
-    }
-
     public static RestartPresentationMode? GetRestartPresentationMode(IReadOnlyList<string>? commandLineArgs = null)
     {
         var rawValue = GetOptionValue(LauncherIpcConstants.RestartPresentationOptionName, commandLineArgs);
@@ -120,13 +104,4 @@ public static class LauncherRuntimeMetadata
             _ => RestartPresentationMode.Foreground
         };
     }
-
-    private static int? TryParsePositiveInt(string? rawValue)
-    {
-        return int.TryParse(rawValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedValue) &&
-               parsedValue > 0
-            ? parsedValue
-            : null;
-    }
-
 }

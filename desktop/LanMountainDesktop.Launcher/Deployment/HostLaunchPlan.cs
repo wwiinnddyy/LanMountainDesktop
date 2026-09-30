@@ -19,7 +19,6 @@ internal static class HostLaunchPlanBuilder
     [
         "debug", "show-loading-details", "plugins-dir", "source", "result",
         "app-root", DataRootOptionName,
-        LauncherIpcConstants.LauncherPidEnvVar,
         LauncherIpcConstants.PackageRootEnvVar,
         LauncherIpcConstants.VersionEnvVar,
         LauncherIpcConstants.CodenameEnvVar
@@ -46,7 +45,6 @@ internal static class HostLaunchPlanBuilder
         var arguments = BuildForwardedArguments(context, packageRoot, versionInfo, dataRoot);
         var environment = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            [LauncherIpcConstants.LauncherPidEnvVar] = Environment.ProcessId.ToString(),
             [LauncherIpcConstants.PackageRootEnvVar] = packageRoot,
             [LauncherIpcConstants.VersionEnvVar] = versionInfo.Version,
             [LauncherIpcConstants.CodenameEnvVar] = versionInfo.Codename
@@ -149,7 +147,6 @@ internal static class HostLaunchPlanBuilder
             arguments.Add(arg);
         }
 
-        arguments.Add($"--{LauncherIpcConstants.LauncherPidEnvVar}={Environment.ProcessId}");
         arguments.Add($"--{LauncherIpcConstants.PackageRootEnvVar}={packageRoot}");
         arguments.Add($"--{LauncherIpcConstants.VersionEnvVar}={versionInfo.Version}");
         arguments.Add($"--{LauncherIpcConstants.CodenameEnvVar}={versionInfo.Codename}");

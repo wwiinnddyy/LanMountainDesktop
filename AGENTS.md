@@ -987,6 +987,10 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 （`Test Case Cleanup Failure … different thread owns it`，即 #G1-I）。#20 早就量过"同形会话多开即复现"，
 这次是我自己往上加暴露。处置不是关掉重跑，是**合并成单会话、内部逐档循环**：断言一条不少
 （每条失败点名档位与角色），会话从 9 次降到 1 次，本地 4 连跑全绿。
+**2026-09-30 又量到一次同一签名的"负载依赖"**：全量 1301 格在本机与 5 个并发会话抢 CPU 时**两趟各红 1 格**
+（都是 `VisualTestAppHarnessTests.HeadlessSession_BootsTheRealApplication` 的清理期线程归属，单独跑该类 12/12 绿；
+趟时从 ~3 分钟被拉到 6 分钟、11 分 42 秒），把别的活停掉独占 CPU 再跑一趟就 **0 红 / 10 分 6 秒**。
+所以判"是不是我改坏的"之前先看趟时——红 1 格且趟时翻倍，基本就是这条。
 **同一轮还量到自己测试的一个真判断洞**：主题的 `surfaceOverlay` 自带 α（0xE8 / 0xF2），
 而我拿不含 α 的 RGB 亮度判"控件底比卡片底亮/暗"——会高估那一层。改成
 **先 `ColorMath.ToOpaqueAgainst` 合成到卡片底、再比亮度**；变异重验过：把控件底接成 raised 键，
@@ -1150,8 +1154,17 @@ ActivateDesktop、记启动成败、OOBE 跳过判定（两处），宿主自己
 **差分**：同一条写回 + 摘掉判据里 `restart` 那一半 → 绿（证明管的正是那一半，而不是别的东西顺带红了）。
 顺带把 #G1-AO 的登记按现量改写：那两个 PID 解析函数确实零调用，但"没读者"不等于"没替代"——
 AirApp 运行时看门狗要的 launcher PID 由启动器直接组请求（`AirAppRuntimeBridge.cs:256`），
-"新宿主撞上正在退出的旧宿主"由 `launch-source=restart` 时跳过探测这条规则承担，
-所以那两条通道是遗留的第二真源，删不删与 #G1-AO 一起判。
+"新宿主撞上正在退出的旧宿主"由 `launch-source=restart` 时跳过探测这条规则承担。
+
+**#G1-AO 已闭环（写侧一起删了）**：既然两条通道的事实都有别处真在承担，留下的只是"看起来有契约"的字节。
+删的面＝读侧 3 件（`GetLauncherProcessId` / `GetRestartParentProcessId` / 只被它俩用的 `TryParsePositiveInt`
+，连带一个空掉的 `using System.Globalization`）+ 常量 2 个（`LMD_LAUNCHER_PID` / `--restart-parent-pid`）
++ 写侧 4 处（启动器 `HostLaunchPlan` 的 env、转发参数、`LauncherOnlyOptions` 名单；宿主 `AppRestartService`
+重启时追加的那个参数）+ `ShouldSkipArgument` 里两条随之失效的剥离。
+**两个方向都量过**：删完编译 0 错误就是"没人读"的终判（删除法）；棘轮先在红里点名那两条登记
+（`名单里已不存在的条目 2 个`）才允许我删登记——不是我把登记顺手改对的。
+**跨版本兼容当场查过**：宿主取参数只走 `GetOptionValue` 按名查找，没有严格解析器，所以旧启动器把
+`--LMD_LAUNCHER_PID=…` 传给新宿主只是被忽略；新启动器不传，旧宿主那条从来没人调，两个方向都不改变行为。
 
 **数据位置配置的磁盘契约只认一处**：`{安装根}/.Launcher/data-location.config.json` 由启动器写、
 启动器与宿主两侧读，字段是 `dataLocationMode` / `systemDataPath` / `portableDataPath`，模式值只有
