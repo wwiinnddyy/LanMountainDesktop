@@ -980,11 +980,18 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 **这一面的两个覆盖边界如实记下**：① 兜底那支中性灰**测不到**——视觉底座把 `Adaptive*` 注册在应用级资源表上（#44），
 任何控件沿作用域都找得到，测试里造不出"取不到键"；② 标记面的红是靠**放一个能编译的 scratch .axaml** 验出来的
 （第一版注入改的是既有元素的属性，顺带把 XAML 编译弄坏了 2 个错误——那种红分不清是判据还是编译，不算证据）。
-剩下最集中的标记文件（下次烧的候选，实测值）：`Stcn24ForumWidget.axaml=38`、`SettingsPages/WallpaperSettingsPage.axaml=37`、
-`MusicControlWidget.axaml=33`、`ComponentEditorWindow.axaml=26`、`StudySessionReportWindow.axaml=23`；
+剩下最集中的标记文件（下次烧的候选，2026-09-30 现量，总数 333）：
+`SettingsPages/WallpaperSettingsPage.axaml=37`、`Components/MusicControlWidget.axaml=33`、
+`ComponentEditorWindow.axaml=26`、`StudySessionReportWindow.axaml=23`、`Components/Stcn24ForumWidget.axaml=18`、
+`Components/TimerWidget.axaml=17`；
+**但第一名不是候选**：那 37 处里 **33 处是色板数据**（11 支值各挂三个属性：`Background` 画那格、
+`CommandParameter` 把值交给命令、`Tip` 把十六进制串印成提示文字），值本身就是这个功能给用户挑的东西，
+不是界面角色色——与 `#FFF` 那一族的分箱结论同类，别拿它当"下次烧谁"的答案。剩下 4 处是
+`#FFF6F7F9`×2／`#080808`／`#1A1A1A`，要不要接主题档得先看它是不是预览底。
 组件代码侧三族烧完最集中的是 `MusicControlWidget.axaml.cs=39`、`TimerWidget.axaml.cs=32`、
-`ClassScheduleWidget.axaml.cs=32`、`WorldClockWidget.axaml.cs=31`、`DailyNewsView.axaml.cs=29`、
-`AnalogClockWidget.axaml.cs=27`（2026-09-29 现量，别引用旧数）。
+`ClassScheduleWidget.axaml.cs=32`、`DailyNewsView.axaml.cs=29`、`WorldClockWidget.axaml.cs=29`、
+`AnalogClockWidget.axaml.cs=27`（2026-09-30 现量，别引用旧数——上一版记的 `WorldClock=31`、
+`Stcn24ForumWidget.axaml=38` 都已漂开，后者同日第十一笔之后降到 18）。
 **判据文档里那句"677 处 / 31 个文件"的 31 也是数错的**（同一总数实际分布在 41 个文件里），已就地更正——
 上限/下限是常量、说明文字是 prose，两者都会漂，引用之前现跑一遍。
 **#FFF 那一族只烧得动一处，产出是"把剩下的分箱"**（553 处）：23 处 `#FFFFFFFF` 逐处读过——
