@@ -582,6 +582,17 @@ public sealed class DuplicateImplementationRatchetTests
     /// <c>Close();</c> 只有一句（又落在上面那条 ≥2 语句盲区里）。
     /// 这一族的"共同逻辑"就是调用窗口自己的 <c>Close()</c>，抽到 Core 只能得到一个接 <c>Window</c>
     /// 参数转手调框架方法的壳——属改数字不属收口，且把两个壳写得彼此不同来降数是登记在案的反向陷阱。
+    ///
+    /// <b>#G1-CW（"≥2 语句"这条门槛让单语句复制隐形）已量完，结论是不动门槛</b>（2026-09-30）：
+    /// 把下限改成 1 语句（<c>dump-dup-methods.py:161</c>，C# 这把同键）对同一份语料重跑，
+    /// 族数 9 → <b>63</b>（+54）。按"同名同体且跨 ≥2 个二进制"这条窄口径再筛，跨二进制的只有 <b>3 族，
+    /// 三族都不该建家</b>：<c>Initialize</c> 3 份是 Avalonia <c>Application</c> 的框架覆写
+    /// （AirAppHost / 安装器 / Mobile 各得写自己的 <c>AvaloniaXamlLoader.Load(this)</c>）、
+    /// <c>L</c> 25 份是每个类给自己那对字段（<c>_localization</c> + <c>_languageCode</c>）起的别名、
+    /// <c>OnCloseClick</c> 上面判过。所以这条盲区**今天的实际代价是 0 个可动项**
+    /// （唯一真值得动的 <c>NormalizeHash</c> 已收进 <c>PlondsManifestValues</c>）。
+    /// 放开全局门槛只会让账上多 54 条无法处置的条目——那是"数字涨＝进度涨"的反面。
+    /// 以后要复查这条盲区，走上面那条窄口径，别动 <c>IdenticalBodyFamilyCeiling</c> 的判据。
     private const int IdenticalBodyFamilyCeiling = 9;
 
     /// 18 → 15 一次收三族，全是同一个签名 <c>ResolveScale</c> 的三个不同体（#66 队列里那条"三对"）：
