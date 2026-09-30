@@ -988,6 +988,16 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 `CommandParameter` 把值交给命令、`Tip` 把十六进制串印成提示文字），值本身就是这个功能给用户挑的东西，
 不是界面角色色——与 `#FFF` 那一族的分箱结论同类，别拿它当"下次烧谁"的答案。剩下 4 处是
 `#FFF6F7F9`×2／`#080808`／`#1A1A1A`，要不要接主题档得先看它是不是预览底。
+**第二名也不是候选**：`MusicControlWidget.axaml=33` 里 32 处是**半透明白**（`Foreground #E9/#F0/#F8FFFFFF`、
+`BorderBrush #52/#77/#3CFFFFFF`、`Background #3C/#33FFFFFF`）——那是"玻璃蒙层与白色字形"这一档，
+主题 64 个键里**没有这一档**，与 #G1-CM 那 7 处撞的是同一堵墙；先定"描边/蒙层由谁画"才谈得上接。
+`StudySessionReportWindow.axaml=23` 同样**不是半迁移缺陷**：全文件 0 个 DynamicResource、代码 0 处重画，
+自己就是一套"纸面"档（根 `#E8EAED`／页眉 `#F5F5F5`／正文 `#FAFAFA`＋灰字 `#333333`×7），
+灰字压纸底对比度约 11:1（读得清）。要不要让报告窗口跟主题走是**设计决定**，不是色值替换。
+`ComponentEditorWindow.axaml=26` 里 24 处是**整套写死的 Material 基线调色板**
+（`ComponentEditorWindow.axaml:51` `<themes:CustomMaterialTheme BaseTheme="Light" PrimaryColor="#6750A4"
+SecondaryColor="#625B71" />`——`#6750A4` 就是 Material3 的原型主色），并强制 Light 档。
+这条不是"烧成角色色"，是"这个窗口自己带了一份 UI 调色板真源"，与宿主主题并存——已登记等拍板（#G1-CZ）。
 组件代码侧三族烧完最集中的是 `MusicControlWidget.axaml.cs=39`、`TimerWidget.axaml.cs=32`、
 `ClassScheduleWidget.axaml.cs=32`、`DailyNewsView.axaml.cs=29`、`WorldClockWidget.axaml.cs=29`、
 `AnalogClockWidget.axaml.cs=27`（2026-09-30 现量，别引用旧数——上一版记的 `WorldClock=31`、
