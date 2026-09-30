@@ -42,6 +42,17 @@ public sealed class TelemetryIdentityService
             $"Initialized. InstallId={instance.InstallId}; TelemetryId={instance.TelemetryId}; BaselineReported={instance.HasReportedBaseline}.");
     }
 
+    /// <summary>
+    /// 测试专用：把进程级单例放回去，这样"首启基线只发一次"这类判据能各测各的起点。
+    /// 与 <c>AppDataPathProvider.ResetForTests</c> 同一先例；用它的测试必须写在同一个类里
+    /// （<c>UsageTelemetryConsentTests</c>），否则并发跑会互相把对方的单例清掉。
+    /// </summary>
+    internal static void ResetForTests()
+    {
+        _instance = null;
+        TelemetryServices.Identity = null;
+    }
+
     public string InstallId
     {
         get

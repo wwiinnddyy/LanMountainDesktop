@@ -65,6 +65,12 @@ AirApp 本地包生成：
   跑完测试红在源码里根本不存在的判据上（当天实测 4 红里 2 红就是这么来的，两条红正好是变异该产出的形状，
   而文件内容已经是对的）。所以还原之后要么 `touch` 被改过的文件，要么 `--no-incremental`，
   别信"构建 0 错误"——它只是在说"没什么要编的"。
+- 变异脚本里的多行针脚**必须按被测文件真正的换行符写**：这个仓的源码是 CRLF，Python 里用三引号写多行针脚
+  落的是 LF，于是"摘掉这道闸"的替换一处都没命中，而同一支里单行的针脚照常命中——报告变成"绿"，
+  看着像"这道闸没被测试钉住"，其实是替换没发生（2026-09-30 实测：3 格里 2 格 NEEDLE 没命中、1 格假绿）。
+  所以每处替换都要 `assert needle in text`，末尾再断言 `mutated != PRISTINE`，并回报还原后与原文一致。
+- 同理：一次变异跑绿之后，别急着记"这条钉不住"——先加一格**反向变异**（把两个互相兜底的守卫只摘一个、
+  再单独摘另一个）看红不红，M2/M4 就是这么量出"内部那道闸是承重的"
 - 怀疑撞上 headless 偶发红灯时，用快速复现而不是两分钟全量：把 filter 拼成
   `--filter "FullyQualifiedName~<每个含 [AvaloniaFact] 的类>"`，约 15 秒一趟，实测 3 趟 2 红；
   要证明"不是本次改动引入的"，用**排除法 + 这个快速子集**（把新写的类整个排除也照样红，只是受害者换人），
@@ -1608,9 +1614,17 @@ os_name／os_version／os_build／device_model／device_arch／runtime_version�
 内部再判一次（多一个调用点也不会绕回旧行为）。**附带一条语义**：没启用时不调 `MarkBaselineReported`，
 所以"先关后开"的用户在打开那一刻补发首启基线（走 `OnSettingsChanged → RefreshEnabledState`）。
 这条改动**减少真正发出去的字节**，与 G1-AY 同属要如实报出去的对外行为变更。
-**但它没有测试钉住**：`PostHogClient` 在构造函数里直接 new（真 project key、真 host），没有可替换接缝，
-测试里跑它等于真往 PostHog 发数据——要补钉得先加接缝，已登记 **#G1-CV**。
-在那之前，这条闸的证据只有"日志 + 读码"两级，别当成被闸门守住了。
+**同日补上了测试钉（原 #G1-CV 已闭环）**：`PostHogClient` 在构造函数里直接 new（真 project key、真 host），
+测试里跑它等于真往 PostHog 发数据——所以先把接缝拆出来：私有 `IUsageTelemetryClient`（`Capture` /
+`IdentifyAsync` / `FlushAsync` / `Dispose` 四件）+ 一个 `internal` 构造器，生产路径仍走
+`PostHogUsageClient` 包着的真客户端。`UsageTelemetryConsentTests` 三格各自钉住"启动时关着→一个字节都不发
+且不标已上报""启动时开着→基线发且只发一次（第二个实例不许再发）""先关后开→在打开那一刻发"。
+三格共用进程级单例 `TelemetryIdentityService`，所以留在同一个类里并行，每格开头 `ResetForTests()` 拿回干净起点。
+**变异验过四格**：M1 复现原 bug（发送点挪回 `Initialize` + 摘内部闸）红 2 格；M3 摘掉"已启用"分支的发送点
+红 2 格（钉的是"打开那一刻发得出"）；M2 只摘内部闸**绿**——调用点摆对时它的行为本来就没错，绿是正确答案；
+M4 只把发送点挪回 `Initialize`、内部闸留着，也**绿**（那一刻 `_isUsageEnabled` 还没被读，仍是默认 `false`，
+内部闸把它拦住）。**这两条合起来说明内部那道闸是承重的**：单看 M2 会误判成冗余，M4 才是原 bug 的形状，
+而挡住它的正是那道闸——`EnsureBaselineEventSent` 的注释里把这句写死了，别按"只有一道就够"删。
 
 判据本身被修过三次：跨工程同名声明行会把调用点喂饱（Plonds 自带 `GetCatalogAsync`）、
 C# 主构造器会被当成方法声明（`class X(IProgress<…>? p)` 报成一条不存在的方法）、

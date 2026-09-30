@@ -17,7 +17,7 @@ public sealed class PostHogUsageTelemetryService : IDisposable
 
     private readonly ISettingsFacadeService _settingsFacade;
     private readonly ISettingsService _settingsService;
-    private readonly PostHogClient _client;
+    private readonly IUsageTelemetryClient _client;
     private readonly CancellationTokenSource _cts = new();
 
     private Timer? _flushTimer;
@@ -30,18 +30,60 @@ public sealed class PostHogUsageTelemetryService : IDisposable
     private readonly string _launchId = Guid.NewGuid().ToString("N");
 
     public PostHogUsageTelemetryService(ISettingsFacadeService settingsFacade)
+        : this(settingsFacade, new PostHogUsageClient())
+    {
+    }
+
+    /// <summary>
+    /// 接缝存在的唯一理由：<b>隐私开关这条路径要能在测试里被钉住</b>。
+    /// 原来构造函数里直接 new 真客户端（带真 project key 与真 host），于是"关掉的遥测不该发"这件事
+    /// 一测试就真往 PostHog 发数据——结果这条闸从写下到 2026-09-30 被真机日志抓到为止，一格测试都没有。
+    /// </summary>
+    internal PostHogUsageTelemetryService(ISettingsFacadeService settingsFacade, IUsageTelemetryClient client)
     {
         _settingsFacade = settingsFacade ?? throw new ArgumentNullException(nameof(settingsFacade));
         _settingsService = settingsFacade.Settings;
         _settingsService.Changed += OnSettingsChanged;
+        _client = client ?? throw new ArgumentNullException(nameof(client));
+    }
 
-        _client = new PostHogClient(new PostHogOptions
+    /// <summary>本服务真正用到的客户端表面，只有这四件事。</summary>
+    internal interface IUsageTelemetryClient : IDisposable
+    {
+        void Capture(string distinctId, string eventName, Dictionary<string, object?> properties);
+
+        Task IdentifyAsync(string distinctId, Dictionary<string, object?> properties, CancellationToken cancellationToken);
+
+        Task FlushAsync();
+    }
+
+    private sealed class PostHogUsageClient : IUsageTelemetryClient
+    {
+        private readonly PostHogClient _client = new(new PostHogOptions
         {
             ProjectApiKey = PostHogApiKey,
             HostUrl = new Uri(PostHogHostUrl),
             FlushAt = 20,
             FlushInterval = TimeSpan.FromSeconds(30)
         });
+
+        public void Capture(string distinctId, string eventName, Dictionary<string, object?> properties)
+            => _client.Capture(
+                distinctId,
+                eventName,
+                properties,
+                groups: null,
+                sendFeatureFlags: false);
+
+        public Task IdentifyAsync(
+            string distinctId,
+            Dictionary<string, object?> properties,
+            CancellationToken cancellationToken)
+            => _client.IdentifyAsync(distinctId, properties, null, cancellationToken);
+
+        public Task FlushAsync() => _client.FlushAsync();
+
+        public void Dispose() => _client.Dispose();
     }
 
     public bool IsUsageEnabled => _isUsageEnabled;
@@ -90,10 +132,10 @@ public sealed class PostHogUsageTelemetryService : IDisposable
 
             if (_isUsageEnabled)
             {
-                StartSession("usage_enabled");
-                // 首启基线只有这一次机会：没启用时不标"已上报"，所以用户后来在设置里打开用量遥测，
-                // 这条还会补发（MarkBaselineReported 只在真发成功之后调用）。
+                // 顺序照改之前的样子保下来：首启基线在前、会话开始在后（原来基线在 Initialize 里发，
+                // 那时会话还没起）。反过来会把两条事件的先后顺序改掉，虽然不影响隐私语义，没必要顺手动。
                 EnsureBaselineEventSent();
+                StartSession("usage_enabled");
                 return;
             }
 
@@ -311,9 +353,12 @@ public sealed class PostHogUsageTelemetryService : IDisposable
     }
 
     /// <summary>
-    /// 首启基线事件：只在用量遥测已启用时发。这条闸**目前没有测试钉住**——`PostHogClient` 在构造函数里
-    /// 直接 new（带真 project key 与真 host），没有任何可替换的接缝，测试里跑它等于真往 PostHog 发数据；
-    /// 要补钉得先加接缝，已登记 #G1-CV。
+    /// 首启基线事件：只在用量遥测已启用时发。<c>UsageTelemetryConsentTests</c> 用 <see cref="IUsageTelemetryClient"/>
+    /// 这条接缝钉住了行为（关掉时一个字节都不发、打开时在那一刻发且只发一次）。
+    /// 这道闸与 <see cref="RefreshEnabledState"/> 里"只在已启用分支调用"看着重复，变异验证说不是：
+    /// 只摘这道闸会绿（调用点摆对时行为本来就该这样），但把发送点挪回 <see cref="Initialize"/> 而留着这道闸也绿——
+    /// 那一刻 <c>_isUsageEnabled</c> 还没被读、仍是默认 false，正是这道闸挡住了 2026-09-30 那个 bug 的形状。
+    /// 所以别按"另一道已经够了"删它。
     /// </summary>
     private void EnsureBaselineEventSent()
     {
@@ -348,14 +393,9 @@ public sealed class PostHogUsageTelemetryService : IDisposable
                 ["render_mode"] = TelemetryEnvironmentInfo.GetRenderMode()
             };
 
-            _ = _client.IdentifyAsync(distinctId, personProps, null, _cts.Token);
+            _ = _client.IdentifyAsync(distinctId, personProps, _cts.Token);
 
-            _client.Capture(
-                distinctId,
-                TelemetryEventNames.AppFirstLaunch,
-                personProps,
-                groups: null,
-                sendFeatureFlags: false);
+            _client.Capture(distinctId, TelemetryEventNames.AppFirstLaunch, personProps);
 
             _ = _client.FlushAsync();
             identity.MarkBaselineReported();
@@ -503,12 +543,7 @@ public sealed class PostHogUsageTelemetryService : IDisposable
             }
         }
 
-        _client.Capture(
-            distinctId,
-            eventName,
-            properties,
-            groups: null,
-            sendFeatureFlags: false);
+        _client.Capture(distinctId, eventName, properties);
 
         if (forceFlush)
         {
