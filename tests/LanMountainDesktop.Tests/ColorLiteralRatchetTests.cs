@@ -76,6 +76,9 @@ public sealed class ColorLiteralRatchetTests
 
     // 总数对账值：组件 543 + 豁免 559 = 1102（2026-09-29 死描边那 5 行删除后重跑）。
     // ↑ 这条会先于上限红，是为了让"文件被改名/挪走导致判据少看一片"和"真烧了一族"分得开。
+    // 2026-09-30 汇率计算器那一笔（标记面 −13）**没动这个数**：这条对账只加 .cs 的两本账，
+    // 标记面另有自己的等值格（MarkupMeasuredTotal）——这一点是我改错一次才被这条红出来的，
+    // 别再把标记面的降幅算进这里。
     private const int MeasuredGrandTotal = 1102;
 
     // 2026-09-29 新量的一面：.axaml 里的颜色属性此前这条判据**完全看不见**（只扫 *.cs）。
@@ -96,10 +99,29 @@ public sealed class ColorLiteralRatchetTests
     // 这条盲区 2026-09-30 用独立实现复算并定性过（限定接收者不是问题、跨文件同名会撞出 223 处假阳，
     // 要补得做名字解析），细节写在 `DuplicatedPaintSourceRatchetTests` 的头注里。
     // 这一面（按字面量数、不认接收者）没有这个盲区。
-    private const int MarkupColorLiteralCeiling = 349;
+    //
+    // 同日第三笔（标记面，第十笔整体）：336 = 349 − 13，全在 `ExchangeRateCalculatorWidget.axaml` 一个文件里。
+    // 这个组件是**半迁移的实物缺陷**，不是"还能再美化一点"：根卡片早就走主题
+    // （`AdaptiveSurfaceRaisedBrush`／`AdaptiveButtonBorderBrush`／圆角 token 全套），而里面 16 处文字与控件底
+    // 还是白天值。按 `ThemeColorSystemService.cs:99` 本主题夜档卡底 `#FF131922` 现算（算式与 `ColorMath.cs`
+    // 逐字相同、正对照先复现了账本里那组 2.95:1 才敢用）：
+    // 币种代码 `#121722` **1.02:1**、大字换算结果 `#0F1622` **1.03:1**、次要文字 `#6C7382` 3.71:1、
+    // 汇率行 `#646D7D` 3.38:1、状态文字 `#5E6677` 3.06:1——前两个数就是"深黑字压在深黑卡上"，
+    // 也就是这个组件在黑夜档下**基本读不出来**；改走角色画笔后同位是 primary 16.87、secondary 10.08、muted 6.71。
+    // 白天档这一笔动得很小（正文 17.93→18.72、次要 4.76→4.31），因为主题白天那几档本来就接近这些灰。
+    // **两处硬并不得、原样留着**（各带理由，别当"漏烧"补）：
+    // ① 输入金额 `#F08D20` 是这一组件的产品色（全仓就这一处，`grep F08D20` 只命中它），并到 `TextAccent`
+    //    等于替产品决定"输入值该跟着壁纸变色"；
+    // ② Clear／Backspace 两个键的 `#D9DDE4` 比其它键深一档——主题的 raised/overlay 只有两档表面，
+    //    而这块键盘有三层（卡底／普通键／特殊键），1:1 映射不存在，硬并等于把三层压成两层
+    //    （与 `NotificationBoxWidget` 未读/已读那两处同形）。
+    // 剩下 3 处是 `<Style>` 里的 `Setter Value="#..."`（键盘默认底/边/字），这一笔**没动**：
+    // `Setter` 里能不能解析 `DynamicResource` 我没实测过，没验过就不改（改了有可能静默退化成默认画笔，
+    // 那比写死更糟），要接先立一格"真实例上解析得到主题画刷"的钉。
+    private const int MarkupColorLiteralCeiling = 336;
 
     // 总数对账（与 .cs 面同一个套路：这条先于上限红，用来分"真收口"与"判据少看一片"）。
-    private const int MarkupMeasuredTotal = 349;
+    private const int MarkupMeasuredTotal = 336;
 
     private const int MarkupFileFloor = 38;
 

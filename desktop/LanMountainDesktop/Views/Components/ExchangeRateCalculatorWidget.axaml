@@ -41,7 +41,7 @@
                             Grid.Row="0"
                             Grid.Column="0"
                             CornerRadius="{DynamicResource DesignCornerRadiusSm}"
-                            Background="#F8F9FB"
+                            Background="{DynamicResource AdaptiveSurfaceOverlayBrush}"
                             Padding="12,8"
                             PointerPressed="OnFromCurrencyRowPointerPressed">
                         <Grid ColumnDefinitions="Auto,Auto,*"
@@ -53,16 +53,16 @@
                                            Text="USD"
                                            FontSize="18"
                                            FontWeight="SemiBold"
-                                           Foreground="#121722" />
+                                           Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
                                 <TextBlock x:Name="FromCurrencyNameTextBlock"
                                            Text="美元"
                                            FontSize="13"
-                                           Foreground="#6C7382" />
+                                           Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
                             </StackPanel>
                             <TextBlock Grid.Column="1"
                                        Text=">"
                                        FontSize="18"
-                                       Foreground="#A3A9B6"
+                                       Foreground="{DynamicResource AdaptiveTextMutedBrush}"
                                        VerticalAlignment="Center" />
                             <TextBlock x:Name="InputAmountTextBlock"
                                        Grid.Column="2"
@@ -82,7 +82,7 @@
                             Grid.Row="1"
                             Grid.Column="0"
                             CornerRadius="{DynamicResource DesignCornerRadiusSm}"
-                            Background="#F8F9FB"
+                            Background="{DynamicResource AdaptiveSurfaceOverlayBrush}"
                             Padding="12,8"
                             PointerPressed="OnToCurrencyRowPointerPressed">
                         <Grid ColumnDefinitions="Auto,Auto,*"
@@ -94,23 +94,23 @@
                                            Text="CNY"
                                            FontSize="18"
                                            FontWeight="SemiBold"
-                                           Foreground="#121722" />
+                                           Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
                                 <TextBlock x:Name="ToCurrencyNameTextBlock"
                                            Text="人民币"
                                            FontSize="13"
-                                           Foreground="#6C7382" />
+                                           Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
                             </StackPanel>
                             <TextBlock Grid.Column="1"
                                        Text=">"
                                        FontSize="18"
-                                       Foreground="#A3A9B6"
+                                       Foreground="{DynamicResource AdaptiveTextMutedBrush}"
                                        VerticalAlignment="Center" />
                             <TextBlock x:Name="ConvertedAmountTextBlock"
                                        Grid.Column="2"
                                        Text="0"
                                        FontSize="42"
                                        FontWeight="Bold"
-                                       Foreground="#0F1622"
+                                       Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
                                        TextAlignment="Right"
                                        VerticalAlignment="Center"
                                        HorizontalAlignment="Right"
@@ -124,8 +124,8 @@
                             Grid.RowSpan="2"
                             Grid.Column="1"
                             CornerRadius="{DynamicResource DesignCornerRadiusSm}"
-                            Background="#F8F9FB"
-                            BorderBrush="#00000000"
+                            Background="{DynamicResource AdaptiveSurfaceOverlayBrush}"
+                            BorderBrush="Transparent"
                             BorderThickness="0"
                             FontSize="30"
                             Content="⇅"
@@ -136,7 +136,7 @@
                            Grid.Row="1"
                            Text="1 USD = 0 CNY"
                            FontSize="14"
-                           Foreground="#646D7D"
+                           Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
                            Margin="4,0,0,0"
                            MaxLines="1"
                            TextTrimming="CharacterEllipsis" />
@@ -185,7 +185,7 @@
                            Grid.RowSpan="3"
                            IsVisible="False"
                            Text="Loading"
-                           Foreground="#5E6677"
+                           Foreground="{DynamicResource AdaptiveTextMutedBrush}"
                            FontSize="15"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center" />

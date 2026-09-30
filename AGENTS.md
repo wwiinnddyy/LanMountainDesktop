@@ -1061,11 +1061,33 @@ Avalonia 的 Border 只在厚度 >0 时描边，所以**这 5 行从写下那天
 **这一笔里有 4 处真的改了像素**：`NotificationBoxWidget` 的代码从头到尾没有一处 `.Foreground =`（现量 grep 为空），
 所以标记值就是最终值——`#8B95A5` 压在那张白卡 `#FCFCFD` 上实测对比度 **2.95:1**，正好掉在主题给次要/状态文字定的 3.0:1 门槛之下；
 改走 `AdaptiveTextMutedBrush` 之后那一档由主题保证（`EnsureContrast`，`ThemeColorSystemService.cs:117-124`），且随壁纸走。
-另外 24 处改的是**过期副本**：代码早就把它们重画过了，只是接收者不是 x:Name 而是记录字段
-（`visual.TitleTextBlock.Foreground = ComponentRoleBrushes.PrimaryText(this)`）——**这正是上一条判据的盲区**：
+另外 24 处改的是**过期副本**：代码早就把它们重画过了，只是重画走的是记录字段、**字段名与 x:Name 不同**
+（`visual.TitleTextBlock.Foreground = ComponentRoleBrushes.PrimaryText(this)`，那几行的 x:Name 其实是
+`HotItem1TextBlock`…`HotItem8TextBlock`）——**这正是上一条判据的盲区**：
 它按「x:Name + 属性名」找接收者，所以这 24 处本该算双真源却隐着身。账面 87 因此是**下界不是全量**，
 这句话写进守卫注释里，别让下一个人把 87 读成『只剩 87』；而数**字面量**的那一面不认接收者，没有这个盲区——两条一起看才是全貌。
 新增的 28 个 {DynamicResource Adaptive…} 请求由既有守卫 `EveryAdaptiveResourceRequested_IsAlsoRegistered` 兜住（要有人问就得有人注册）。
+
+**标记面第三笔＝总第十笔：`ExchangeRateCalculatorWidget.axaml` 一处文件烧掉 13 个（349 → 336，2026-09-30）。**
+这一笔的性质与前九笔不同：**它是缺陷修复，不是整洁性**。该组件根卡片早就走主题
+（`AdaptiveSurfaceRaisedBrush`／`AdaptiveButtonBorderBrush`／圆角 token 全套），里面 16 处文字与控件底却还是写死的白天值。
+按本主题夜档卡底 `#FF131922`（`ThemeColorSystemService.cs:99`）现算（算式与 `ColorMath.cs` 逐字相同，
+且**先复现了账本里那组 2.95:1 的正对照才敢引用**）：正文 `#121722` **1.02:1**、大字换算结果 `#0F1622` **1.03:1**、
+次要文字 3.71:1、汇率行 3.38:1、状态文字 3.06:1——前两个数就是"近黑字压近黑卡"，黑夜档下这块面板读不出来。
+改走角色画笔后同位是 primary 16.87 / secondary 10.08 / muted 6.71，白天档动得很小（正文 17.93→18.72）。
+**新增真实例钉 `ExchangeRateCalculatorThemeTests`**（单会话、内部逐明暗两档循环）：按 x:Name 找控件、
+读它解析出的画笔、把 α 两层合上来算对比度是否达标（overlay 自带 0xE8/0xF2，先合成到卡底、再把字合成到那层上）。
+三格变异逐条量过：把一行改回写死 → 红（两档都点名 `还是写死的 #FF121722`）；卡片底指向没注册的键 →
+红"没解析到纯色"（顺带量出 chip 在昼/夜分别解析成 `#f2ebf0f4`／`#e81e242d`）；状态文字错接成卡片底那一档 →
+红 `对比度 1.00:1 < 门槛 3.0:1（字与底是同一个颜色）`。
+两条自己踩到的：**`new` 出来的 UserControl 在没上屏之前可视树里 0 个子节点**（先怀疑自己改错了，
+其实是夹具要 `Window.Show()` + `RunJobs()` 一次）；**`Color.ToString()` 出小写十六进制**，
+按 `==` 比写死值那一格永远不走，得 `OrdinalIgnoreCase`（不敏感比对是变异 V1 红出来才补的）。
+**两处硬并不得、原样留着并写明理由**：输入金额 `#F08D20` 是这一组件的产品色（全仓唯一一处），并到 `TextAccent`
+等于替产品决定"输入值跟壁纸变色"；Clear/Backspace 的 `#D9DDE4` 比其它键深一档——主题只有 raised/overlay 两档表面，
+这块键盘却有三层（卡底／普通键／特殊键），1:1 映射不存在（与 `NotificationBoxWidget` 未读/已读那两处同形）。
+另有 3 处留在 `<Style>` 的 `Setter Value="#…"`（键盘默认底/边/字）：Setter 里能不能解析 DynamicResource 我**没实测过**，
+没验过就不改（改错是"静默退化成默认画笔"，比写死更糟）——要接先立一格"真实例上解析得到主题画刷"的钉。
 
 **组件与时区服务之间那对订阅/退订只认一处**：一律走 `desktop/LanMountainDesktop/Views/Components/TimeZoneServiceBinding.cs`
 的 `Replace` / `Clear`（两个方法都返回新的字段值，语义与原来逐字一致：换服务时先退旧再订新，退订不刷新），
