@@ -551,7 +551,9 @@ finally 里当时写的是裸 `end();`，而签名里 `end` 是 `Action? = null`
 （**禁用即淡出，同一个判据**），`Apply(button, enabled, dimmed, dimmedOpacity)` 只给"两个判据确实要分开"的组件用
 并且要在调用点说清为什么，`Fade(visual, dimmed, dimmedOpacity)` 画那些不可交互的字形/图标。
 **家只收写法、没统一任何口径**，因为量到的分歧都是既成事实：淡出值五档并存（0.56 / 0.58 / 0.60 / 0.65 / 0.85）、
-禁用判据两种（`_feed.IsBusy` 六家、`_isRefreshing` 一家——它没走 `ComponentFeedRefresh`，见 #G1-CG），
+禁用判据两种（`_feed.IsBusy` 六家、`DailyPoetryWidget` 一家看它自己的 `_isRefreshing`——那一家没走
+`ComponentFeedRefresh`，2026-09-30 现量：走家的组件共 10 个，`#G1-CG` 早在 2026-09-26 随 Juya 收口，
+当时把这条交叉引用留在原文里就是指错了人），
 而 `CnrDailyNewsWidget` 与每日一词 1x1 把禁用与淡出写成两个判据
 （忙→禁用，却只有"没上台面"才淡），症状是**按钮点了没反应、画面上又完全没有在取数的样子**。
 这三件事要不要统一是视觉决定，已挂 #G1-CH 等拍板；在那之前别把某家的淡出值"顺手对齐"成另一家的数，
@@ -1684,6 +1686,15 @@ Sharp 与 Fluent 才相同。也就是说默认风格下桌面组件面板本来
 （症状是更新包读不到清单、回滚找不到快照，而且没有任何东西保证三个进程算出同一个路径）。
 同族另外两处：`DataLocationResolver.ResolveLauncherDataPath()` 自己拼 `.Launcher`、
 `DeploymentLocator` 自己拼 `snapshots`，现在都指回 `UpdatePaths.GetLauncherDataRoot` / `GetSnapshotsDirectory`。
+**清单取值的归一只认 Core 的 `PlondsManifestValues` 一家（2026-09-30，#G1-BC 队列里那两族跨二进制的收掉）**：
+`ResolveManifestUrl`（环境变量覆盖内置 URL）与 `NormalizeHash`（哈希文本归一）以前在宿主
+（`PlondsClientServiceFactory` / `PlondsVerifier`）与安装器（`InstallerPlondsClient`）各写一份逐字相同的实现，
+而两边都本来就引用 Core——9 个调用点现在都指回这一家。记账要说清两件事：
+① **族数只从 10 降到 9，不是 8**——`NormalizeHash` 整个体只有一句 `return`，而这把尺子的登记下限是
+"方法体 ≥2 语句"（`dump-dup-methods.py:161`，C# 那把同键），所以它本来就不在数内，这一笔对它是
+"只降语义不降数字"；这个盲区另立 **#G1-CW**（放开下限会凭空涨一批族，要先量再动，不许顺手改判据）。
+② **故意没并进 `UpdateHash.NormalizeHashText`**：那条剥 `algo:` 前缀、去掉 `-`，本家去的是空格、保留 `-`——
+两条不同的宽容度。合起来会改变签名校验的通过集合，那是安全判定，不是重复真源，所以两份各留各家。
 **零引用成员棘轮的口径要覆盖所有二进制**：它原先只看宿主工程，Core / 启动器 / 安装器 / Platform 里的
 静态类完全没被数过——把口径从 1 个目录扩到 7 个，当场量出 21 条零引用成员（判法见该文件里的名单注释）。
 **这条探针数的是裸方法名，名字越常用越容易被无关文本喂饱**：`SettingsServiceAppSnapshotExtensions.Save()`

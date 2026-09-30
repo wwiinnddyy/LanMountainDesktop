@@ -565,7 +565,15 @@ public sealed class DuplicateImplementationRatchetTests
     /// 3 个"没判回填守卫"的处理器也逐处核过（两个是用户点击、一个自己管标志），不是漏网的缺陷。
     /// 真正还值得动的只有跨二进制那两族（<c>ResolveManifestUrl</c>、<c>OnCloseClick</c>），
     /// 它们各自牵扯 SDK 版本线与安装器边界，留在下面的待办里。
-    private const int IdenticalBodyFamilyCeiling = 10;
+    /// 10 → 9（2026-09-30）：<c>ResolveManifestUrl</c> 与 <c>NormalizeHash</c> 两份跨二进制逐字相同的实现
+    /// 收进 <c>core/.../Update/PlondsManifestValues.cs</c>（宿主 <c>PlondsClientServiceFactory</c> /
+    /// <c>PlondsVerifier</c> 与安装器 <c>InstallerPlondsClient</c>，两边都本来就引用 Core）。
+    /// **只降了一格，另一格本来就不在这把尺子的数内**：判据是"语句数 ≥2 才登记"
+    /// （<c>dump-dup-methods.py:161</c>，C# 那把同键），而 <c>NormalizeHash</c> 整个体就一句 return——
+    /// 它是这条口径的盲区（与 #G1-CN 那条"双真源只认 x:Name 直接接收者"同一类：判据看不见 ≠ 不存在）。
+    /// 所以这一笔里 <c>NormalizeHash</c> 属"只降语义不降数字"，与上面 <c>Clamped</c>/<c>CreateFrom</c> 同档；
+    /// 反向的便宜也没占：没为它单独造一个两语句的壳去把数字做下来。
+    private const int IdenticalBodyFamilyCeiling = 9;
 
     /// 18 → 15 一次收三族，全是同一个签名 <c>ResolveScale</c> 的三个不同体（#66 队列里那条"三对"）：
     /// <list type="bullet">

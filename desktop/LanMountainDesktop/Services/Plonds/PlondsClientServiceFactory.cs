@@ -1,3 +1,5 @@
+using LanMountainDesktop.Shared.Contracts.Update;
+
 namespace LanMountainDesktop.Services.Plonds;
 
 internal static class PlondsClientServiceFactory
@@ -30,15 +32,15 @@ internal static class PlondsClientServiceFactory
     /// </summary>
     internal static IReadOnlyList<PlondsSourceDescriptor> CreateBuiltInSources()
     {
-        var baseUrl = ResolveManifestUrl(
+        var baseUrl = PlondsManifestValues.ResolveManifestUrl(
             UpdateSettingsValues.PlondsStaticBaseUrlEnvironmentVariable,
             UpdateSettingsValues.DefaultPlondsStaticBaseUrl).TrimEnd('/');
 
-        var s3Manifest = ResolveManifestUrl(
+        var s3Manifest = PlondsManifestValues.ResolveManifestUrl(
             S3ManifestUrlEnvironmentVariable,
             $"{baseUrl}/plonds/PLONDS.json");
 
-        var githubManifest = ResolveManifestUrl(
+        var githubManifest = PlondsManifestValues.ResolveManifestUrl(
             GitHubManifestUrlEnvironmentVariable,
             DefaultGitHubManifestUrl);
 
@@ -55,11 +57,5 @@ internal static class PlondsClientServiceFactory
                 ManifestUrl: githubManifest,
                 Priority: 50)
         ];
-    }
-
-    private static string ResolveManifestUrl(string environmentVariable, string fallback)
-    {
-        var value = Environment.GetEnvironmentVariable(environmentVariable);
-        return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
     }
 }

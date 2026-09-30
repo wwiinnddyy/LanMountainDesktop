@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using LanMountainDesktop.Shared.Contracts.Update;
 
 namespace LanMountainDesktop.Services.Plonds;
 
@@ -67,14 +68,14 @@ internal sealed class PlondsVerifier
         if (separatorIndex > 0)
         {
             var algorithm = normalized[..separatorIndex].Trim().ToLowerInvariant();
-            var hash = NormalizeHash(normalized[(separatorIndex + 1)..]);
+            var hash = PlondsManifestValues.NormalizeHash(normalized[(separatorIndex + 1)..]);
             if (algorithm is PlondsWireFormat.HashAlgorithmMd5 or PlondsWireFormat.HashAlgorithmSha256 && hash.Length > 0)
             {
                 return (algorithm, hash);
             }
         }
 
-        var inferredHash = NormalizeHash(normalized);
+        var inferredHash = PlondsManifestValues.NormalizeHash(normalized);
         return inferredHash.Length switch
         {
             32 => (PlondsWireFormat.HashAlgorithmMd5, inferredHash),
@@ -98,10 +99,5 @@ internal sealed class PlondsVerifier
         await using var stream = File.OpenRead(filePath);
         var hash = await hasher.ComputeHashAsync(stream, cancellationToken).ConfigureAwait(false);
         return Convert.ToHexString(hash).ToLowerInvariant();
-    }
-
-    private static string NormalizeHash(string value)
-    {
-        return value.Trim().Replace(" ", string.Empty, StringComparison.Ordinal).ToLowerInvariant();
     }
 }

@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using LanDesktopPLONDS.Installer.Models;
 using LanMountainDesktop.Shared.Contracts.Deployment;
+using LanMountainDesktop.Shared.Contracts.Update;
 using LanMountainDesktop.Shared.IO;
 
 namespace LanDesktopPLONDS.Installer.Services;
@@ -50,8 +51,8 @@ internal sealed class InstallerPlondsClient
     {
         return
         [
-            new("s3", "s3", ResolveManifestUrl(S3ManifestUrlEnvironmentVariable, DefaultS3ManifestUrl), 100),
-            new("github", "github", ResolveManifestUrl(GitHubManifestUrlEnvironmentVariable, DefaultGitHubManifestUrl), 50)
+            new("s3", "s3", PlondsManifestValues.ResolveManifestUrl(S3ManifestUrlEnvironmentVariable, DefaultS3ManifestUrl), 100),
+            new("github", "github", PlondsManifestValues.ResolveManifestUrl(GitHubManifestUrlEnvironmentVariable, DefaultGitHubManifestUrl), 50)
         ];
     }
 
@@ -430,7 +431,7 @@ internal sealed class InstallerPlondsClient
         if (separatorIndex > 0)
         {
             var algorithm = normalized[..separatorIndex].Trim().ToLowerInvariant();
-            var hash = NormalizeHash(normalized[(separatorIndex + 1)..]);
+            var hash = PlondsManifestValues.NormalizeHash(normalized[(separatorIndex + 1)..]);
 
             if (algorithm == "md5")
             {
@@ -443,7 +444,7 @@ internal sealed class InstallerPlondsClient
             }
         }
 
-        var inferred = NormalizeHash(normalized);
+        var inferred = PlondsManifestValues.NormalizeHash(normalized);
         return inferred.Length switch
         {
             // 32 位十六进制 = MD5，明确拒绝
@@ -494,17 +495,6 @@ internal sealed class InstallerPlondsClient
     {
         _ = checksums;
         return 0;
-    }
-
-    private static string NormalizeHash(string value)
-    {
-        return value.Trim().Replace(" ", string.Empty, StringComparison.Ordinal).ToLowerInvariant();
-    }
-
-    private static string ResolveManifestUrl(string environmentVariable, string fallback)
-    {
-        var value = Environment.GetEnvironmentVariable(environmentVariable);
-        return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
     }
 
     private static string FormatBytes(long bytes)
