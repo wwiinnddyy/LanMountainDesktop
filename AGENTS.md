@@ -1695,6 +1695,13 @@ Sharp 与 Fluent 才相同。也就是说默认风格下桌面组件面板本来
 "只降语义不降数字"；这个盲区另立 **#G1-CW**（放开下限会凭空涨一批族，要先量再动，不许顺手改判据）。
 ② **故意没并进 `UpdateHash.NormalizeHashText`**：那条剥 `algo:` 前缀、去掉 `-`，本家去的是空格、保留 `-`——
 两条不同的宽容度。合起来会改变签名校验的通过集合，那是安全判定，不是重复真源，所以两份各留各家。
+**#G1-BC 队列里最后一条也判完了：`OnCloseClick` 不建家。** 现量 5 个同名处理器：宿主
+`ComponentEditorWindow` 与安装器 `MainWindow` 两份逐字 `<c>_ = sender; _ = e; Close();</c>`（被数到的就是这 2 处）、
+`ComponentLibraryWindow` 那份动作是 `Hide()`（不是同一件事）、宿主 `FusedDesktopComponentLibraryWindow` 与
+启动器 `PrivacyPolicyWindow` 两份 `Close();` 只一句（又落在上面那条 ≥2 语句盲区）。这一族共有的"逻辑"
+就是叫窗口自己的 `Close()`，抽进 Core 只剩一个接 `Window` 转手调框架方法的壳——**属改数字不属收口**；
+而把两个壳写成不同形状来降数，正是本文件登记过的反向陷阱。至此 #G1-BC 的两本账没有待动项：
+剩下 8 族是薄壳（逐处读过，只差"保存哪份状态"），也不建家。
 **零引用成员棘轮的口径要覆盖所有二进制**：它原先只看宿主工程，Core / 启动器 / 安装器 / Platform 里的
 静态类完全没被数过——把口径从 1 个目录扩到 7 个，当场量出 21 条零引用成员（判法见该文件里的名单注释）。
 **这条探针数的是裸方法名，名字越常用越容易被无关文本喂饱**：`SettingsServiceAppSnapshotExtensions.Save()`

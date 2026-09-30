@@ -573,6 +573,15 @@ public sealed class DuplicateImplementationRatchetTests
     /// 它是这条口径的盲区（与 #G1-CN 那条"双真源只认 x:Name 直接接收者"同一类：判据看不见 ≠ 不存在）。
     /// 所以这一笔里 <c>NormalizeHash</c> 属"只降语义不降数字"，与上面 <c>Clamped</c>/<c>CreateFrom</c> 同档；
     /// 反向的便宜也没占：没为它单独造一个两语句的壳去把数字做下来。
+    /// 剩下跨二进制那两族里：<c>ResolveManifestUrl</c> 已于 2026-09-30 收进
+    /// <c>core/.../Update/PlondsManifestValues.cs</c>（见上一条），<c>OnCloseClick</c> 判完是
+    /// <b>不该建家</b>：现量 5 个同名处理器——宿主 <c>ComponentEditorWindow</c> 与安装器 <c>MainWindow</c>
+    /// 两份 <c>_ = sender; _ = e; Close();</c>（就是这一族被数到的那 2 处）、
+    /// <c>ComponentLibraryWindow</c> 那份动作是 <c>Hide()</c>（不是同一件事，本来就不该并）、
+    /// 宿主 <c>FusedDesktopComponentLibraryWindow</c> 与启动器 <c>PrivacyPolicyWindow</c> 两份
+    /// <c>Close();</c> 只有一句（又落在上面那条 ≥2 语句盲区里）。
+    /// 这一族的"共同逻辑"就是调用窗口自己的 <c>Close()</c>，抽到 Core 只能得到一个接 <c>Window</c>
+    /// 参数转手调框架方法的壳——属改数字不属收口，且把两个壳写得彼此不同来降数是登记在案的反向陷阱。
     private const int IdenticalBodyFamilyCeiling = 9;
 
     /// 18 → 15 一次收三族，全是同一个签名 <c>ResolveScale</c> 的三个不同体（#66 队列里那条"三对"）：
