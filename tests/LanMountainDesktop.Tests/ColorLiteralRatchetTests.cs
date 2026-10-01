@@ -85,19 +85,39 @@ public sealed class ColorLiteralRatchetTests
     // 以及深度条目边框那 1 处 #e6e6e6 ——它是**构造期写了、同一趟构造里就被 ApplyNightMode 按档重画**的
     // （CreateDetailedNewsPanel 写死 #e6e6e6，ApplyNightMode:363 用 separatorColor 覆盖），
     // 也就是同一个属性两个地方各写一份的那一族；这一处**没跟着烧**是因为它归 #G1-CM，不是漏了。
-    private const int ColorLiteralCeiling = 525;
+    // 同一族的第十三笔（.cs 面第二笔）：525 − 8 = **517**，`ClassScheduleWidget.axaml.cs` 表头四处
+    // （月份与日期各写一遍 #F8FAFF/#131722、星期 #C6CBD5/#4B5463、状态行 #9AA2B1/#4B5565）
+    // 改走 PrimaryText／SecondaryText／MutedText。接哪一档的依据是**角色**，不是"值接近"
+    // （与第四族那句"依据不是值接近而是阶梯方向"同一口径）：月份/日期是这块面板的正文，
+    // 星期是次要标注，状态行是提示性文字——三档各自的门槛由真实例判据钉住
+    // （ClassScheduleHeaderThemeTests：正文 4.5、次要与状态 3.0，压在面板渐变两个色标上都过）。
+    // 昼档换到主题档之后这两行会变淡多少，本笔**没有量**，只量了"不低于主题给的门槛"。
+    // **同文件另外 12 个字面量一处没动**，两类原因都实测过：
+    // ① 条目里的时间/课名（CreateTimelineItemControl:726-728、IncrementalUpdateItems:924）
+    //    **不能照抄本笔接法**——角色画笔当场解析，而条目控件是"造好之后才加进面板"的，
+    //    那一刻还不在资源作用域里；且 ApplyAdaptiveLayout 只重画命名元素、不重画动态条目的字色，
+    //    所以烧它们要先把"条目字色的重画路径"建出来（挂这一族的账，不是漏烧）。
+    //    时间那对还是"过去→将来"的两档淡出（#6B7280/#9AA3B2 与 #4B5563/#B8BEC9），
+    //    与 TimerWidget 四档淡出同形，要先定哪档说了算。
+    // ② 面板渐变（#171A21→#0C0E14 / #F7F8FC→#ECEFF6）、α 蒙层与外框描边、品牌蓝 #4FC3F7 与红 #FF4D5A
+    //    ——主题没有渐变档、没有第三层表面、描边归属挂在 #G1-CM、品牌色挂在 #G1-CY 那条口径上。
+    // 夹具这一笔补到 Window.RequestedThemeVariant 才测得对：组件自己的明暗判定先看
+    // ActualThemeVariant（ComponentThemeMode.ResolveIsNight:65-73），生产里资源与档位是同一处一起设的
+    // （App.axaml.cs:862）。只注册资源不改档，会造出"注册的是夜档、面板画的是昼档"的假状态——
+    // 第一版就是这么量出 1.01:1 的，那是**夹具错**，不是产品状态（这条要记下，下一个真实例夹具会再撞）。
+    private const int ColorLiteralCeiling = 517;
 
     // 2026-09-26 实测：剩下这些分布在 31 个文件里。
     // ↑ 这句今天核对是错的：677 处实际分布在 **41** 个文件里（当时把"组件目录"与"整个 Views"两份清单
     // 数混了）。下限仍是 30，别把它当实测值引用——要实测值就现跑。
     private const int ScannedFileFloor = 30;
 
-    // 总数对账值：组件 525 + 豁免 559 = 1084（2026-10-01 第十二笔 DailyNewsView 的 .cs 面 −18 后重跑）。
+    // 总数对账值：组件 517 + 豁免 559 = 1076（2026-10-01 第十三笔 ClassScheduleWidget 表头 −8 后重跑）。
     // ↑ 这条会先于上限红，是为了让"文件被改名/挪走导致判据少看一片"和"真烧了一族"分得开。
     // 2026-09-30 汇率计算器那一笔（标记面 −13）**没动这个数**：这条对账只加 .cs 的两本账，
     // 标记面另有自己的等值格（MarkupMeasuredTotal）——这一点是我改错一次才被这条红出来的，
     // 别再把标记面的降幅算进这里。
-    private const int MeasuredGrandTotal = 1084;
+    private const int MeasuredGrandTotal = 1076;
 
     // 2026-09-29 新量的一面：.axaml 里的颜色属性此前这条判据**完全看不见**（只扫 *.cs）。
     // 量出来是 412 处 / 40 个文件——比组件里剩下的 659 少不到一半，绝不是"边角料"。

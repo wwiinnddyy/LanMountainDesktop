@@ -1041,11 +1041,11 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         DayTextBlock.FontSize = dateFont;
         SlashTextBlock.FontSize = dateFont;
 
-        MonthTextBlock.Foreground = ComponentPaint.CreateBrush(_isNightVisual ? "#F8FAFF" : "#131722");
-        DayTextBlock.Foreground = ComponentPaint.CreateBrush(_isNightVisual ? "#F8FAFF" : "#131722");
+        MonthTextBlock.Foreground = ComponentRoleBrushes.PrimaryText(this);
+        DayTextBlock.Foreground = ComponentRoleBrushes.PrimaryText(this);
         SlashTextBlock.Foreground = slashBrush;
-        WeekdayTextBlock.Foreground = ComponentPaint.CreateBrush(_isNightVisual ? "#C6CBD5" : "#4B5463");
-        StatusTextBlock.Foreground = ComponentPaint.CreateBrush(_isNightVisual ? "#9AA2B1" : "#4B5565");
+        WeekdayTextBlock.Foreground = ComponentRoleBrushes.SecondaryText(this);
+        StatusTextBlock.Foreground = ComponentRoleBrushes.MutedText(this);
 
         WeekdayTextBlock.FontSize = weekdayFontByScale;
         WeekdayTextBlock.FontWeight = ComponentTypography.ToVariableWeight(ComponentTypography.Lerp(560, 700, Math.Clamp((scale - 0.60) / 1.2, 0, 1)));
