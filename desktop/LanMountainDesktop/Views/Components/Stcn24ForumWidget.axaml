@@ -71,7 +71,7 @@
                     <Border x:Name="PostItem1Host"
                                     Grid.Row="1"
                                     Tag="0"
-                                    Background="#F7F8FA"
+                                    Background="{DynamicResource AdaptiveSurfaceOverlayBrush}"
                                     CornerRadius="{DynamicResource DesignCornerRadiusSm}"
                                     Padding="8,6"
                                     PointerPressed="OnPostItemPointerPressed">
@@ -112,7 +112,7 @@
                     <Border x:Name="PostItem2Host"
                             Grid.Row="2"
                             Tag="1"
-                            Background="#F7F8FA"
+                            Background="{DynamicResource AdaptiveSurfaceOverlayBrush}"
                             CornerRadius="10"
                             Padding="8,6"
                             PointerPressed="OnPostItemPointerPressed">
@@ -153,7 +153,7 @@
                     <Border x:Name="PostItem3Host"
                             Grid.Row="3"
                             Tag="2"
-                            Background="#F7F8FA"
+                            Background="{DynamicResource AdaptiveSurfaceOverlayBrush}"
                             CornerRadius="10"
                             Padding="8,6"
                             PointerPressed="OnPostItemPointerPressed">
@@ -194,7 +194,7 @@
                     <Border x:Name="PostItem4Host"
                             Grid.Row="4"
                             Tag="3"
-                            Background="#F7F8FA"
+                            Background="{DynamicResource AdaptiveSurfaceOverlayBrush}"
                             CornerRadius="10"
                             Padding="8,6"
                             PointerPressed="OnPostItemPointerPressed">
@@ -235,7 +235,7 @@
                     <Border x:Name="PostItem5Host"
                             Grid.Row="5"
                             Tag="4"
-                            Background="#F7F8FA"
+                            Background="{DynamicResource AdaptiveSurfaceOverlayBrush}"
                             CornerRadius="10"
                             Padding="8,6"
                             PointerPressed="OnPostItemPointerPressed">
@@ -276,7 +276,7 @@
                     <Border x:Name="PostItem6Host"
                             Grid.Row="6"
                             Tag="5"
-                            Background="#F7F8FA"
+                            Background="{DynamicResource AdaptiveSurfaceOverlayBrush}"
                             CornerRadius="10"
                             Padding="8,6"
                             PointerPressed="OnPostItemPointerPressed">
@@ -317,7 +317,7 @@
                     <Border x:Name="PostItem7Host"
                             Grid.Row="7"
                             Tag="6"
-                            Background="#F7F8FA"
+                            Background="{DynamicResource AdaptiveSurfaceOverlayBrush}"
                             CornerRadius="10"
                             Padding="8,6"
                             PointerPressed="OnPostItemPointerPressed">
@@ -358,7 +358,7 @@
                     <Border x:Name="PostItem8Host"
                             Grid.Row="8"
                             Tag="7"
-                            Background="#F7F8FA"
+                            Background="{DynamicResource AdaptiveSurfaceOverlayBrush}"
                             CornerRadius="10"
                             Padding="8,6"
                             PointerPressed="OnPostItemPointerPressed">

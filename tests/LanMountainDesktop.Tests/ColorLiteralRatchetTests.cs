@@ -172,10 +172,18 @@ public sealed class ColorLiteralRatchetTests
     // 之后两侧是同一个键，设计期与运行时也不再各说一套。
     // 这个文件现在只剩 3 处（品牌红 DateTextBlock 与展开按钮的描边/字色、分隔线 #e6e6e6），
     // 理由与上面 .cs 面那 11 处同源。
-    private const int MarkupColorLiteralCeiling = 331;
+    // 同日第六笔（标记面，跟第十三笔一起）：331 − 8 = **323**——`Stcn24ForumWidget.axaml` 里
+    // `PostItem{1-8}Host` 的行板底。代码那一侧（:202）早就把这些 Border 改走 OverlaySurface，
+    // 标记里的 #F7F8FA 是"造好即被覆盖"的初始值，也就是这条轴一直在数的**同一个属性两个真源**。
+    // 这一笔**一个像素都不改**（两侧本来就画同一档），它只是把标记那份过期值接回同一个键。
+    // **同文件 `PostItem{1-8}AvatarHost` 的 8 处 #E7EBF4 没动**：代码 :203 给它的是
+    // `_isNightVisual ? #3D4451 : #E7EBF4`，比行板（overlay）更亮一档——主题只有 raised/overlay 两层，
+    // 而这块面板有"卡底／行板／头像格"三层，1:1 不存在，硬并会让头像格和行板同色、圆片直接看不见
+    // （与键盘特殊键、通知盒未读/已读同形）。已并进 #G1-CY 那条"第三层表面"的口径，另加 #112 记账。
+    private const int MarkupColorLiteralCeiling = 323;
 
     // 总数对账（与 .cs 面同一个套路：这条先于上限红，用来分"真收口"与"判据少看一片"）。
-    private const int MarkupMeasuredTotal = 331;
+    private const int MarkupMeasuredTotal = 323;
 
     private const int MarkupFileFloor = 38;
 
