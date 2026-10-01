@@ -18,7 +18,7 @@
         <Border x:Name="CoverImageBorder"
                 CornerRadius="{DynamicResource DesignCornerRadiusXs}"
                 ClipToBounds="True"
-                Background="#f8f5ec"
+                Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
                 PointerPressed="OnCoverImagePointerPressed"
                 Cursor="Hand">
             <Image x:Name="CoverImage"
@@ -74,7 +74,7 @@
         </Grid>
         
         <Border x:Name="OverviewBorder"
-                Background="#f8f5ec"
+                Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
                 CornerRadius="{DynamicResource DesignCornerRadiusXs}"
                 Padding="12"
                 Margin="0,0,0,8">

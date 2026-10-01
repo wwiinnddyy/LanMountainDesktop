@@ -998,10 +998,24 @@ UI 文案要不要跟着变是产品判断，先登记不擅自动。
 （`ComponentEditorWindow.axaml:51` `<themes:CustomMaterialTheme BaseTheme="Light" PrimaryColor="#6750A4"
 SecondaryColor="#625B71" />`——`#6750A4` 就是 Material3 的原型主色），并强制 Light 档。
 这条不是"烧成角色色"，是"这个窗口自己带了一份 UI 调色板真源"，与宿主主题并存——已登记等拍板（#G1-CZ）。
-组件代码侧三族烧完最集中的是 `MusicControlWidget.axaml.cs=39`、`TimerWidget.axaml.cs=32`、
-`ClassScheduleWidget.axaml.cs=32`、`DailyNewsView.axaml.cs=29`、`WorldClockWidget.axaml.cs=29`、
-`AnalogClockWidget.axaml.cs=27`（2026-09-30 现量，别引用旧数——上一版记的 `WorldClock=31`、
-`Stcn24ForumWidget.axaml=38` 都已漂开，后者同日第十一笔之后降到 18）。
+组件代码侧现量最集中（2026-10-01 第十二笔之后，总数 525 / 40 个文件）：`MusicControlWidget.axaml.cs=39`、
+`TimerWidget.axaml.cs=32`、`ClassScheduleWidget.axaml.cs=32`、`WorldClockWidget.axaml.cs=29`、
+`AnalogClockWidget.axaml.cs=27`、`StudySessionHistoryWidget.axaml.cs=25`（`DailyNewsView.axaml.cs` 本笔
+29 → 11 退出头部；别引用旧数——上一版记的 `WorldClock=31`、`Stcn24ForumWidget.axaml=38` 都已漂开，
+后者第十一笔之后降到 18）。
+头部两家**逐处读完后的分箱**（这一步的产出是"剩下的 .cs 面卡在哪把缺失的能力上"，不是"下次烧谁"）：
+① `MusicControlWidget` 那 39 处没有一处是角色色——它是**画在专辑封面之上的那层膜**：
+20 处 α 白/α 黑（`#2FFFFFFF`…`#77FFFFFF`、渐变里的 `#44FFFFFF`/`#15000000`）压的是 artwork 不是主题表面，
+11 处是取色算法本身（`PickPaletteColor` 的 4 个兜底 + `ColorMath.Blend/WithAlpha` 的提亮压暗常数），
+剩下的是无封面态那套固定灰底 `#F0635D61` 与产品红渐变（`#FFFF4767→#FFD60045`）。
+把它们接到 `ComponentRoleBrushes` 等于让封面照片上的一层膜跟着壁纸换色——**方向就错了**。
+② `TimerWidget` 那 16 行（32 个字面量）全是 `isNightMode ? … : …`，是这条判据从头注到尾点名的形状，
+但**它今天一处都没烧**，两个原因都不是"懒得改"：
+它的面板底是**两档渐变**（`#2F3441→#202632`），主题只有 raised/overlay 两档纯色、没有渐变档，1:1 不存在；
+而四个数字的"离本位越远越淡"这个编码在昼/夜两档**方向是反的**（现算：昼 本位 17.40 > 上邻位 1.96 > 下邻位 1.88 > 下下位 1.50，
+夜 本位 12.72 > **下邻位 3.93 > 上邻位 3.62** > 下下位 2.90，压在自家面板渐变中点上，正对照先复现账本 2.95:1）——
+同一个"过去/将来"的梯度，换一档就读成另一种顺序，且夜档邻位是昼档的两倍清晰。
+烧它必须先决定"哪一档说了算"，那是产品决定不是整洁性，已登记（与 #G1-CY 同形）。
 **判据文档里那句"677 处 / 31 个文件"的 31 也是数错的**（同一总数实际分布在 41 个文件里），已就地更正——
 上限/下限是常量、说明文字是 prose，两者都会漂，引用之前现跑一遍。
 **#FFF 那一族只烧得动一处，产出是"把剩下的分箱"**（553 处）：23 处 `#FFFFFFFF` 逐处读过——
@@ -1115,6 +1129,27 @@ Avalonia 的 Border 只在厚度 >0 时描边，所以**这 5 行从写下那天
 两个变异都红：改回写死 → 报"键盘按钮没接上 Setter 该接的那两档（底 #fff8f9fb 应为 #f2ebf0f4/#e81e242d）"；
 把底接成正文那一档 → 也红（字对、底错）。而这两次变异**第一遍都是绿**，原因是我又用了 `--no-build`
 （改了 .axaml 没重建，测的是旧 dll）——这条坑今天第三次踩，写在这里因为它真的会骗过自己。
+
+**第十二笔（2026-10-01，.cs 面第一笔）：`DailyNewsView` 一套自带调色板接进主题，525＝543−18、标记 331＝333−2、
+双真源那面 87 → 85**。这个组件不是半迁移，是**整套自己算了两档**：正文/次要/面板底三组值在
+建条目的构造路径、`CreateDetailedNewsPanel`、`ApplyNightMode` 那遍全树重画里各写一遍，换壁纸时一个字不动。
+**本笔最值钱的一条是它带出的约束：角色画笔是当场解析的，构造期取不到主题。**
+`AdaptiveTokens.Brush` 走 `TryFindResource`，而宿主是 `new DailyNewsView(…)` 之后才 `Children.Add`
+（`JuyaNewsWidget.axaml.cs:506→511`）——构造期这个 view 不在任何资源作用域里，18 处角色色会**全部落成兜底灰**，
+既不报错也没有编译期信号。所以光"改接线"不够，必须补一遍 `OnAttachedToVisualTree` 重画。
+这条只有真实例判据能发现：值域判据看的是"来自主题还是写死"，而灰也是解析结果。
+变异 M1（把那行订阅注释掉）红得不含糊：`昼档：• 的字色是 Gray，角色 AdaptiveTextSecondaryBrush 注册的是 #ff70757f`。
+M2（标题接成次要）／M4（故意保留的品牌红被顺手扫成角色）各自只红自己那一格，三处变异全红。
+**顺带查出一处既有缺陷并登记成 #G1-DA**：`ApplyNightMode` 与 `UpdateLayout` 两遍树遍历都用
+`stackChild is StackPanel headerPanel` 认"标题行"，而链接区也是 StackPanel ⇒ 落进第一个分支，
+`else if (… linksPanel)` 那一路永不执行。症状三个：「相关链接：」标签拿到标题的正文色（本笔真实例实测：
+昼 `#ff0b1220`、夜 `#fff8fafc`，与"深度一条"同一支）、字号被抬成标题那一档、链接按钮在字号遍历里两分支都不认、
+因此从不随格子缩放。`git show HEAD:` 对比确认**判据行改动前就在**，不是烧色引入的；
+本笔把那一格按**现状**钉成 `TextPrimaryBrush` 并在注释里写明"翻成 Secondary 的那一笔就是修复本身"——
+收口与改语义不混在同一个提交里（同 `ExistingPath` 那次的规矩）。
+剩下 11 处（.cs）分三类，各带理由：品牌红 `#d4736a/#bb5649` 8 处（日期行、展开按钮、#序号徽标底、链接——
+与 #G1-CY 输入金额同形，并进 TextAccent 等于替产品决定"新闻品牌色跟壁纸变"）；
+发丝分隔线 2 处（主题没有"分隔线"这一档，归 #G1-CM）；深度条目边框 1 处（同一个属性标记/代码各写一份，也归 #G1-CM）。
 
 **组件与时区服务之间那对订阅/退订只认一处**：一律走 `desktop/LanMountainDesktop/Views/Components/TimeZoneServiceBinding.cs`
 的 `Replace` / `Clear`（两个方法都返回新的字段值，语义与原来逐字一致：换服务时先退旧再订新，退订不刷新），

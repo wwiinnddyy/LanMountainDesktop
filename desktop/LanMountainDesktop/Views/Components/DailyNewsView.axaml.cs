@@ -24,6 +24,7 @@ public partial class DailyNewsView : UserControl
     private readonly JuyaDailyNews _news;
     private Bitmap? _coverBitmap;
     private bool _isExpanded;
+    private bool _isNightModeVisual;
 
     public event EventHandler? CoverImageClicked;
     public event EventHandler<string>? NewsItemClicked;
@@ -76,7 +77,7 @@ public partial class DailyNewsView : UserControl
                     {
                         Text = "•",
                         FontSize = 13,
-                        Foreground = new SolidColorBrush(isNightMode ? Color.Parse("#9a9590") : Color.Parse("#757575"))
+                        Foreground = ComponentRoleBrushes.SecondaryText(this)
                     };
                     itemPanel.Children.Add(bulletText);
 
@@ -87,7 +88,7 @@ public partial class DailyNewsView : UserControl
                             Content = item.Title,
                             NavigateUri = new Uri(item.Url),
                             FontSize = 13,
-                            Foreground = new SolidColorBrush(isNightMode ? Color.Parse("#9a9590") : Color.Parse("#757575")),
+                            Foreground = ComponentRoleBrushes.SecondaryText(this),
                             Padding = new Thickness(0)
                         };
                         itemPanel.Children.Add(linkButton);
@@ -99,7 +100,7 @@ public partial class DailyNewsView : UserControl
                             Text = item.Title,
                             FontSize = 13,
                             TextWrapping = TextWrapping.Wrap,
-                            Foreground = new SolidColorBrush(isNightMode ? Color.Parse("#9a9590") : Color.Parse("#757575"))
+                            Foreground = ComponentRoleBrushes.SecondaryText(this)
                         };
                         itemPanel.Children.Add(titleText);
                     }
@@ -141,14 +142,28 @@ public partial class DailyNewsView : UserControl
             }
         }
 
+        _isNightModeVisual = isNightMode;
         ApplyNightMode(isNightMode);
+
+        // 角色画笔是"取一次就定色"的：AdaptiveTokens.Brush 用 TryFindResource 当场解析，取不到就落兜底灰。
+        // 宿主是 `new DailyNewsView(…)` 之后才把 view 加进 NewsStackPanel（JuyaNewsWidget.axaml.cs:506→511），
+        // 所以构造期这个 view 还不在任何资源作用域里——上面那遍着色全是灰，第一帧就会是灰字。
+        // 挂上树之后再着一次色，取到的才是主题当前那几支。
+        AttachedToVisualTree += OnAttachedToVisualTree;
+    }
+
+    private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        ApplyNightMode(_isNightModeVisual);
     }
 
     private Border CreateDetailedNewsPanel(JuyaDetailedNewsItem detailedItem, bool isNightMode)
     {
         var primaryColor = isNightMode ? "#d4736a" : "#bb5649";
-        var textColor = isNightMode ? "#e8e4e0" : "#34495e";
-        var secondaryTextColor = isNightMode ? "#9a9590" : "#757575";
+        var textColor = ComponentRoleBrushes.PrimaryText(this);
+        var secondaryTextColor = ComponentRoleBrushes.SecondaryText(this);
 
         var mainBorder = new Border
         {
@@ -192,7 +207,7 @@ public partial class DailyNewsView : UserControl
             Text = detailedItem.Title,
             FontSize = 16,
             FontWeight = FontWeight.SemiBold,
-            Foreground = new SolidColorBrush(Color.Parse(textColor)),
+            Foreground = textColor,
             TextWrapping = TextWrapping.Wrap,
             VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
         };
@@ -207,7 +222,7 @@ public partial class DailyNewsView : UserControl
                 FontSize = 14,
                 LineHeight = 22,
                 TextWrapping = TextWrapping.Wrap,
-                Foreground = new SolidColorBrush(Color.Parse(textColor))
+                Foreground = textColor
             };
             mainStack.Children.Add(bodyText);
         }
@@ -220,7 +235,7 @@ public partial class DailyNewsView : UserControl
             {
                 Text = "相关链接：",
                 FontSize = 12,
-                Foreground = new SolidColorBrush(Color.Parse(secondaryTextColor))
+                Foreground = secondaryTextColor
             };
             linksPanel.Children.Add(linksHeader);
 
@@ -306,16 +321,15 @@ public partial class DailyNewsView : UserControl
     public void ApplyNightMode(bool isNightMode)
     {
         var primaryColor = isNightMode ? "#d4736a" : "#bb5649";
-        var textColor = isNightMode ? "#e8e4e0" : "#34495e";
-        var secondaryTextColor = isNightMode ? "#9a9590" : "#757575";
+        var textColor = ComponentRoleBrushes.PrimaryText(this);
+        var secondaryTextColor = ComponentRoleBrushes.SecondaryText(this);
         var separatorColor = isNightMode ? "#3d3a3a" : "#e6e6e6";
-        var coverBgColor = isNightMode ? "#3d3a3a" : "#f8f5ec";
-        var overviewBgColor = isNightMode ? "#3d3a3a" : "#f8f5ec";
+        var panelSurface = ComponentRoleBrushes.RaisedSurface(this);
 
         DateTextBlock.Foreground = new SolidColorBrush(Color.Parse(primaryColor));
         DateSeparatorBorder.Background = new SolidColorBrush(Color.Parse(separatorColor));
-        CoverImageBorder.Background = new SolidColorBrush(Color.Parse(coverBgColor));
-        OverviewBorder.Background = new SolidColorBrush(Color.Parse(overviewBgColor));
+        CoverImageBorder.Background = panelSurface;
+        OverviewBorder.Background = panelSurface;
 
         ShowMoreButton.BorderBrush = new SolidColorBrush(Color.Parse(primaryColor));
         ShowMoreButton.Foreground = new SolidColorBrush(Color.Parse(primaryColor));
@@ -343,12 +357,12 @@ public partial class DailyNewsView : UserControl
                                 }
                                 else
                                 {
-                                    textBlock.Foreground = new SolidColorBrush(Color.Parse(secondaryTextColor));
+                                    textBlock.Foreground = secondaryTextColor;
                                 }
                             }
                             else if (itemChild is HyperlinkButton linkBtn)
                             {
-                                linkBtn.Foreground = new SolidColorBrush(Color.Parse(secondaryTextColor));
+                                linkBtn.Foreground = secondaryTextColor;
                             }
                         }
                     }
@@ -374,13 +388,13 @@ public partial class DailyNewsView : UserControl
                             }
                             else if (headerChild is TextBlock titleText)
                             {
-                                titleText.Foreground = new SolidColorBrush(Color.Parse(textColor));
+                                titleText.Foreground = textColor;
                             }
                         }
                     }
                     else if (stackChild is TextBlock bodyText)
                     {
-                        bodyText.Foreground = new SolidColorBrush(Color.Parse(textColor));
+                        bodyText.Foreground = textColor;
                     }
                     else if (stackChild is StackPanel linksPanel)
                     {
@@ -388,7 +402,7 @@ public partial class DailyNewsView : UserControl
                         {
                             if (linkChild is TextBlock linksHeader)
                             {
-                                linksHeader.Foreground = new SolidColorBrush(Color.Parse(secondaryTextColor));
+                                linksHeader.Foreground = secondaryTextColor;
                             }
                             else if (linkChild is HyperlinkButton linkButton)
                             {

@@ -50,13 +50,18 @@ public sealed class DuplicatedPaintSourceRatchetTests
     //    ZhiJiaoHub 各自的 `RootBorder.Background` 都算成自己重画过）。
     // 真要补这条盲区，得把"记录字段 → 构造实参里那几个 x:Name"解出来（`new HotItemVisual(…, HotItem1TextBlock)`)，
     // 那是名字解析、不是文本匹配。按现在这把尺子的美学（宁可不报也不报假的），留给那一笔单独做。
-    private const int DuplicatedPaintCeiling = 87;
+    //
+    // 2026-10-01 第十二笔（#G1-AF）在这里收掉 **2 处**：`DailyNewsView` 的 `CoverImageBorder.Background`
+    // 与 `OverviewBorder.Background`——标记写 #f8f5ec、同一趟构造里 ApplyNightMode 又按档重画，
+    // 是这一族最干净的一种（标记那一遍永不生效）。两侧现在都说同一个角色键 → **85**。
+    // 上面那些 87 是当时的实测值，别当"现在还剩 87"引用；要现值就现跑。
+    private const int DuplicatedPaintCeiling = 85;
 
     // 总数对账：与上限分开钉，是因为这条**先于上限红**——
     // 目录改名或配对方式变了会让判据安静地少看一片（那时上限仍然"够绿"），而真收口一族是另一回事。
-    // 剩下 87 处两侧都还是字面色值（Timer / AnalogClock / Whiteboard / 学习面板那几件），
+    // 剩下 85 处两侧都还是字面色值（Timer / AnalogClock / Whiteboard / 学习面板那几件），
     // 要动它们得先给那批组件建角色映射，属 #G1-AF 的账。
-    private const int MeasuredDuplicatedTotal = 87;
+    private const int MeasuredDuplicatedTotal = 85;
 
     // 2026-09-29 实测：Views 下 93 个 .axaml，全部有配对的 .axaml.cs。
     private const int ScannedPairFloor = 88;

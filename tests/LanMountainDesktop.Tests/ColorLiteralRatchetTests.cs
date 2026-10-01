@@ -67,19 +67,37 @@ public sealed class ColorLiteralRatchetTests
     // 所在边框在标记里写着 BorderThickness="0"，而 code-behind 从没抬过厚度。
     // 这 5 行不是"颜色漂了"，是死赋值，删掉即 553 − 10 = 543（每行带三元组两侧共 2 个字面量）。
     // 判据与普查落在 DeadBorderPaintRatchetTests（上限 0，覆盖面 97 对），别再把它当角色色烧。
-    private const int ColorLiteralCeiling = 543;
+    //
+    // 同日第十二笔（.cs 面第一笔）：543 − 18 = **525**，全在 `DailyNewsView.axaml.cs` 一个文件里。
+    // 这个组件不是"半迁移"，是**整套自带两档调色板**：正文 #e8e4e0/#34495e、次要 #9a9590/#757575、
+    // 面板底 #3d3a3a/#f8f5ec，同一份色值在三个地方各抄一遍（建概览条目的构造路径、
+    // CreateDetailedNewsPanel、ApplyNightMode 那遍全树重画）——换壁纸时这块面板一个字都不动。
+    // 烧的是这三组里能 1:1 对上角色的六处（正文→PrimaryText、次要→SecondaryText、
+    // 两层面板底→RaisedSurface，另把 coverBg/overviewBg 那两个同值局部量并成一个）。
+    // **本笔真正的产出是它带出的那条约束**：角色画笔是当场解析的（AdaptiveTokens.Brush 走
+    // TryFindResource），而宿主是 `new DailyNewsView(…)` 之后才 Children.Add（JuyaNewsWidget.axaml.cs:506→511），
+    // 构造期这个 view 不在任何资源作用域里，取到的只有兜底灰 —— 只改接线不加"OnAttachedToVisualTree
+    // 再着一次色"就会把 18 处主题色变成一片灰，而这一点**只有真实例判据能发现**（值域判据看的是"来自主题"，
+    // 灰也是解析结果）。同一条约束对其它组件同样成立：在构造/字段初始化里取角色画笔的都是这个形状。
+    // 剩下 11 处分三类，各带理由（别当"漏烧"补）：品牌红 #d4736a/#bb5649 共 8 处（日期行、展开按钮、
+    // #序号徽标底、链接，并到 TextAccent 等于替产品决定"新闻品牌色跟着壁纸变"，与 #G1-CY 输入金额同形）；
+    // 发丝分隔线 #3d3a3a/#e6e6e6 2 处（主题没有"分隔线"这一档，描边归属本身挂在 #G1-CM 等定档）；
+    // 以及深度条目边框那 1 处 #e6e6e6 ——它是**构造期写了、同一趟构造里就被 ApplyNightMode 按档重画**的
+    // （CreateDetailedNewsPanel 写死 #e6e6e6，ApplyNightMode:363 用 separatorColor 覆盖），
+    // 也就是同一个属性两个地方各写一份的那一族；这一处**没跟着烧**是因为它归 #G1-CM，不是漏了。
+    private const int ColorLiteralCeiling = 525;
 
     // 2026-09-26 实测：剩下这些分布在 31 个文件里。
     // ↑ 这句今天核对是错的：677 处实际分布在 **41** 个文件里（当时把"组件目录"与"整个 Views"两份清单
     // 数混了）。下限仍是 30，别把它当实测值引用——要实测值就现跑。
     private const int ScannedFileFloor = 30;
 
-    // 总数对账值：组件 543 + 豁免 559 = 1102（2026-09-29 死描边那 5 行删除后重跑）。
+    // 总数对账值：组件 525 + 豁免 559 = 1084（2026-10-01 第十二笔 DailyNewsView 的 .cs 面 −18 后重跑）。
     // ↑ 这条会先于上限红，是为了让"文件被改名/挪走导致判据少看一片"和"真烧了一族"分得开。
     // 2026-09-30 汇率计算器那一笔（标记面 −13）**没动这个数**：这条对账只加 .cs 的两本账，
     // 标记面另有自己的等值格（MarkupMeasuredTotal）——这一点是我改错一次才被这条红出来的，
     // 别再把标记面的降幅算进这里。
-    private const int MeasuredGrandTotal = 1102;
+    private const int MeasuredGrandTotal = 1084;
 
     // 2026-09-29 新量的一面：.axaml 里的颜色属性此前这条判据**完全看不见**（只扫 *.cs）。
     // 量出来是 412 处 / 40 个文件——比组件里剩下的 659 少不到一半，绝不是"边角料"。
@@ -127,10 +145,17 @@ public sealed class ColorLiteralRatchetTests
     // ② Clear／Backspace 两个键的 `#D9DDE4` 比其它键深一档——主题的 raised/overlay 只有两档表面，
     //    而这块键盘有三层（卡底／普通键／特殊键），1:1 映射不存在，硬并等于把三层压成两层
     //    （与 `NotificationBoxWidget` 未读/已读那两处同形）。
-    private const int MarkupColorLiteralCeiling = 333;
+    // 同日第五笔（标记面，跟第十二笔同一批）：333 − 2 = **331**——`DailyNewsView.axaml` 里
+    // `CoverImageBorder`/`OverviewBorder` 那两层底。代码那一侧本笔已改走 RaisedSurface，
+    // 标记里若还留着 #f8f5ec 就是"同一个属性两个地方各写一份"（构造期标记值生效、同一趟构造里
+    // 被 ApplyNightMode 覆盖，之后永不再生效）——改 {DynamicResource AdaptiveSurfaceRaisedBrush}
+    // 之后两侧是同一个键，设计期与运行时也不再各说一套。
+    // 这个文件现在只剩 3 处（品牌红 DateTextBlock 与展开按钮的描边/字色、分隔线 #e6e6e6），
+    // 理由与上面 .cs 面那 11 处同源。
+    private const int MarkupColorLiteralCeiling = 331;
 
     // 总数对账（与 .cs 面同一个套路：这条先于上限红，用来分"真收口"与"判据少看一片"）。
-    private const int MarkupMeasuredTotal = 333;
+    private const int MarkupMeasuredTotal = 331;
 
     private const int MarkupFileFloor = 38;
 
