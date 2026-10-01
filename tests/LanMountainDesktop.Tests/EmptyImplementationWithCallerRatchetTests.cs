@@ -99,11 +99,17 @@ public sealed class EmptyImplementationWithCallerRatchetTests
 
         // —— 挂账：不是"空着是对的"，是已知缺陷，等用户拍板 ——
         ["CnrDailyNewsWidget.axaml.cs|ApplyCellSize"] =
-            "G1-BE / G1-BJ：签名是缩放契约，体里只把 cellSize 丢掉——29 个组件里第 2 个这样的" +
-            "（另一个是 RssReaderWidget）。它连 _currentCellSize 与 UpdateAdaptiveLayout 都没有，" +
-            "也就是整体不参与格子缩放；要不要跟着缩放是产品判断，等他拍。",
+            "G1-BE / G1-BJ：签名是缩放契约，体里只把 cellSize 丢掉——**2026-10-01 现量的口径**：" +
+            "Views/Components 下 44 个文件声明 ApplyCellSize，其中 18 个走家" +
+            "（ComponentDesignMetrics.ApplyCellSize）、24 个自带一套布局、**2 个什么都不做**" +
+            "（本条与 RssReaderWidget 那条）。原账上写的「29 个组件里第 2 个」是旧数，别引用。" +
+            "它连 _currentCellSize 与 UpdateAdaptiveLayout 都没有，也就是整体不参与格子缩放；" +
+            "要不要跟着缩放是产品判断，等他拍。",
         ["RssReaderWidget.axaml.cs|ApplyCellSize"] =
-            "G1-BE：声明了缩放契约却什么都不干——格子变大时 RSS 条目字号/行数不跟着变。怎么缩放是产品设计，等他拍。",
+            "G1-BE：声明了缩放契约却什么都不干（体是空的 { }，与 Cnr 那格的 `_ = cellSize;` 同数不同形）——" +
+            "格子变大时 RSS 条目字号/行数不跟着变。这一格要动不是接个家就完事：该文件里没有" +
+            "_currentCellSize、也没有 UpdateAdaptiveLayout 之类的布局函数，等于要先写一遍自适应布局" +
+            "再加真实例探针，等于「怎么缩放」既是产品设计、也是一块不小的实现，等他拍。",
     };
 
     /// <summary>一行方法签名（参数表不跨行）：抓名字，并把 <c>)</c> 之后的残余留给 <see cref="IsEmptyBody"/> 判体形。</summary>
