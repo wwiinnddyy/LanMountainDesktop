@@ -1151,6 +1151,18 @@ M2（标题接成次要）／M4（故意保留的品牌红被顺手扫成角色�
 与 #G1-CY 输入金额同形，并进 TextAccent 等于替产品决定"新闻品牌色跟壁纸变"）；
 发丝分隔线 2 处（主题没有"分隔线"这一档，归 #G1-CM）；深度条目边框 1 处（同一个属性标记/代码各写一份，也归 #G1-CM）。
 
+**#G1-DA 当天就修掉了（上一段末尾登记的那笔）**：`ApplyNightMode`（上色）与 `UpdateLayout`（定字号）
+两遍树遍历都写成 `if (stackChild is StackPanel headerPanel) … else if (stackChild is StackPanel linksPanel)`，
+而两个容器都是 StackPanel ⇒ 第二个分支**永不执行**。判据改成按形状认（标题行是横排"徽标＋标题"，
+链接区是竖排）：`stackChild is StackPanel { Orientation: Avalonia.Layout.Orientation.Horizontal }`，两遍各一行。
+三个症状实测过：① 标签「相关链接：」拿到标题的正文色（昼 `#ff0b1220`／夜 `#fff8fafc`）而不是次要色；
+② 字号被抬成标题那一档（scale=2 实测 **20**，应 14）；③ **链接按钮两个分支都不认**（标题分支只认
+`Border`/`TextBlock`），因此从不随格子缩放——scale=1 时"没缩放"与"缩放对了"都是 12、看不出来，
+**必须取 scale=2 才量得出这一格**（实测卡在创建值 12，应 14）。
+变异各红各的：退回上色那遍 → 只有色那一格红；退回定字号那遍 → 20/14 与 12/14 两格一起红。
+一条通用的做法：**"这一行从没被执行过"这类症状要挑一个"少做一步与做对了给同一个数"的档位再验**，
+否则判据会安静地覆盖不到第三件事。
+
 **组件与时区服务之间那对订阅/退订只认一处**：一律走 `desktop/LanMountainDesktop/Views/Components/TimeZoneServiceBinding.cs`
 的 `Replace` / `Clear`（两个方法都返回新的字段值，语义与原来逐字一致：换服务时先退旧再订新，退订不刷新），
 不要在组件里手写 `TimeZoneChanged += / -=`。收口前 10 个时钟/日历组件各抄了一份 Set 与一份 Clear（20 个方法体，

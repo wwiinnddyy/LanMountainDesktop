@@ -55,13 +55,10 @@ public sealed class DailyNewsViewThemeTests
         ("第二条带链接", ThemeResourceKeys.TextSecondaryBrush, 3.0),
         ("深度一条", ThemeResourceKeys.TextPrimaryBrush, 4.5),
         ("正文若干。", ThemeResourceKeys.TextPrimaryBrush, 4.5),
-        // 这一格钉的是**现状**，不是应该：写代码的人给「相关链接：」的是次要色
-        // （CreateDetailedNewsPanel 与 ApplyNightMode 两处都写的 secondaryTextColor），
-        // 但 ApplyNightMode 那遍全树重画用 `stackChild is StackPanel headerPanel` 认"标题行"，
-        // 而链接区也是 StackPanel ⇒ 落进第一个分支，被当成标题，拿到的正是正文色。
-        // 实测（本笔第一版跑出来的两档值）：昼 #ff0b1220、夜 #fff8fafc，都与"深度一条"同一支。
-        // 这条错位登记成 #G1-DA，改的是判据不是色值；把它翻成 TextSecondaryBrush 的那一笔就是修复本身。
-        ("相关链接：", ThemeResourceKeys.TextPrimaryBrush, 4.5),
+        // #G1-DA：这一格原先钉的是**现状**（写的是次要色、树遍历把它当标题行、实测拿到正文色），
+        // 2026-10-01 把判据改成按 `Orientation: Horizontal` 认标题行之后，它才真的落回 Secondary。
+        // 翻回 TextPrimaryBrush 就是那条遍历又认错了一类容器。
+        ("相关链接：", ThemeResourceKeys.TextSecondaryBrush, 3.0),
     ];
 
     private static JuyaDailyNews SampleNews() => new(
@@ -163,6 +160,32 @@ public sealed class DailyNewsViewThemeTests
                 }
             }
 
+            // #G1-DA 的另一半：那条认错容器的遍历在**定字号**那遍里也有。取 scale=2 才验得出第三个症状——
+            // scale=1 时"从没被缩放的链接按钮"和"被正确缩放的链接按钮"都是 12，看不出来。
+            // 三档在 scale=2 下应当是 标题 clamp(16·2)=20 / 正文 clamp(14·2)=16 / 「相关链接：」与链接=14。
+            view.UpdateLayout(2.0, 600);
+            foreach (var (text, expectedSize) in new (string, double)[]
+                {
+                    ("深度一条", 20.0),
+                    ("正文若干。", 16.0),
+                    ("相关链接：", 14.0),
+                    ("https://example.invalid/a", 14.0),
+                })
+            {
+                var target = FindByText(view, text);
+                var size = FontSizeOf(target);
+                if (target is null || size is null)
+                {
+                    failures.Add($"{mode}档：字号那一组找不到 {text}（或它没有字号），夹具没建出来");
+                    continue;
+                }
+
+                if (Math.Abs(size.Value - expectedSize) > 0.01)
+                {
+                    failures.Add($"{mode}档：{text} 字号 {size}，应当是 {expectedSize}（scale=2）");
+                }
+            }
+
             // 品牌红是**故意不并**的：#d4736a/#bb5649 是这一组件的产品色（日期、展开按钮、#序号徽标、
             // 链接都用它），并到 TextAccent 等于替产品决定「新闻品牌色跟着壁纸变」。
             // 这一格钉的就是它没被顺手扫掉——与上面那组方向相反，所以两边都要有。
@@ -219,6 +242,14 @@ public sealed class DailyNewsViewThemeTests
     {
         TextBlock block => (block.Foreground as ISolidColorBrush)?.Color,
         TemplatedControl control => (control.Foreground as ISolidColorBrush)?.Color,
+        _ => null,
+    };
+
+    /// <summary>TextBlock 与 HyperlinkButton 这一类都要能读字号（前者不是 TemplatedControl，得分开认）。</summary>
+    private static double? FontSizeOf(Avalonia.Visual? element) => element switch
+    {
+        TextBlock block => block.FontSize,
+        TemplatedControl control => control.FontSize,
         _ => null,
     };
 

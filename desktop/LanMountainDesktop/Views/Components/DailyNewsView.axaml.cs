@@ -378,7 +378,9 @@ public partial class DailyNewsView : UserControl
 
                 foreach (var stackChild in mainStack.Children)
                 {
-                    if (stackChild is StackPanel headerPanel)
+                    // 标题行是横排（徽标＋标题），链接区是竖排——只按 `is StackPanel` 认的话，
+                    // 链接区会落进这一支，下面那条 linksPanel 分支永不执行（#G1-DA）。
+                    if (stackChild is StackPanel { Orientation: Avalonia.Layout.Orientation.Horizontal } headerPanel)
                     {
                         foreach (var headerChild in headerPanel.Children)
                         {
@@ -469,7 +471,9 @@ public partial class DailyNewsView : UserControl
             {
                 foreach (var stackChild in mainStack.Children)
                 {
-                    if (stackChild is StackPanel headerPanel)
+                    // 标题行是横排（徽标＋标题），链接区是竖排——只按 `is StackPanel` 认的话，
+                    // 链接区会落进这一支，下面那条 linksPanel 分支永不执行（#G1-DA）。
+                    if (stackChild is StackPanel { Orientation: Avalonia.Layout.Orientation.Horizontal } headerPanel)
                     {
                         foreach (var headerChild in headerPanel.Children)
                         {
