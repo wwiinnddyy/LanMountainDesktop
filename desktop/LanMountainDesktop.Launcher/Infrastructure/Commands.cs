@@ -1,8 +1,11 @@
-using System.Text;
+﻿using System.Text;
 using LanMountainDesktop.Shared.Data;
 using System.Text.Json;
 using LanMountainDesktop.Launcher.Models;
+using LanMountainDesktop.Launcher.Startup;
 using LanMountainDesktop.Shared.Contracts.Deployment;
+using LanMountainDesktop.Shared.IPC;
+using LanMountainDesktop.Shared.IPC.Abstractions.Services;
 
 namespace LanMountainDesktop.Launcher.Infrastructure;
 
@@ -44,7 +47,7 @@ internal static class Commands
         LauncherResult result;
         try
         {
-            result = ExecuteCore(context, pluginInstaller, pluginUpgrades);
+            result = await ExecuteCoreAsync(context, pluginInstaller, pluginUpgrades).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -62,7 +65,7 @@ internal static class Commands
         return result.Success ? 0 : 1;
     }
 
-    private static LauncherResult ExecuteCore(
+    private static async Task<LauncherResult> ExecuteCoreAsync(
         CommandContext context,
         AirAppInstallerService pluginInstaller,
         AirAppUpgradeQueueService pluginUpgrades)
@@ -71,6 +74,8 @@ internal static class Commands
         {
             case "plugin":
                 return ExecuteAirAppCommand(context, pluginInstaller, pluginUpgrades);
+            case "desktop":
+                return await ExecuteDesktopCommandAsync(context).ConfigureAwait(false);
             default:
                 return new LauncherResult
                 {
@@ -109,6 +114,70 @@ internal static class Commands
                     Message = $"Unsupported plugin sub-command '{context.SubCommand}'."
                 };
         }
+    }
+
+    private static async Task<LauncherResult> ExecuteDesktopCommandAsync(CommandContext context)
+    {
+        switch (context.SubCommand.ToLowerInvariant())
+        {
+            case "exit":
+                return await ExecuteDesktopExitAsync().ConfigureAwait(false);
+            default:
+                return new LauncherResult
+                {
+                    Success = false,
+                    Stage = "desktop",
+                    Code = "unsupported_subcommand",
+                    Message = $"Unsupported desktop sub-command '{context.SubCommand}'."
+                };
+        }
+    }
+
+    /// <summary>
+    /// 退出这条通道一直存在（宿主把 IPublicShellControlService.ExitAsync 注册在公共 IPC 上），
+    /// 这里只把动词接上、不新建第二条退出路径：连接走 PublicIpcConnection 那一家，
+    /// 落点仍是宿主自己的 HostApplicationLifecycleService。
+    /// 宿主那边是先受理（TrySubmitShutdown 立刻返回）再生效，所以 true = 已受理，不等于进程已经退完。
+    /// </summary>
+    private static async Task<LauncherResult> ExecuteDesktopExitAsync()
+    {
+        var timeout = TimeSpan.FromSeconds(5);
+        using var ipcClient = new LanMountainDesktopIpcClient();
+        if (!await PublicIpcConnection.TryConnectAsync(ipcClient, timeout).ConfigureAwait(false))
+        {
+            return new LauncherResult
+            {
+                Success = false,
+                Stage = "desktop.exit",
+                Code = "host_not_connected",
+                Message = "No running desktop host is reachable over the public IPC pipe."
+            };
+        }
+
+        var shellProxy = ipcClient.CreateProxy<IPublicShellControlService>();
+        var exitTask = shellProxy.ExitAsync();
+        var completedTask = await Task.WhenAny(exitTask, Task.Delay(timeout)).ConfigureAwait(false);
+        if (completedTask != exitTask)
+        {
+            return new LauncherResult
+            {
+                Success = false,
+                Stage = "desktop.exit",
+                Code = "host_not_responding",
+                Message = $"The running desktop host did not answer the exit request within {timeout.TotalSeconds:0} seconds."
+            };
+        }
+
+        var accepted = await exitTask.ConfigureAwait(false);
+        return new LauncherResult
+        {
+            Success = accepted,
+            Stage = "desktop.exit",
+            Code = accepted ? "exit_requested" : "exit_refused",
+            Message = accepted
+                ? "The running desktop host accepted the exit request."
+                : "The running desktop host refused the exit request (desktop lifetime unavailable, or shutdown already in progress)."
+        };
     }
 
     public static async Task WriteResultIfNeededAsync(string? resultPath, LauncherResult result)
