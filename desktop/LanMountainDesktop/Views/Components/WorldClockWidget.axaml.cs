@@ -545,7 +545,7 @@ public partial class WorldClockWidget : UserControl,
         }
     }
 
-    private static void ApplyDialTheme(ClockEntryVisual entry, bool isNight)
+    private void ApplyDialTheme(ClockEntryVisual entry, bool isNight)
     {
         if (entry.IsNightApplied.HasValue && entry.IsNightApplied.Value == isNight)
         {
@@ -553,6 +553,15 @@ public partial class WorldClockWidget : UserControl,
         }
 
         entry.IsNightApplied = isNight;
+        // 三个城市标签以前**只在这批控件被造出来的那一刻**取过色，取的是写死的昼档值
+        // （城名 #20232A、相对日 #646C79、时区偏移 #7A7F89），而这一遍重画管了盘面、指针、刻度、
+        // 数字却从来没管它们——黑夜档下盘底换成 #2D313A，字还是那三个近黑的昼档值，实测压在
+        // 深底上就是读不出来（与汇率计算器同一类，只是这里连三元组都没写）。
+        // 这三对值不是新口径：#20232A 是第二族"正文"日档漂开的六个值之一，
+        // #646C79/#7A7F89 是第三族"次要文字"日档漂开的十一个值之一，两处都有先例归档到角色档。
+        entry.CityTextBlock.Foreground = ComponentRoleBrushes.PrimaryText(this);
+        entry.DayTextBlock.Foreground = ComponentRoleBrushes.SecondaryText(this);
+        entry.OffsetTextBlock.Foreground = ComponentRoleBrushes.SecondaryText(this);
         entry.DialBorder.Background = ComponentPaint.CreateBrush(isNight ? "#2D313A" : "#FAFBFD");
         entry.DialBorder.BorderBrush = ComponentPaint.CreateBrush(isNight ? "#262A33" : "#DADFE8");
         entry.HourHand.Stroke = ComponentPaint.CreateBrush(isNight ? "#F5F8FF" : "#2B3242");
