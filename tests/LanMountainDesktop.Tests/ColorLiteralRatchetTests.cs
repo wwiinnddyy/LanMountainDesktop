@@ -105,7 +105,8 @@ public sealed class ColorLiteralRatchetTests
     // ActualThemeVariant（ComponentThemeMode.ResolveIsNight:65-73），生产里资源与档位是同一处一起设的
     // （App.axaml.cs:862）。只注册资源不改档，会造出"注册的是夜档、面板画的是昼档"的假状态——
     // 第一版就是这么量出 1.01:1 的，那是**夹具错**，不是产品状态（这条要记下，下一个真实例夹具会再撞）。
-    private const int ColorLiteralCeiling = 517;
+// 2026-10-01 第十五笔：计时器那一列四个数字的两侧各一遍全烧掉（代码面 4 行 8 个值、标记面 4 个），改走 ComponentRoleBrushes 与 {DynamicResource Adaptive…Brush}。这一笔另带一行 attach 时的强制重画——没有它，构造期那次取色落在无资源作用域上，四格数字就是灰的（TimerNumberColumnThemeTests 钉住）
+    private const int ColorLiteralCeiling= 509;
 
     // 2026-09-26 实测：剩下这些分布在 31 个文件里。
     // ↑ 这句今天核对是错的：677 处实际分布在 **41** 个文件里（当时把"组件目录"与"整个 Views"两份清单
@@ -117,7 +118,7 @@ public sealed class ColorLiteralRatchetTests
     // 2026-09-30 汇率计算器那一笔（标记面 −13）**没动这个数**：这条对账只加 .cs 的两本账，
     // 标记面另有自己的等值格（MarkupMeasuredTotal）——这一点是我改错一次才被这条红出来的，
     // 别再把标记面的降幅算进这里。
-    private const int MeasuredGrandTotal = 1076;
+    private const int MeasuredGrandTotal = 1068;
 
     // 2026-09-29 新量的一面：.axaml 里的颜色属性此前这条判据**完全看不见**（只扫 *.cs）。
     // 量出来是 412 处 / 40 个文件——比组件里剩下的 659 少不到一半，绝不是"边角料"。
@@ -180,10 +181,10 @@ public sealed class ColorLiteralRatchetTests
     // `_isNightVisual ? #3D4451 : #E7EBF4`，比行板（overlay）更亮一档——主题只有 raised/overlay 两层，
     // 而这块面板有"卡底／行板／头像格"三层，1:1 不存在，硬并会让头像格和行板同色、圆片直接看不见
     // （与键盘特殊键、通知盒未读/已读同形）。已并进 #G1-CY 那条"第三层表面"的口径，另加 #112 记账。
-    private const int MarkupColorLiteralCeiling = 323;
+    private const int MarkupColorLiteralCeiling = 319;
 
     // 总数对账（与 .cs 面同一个套路：这条先于上限红，用来分"真收口"与"判据少看一片"）。
-    private const int MarkupMeasuredTotal = 323;
+    private const int MarkupMeasuredTotal = 319;
 
     private const int MarkupFileFloor = 38;
 

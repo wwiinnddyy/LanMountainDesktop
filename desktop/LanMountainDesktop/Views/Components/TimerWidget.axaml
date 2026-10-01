@@ -33,27 +33,27 @@
                                        Text="60"
                                        FontSize="38"
                                        FontWeight="SemiBold"
-                                       Foreground="#AEB4C1"
+                                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
                                        Margin="0,0,0,10" />
                             <TextBlock x:Name="MainNumberTextBlock"
                                        Grid.Row="1"
                                        Text="0"
                                        FontSize="64"
                                        FontWeight="Bold"
-                                       Foreground="#0F141C" />
+                                       Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
                             <TextBlock x:Name="NextNumberTextBlock"
                                        Grid.Row="2"
                                        Text="1"
                                        FontSize="34"
                                        FontWeight="Medium"
-                                       Foreground="#B2B8C4"
+                                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
                                        Margin="0,8,0,0" />
                             <TextBlock x:Name="NextNextNumberTextBlock"
                                        Grid.Row="3"
                                        Text="2"
                                        FontSize="26"
                                        FontWeight="Medium"
-                                       Foreground="#C8CDD7"
+                                       Foreground="{DynamicResource AdaptiveTextMutedBrush}"
                                        Margin="0,2,0,0" />
                         </Grid>
 

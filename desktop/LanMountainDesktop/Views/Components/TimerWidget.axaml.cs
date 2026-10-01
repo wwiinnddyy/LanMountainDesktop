@@ -149,9 +149,9 @@ public partial class TimerWidget : UserControl, IDesktopComponentWidget
             : "M 0,0 L 0,14 L 11,7 Z");
     }
 
-    private void ApplyModeVisualIfNeeded()
+    private void ApplyModeVisualIfNeeded(bool force = false)
     {
-        ComponentThemeMode.RefreshNightVisualIfChanged(this, ref _isNightModeApplied, ApplyModeVisual);
+        ComponentThemeMode.RefreshNightVisualIfChanged(this, ref _isNightModeApplied, ApplyModeVisual, force: force);
     }
 
     private void ApplyModeVisual(bool isNightMode)
@@ -164,10 +164,10 @@ public partial class TimerWidget : UserControl, IDesktopComponentWidget
 
         CenterDivider.Background = ComponentPaint.CreateBrush(isNightMode ? "#434B5C" : "#D5DAE3");
 
-        TopNumberTextBlock.Foreground = ComponentPaint.CreateBrush(isNightMode ? "#7A8397" : "#AEB4C1");
-        MainNumberTextBlock.Foreground = ComponentPaint.CreateBrush(isNightMode ? "#F3F6FE" : "#0F141C");
-        NextNumberTextBlock.Foreground = ComponentPaint.CreateBrush(isNightMode ? "#8089A0" : "#B2B8C4");
-        NextNextNumberTextBlock.Foreground = ComponentPaint.CreateBrush(isNightMode ? "#6A7388" : "#C8CDD7");
+        TopNumberTextBlock.Foreground = ComponentRoleBrushes.SecondaryText(this);
+        MainNumberTextBlock.Foreground = ComponentRoleBrushes.PrimaryText(this);
+        NextNumberTextBlock.Foreground = ComponentRoleBrushes.SecondaryText(this);
+        NextNextNumberTextBlock.Foreground = ComponentRoleBrushes.MutedText(this);
 
         var markBrush = ComponentPaint.CreateBrush(isNightMode ? "#5A657D" : "#D0D6E1");
         ScaleMark1.Background = markBrush;
