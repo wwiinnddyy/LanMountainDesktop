@@ -2048,3 +2048,18 @@ HttpClientTimeout 100000 毫秒、BlockTimeout 5000、ConnectTimeout 30000。
 ② 方法名 `ApplyTextThemeForSystemNight` 说的 System 其实收到的是组件自己的 `_isNightVisual`
 （`:215` 传的就是它），名字误导，且它与 `ApplyDialTheme` 各持一个 memo 标志、互不触发——
 值得核一次「两标志会不会一个更新一个没更新」，但本笔没有证据说它已经出错。都记在 #113。
+
+**"外部 AirApp 能被真实加载"这句今天被我自己误用过两次，先把已验与未验切开**（2026-10-01 现量）：
+`ExternalAirAppLoadProbeTests` 确实在加载**六份真外部仓库的构建产物**并校验声明组件
+（SamplePlugin / LanWord / Schedule / VoiceHub / LanDesktopHot / Classworks），
+外加"旧 plugin.json 不被半加载"与 `Coverage_IsNotSilentlyEmpty` 防空跑自查，本轮 8/8 绿；
+缺同级仓库时按 `LMD_STRICT_AIRAPP_PROBE` 决定红还是 Skip（本地是全量跑里"已跳过: 0"那种**执行**）。
+但验收标准写的是"跑通 **IPC**/清单契约"，而后半边的证据形状是这样的：
+① 探针全文搜 `Ipc|Bridge|Invoke|channel` = **0 命中**，它只到"加载 + 清单 + 组件注册"为止；
+② IPC 目前由 `InProcAirAppIpcTransportTests`（6 格，**进程内**传输）加
+   `IpcPublicContractArchitectureTests`／`ExternalIpcPublicApiTests`（契约形状）覆盖；
+③ 进程侧只有 `AirAppProcessStarterRuntimeTests` 两格，验的是 **StartInfo 怎么拼**，没有真起一次握手。
+所以准确的账面是：**加载与清单契约＝已验；跨进程 IPC 握手＝未验**。
+以后任何地方写"外部轻应用验收已过"，必须带上这一刀切；
+补的那一格应该是"拿一份真外部件走进程边界握手一遍"，并且照 `Coverage_IsNotSilentlyEmpty` 的样子
+配一条"不许空跑"自查（缺产物就红，别安静 Skip——安静 Skip 会让 CI 的绿变成假保证）。
