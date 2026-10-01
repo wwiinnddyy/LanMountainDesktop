@@ -2027,3 +2027,24 @@ HttpClientTimeout 100000 毫秒、BlockTimeout 5000、ConnectTimeout 30000。
 - 命名与标识符冻结：`docs/ai/NAMING_AND_FROZEN_IDENTIFIERS.md`
 
 如果多个文档都提到同一件事，以 `docs/ai/DOC_SOURCES.md` 列出的权威来源为准。
+
+**公开更正：世界时钟那笔「城市标签黑夜档读不出来」是我的误判，已回滚（66b0d0d → e4cfc84）**（2026-10-01）。
+我当时只查了 `ApplyDialTheme`（`WorldClockWidget.axaml.cs:548`）这一遍重画，确认它没管
+`CityTextBlock`／`DayTextBlock`／`OffsetTextBlock`，就宣布缺陷并加了覆盖赋值；但同一份文件
+`:226` 的 `ApplyTextThemeForSystemNight`（由 `:215` 的 `ApplyNightModeVisual` 对每个 entry 调用）
+**早就**把这三个接成 PrimaryText／SecondaryText／SecondaryText。我算的那组对比度
+（城名 `#20232A` 压在夜盘底 `#2D313A` 上 1.21:1，算式先用账本 2.95:1 做过正对照）算的是
+**创建时的写死初值**，而那个初值运行时从来没机会露出来。所以我加的不是修复，是**第二个真源**：
+同一个属性两遍重画、各持一个 memo 标志（`IsNightApplied`／`IsSystemNightApplied`），
+正是这条轴平时要消的东西。回滚后 Release 构建 0 错误。
+**可复用的规矩：宣布「某属性没人重画」之前，先把整份文件里对该属性的所有赋值列一遍**——
+既要搜属性名单独出现的位置，也要搜「元素名/字段名 + 属性」这种形状（这里该搜
+`CityTextBlock.Foreground`），只看离改动点最近的那一遍不够；在这个仓库里
+「同一个属性被多个 pass 各管一段」本身就是已登记的病（#G1-CN 量的就是它），
+所以"我没看到别的赋值"这句话的成本几乎总是被低估。
+这条误判里唯一站得住的两点观察，都不构成立即行动：① `ApplyDialTheme` 里的盘面/指针/刻度
+仍是一堆按组件夜标志写死的两档值（`#2D313A`/`#FAFBFD`、`#F5F8FF`/`#2B3242`、刻度
+`#E3E7F2`/`#2D3341`），要动先得回答「钟面装饰色算不算角色色」；
+② 方法名 `ApplyTextThemeForSystemNight` 说的 System 其实收到的是组件自己的 `_isNightVisual`
+（`:215` 传的就是它），名字误导，且它与 `ApplyDialTheme` 各持一个 memo 标志、互不触发——
+值得核一次「两标志会不会一个更新一个没更新」，但本笔没有证据说它已经出错。都记在 #113。
