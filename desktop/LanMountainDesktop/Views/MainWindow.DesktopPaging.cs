@@ -77,6 +77,8 @@ public partial class MainWindow : Window
     private int? _desktopPageContextSettlingSourceIndex;
     private int? _desktopPageContextSettlingTargetIndex;
     private int _desktopPageContextSettleRevision;
+    private bool _desktopGridRebuildPending;
+    private bool _desktopCellSizeChangedForReflow;
 
     // 婵犵數鍋為崹鍫曞箰閹间絸鍥箥椤旂懓浜鹃柛顭戝亯婢规ɑ銇勯婊冨妤犵偛顑呴埞鎴﹀窗?闂傚倷绀侀幉锟犳偡閿旂晫绠惧┑鐘叉搐閺嬩焦銇勯幘鍗炵仼缂佺媭鍨堕弻鈥崇暤椤旂厧鏁俊銈呮噺閻撶喖鏌嶉崫鍕灓闁绘帡绠栭弻?
     private bool _isThreeFingerOrRightDragSwipeActive;
@@ -226,42 +228,82 @@ public partial class MainWindow : Window
         DesktopPagesContainer.RowDefinitions.Clear();
         DesktopPagesContainer.RowDefinitions.Add(new RowDefinition(new GridLength(pageHeight, GridUnitType.Pixel)));
         DesktopPagesContainer.ColumnDefinitions.Clear();
-        DesktopComponentContext.ClearTimeZoneServiceBindings(DesktopPagesContainer.Children.OfType<Control>().ToList());
-        DesktopPagesContainer.Children.Clear();
         DesktopPagesContainer.Width = pageWidth * _desktopPageCount;
         DesktopPagesContainer.Height = pageHeight;
-        _desktopPageComponentGrids.Clear();
+
+        // 页面数量变少时只移除多出来的页面；其余页面和组件宿主原地复用。
+        foreach (var staleIndex in _desktopPageComponentGrids.Keys
+                     .Where(index => index >= _desktopPageCount)
+                     .ToArray())
+        {
+            if (!_desktopPageComponentGrids.Remove(staleIndex, out var staleGrid))
+            {
+                continue;
+            }
+
+            DesktopComponentContext.ClearTimeZoneServiceBindings(staleGrid.Children.OfType<Control>().ToList());
+            foreach (var child in staleGrid.Children.OfType<Border>())
+            {
+                DisposeComponentIfNeeded(child);
+            }
+
+            staleGrid.Children.Clear();
+            DesktopPagesContainer.Children.Remove(staleGrid);
+        }
+
         InvalidateDesktopPageAwareComponentContextCache();
+        var reflowStopwatch = System.Diagnostics.Stopwatch.StartNew();
+        var reusedHosts = 0;
+        var createdHosts = 0;
         for (var index = 0; index < _desktopPageCount; index++)
         {
             DesktopPagesContainer.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(pageWidth, GridUnitType.Pixel)));
 
-            var pageGrid = new Grid
+            if (!_desktopPageComponentGrids.TryGetValue(index, out var pageGrid))
             {
-                Width = pageWidth,
-                Height = pageHeight,
-                RowSpacing = gridMetrics.GapPx,
-                ColumnSpacing = gridMetrics.GapPx,
-                Background = Brushes.Transparent,
-                ShowGridLines = false
-            };
+                pageGrid = new Grid
+                {
+                    Background = Brushes.Transparent,
+                    ShowGridLines = false
+                };
+                _desktopPageComponentGrids[index] = pageGrid;
+                Grid.SetColumn(pageGrid, index);
+                Grid.SetRow(pageGrid, 0);
+                DesktopPagesContainer.Children.Add(pageGrid);
+            }
 
+            pageGrid.Width = pageWidth;
+            pageGrid.Height = pageHeight;
+            pageGrid.RowSpacing = gridMetrics.GapPx;
+            pageGrid.ColumnSpacing = gridMetrics.GapPx;
+            pageGrid.RowDefinitions.Clear();
             for (var row = 0; row < viewportRowSpan; row++)
             {
                 pageGrid.RowDefinitions.Add(new RowDefinition(new GridLength(gridMetrics.CellSize, GridUnitType.Pixel)));
             }
 
+            pageGrid.ColumnDefinitions.Clear();
             for (var col = 0; col < gridMetrics.ColumnCount; col++)
             {
                 pageGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(gridMetrics.CellSize, GridUnitType.Pixel)));
             }
 
-            _desktopPageComponentGrids[index] = pageGrid;
-            RestoreDesktopPageComponents(index);
-
             Grid.SetColumn(pageGrid, index);
             Grid.SetRow(pageGrid, 0);
-            DesktopPagesContainer.Children.Add(pageGrid);
+            var (reused, created) = RepositionDesktopPageComponents(index, refreshContext: false);
+            reusedHosts += reused;
+            createdHosts += created;
+        }
+
+        _desktopCellSizeChangedForReflow = false;
+        UpdateDesktopPageAwareComponentContext();
+        reflowStopwatch.Stop();
+        if (reusedHosts > 0 || createdHosts > 0)
+        {
+            AppLogger.Info(
+                "DesktopPerf",
+                $"Desktop surface reflow: pages={_desktopPageCount}; placements={_desktopComponentPlacements.Count}; " +
+                $"reusedHosts={reusedHosts}; createdHosts={createdHosts}; elapsed={reflowStopwatch.ElapsedMilliseconds}ms.");
         }
 
         Grid.SetColumn(LauncherPagePanel, 1);

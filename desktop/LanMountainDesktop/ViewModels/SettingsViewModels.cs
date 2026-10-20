@@ -1413,35 +1413,73 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
         });
     }
 
+    private readonly HashSet<string> _pendingDesktopPanelFields = new(StringComparer.Ordinal);
+    private bool _desktopPanelFlushScheduled;
+
     private void SaveDesktopPanelField(string changedKey)
     {
-        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
-        switch (changedKey)
+        _pendingDesktopPanelFields.Add(changedKey);
+
+        // 开关/停靠方式是离散动作，立即落盘；滑杆连续变化时合并成一次写入与一次面板重排。
+        if (string.Equals(changedKey, nameof(AppSettingsSnapshot.EnableDesktopPanel), StringComparison.Ordinal) ||
+            string.Equals(changedKey, nameof(AppSettingsSnapshot.DesktopPanelUseDesktopLayer), StringComparison.Ordinal))
         {
-            case nameof(AppSettingsSnapshot.EnableDesktopPanel):
-                snapshot.EnableDesktopPanel = EnableDesktopPanel;
-                break;
-            case nameof(AppSettingsSnapshot.DesktopPanelCellSize):
-                snapshot.DesktopPanelCellSize = DesktopPanelMetrics.NormalizeCellSize(DesktopPanelCellSize);
-                break;
-            case nameof(AppSettingsSnapshot.DesktopPanelColumns):
-                snapshot.DesktopPanelColumns = DesktopPanelMetrics.NormalizeColumns(DesktopPanelColumns);
-                break;
-            case nameof(AppSettingsSnapshot.DesktopPanelRows):
-                snapshot.DesktopPanelRows = DesktopPanelMetrics.NormalizeRows(DesktopPanelRows);
-                break;
-            case nameof(AppSettingsSnapshot.DesktopPanelUseDesktopLayer):
-                snapshot.DesktopPanelUseDesktopLayer =
-                    string.Equals(SelectedDesktopPanelDockMode?.Value, "Desktop", StringComparison.OrdinalIgnoreCase);
-                break;
-            default:
-                return;
+            FlushDesktopPanelFields();
+            return;
+        }
+
+        if (_desktopPanelFlushScheduled)
+        {
+            return;
+        }
+
+        _desktopPanelFlushScheduled = true;
+        Avalonia.Threading.DispatcherTimer.RunOnce(
+            () =>
+            {
+                _desktopPanelFlushScheduled = false;
+                FlushDesktopPanelFields();
+            },
+            TimeSpan.FromMilliseconds(150));
+    }
+
+    private void FlushDesktopPanelFields()
+    {
+        if (_pendingDesktopPanelFields.Count == 0)
+        {
+            return;
+        }
+
+        var changedKeys = _pendingDesktopPanelFields.ToArray();
+        _pendingDesktopPanelFields.Clear();
+        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
+        foreach (var changedKey in changedKeys)
+        {
+            switch (changedKey)
+            {
+                case nameof(AppSettingsSnapshot.EnableDesktopPanel):
+                    snapshot.EnableDesktopPanel = EnableDesktopPanel;
+                    break;
+                case nameof(AppSettingsSnapshot.DesktopPanelCellSize):
+                    snapshot.DesktopPanelCellSize = DesktopPanelMetrics.NormalizeCellSize(DesktopPanelCellSize);
+                    break;
+                case nameof(AppSettingsSnapshot.DesktopPanelColumns):
+                    snapshot.DesktopPanelColumns = DesktopPanelMetrics.NormalizeColumns(DesktopPanelColumns);
+                    break;
+                case nameof(AppSettingsSnapshot.DesktopPanelRows):
+                    snapshot.DesktopPanelRows = DesktopPanelMetrics.NormalizeRows(DesktopPanelRows);
+                    break;
+                case nameof(AppSettingsSnapshot.DesktopPanelUseDesktopLayer):
+                    snapshot.DesktopPanelUseDesktopLayer =
+                        string.Equals(SelectedDesktopPanelDockMode?.Value, "Desktop", StringComparison.OrdinalIgnoreCase);
+                    break;
+            }
         }
 
         _settingsFacade.Settings.SaveSnapshot(
             AirAppSettingsScope.App,
             snapshot,
-            changedKeys: [changedKey]);
+            changedKeys: changedKeys);
     }
 
     private IReadOnlyList<SelectionOption> CreateSpacingPresets()

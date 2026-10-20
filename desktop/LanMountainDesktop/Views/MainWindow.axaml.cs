@@ -380,6 +380,7 @@ public partial class MainWindow : Window
             return;
         }
 
+        var openedStopwatch = System.Diagnostics.Stopwatch.StartNew();
         SyncSettingsWindowState();
 
         _suppressSettingsPersistence = true;
@@ -455,6 +456,11 @@ public partial class MainWindow : Window
         PersistSettings();
 
         TriggerAutoUpdateCheckIfEnabled();
+        AppLogger.Info(
+            "DesktopPerf",
+            $"MainWindow.OnOpened completed in {openedStopwatch.ElapsedMilliseconds}ms; " +
+            $"pages={_desktopPageCount}; placements={_desktopComponentPlacements.Count}.");
+        Dispatcher.UIThread.Post(RefreshTaskbarProfilePresentation, DispatcherPriority.Background);
     }
 
     protected override void OnClosed(EventArgs e)
@@ -527,8 +533,23 @@ public partial class MainWindow : Window
 
     private void OnDesktopHostSizeChanged(object? sender, SizeChangedEventArgs e)
     {
-        RebuildDesktopGrid();
-        PersistSettings();
+        _ = sender;
+        _ = e;
+        if (_desktopGridRebuildPending)
+        {
+            return;
+        }
+
+        _desktopGridRebuildPending = true;
+        // 窗口尺寸在一轮布局里会连发多次；合并成一次几何重排，并把设置落盘延后。
+        DispatcherTimer.RunOnce(
+            () =>
+            {
+                _desktopGridRebuildPending = false;
+                RebuildDesktopGrid();
+                SchedulePersistSettings(300);
+            },
+            TimeSpan.FromMilliseconds(80));
     }
 
     private void RebuildDesktopGrid()
@@ -542,6 +563,7 @@ public partial class MainWindow : Window
         {
             return;
         }
+        _desktopCellSizeChangedForReflow = Math.Abs(_currentDesktopCellSize - gridMetrics.CellSize) > 0.01d;
         _currentDesktopCellSize = gridMetrics.CellSize;
         _currentDesktopCellGap = gridMetrics.GapPx;
 

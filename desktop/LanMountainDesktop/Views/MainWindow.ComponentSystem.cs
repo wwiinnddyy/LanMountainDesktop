@@ -79,7 +79,6 @@ public partial class MainWindow : Window
         }
 
         TaskbarProfilePopup.PlacementTarget = TaskbarProfileButton;
-        RefreshTaskbarProfilePresentation();
     }
 
     private void RefreshTaskbarProfilePresentation()
@@ -89,10 +88,22 @@ public partial class MainWindow : Window
             return;
         }
 
+        // 账号头像目录枚举与图片解码在启动关键路径之外执行；窗口先出来，头像随后补上。
         var profile = _currentUserProfileService.GetCurrentProfile();
         ApplyProfileAvatarVisual(TaskbarProfileAvatarImage, TaskbarProfileAvatarFallbackText, profile);
         ApplyProfileAvatarVisual(TaskbarProfileHeaderAvatarImage, TaskbarProfileHeaderAvatarFallbackText, profile);
         TaskbarProfileDisplayNameTextBlock.Text = profile.DisplayName;
+        RefreshTaskbarProfileActionLabels();
+        ToolTip.SetTip(TaskbarProfileButton, profile.DisplayName);
+    }
+
+    private void RefreshTaskbarProfileActionLabels()
+    {
+        if (TaskbarProfileButton is null)
+        {
+            return;
+        }
+
         TaskbarProfileSettingsActionTextBlock.Text = L("tooltip.open_settings", "Settings");
         TaskbarProfileDesktopEditActionTextBlock.Text = L("button.component_library", "Edit Desktop");
         TaskbarProfilePowerActionTextBlock.Text = L("power.menu", "Power");
@@ -106,8 +117,6 @@ public partial class MainWindow : Window
 
         UpdatePowerMenuVisibility();
         ApplyTaskbarProfilePopupTheme(_appearanceThemeService.GetCurrent());
-
-        ToolTip.SetTip(TaskbarProfileButton, profile.DisplayName);
     }
 
     private static void ApplyProfileAvatarVisual(Image? image, TextBlock? fallbackText, CurrentUserProfileSnapshot profile)
@@ -2010,6 +2019,126 @@ public partial class MainWindow : Window
                 HeightCells = heightCells
             });
         }
+    }
+
+    /// <summary>
+    /// 几何变化时原地复用已有宿主：只更新格子坐标/跨度，不销毁再创建组件控件。
+    /// 旧实现每次窗口尺寸或设置变化都会清空所有页并重建全部组件，是启动与调设置时的主要卡顿来源。
+    /// </summary>
+    private (int Reused, int Created) RepositionDesktopPageComponents(int pageIndex, bool refreshContext = true)
+    {
+        if (!_desktopPageComponentGrids.TryGetValue(pageIndex, out var pageGrid))
+        {
+            return (0, 0);
+        }
+
+        var maxColumns = pageGrid.ColumnDefinitions.Count;
+        var maxRows = pageGrid.RowDefinitions.Count;
+        if (maxColumns <= 0 || maxRows <= 0)
+        {
+            return (0, 0);
+        }
+
+        var desiredPlacements = _desktopComponentPlacements
+            .Where(candidate => candidate.PageIndex == pageIndex)
+            .ToList();
+        var desiredIds = new HashSet<string>(
+            desiredPlacements.Select(candidate => candidate.PlacementId),
+            StringComparer.OrdinalIgnoreCase);
+        var reused = 0;
+        var created = 0;
+
+        foreach (var staleHost in pageGrid.Children
+                     .OfType<Border>()
+                     .Where(IsDesktopComponentHost)
+                     .ToList())
+        {
+            if (staleHost.Tag is string placementId && desiredIds.Contains(placementId))
+            {
+                continue;
+            }
+
+            DesktopComponentContext.ClearTimeZoneServiceBindings(staleHost);
+            DisposeComponentIfNeeded(staleHost);
+            pageGrid.Children.Remove(staleHost);
+        }
+
+        foreach (var placement in desiredPlacements)
+        {
+            if (!_componentRuntimeRegistry.TryGetDescriptor(placement.ComponentId, out var runtimeDescriptor) ||
+                !runtimeDescriptor.Definition.AllowDesktopPlacement)
+            {
+                continue;
+            }
+
+            var (widthCells, heightCells) = NormalizeComponentCellSpan(
+                placement.ComponentId,
+                ComponentPlacementRules.EnsureMinimumSize(
+                    runtimeDescriptor.Definition,
+                    placement.WidthCells,
+                    placement.HeightCells));
+            var clampedColumn = Math.Clamp(placement.Column, 0, Math.Max(0, maxColumns - widthCells));
+            var clampedRow = Math.Clamp(placement.Row, 0, Math.Max(0, maxRows - heightCells));
+
+            var host = pageGrid.Children
+                .OfType<Border>()
+                .FirstOrDefault(candidate =>
+                    IsDesktopComponentHost(candidate) &&
+                    string.Equals(candidate.Tag as string, placement.PlacementId, StringComparison.OrdinalIgnoreCase));
+
+            // 失败占位或内容宿主丢失时重建这一格，避免复用一条永远起不来的组件。
+            var contentRoot = host is null ? null : TryGetContentHost(host)?.Child;
+            if (host is not null && (contentRoot is null or DesktopComponentFailureView))
+            {
+                DesktopComponentContext.ClearTimeZoneServiceBindings(host);
+                DisposeComponentIfNeeded(host);
+                pageGrid.Children.Remove(host);
+                host = null;
+            }
+
+            if (host is null)
+            {
+                host = CreateDesktopComponentHost(placement);
+                if (host is null)
+                {
+                    continue;
+                }
+
+                pageGrid.Children.Add(host);
+                created++;
+            }
+            else
+            {
+                reused++;
+                if (_desktopCellSizeChangedForReflow && contentRoot is IDesktopComponentWidget sizedComponent)
+                {
+                    sizedComponent.ApplyCellSize(_currentDesktopCellSize);
+                }
+            }
+
+            placement.Column = clampedColumn;
+            placement.Row = clampedRow;
+            placement.WidthCells = widthCells;
+            placement.HeightCells = heightCells;
+
+            Grid.SetColumn(host, clampedColumn);
+            Grid.SetRow(host, clampedRow);
+            Grid.SetColumnSpan(host, widthCells);
+            Grid.SetRowSpan(host, heightCells);
+        }
+
+        if (refreshContext)
+        {
+            InvalidateDesktopPageAwareComponentContextCache();
+            UpdateDesktopPageAwareComponentContext();
+        }
+
+        return (reused, created);
+    }
+
+    private static bool IsDesktopComponentHost(Border host)
+    {
+        return host.Classes.Contains(DesktopComponentHostClass);
     }
 
     private void RestoreDesktopPageComponents(int pageIndex)

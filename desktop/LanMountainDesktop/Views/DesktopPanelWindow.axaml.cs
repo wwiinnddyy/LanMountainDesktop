@@ -656,11 +656,6 @@ public partial class DesktopPanelWindow : Window
 
         CopyPlacement(candidate, host.Placement);
         ApplyGridPlacement(host);
-        if (host.Content is IDesktopComponentWidget componentWidget)
-        {
-            componentWidget.ApplyCellSize(_metrics.CellSize);
-        }
-
         _interaction.Changed = true;
     }
 
@@ -701,6 +696,13 @@ public partial class DesktopPanelWindow : Window
             !_hosts.TryGetValue(interaction.PlacementId, out var host))
         {
             return;
+        }
+
+        // 缩放跨格期间格子边长没变，组件自身会随 SizeChanged 重排；只在松手时补一次格子口径。
+        if (interaction.Kind == PanelInteractionKind.Resize &&
+            host.Content is IDesktopComponentWidget componentWidget)
+        {
+            componentWidget.ApplyCellSize(_metrics.CellSize);
         }
 
         PlacementChanged?.Invoke(this, host.Placement.Clone());

@@ -163,7 +163,7 @@ public partial class MainWindow : Window
         LauncherSubtitleTextBlock.Text = OperatingSystem.IsLinux()
             ? L("launcher.subtitle_linux", "Displays installed apps discovered from Linux desktop entries.")
             : L("launcher.subtitle", "Displays all apps and folders based on the Windows Start menu structure.");
-        RefreshTaskbarProfilePresentation();
+        RefreshTaskbarProfileActionLabels();
 
         UpdateCurrentRenderBackendStatus();
         RenderLauncherHiddenItemsList();

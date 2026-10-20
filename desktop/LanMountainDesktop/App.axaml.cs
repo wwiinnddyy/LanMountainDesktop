@@ -1302,11 +1302,13 @@ public partial class App : Application
         IClassicDesktopStyleApplicationLifetime desktop,
         string reason)
     {
+        var constructStopwatch = System.Diagnostics.Stopwatch.StartNew();
         var mainWindow = new MainWindow
         {
             DataContext = new MainWindowViewModel(),
             ShowInTaskbar = ShouldShowMainWindowInTaskbar() && !IsMainWindowDesktopLayerEnabled()
         };
+        AppLogger.Info("DesktopPerf", $"MainWindow constructed in {constructStopwatch.ElapsedMilliseconds}ms.");
 
         _mainWindowOpened = false;
         AttachMainWindow(mainWindow);
@@ -1323,7 +1325,9 @@ public partial class App : Application
 
         if (!mainWindow.IsVisible)
         {
+            var showStopwatch = System.Diagnostics.Stopwatch.StartNew();
             mainWindow.Show();
+            AppLogger.Info("DesktopPerf", $"MainWindow.Show returned in {showStopwatch.ElapsedMilliseconds}ms.");
         }
 
         _ = Task.Run(async () =>

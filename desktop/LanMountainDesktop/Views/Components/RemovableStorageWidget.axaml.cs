@@ -216,16 +216,9 @@ public partial class RemovableStorageWidget : UserControl, IDesktopComponentWidg
 
             var newlyInsertedDrive = latestDrives.FirstOrDefault(drive => !previousDriveRoots.Contains(drive.RootPath));
             _connectedDrives = latestDrives;
-
-            if (newlyInsertedDrive is not null)
-            {
-                _selectedDriveRootPath = newlyInsertedDrive.RootPath;
-            }
-            else if (string.IsNullOrWhiteSpace(_selectedDriveRootPath) ||
-                     !_connectedDrives.Any(drive => string.Equals(drive.RootPath, _selectedDriveRootPath, StringComparison.OrdinalIgnoreCase)))
-            {
-                _selectedDriveRootPath = _connectedDrives.FirstOrDefault().RootPath ?? string.Empty;
-            }
+            _selectedDriveRootPath = newlyInsertedDrive is not null
+                ? newlyInsertedDrive.RootPath
+                : ResolveSelectedDriveRoot(_connectedDrives, _selectedDriveRootPath);
 
             if (_connectedDrives.Count == 0)
             {
@@ -250,6 +243,27 @@ public partial class RemovableStorageWidget : UserControl, IDesktopComponentWidg
         {
             _isRefreshing = false;
         }
+    }
+
+    internal static string ResolveSelectedDriveRoot(
+        IReadOnlyList<RemovableStorageDrive> drives,
+        string? currentRootPath)
+    {
+        if (drives.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        if (!string.IsNullOrWhiteSpace(currentRootPath) &&
+            drives.Any(drive => string.Equals(
+                drive.RootPath,
+                currentRootPath,
+                StringComparison.OrdinalIgnoreCase)))
+        {
+            return currentRootPath;
+        }
+
+        return drives[0].RootPath;
     }
 
     private void ReloadSettings()
