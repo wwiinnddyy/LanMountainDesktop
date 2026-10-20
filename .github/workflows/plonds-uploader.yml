@@ -4,12 +4,10 @@ concurrency:
   group: plonds-publish
   cancel-in-progress: false
 
+# 由 PLONDS Comparator 成功后显式 dispatch，或手动指定 tag 运行。
+# 不再监听 workflow_run：Comparator 现在由 Release 用 GITHUB_TOKEN dispatch，
+# GitHub 不会为 GITHUB_TOKEN 发起的运行再创建 workflow_run 下游运行。
 on:
-  workflow_run:
-    workflows:
-      - PLONDS Comparator
-    types:
-      - completed
   workflow_dispatch:
     inputs:
       tag:
@@ -28,7 +26,6 @@ env:
 
 jobs:
   publish:
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -37,7 +34,6 @@ jobs:
     timeout-minutes: 360
     permissions:
       contents: write
-      actions: read
 
     steps:
       - name: Checkout
@@ -52,16 +48,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            RAW_TAG="${{ github.event.inputs.tag }}"
-            if [[ "$RAW_TAG" == v* ]]; then
-              TAG="$RAW_TAG"
-            else
-              TAG="v$RAW_TAG"
-            fi
+          RAW_TAG="${{ github.event.inputs.tag }}"
+          if [[ "$RAW_TAG" == v* ]]; then
+            TAG="$RAW_TAG"
           else
-            gh run download "${{ github.event.workflow_run.id }}" -n plonds-run-metadata-${{ matrix.arch }} -D plonds-run-metadata
-            TAG="$(tr -d '\r\n' < plonds-run-metadata/tag.txt)"
+            TAG="v$RAW_TAG"
           fi
 
           gh release view "$TAG" --repo "${{ github.repository }}" --json tagName >/dev/null
