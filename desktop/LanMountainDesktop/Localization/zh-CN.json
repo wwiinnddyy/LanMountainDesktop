@@ -1128,5 +1128,10 @@
     "component.file_manager": "文件管理",
     "component.zhijiao_hub": "智教Hub",
     "component.juya_news": "橘鸦早报",
-    "component.notification_box": "消息盒子"
+    "component.notification_box": "消息盒子",
+    "settings.update.channel_label": "更新通道",
+    "settings.update.channel_description": "默认使用稳定版。选择预览版可获取预发布版本。",
+    "settings.update.channel_stable": "稳定版",
+    "settings.update.channel_preview": "预览版",
+    "settings.update.install_after_exit": "更新已准备好，将在桌面退出后完成安装。"
 }

@@ -4,8 +4,13 @@ internal sealed class PlondsService(
     PlondsSourceRegistry sourceRegistry,
     PlondsManifestClient manifestClient,
     PlondsDownloadPlanner downloadPlanner,
-    PlondsSourceStore? sourceStore = null) : IPlondsService
+    PlondsSourceStore? sourceStore = null,
+    string? platform = null,
+    string channel = UpdateSettingsValues.ChannelStable,
+    IDisposable? lifetime = null) : IPlondsService, IDisposable
 {
+    public void Dispose() => lifetime?.Dispose();
+
     public async Task<PlondsLatestResult> FindLatestAsync(Version currentVersion, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(currentVersion);
@@ -65,6 +70,15 @@ internal sealed class PlondsService(
             return PlondsPrepareResult.FailedForUi("未找到可用的智慧更新源（S3 / GitHub）。");
         }
 
+        return await PrepareAsync(latest with { Candidates = candidates }, forceFullPackage, UpdateSettingsValues.DefaultDownloadThreads, null, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<PlondsPrepareResult> PrepareAsync(
+        PlondsLatestResult latest, bool forceFullPackage, int downloadThreads,
+        IProgress<DownloadProgressInfo>? progress, CancellationToken cancellationToken)
+    {
+        downloadPlanner.ConfigureTransfer(downloadThreads, progress);
+        var candidates = latest.Candidates;
         var errors = new List<string>();
         // Prefer S3, then other high-priority sources, then GitHub PLONDS mirrors.
         foreach (var selected in candidates.OrderByDescending(c => c.Source.Priority)
@@ -72,7 +86,7 @@ internal sealed class PlondsService(
                      .ThenBy(c => string.Equals(c.Source.Kind, "github", StringComparison.OrdinalIgnoreCase) ? 1 : 0))
         {
             var result = await downloadPlanner
-                .PrepareAsync(selected, cancellationToken, forceFullPackage)
+                .PrepareAsync(selected, cancellationToken, forceFullPackage, latest.CurrentVersion)
                 .ConfigureAwait(false);
             if (result.Success)
             {
@@ -127,6 +141,6 @@ internal sealed class PlondsService(
             candidates.Add(new PlondsManifestCandidate(source, manifest));
         }
 
-        return PlondsManifestSelector.SelectHighestVersionCandidates(candidates);
+        return PlondsManifestSelector.SelectHighestVersionCandidates(candidates, platform ?? PlatformIdentifiers.CurrentPlatformId, channel);
     }
 }

@@ -11,6 +11,11 @@ public static class Program
     public static void Main(string[] args)
     {
         InstallerStartupDiagnostics.Initialize();
+        if (args.Length == 2 && args[0] == "--apply-update")
+        {
+            Environment.ExitCode = DeploymentMaintenanceRunner.RunAsync(args[1], CancellationToken.None).GetAwaiter().GetResult();
+            return;
+        }
 
         // 解析命令行参数
         var uninstallMode = false;

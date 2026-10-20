@@ -45,8 +45,7 @@ public sealed class ZeroUseTypeRatchetTests
         ["ServiceCollectionExtensions"] = "已发布 Core 包里的第二套 IPC 装配入口，删除属破坏性变更，跟 SDK 版本号一起定",
         ["ManifestSignatureVerifier"] = "实现了但安装流程没调用（只有 InstallerSecurityTests 在用）：清单 RSA-PSS 校验没接线，" +
             "且内置公钥是空串（IsConfigured=false 时 Verify 直接返回 true）——接线与内置公钥都要用户拍板",
-        ["AuthenticodeVerifier"] = "实现了但安装流程没调用：WinVerifyTrust 校验没接进落盘前那道关，" +
-            "EnforcementEnabled 读环境变量也没人问——接线与否要用户拍板",
+        // AuthenticodeVerifier is used by the runtime prerequisite installation path.
     };
 
     private static readonly string[] ProductionDirectories =

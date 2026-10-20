@@ -2,16 +2,23 @@ namespace LanMountainDesktop.Services.Plonds;
 
 internal sealed class PlondsDownloadPlanner(IPlondsPackageDownloader downloader)
 {
+    public void ConfigureTransfer(int downloadThreads, IProgress<DownloadProgressInfo>? progress) =>
+        downloader.ConfigureTransfer(downloadThreads, progress);
+
     public async Task<PlondsPrepareResult> PrepareAsync(
         PlondsManifestCandidate candidate,
         CancellationToken cancellationToken,
-        bool forceFullPackage = false)
+        bool forceFullPackage = false,
+        Version? currentVersion = null)
     {
         ArgumentNullException.ThrowIfNull(candidate);
 
         // Clean install / force reinstall: prefer full PLONDS package from this source (S3 first, GitHub PLONDS second).
         // If all PLONDS package sources fail, UpdateSettingsService may still fall back to a GitHub installer EXE.
-        if (forceFullPackage ||
+        var baselineMatches = currentVersion is null ||
+            (PlondsManifestSelector.TryParseVersion(candidate.Manifest.PreviousVersion, out var baseline) &&
+             baseline.CompareTo(currentVersion) == 0);
+        if (forceFullPackage || !baselineMatches ||
             candidate.Manifest.RequiresCleanInstall ||
             candidate.Manifest.IsFullUpdate)
         {

@@ -1,7 +1,7 @@
 name: PLONDS Publisher
 
 concurrency:
-  group: plonds-publish-${{ github.event_name }}-${{ github.event.workflow_run.id || github.event.inputs.tag || github.run_id }}
+  group: plonds-publish
   cancel-in-progress: false
 
 on:
@@ -20,7 +20,7 @@ on:
 env:
   DOTNET_VERSION: '10.0.x'
   PLONDS_S3_PREFIX: lanmountain/update/plonds
-  PLONDS_S3_PUBLIC_BASE_KEY_PREFIX: lanmountain/update
+  PLONDS_S3_PUBLIC_BASE_KEY_PREFIX: ''
   PLONDS_S3_DIRECTORY_UPLOAD_CONCURRENCY: '4'
   PLONDS_S3_MULTIPART_THRESHOLD_MB: '10'
   PLONDS_S3_MULTIPART_PART_SIZE_MB: '10'
@@ -30,6 +30,10 @@ jobs:
   publish:
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x64, x86]
     timeout-minutes: 360
     permissions:
       contents: write
@@ -56,7 +60,7 @@ jobs:
               TAG="v$RAW_TAG"
             fi
           else
-            gh run download "${{ github.event.workflow_run.id }}" -n plonds-run-metadata -D plonds-run-metadata
+            gh run download "${{ github.event.workflow_run.id }}" -n plonds-run-metadata-${{ matrix.arch }} -D plonds-run-metadata
             TAG="$(tr -d '\r\n' < plonds-run-metadata/tag.txt)"
           fi
 
@@ -80,11 +84,12 @@ jobs:
           set -euo pipefail
           rm -rf plonds-assets
           mkdir -p plonds-assets
-          gh release download "$RELEASE_TAG" -p changed.zip -p PLONDS.json -p files-windows-x64.zip -D plonds-assets --clobber
-          test -f plonds-assets/changed.zip
-          test -f plonds-assets/PLONDS.json
-          test -f plonds-assets/files-windows-x64.zip
-          jq -e . plonds-assets/PLONDS.json >/dev/null
+          gh release download "$RELEASE_TAG" -p changed-windows-${{ matrix.arch }}.zip -p PLONDS-windows-${{ matrix.arch }}.json -p files-windows-${{ matrix.arch }}.zip -D plonds-assets --clobber
+          test -f plonds-assets/changed-windows-${{ matrix.arch }}.zip
+          test -f plonds-assets/PLONDS-windows-${{ matrix.arch }}.json
+          test -f plonds-assets/files-windows-${{ matrix.arch }}.zip
+          jq -e . plonds-assets/PLONDS-windows-${{ matrix.arch }}.json >/dev/null
+          echo "RELEASE_CHANNEL=$(jq -r .channel plonds-assets/PLONDS-windows-${{ matrix.arch }}.json)" >> "$GITHUB_ENV"
 
       - name: Publish PLONDS assets to Rainyun S3
         env:
@@ -110,11 +115,11 @@ jobs:
             publish-s3 \
             --release-tag "$RELEASE_TAG" \
             --repository "${{ github.repository }}" \
-            --manifest "$PWD/plonds-assets/PLONDS.json" \
-            --changed-zip "$PWD/plonds-assets/changed.zip" \
-            --files-zip "$PWD/plonds-assets/files-windows-x64.zip" \
+            --manifest "$PWD/plonds-assets/PLONDS-windows-${{ matrix.arch }}.json" \
+            --changed-zip "$PWD/plonds-assets/changed-windows-${{ matrix.arch }}.zip" \
+            --files-zip "$PWD/plonds-assets/files-windows-${{ matrix.arch }}.zip" \
             --work-dir "$PWD/plonds-publish-work" \
-            --s3-prefix "$PLONDS_S3_PREFIX" \
+            --s3-prefix "$PLONDS_S3_PREFIX/windows-${{ matrix.arch }}/$RELEASE_CHANNEL" \
             --s3-endpoint "$S3_ENDPOINT" \
             --s3-region "$REGION" \
             --s3-bucket "$S3_BUCKET" \
@@ -127,7 +132,7 @@ jobs:
             --multipart-part-size-mb "$PLONDS_S3_MULTIPART_PART_SIZE_MB" \
             --multipart-concurrency "$PLONDS_S3_MULTIPART_CONCURRENCY"
 
-          jq -e '.downloads.github.changedZipUrl and .downloads.github.filesZipUrl and .downloads.s3.changedFolderUrl and .downloads.s3.filesFolderUrl' plonds-assets/PLONDS.json >/dev/null
+          jq -e '.downloads.github.changedZipUrl and .downloads.github.filesZipUrl and .downloads.s3.changedFolderUrl and .downloads.s3.filesFolderUrl' plonds-assets/PLONDS-windows-${{ matrix.arch }}.json >/dev/null
 
       - name: Upload enriched PLONDS manifest to GitHub Release
         env:
@@ -135,4 +140,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gh release upload "$RELEASE_TAG" plonds-assets/PLONDS.json --clobber
+          gh release upload "$RELEASE_TAG" plonds-assets/PLONDS-windows-${{ matrix.arch }}.json --clobber
+          if [[ "${{ matrix.arch }}" == x64 ]]; then
+            gh release upload "$RELEASE_TAG" plonds-assets/PLONDS.json --clobber
+          fi

@@ -13,15 +13,17 @@ internal static class PlondsDownloadUrlResolver
         // Prefer the selected source first so S3 stays primary for 智慧更新.
         if (sourceKind is "s3")
         {
+            urls.Add(DeriveObjectUrl(source.ManifestUrl, manifest.Downloads?.S3,
+                mode is PlondsPackageMode.Delta ? manifest.Downloads?.S3?.ChangedZipKey : manifest.Downloads?.S3?.FilesZipKey));
             AddS3(urls, manifest, mode);
             urls.Add(DerivePackageUrl(source.ManifestUrl, mode));
             urls.Add(DeriveFromStaticBase(mode));
             AddGitHub(urls, manifest, mode);
         }
-        else if (sourceKind is "github")
+        else if (sourceKind is "github" or "github-api")
         {
             AddGitHub(urls, manifest, mode);
-            urls.Add(DerivePackageUrl(source.ManifestUrl, mode));
+            if (sourceKind == "github") urls.Add(DerivePackageUrl(source.ManifestUrl, mode));
             AddS3(urls, manifest, mode);
             urls.Add(DeriveFromStaticBase(mode));
         }
@@ -38,7 +40,7 @@ internal static class PlondsDownloadUrlResolver
             .Select(url => Uri.TryCreate(url!.Trim(), UriKind.Absolute, out var uri) ? uri : null)
             .OfType<Uri>()
             .Where(uri => uri.Scheme is "http" or "https")
-            .DistinctBy(uri => uri.AbsoluteUri, StringComparer.OrdinalIgnoreCase)
+            .DistinctBy(uri => uri.AbsoluteUri, StringComparer.Ordinal)
             .ToArray();
     }
 
@@ -47,12 +49,10 @@ internal static class PlondsDownloadUrlResolver
         if (mode is PlondsPackageMode.Delta)
         {
             urls.Add(manifest.Downloads?.S3?.ChangedZipUrl);
-            urls.Add(manifest.Downloads?.S3?.ChangedFolderUrl);
         }
         else
         {
             urls.Add(manifest.Downloads?.S3?.FilesZipUrl);
-            urls.Add(manifest.Downloads?.S3?.FilesFolderUrl);
         }
     }
 
@@ -83,6 +83,11 @@ internal static class PlondsDownloadUrlResolver
             ? $"{builder.Path[..(lastSlash + 1)]}{packageName}"
             : packageName;
         return builder.Uri.AbsoluteUri;
+    }
+
+    internal static string? DeriveObjectUrl(string manifestUrl, PlondsS3Downloads? downloads, string? key)
+    {
+        return LanMountainDesktop.Shared.Contracts.Deployment.ReleaseManifestLocator.ObjectUrl(manifestUrl, downloads?.Bucket, key);
     }
 
     private static string? DeriveFromStaticBase(PlondsPackageMode mode)

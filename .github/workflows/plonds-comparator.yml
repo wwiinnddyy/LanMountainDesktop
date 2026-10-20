@@ -1,7 +1,7 @@
 name: PLONDS Comparator
 
 concurrency:
-  group: plonds-${{ github.event_name }}-${{ github.event.release.tag_name || github.event.inputs.tag || github.run_id }}
+  group: plonds-${{ github.event.release.tag_name || github.event.inputs.tag || github.run_id }}
   cancel-in-progress: false
 
 on:
@@ -50,6 +50,10 @@ env:
 jobs:
   compare:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x64, x86]
     permissions:
       contents: write
 
@@ -128,7 +132,10 @@ jobs:
               --jq ".[] | select(.draft == false and .prerelease == ${IS_PRERELEASE} and .tag_name != \"${RELEASE_TAG}\") | .tag_name")"
 
             for CANDIDATE in $CANDIDATES; do
-              if gh release download "$CANDIDATE" -p "files-windows-x64.zip" -D /tmp/baseline-check --clobber 2>/dev/null; then
+              CANDIDATE_VERSION="${CANDIDATE#v}"
+              if [[ "$CANDIDATE_VERSION" == "$RELEASE_VERSION" ]]; then continue; fi
+              if [[ "$(printf '%s\n%s\n' "$CANDIDATE_VERSION" "$RELEASE_VERSION" | sort -V | head -n 1)" != "$CANDIDATE_VERSION" ]]; then continue; fi
+              if gh release download "$CANDIDATE" -p "files-windows-${{ matrix.arch }}.zip" -D /tmp/baseline-check --clobber 2>/dev/null; then
                 BASELINE_TAG="$CANDIDATE"
                 BASELINE_VERSION="${CANDIDATE#v}"
                 rm -rf /tmp/baseline-check
@@ -138,6 +145,10 @@ jobs:
           fi
 
           if [[ -n "$BASELINE_TAG" ]]; then
+            if [[ "$BASELINE_VERSION" == "$RELEASE_VERSION" || "$(printf '%s\n%s\n' "$BASELINE_VERSION" "$RELEASE_VERSION" | sort -V | head -n 1)" != "$BASELINE_VERSION" ]]; then
+              echo "Baseline must be earlier than the release version."
+              exit 1
+            fi
             echo "BASELINE_TAG=${BASELINE_TAG}" >> "$GITHUB_ENV"
             echo "BASELINE_VERSION=${BASELINE_VERSION}" >> "$GITHUB_ENV"
             echo "Resolved baseline: ${BASELINE_TAG}"
@@ -153,12 +164,12 @@ jobs:
           set -euo pipefail
           mkdir -p plonds-input
 
-          gh release download "$RELEASE_TAG" -p "files-windows-x64.zip" -D plonds-input
-          mv plonds-input/files-windows-x64.zip plonds-input/current-files-windows-x64.zip
+          gh release download "$RELEASE_TAG" -p "files-windows-${{ matrix.arch }}.zip" -D plonds-input
+          mv plonds-input/files-windows-${{ matrix.arch }}.zip plonds-input/current-files-windows-${{ matrix.arch }}.zip
 
           if [[ -n "$BASELINE_TAG" ]]; then
-            gh release download "$BASELINE_TAG" -p "files-windows-x64.zip" -D plonds-input
-            mv plonds-input/files-windows-x64.zip plonds-input/baseline-files-windows-x64.zip
+            gh release download "$BASELINE_TAG" -p "files-windows-${{ matrix.arch }}.zip" -D plonds-input
+            mv plonds-input/files-windows-${{ matrix.arch }}.zip plonds-input/baseline-files-windows-${{ matrix.arch }}.zip
           fi
 
       - name: Run build-delta (file-compare)
@@ -172,9 +183,9 @@ jobs:
             'run' '--project' 'PenguinLogisticsOnlineNetworkDistributionSystem/src/Plonds.Tool/Plonds.Tool.csproj'
             '--configuration' 'Release' '--'
             'build-delta'
-            '--platform' 'windows-x64'
+            '--platform' 'windows-${{ matrix.arch }}'
             '--current-version' "$RELEASE_VERSION"
-            '--current-zip' "$PWD/plonds-input/current-files-windows-x64.zip"
+            '--current-zip' "$PWD/plonds-input/current-files-windows-${{ matrix.arch }}.zip"
             '--output-dir' "$PWD/plonds-output"
             '--channel' "$RELEASE_CHANNEL"
             '--hash-algorithm' "$HASH_ALGORITHM"
@@ -183,7 +194,7 @@ jobs:
           if [[ -n "$BASELINE_TAG" ]]; then
             ARGS+=(
               '--baseline-version' "$BASELINE_VERSION"
-              '--baseline-zip' "$PWD/plonds-input/baseline-files-windows-x64.zip"
+              '--baseline-zip' "$PWD/plonds-input/baseline-files-windows-${{ matrix.arch }}.zip"
             )
           fi
 
@@ -200,9 +211,9 @@ jobs:
             'run' '--project' 'PenguinLogisticsOnlineNetworkDistributionSystem/src/Plonds.Tool/Plonds.Tool.csproj'
             '--configuration' 'Release' '--'
             'build-delta-from-commits'
-            '--platform' 'windows-x64'
+            '--platform' 'windows-${{ matrix.arch }}'
             '--current-version' "$RELEASE_VERSION"
-            '--current-zip' "$PWD/plonds-input/current-files-windows-x64.zip"
+            '--current-zip' "$PWD/plonds-input/current-files-windows-${{ matrix.arch }}.zip"
             '--output-dir' "$PWD/plonds-output"
             '--channel' "$RELEASE_CHANNEL"
             '--baseline-tag' "${BASELINE_TAG:-$RELEASE_TAG}"
@@ -212,7 +223,7 @@ jobs:
 
           if [[ -n "$BASELINE_TAG" ]]; then
             ARGS+=(
-              '--fallback-zip' "$PWD/plonds-input/baseline-files-windows-x64.zip"
+              '--fallback-zip' "$PWD/plonds-input/baseline-files-windows-${{ matrix.arch }}.zip"
             )
           fi
 
@@ -238,7 +249,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gh release upload "$RELEASE_TAG" plonds-output/changed.zip plonds-output/PLONDS.json --clobber
+          cp plonds-output/changed.zip "plonds-output/changed-windows-${{ matrix.arch }}.zip"
+          cp plonds-output/PLONDS.json "plonds-output/PLONDS-windows-${{ matrix.arch }}.json"
+          gh release upload "$RELEASE_TAG" "plonds-output/changed-windows-${{ matrix.arch }}.zip" "plonds-output/PLONDS-windows-${{ matrix.arch }}.json" --clobber
+          if [[ "${{ matrix.arch }}" == x64 ]]; then
+            gh release upload "$RELEASE_TAG" plonds-output/changed.zip plonds-output/PLONDS.json --clobber
+          fi
 
       - name: Persist run metadata
         shell: bash
@@ -250,7 +266,7 @@ jobs:
       - name: Upload run metadata artifact
         uses: actions/upload-artifact@v7
         with:
-          name: plonds-run-metadata
+          name: plonds-run-metadata-${{ matrix.arch }}
           path: |
             plonds-run-metadata/tag.txt
             plonds-run-metadata/compare-method.txt

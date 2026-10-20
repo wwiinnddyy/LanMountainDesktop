@@ -45,9 +45,13 @@ internal sealed class PlondsPackageStore
             PathSegmentSanitizer.Sanitize(source.Id, "unknown"),
             modeDirectoryName);
 
-        EnsureCleanDirectory(stagingRoot);
-
         var manifestPath = Path.Combine(stagingRoot, PlondsWireFormat.CommitDeltaManifestFileName);
+        var manifestJson = JsonSerializer.Serialize(manifest, JsonOptions);
+        if (File.Exists(manifestPath) && !string.Equals(
+                await File.ReadAllTextAsync(manifestPath, cancellationToken).ConfigureAwait(false), manifestJson, StringComparison.Ordinal))
+            EnsureCleanDirectory(stagingRoot);
+        else
+            Directory.CreateDirectory(stagingRoot);
         await using (var manifestStream = File.Create(manifestPath))
         {
             await JsonSerializer.SerializeAsync(manifestStream, manifest, JsonOptions, cancellationToken).ConfigureAwait(false);

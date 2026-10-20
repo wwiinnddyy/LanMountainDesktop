@@ -7,22 +7,32 @@ namespace LanDesktopPLONDS.Installer.Services;
 
 internal sealed class FilesPackageInstaller
 {
-    public async Task InstallAsync(
-        PreparedFilesPackage package,
-        string installPath,
-        IProgress<InstallerDeployProgress>? progress,
-        CancellationToken cancellationToken)
+    private readonly Action<string, string> _registerInstallation;
+
+    public FilesPackageInstaller(Action<string, string>? registerInstallation = null)
     {
-        await InstallAsync(package, installPath, OnlineInstallOptions.Default, progress, cancellationToken)
-            .ConfigureAwait(false);
+        _registerInstallation = registerInstallation ?? ((root, version) => ArpRegistration.Register(root, version));
     }
 
-    public async Task InstallAsync(
-        PreparedFilesPackage package,
-        string installPath,
-        OnlineInstallOptions options,
-        IProgress<InstallerDeployProgress>? progress,
-        CancellationToken cancellationToken)
+    public Task InstallAsync(
+        PreparedFilesPackage package, string installPath,
+        IProgress<InstallerDeployProgress>? progress, CancellationToken cancellationToken) =>
+        InstallAsync(package, installPath, OnlineInstallOptions.Default, progress, cancellationToken);
+
+    public Task InstallAsync(
+        PreparedFilesPackage package, string installPath, OnlineInstallOptions options,
+        IProgress<InstallerDeployProgress>? progress, CancellationToken cancellationToken) =>
+        InstallCoreAsync(package, installPath, options, progress, cancellationToken, null, null);
+
+    internal Task InstallIncrementalAsync(
+        PreparedFilesPackage package, string installPath, string currentDeployment, IncrementalUpdatePlan plan,
+        IProgress<InstallerDeployProgress>? progress, CancellationToken cancellationToken) =>
+        InstallCoreAsync(package, installPath, OnlineInstallOptions.Default, progress, cancellationToken, currentDeployment, plan);
+
+    private async Task InstallCoreAsync(
+        PreparedFilesPackage package, string installPath, OnlineInstallOptions options,
+        IProgress<InstallerDeployProgress>? progress, CancellationToken cancellationToken,
+        string? currentDeployment, IncrementalUpdatePlan? plan)
     {
         ArgumentNullException.ThrowIfNull(package);
 
@@ -36,6 +46,8 @@ internal sealed class FilesPackageInstaller
 
         // 在复制 launcherRoot 文件之前，检测是否有进程正在运行
         RunningProcessGuard.EnsureNoRunningProcesses(launcherRoot);
+        using var rootTransaction = new DeploymentRootFileTransaction(launcherRoot);
+        var committed = false;
 
         // 事务性安装：失败时回滚，不破坏已有状态
         try
@@ -53,7 +65,7 @@ internal sealed class FilesPackageInstaller
             DeploymentStaging.Prepare(targetDeployment);
 
             // (b) 复制所有应用文件到部署目录
-            await CopyDirectoryAsync(sourceAppDirectory, targetDeployment, package.Version, progress, cancellationToken)
+            await CopyDirectoryAsync(sourceAppDirectory, targetDeployment, package.Version, progress, cancellationToken, currentDeployment, plan)
                 .ConfigureAwait(false);
 
             // (c) 验证文件数量匹配
@@ -67,6 +79,10 @@ internal sealed class FilesPackageInstaller
                 null));
 
             VerifyFileCount(sourceAppDirectory, targetDeployment);
+            DeploymentValidation.Verify(targetDeployment,
+                package.Manifest.FilesMap.Select(pair => new DeploymentFileHash(
+                    pair.Key, pair.Value.Action, pair.Value.Hash, pair.Value.HashAlgorithm, pair.Value.Size)),
+                cancellationToken);
 
             // (d) 复制 launcherRoot 载荷：先写入临时兄弟目录，再逐文件原子移入
             progress?.Report(new InstallerDeployProgress(
@@ -78,13 +94,7 @@ internal sealed class FilesPackageInstaller
                 0,
                 null));
 
-            await CopyLauncherRootPayloadAtomicAsync(
-                package.ExtractDirectory,
-                sourceAppDirectory,
-                launcherRoot,
-                package.Version,
-                progress,
-                cancellationToken).ConfigureAwait(false);
+            rootTransaction.Copy(package.ExtractDirectory, sourceAppDirectory, cancellationToken);
 
             // (e) 激活部署：删除 .partial → 写 .current → 清除其他 .current
             progress?.Report(new InstallerDeployProgress(
@@ -96,11 +106,14 @@ internal sealed class FilesPackageInstaller
                 0,
                 null));
 
-            ActivateDeployment(launcherRoot, targetDeployment);
+            rootTransaction.PrepareCommit();
+            ActivateDeployment(launcherRoot, targetDeployment, rootTransaction.BackupDirectory);
+            rootTransaction.Commit();
+            committed = true;
             CreateWindowsShortcutsIfAvailable(launcherRoot, options);
 
             // ARP 注册（仅 Windows）
-            ArpRegistration.Register(launcherRoot, package.Version);
+            _registerInstallation(launcherRoot, package.Version);
 
             // 清理过时部署目录，保留最新一个作为回滚
             CleanupStaleDeployments(launcherRoot);
@@ -116,8 +129,13 @@ internal sealed class FilesPackageInstaller
         }
         catch (Exception ex)
         {
+            if (committed)
+            {
+                InstallerStartupDiagnostics.Log($"Deployment was committed; optional registration or cleanup failed: {ex.Message}");
+                return;
+            }
             // (f) 任何失败：删除不完整的部署目录，保留预先存在的状态，重新抛出带中文上下文的异常
-            CleanupPartialDeployment(targetDeployment);
+            if (!committed) CleanupPartialDeployment(targetDeployment);
             throw new InvalidOperationException($"安装失败，已回滚更改：{ex.Message}", ex);
         }
     }
@@ -170,7 +188,9 @@ internal sealed class FilesPackageInstaller
         string targetDirectory,
         string version,
         IProgress<InstallerDeployProgress>? progress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? currentDeployment,
+        IncrementalUpdatePlan? plan)
     {
         var sourceFiles = Directory.EnumerateFiles(sourceDirectory, "*", SearchOption.AllDirectories).ToArray();
         var total = Math.Max(1, sourceFiles.Length);
@@ -183,6 +203,8 @@ internal sealed class FilesPackageInstaller
             {
                 continue;
             }
+            if (currentDeployment is not null && plan is not null && plan.FilesUnchanged.Contains(relativePath, StringComparer.OrdinalIgnoreCase))
+                sourcePath = Path.Combine(currentDeployment, relativePath.Replace('/', Path.DirectorySeparatorChar));
 
             var targetPath = Path.GetFullPath(Path.Combine(targetDirectory, relativePath));
             InstallerPathGuard.EnsureChildPath(targetDirectory, targetPath);
@@ -229,161 +251,11 @@ internal sealed class FilesPackageInstaller
     }
 
     /// <summary>
-    /// 原子性地将 launcher-root 载荷复制到安装根目录。
-    /// 先复制到临时兄弟目录，然后逐文件用 File.Move(overwrite) 移入目标。
-    /// </summary>
-    private static async Task CopyLauncherRootPayloadAtomicAsync(
-        string packageRoot,
-        string sourceAppDirectory,
-        string launcherRoot,
-        string version,
-        IProgress<InstallerDeployProgress>? progress,
-        CancellationToken cancellationToken)
-    {
-        var resolvedPackageRoot = Path.GetFullPath(packageRoot);
-        var resolvedAppDirectory = Path.GetFullPath(sourceAppDirectory);
-        if (string.Equals(
-                resolvedPackageRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
-                resolvedAppDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
-                StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        var files = Directory
-            .EnumerateFiles(resolvedPackageRoot, "*", SearchOption.AllDirectories)
-            .Where(path => !PathContainment.IsSameOrChild(resolvedAppDirectory, path))
-            .Where(path =>
-            {
-                var relative = InstallerPathGuard.NormalizeRelativePath(Path.GetRelativePath(resolvedPackageRoot, path));
-                return !relative.StartsWith(DeploymentLayout.DeploymentDirectoryPrefix, StringComparison.OrdinalIgnoreCase);
-            })
-            .ToArray();
-
-        // 先复制到临时目录
-        var tempSibling = launcherRoot + ".tmp-staging-" + Guid.NewGuid().ToString("N")[..8];
-        try
-        {
-            Directory.CreateDirectory(tempSibling);
-
-            var total = Math.Max(1, files.Length);
-            for (var index = 0; index < files.Length; index++)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                var sourcePath = files[index];
-                var relativePath = InstallerPathGuard.NormalizeRelativePath(Path.GetRelativePath(resolvedPackageRoot, sourcePath));
-                if (DeploymentLayout.IsDeploymentMarker(relativePath))
-                {
-                    continue;
-                }
-
-                var tempPath = Path.GetFullPath(Path.Combine(tempSibling, relativePath));
-                InstallerPathGuard.EnsureChildPath(tempSibling, tempPath);
-                var tempParent = Path.GetDirectoryName(tempPath);
-                if (!string.IsNullOrWhiteSpace(tempParent))
-                {
-                    Directory.CreateDirectory(tempParent);
-                }
-
-                await using (var source = File.OpenRead(sourcePath))
-                await using (var target = File.Create(tempPath))
-                {
-                    await source.CopyToAsync(target, cancellationToken).ConfigureAwait(false);
-                }
-
-                progress?.Report(new InstallerDeployProgress(
-                    "复制启动器文件",
-                    version,
-                    1,
-                    0.88 + ((index + 1) * 0.03 / total),
-                    relativePath,
-                    index + 1,
-                    total));
-            }
-
-            // 逐文件原子移入目标（File.Move overwrite + 回退 copy+delete）
-            var tempFiles = Directory.EnumerateFiles(tempSibling, "*", SearchOption.AllDirectories).ToArray();
-            foreach (var tempFile in tempFiles)
-            {
-                var relativePath = InstallerPathGuard.NormalizeRelativePath(Path.GetRelativePath(tempSibling, tempFile));
-                var targetPath = Path.GetFullPath(Path.Combine(launcherRoot, relativePath));
-                InstallerPathGuard.EnsureChildPath(launcherRoot, targetPath);
-                var targetParent = Path.GetDirectoryName(targetPath);
-                if (!string.IsNullOrWhiteSpace(targetParent))
-                {
-                    Directory.CreateDirectory(targetParent);
-                }
-
-                AtomicMoveOrCopyDelete(tempFile, targetPath);
-            }
-        }
-        finally
-        {
-            // 清理临时目录
-            FileOperationRetryHelper.TryDeleteDirectory(tempSibling, true, "Installer");
-        }
-    }
-
-    /// <summary>
-    /// 原子移动文件：优先 File.Move(overwrite)，失败时回退到复制+删除。
-    /// </summary>
-    private static void AtomicMoveOrCopyDelete(string source, string destination)
-    {
-        try
-        {
-            File.Move(source, destination, overwrite: true);
-        }
-        catch (IOException)
-        {
-            // 回退：复制后删除源文件
-            File.Copy(source, destination, overwrite: true);
-            File.Delete(source);
-        }
-    }
-
-    /// <summary>
     /// 激活部署：删除 .partial → 写 .current → 移除其他部署的 .current → 创建 .Launcher 目录。
     /// </summary>
-    private static void ActivateDeployment(string launcherRoot, string targetDeployment)
+    private static void ActivateDeployment(string launcherRoot, string targetDeployment, string rootBackupDirectory)
     {
-        // 删除 .partial 标记
-        var partialMarker = Path.Combine(targetDeployment, DeploymentLayout.PartialMarkerFileName);
-        if (File.Exists(partialMarker))
-        {
-            File.Delete(partialMarker);
-        }
-
-        // 写入 .current 标记
-        File.WriteAllText(Path.Combine(targetDeployment, DeploymentLayout.CurrentMarkerFileName), string.Empty);
-
-        // 移除其他部署目录中的 .current 标记
-        foreach (var dir in Directory.EnumerateDirectories(launcherRoot))
-        {
-            var dirName = Path.GetFileName(dir);
-            if (!DeploymentLayout.IsDeploymentDirectoryName(dirName))
-            {
-                continue;
-            }
-
-            if (string.Equals(dir, targetDeployment, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            var otherCurrent = Path.Combine(dir, DeploymentLayout.CurrentMarkerFileName);
-            if (File.Exists(otherCurrent))
-            {
-                try
-                {
-                    File.Delete(otherCurrent);
-                }
-                catch
-                {
-                    // 忽略无法删除的标记文件
-                }
-            }
-        }
-
+        DeploymentCommit.Activate(launcherRoot, targetDeployment, rootBackupDirectory);
         Directory.CreateDirectory(Path.Combine(launcherRoot, DeploymentLayout.LauncherStateDirectoryName));
     }
 

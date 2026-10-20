@@ -29,7 +29,8 @@ internal sealed class PlondsPreparedPackageInstaller
 
             if (package.Mode is PlondsPackageMode.Full)
             {
-                return InstallFullPackage(package, launcherRoot, progress, cancellationToken);
+                var fullManifest = await LoadManifestAsync(package.ManifestPath, cancellationToken).ConfigureAwait(false);
+                return InstallFullPackage(package, fullManifest, launcherRoot, progress, cancellationToken);
             }
 
             var manifest = await LoadManifestAsync(package.ManifestPath, cancellationToken).ConfigureAwait(false);
@@ -38,6 +39,10 @@ internal sealed class PlondsPreparedPackageInstaller
         catch (OperationCanceledException)
         {
             throw;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return new PlondsInstallResult(false, ex.Message, "requires_clean_install");
         }
         catch (Exception ex)
         {
@@ -48,6 +53,7 @@ internal sealed class PlondsPreparedPackageInstaller
 
     private static PlondsInstallResult InstallFullPackage(
         PlondsPreparedPackage package,
+        PlondsClientManifest manifest,
         string launcherRoot,
         IProgress<InstallProgressReport>? progress,
         CancellationToken cancellationToken)
@@ -58,15 +64,21 @@ internal sealed class PlondsPreparedPackageInstaller
         }
 
         var sourceAppDirectory = ResolveFullPackageAppDirectory(package.FilesDirectory, package.Version);
+        DeploymentValidation.Verify(sourceAppDirectory,
+            manifest.FilesMap.Select(pair => new DeploymentFileHash(pair.Key, pair.Value.Action, pair.Value.Hash, pair.Value.HashAlgorithm, pair.Value.Size)),
+            cancellationToken);
+        if (manifest.RequiresCleanInstall || RootPayloadNeedsMaintenance(package.FilesDirectory, sourceAppDirectory, launcherRoot))
+            return new PlondsInstallResult(false, "The launcher or runtime requires a complete maintenance install.", "requires_clean_install");
         var currentDeployment = FindCurrentDeploymentDirectory(launcherRoot);
         var targetDeployment = BuildNextDeploymentDirectory(launcherRoot, package.Version.ToString());
 
         progress?.Report(new InstallProgressReport(InstallStage.CreateTarget, "Creating target deployment...", 15, null, 0, 0));
         DeploymentStaging.Prepare(targetDeployment);
         CopyDirectory(sourceAppDirectory, targetDeployment, cancellationToken, skipMarkers: true);
+        VerifyFiles(manifest.FilesMap, targetDeployment, progress, cancellationToken);
 
         progress?.Report(new InstallProgressReport(InstallStage.ActivateDeployment, "Activating deployment...", 85, null, 0, 0));
-        ActivateDeployment(currentDeployment, targetDeployment);
+        DeploymentCommit.Activate(launcherRoot, targetDeployment);
         progress?.Report(new InstallProgressReport(InstallStage.Completed, $"Updated to {package.Version}.", 100, null, 0, 0));
         return new PlondsInstallResult(true, null);
     }
@@ -114,7 +126,7 @@ internal sealed class PlondsPreparedPackageInstaller
         VerifyFiles(fileEntries, targetDeployment, progress, cancellationToken);
 
         progress?.Report(new InstallProgressReport(InstallStage.ActivateDeployment, "Activating deployment...", 85, null, fileEntries.Count, fileEntries.Count));
-        ActivateDeployment(currentDeployment, targetDeployment);
+        DeploymentCommit.Activate(launcherRoot, targetDeployment);
         progress?.Report(new InstallProgressReport(InstallStage.Completed, $"Updated to {package.Version}.", 100, null, fileEntries.Count, fileEntries.Count));
         return new PlondsInstallResult(true, null);
     }
@@ -331,17 +343,22 @@ internal sealed class PlondsPreparedPackageInstaller
         }
     }
 
-    private static void ActivateDeployment(string? currentDeployment, string targetDeployment)
+    private static bool RootPayloadNeedsMaintenance(string filesRoot, string appDirectory, string launcherRoot)
     {
-        File.WriteAllText(Path.Combine(targetDeployment, DeploymentLayout.CurrentMarkerFileName), string.Empty);
-        FileOperationRetryHelper.TryDeleteFile(Path.Combine(targetDeployment, DeploymentLayout.PartialMarkerFileName), "PlondsInstall");
-        FileOperationRetryHelper.TryDeleteFile(Path.Combine(targetDeployment, DeploymentLayout.DestroyMarkerFileName), "PlondsInstall");
-
-        if (!string.IsNullOrWhiteSpace(currentDeployment) && Directory.Exists(currentDeployment))
+        var resolvedRoot = Path.GetFullPath(filesRoot);
+        foreach (var source in Directory.EnumerateFiles(resolvedRoot, "*", SearchOption.AllDirectories))
         {
-            FileOperationRetryHelper.TryDeleteFile(Path.Combine(currentDeployment, DeploymentLayout.CurrentMarkerFileName), "PlondsInstall");
-            File.WriteAllText(Path.Combine(currentDeployment, DeploymentLayout.DestroyMarkerFileName), string.Empty);
+            if (PathContainment.IsSameOrChild(appDirectory, source))
+                continue;
+            var relative = Path.GetRelativePath(resolvedRoot, source);
+            if (DeploymentLayout.IsDeploymentMarker(relative))
+                continue;
+            var target = Path.Combine(launcherRoot, relative);
+            if (!File.Exists(target) || !string.Equals(ComputeHash(source, PlondsWireFormat.HashAlgorithmSha256),
+                    ComputeHash(target, PlondsWireFormat.HashAlgorithmSha256), StringComparison.OrdinalIgnoreCase))
+                return true;
         }
+        return false;
     }
 
     private static string ComputeHash(string filePath, string algorithm)

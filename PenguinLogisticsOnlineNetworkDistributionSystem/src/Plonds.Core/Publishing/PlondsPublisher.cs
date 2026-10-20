@@ -8,6 +8,13 @@ namespace Plonds.Core.Publishing;
 
 public sealed class PlondsPublisher
 {
+    private readonly Func<PlondsS3ClientOptions, PlondsS3Client> _createS3;
+
+    public PlondsPublisher(Func<PlondsS3ClientOptions, PlondsS3Client>? createS3 = null)
+    {
+        _createS3 = createS3 ?? (options => new PlondsS3Client(options));
+    }
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -60,7 +67,7 @@ public sealed class PlondsPublisher
         var filesZipKey = $"{versionPrefix}/Files.zip";
         var filesFolderKey = $"{versionPrefix}/{filesFolderName}";
 
-        using var s3 = new PlondsS3Client(options.S3);
+        using var s3 = _createS3(options.S3);
 
         await UploadArtifactAsync(s3, changedZipPath, changedZipKey, "application/zip", cancellationToken).ConfigureAwait(false);
         await UploadArtifactAsync(s3, filesZipPath, filesZipKey, "application/zip", cancellationToken).ConfigureAwait(false);
@@ -82,8 +89,8 @@ public sealed class PlondsPublisher
                 ReleaseTag: releaseTag,
                 GitHub: new PlondsGitHubDownloadInfo(
                     ReleaseUrl: $"https://github.com/{repository}/releases/tag/{releaseTag}",
-                    ManifestUrl: $"https://github.com/{repository}/releases/download/{releaseTag}/PLONDS.json",
-                    ChangedZipUrl: $"https://github.com/{repository}/releases/download/{releaseTag}/changed.zip",
+                    ManifestUrl: $"https://github.com/{repository}/releases/download/{releaseTag}/{Path.GetFileName(manifestPath)}",
+                    ChangedZipUrl: $"https://github.com/{repository}/releases/download/{releaseTag}/{Path.GetFileName(changedZipPath)}",
                     FilesZipUrl: $"https://github.com/{repository}/releases/download/{releaseTag}/{Path.GetFileName(filesZipPath)}"),
                 S3: new PlondsS3DownloadInfo(
                     Bucket: options.S3.Bucket,
@@ -102,12 +109,33 @@ public sealed class PlondsPublisher
 
         File.WriteAllText(manifestPath, JsonSerializer.Serialize(updatedManifest, JsonOptions), new UTF8Encoding(false));
         await s3.UploadFileAsync(new PlondsS3ObjectUpload(manifestPath, manifestKey, "application/json"), cancellationToken).ConfigureAwait(false);
-        await s3.UploadFileAsync(new PlondsS3ObjectUpload(manifestPath, latestManifestKey, "application/json"), cancellationToken).ConfigureAwait(false);
+        await s3.VerifyPublicObjectAsync(changedZipKey, cancellationToken).ConfigureAwait(false);
+        await s3.VerifyPublicObjectAsync(filesZipKey, cancellationToken).ConfigureAwait(false);
+        await s3.VerifyPublicObjectAsync(manifestKey, cancellationToken).ConfigureAwait(false);
+        var previousJson = await s3.ReadObjectJsonAsync(latestManifestKey, cancellationToken).ConfigureAwait(false);
+        var previous = previousJson is null ? null : JsonSerializer.Deserialize<PlondsManifest>(previousJson, JsonOptions);
+        if (previous is null || Version.Parse(previous.CurrentVersion.TrimStart('v', 'V')) <= Version.Parse(manifest.CurrentVersion.TrimStart('v', 'V')))
+            await s3.UploadFileAsync(new PlondsS3ObjectUpload(manifestPath, latestManifestKey, "application/json"), cancellationToken).ConfigureAwait(false);
 
         await s3.EnsureObjectExistsAsync(manifestKey, cancellationToken).ConfigureAwait(false);
         await s3.EnsureObjectExistsAsync(latestManifestKey, cancellationToken).ConfigureAwait(false);
         await s3.EnsureObjectExistsAsync(changedZipKey, cancellationToken).ConfigureAwait(false);
         await s3.EnsureObjectExistsAsync(filesZipKey, cancellationToken).ConfigureAwait(false);
+
+        var legacyManifest = CreateLegacyBootstrapManifest(updatedManifest);
+        var legacyPath = Path.Combine(Path.GetDirectoryName(manifestPath)!, "PLONDS.json");
+        if (!string.Equals(legacyPath, manifestPath, StringComparison.OrdinalIgnoreCase))
+            File.WriteAllText(legacyPath, JsonSerializer.Serialize(legacyManifest, JsonOptions), new UTF8Encoding(false));
+        const string stableX64Suffix = "/windows-x64/stable";
+        if (manifest.Platform == "windows-x64" && manifest.Channel == "stable" && prefix.EndsWith(stableX64Suffix, StringComparison.Ordinal))
+        {
+            var legacyKey = prefix[..^stableX64Suffix.Length] + "/PLONDS.json";
+            var legacyJson = await s3.ReadObjectJsonAsync(legacyKey, cancellationToken).ConfigureAwait(false);
+            var existingLegacy = legacyJson is null ? null : JsonSerializer.Deserialize<PlondsManifest>(legacyJson, JsonOptions);
+            if (existingLegacy is null || existingLegacy.Channel != "stable" ||
+                Version.Parse(existingLegacy.CurrentVersion.TrimStart('v', 'V')) <= Version.Parse(manifest.CurrentVersion.TrimStart('v', 'V')))
+                await s3.UploadFileAsync(new PlondsS3ObjectUpload(legacyPath, legacyKey, "application/json"), cancellationToken).ConfigureAwait(false);
+        }
 
         return new PlondsPublishResult(
             ReleaseTag: releaseTag,
@@ -125,6 +153,25 @@ public sealed class PlondsPublisher
             FilesFolderUrl: s3.BuildPublicUrl(filesFolderKey),
             ChangedFileCount: changedFileCount,
             FilesFileCount: filesFileCount);
+    }
+
+    public static PlondsManifest CreateLegacyBootstrapManifest(PlondsManifest manifest)
+    {
+        // Old clients cannot update launcher-root files from Files.zip. Force their existing EXE fallback.
+        var downloads = manifest.Downloads;
+        return manifest with
+        {
+            RequiresCleanInstall = true,
+            Downloads = downloads is null ? null : downloads with
+            {
+                GitHub = downloads.GitHub with { ChangedZipUrl = string.Empty, FilesZipUrl = string.Empty },
+                S3 = downloads.S3 with
+                {
+                    ChangedZipKey = string.Empty, ChangedZipUrl = string.Empty, ChangedFolderUrl = string.Empty,
+                    FilesZipKey = string.Empty, FilesZipUrl = string.Empty, FilesFolderUrl = string.Empty
+                }
+            }
+        };
     }
 
     private static async Task<int> UploadDirectoryAsync(

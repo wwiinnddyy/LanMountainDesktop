@@ -1103,5 +1103,10 @@
     "component.file_manager": "File Manager",
     "component.zhijiao_hub": "ZhiJiao Hub",
     "component.juya_news": "Juya News",
-    "component.notification_box": "Notification Box"
+    "component.notification_box": "Notification Box",
+    "settings.update.channel_label": "Update channel",
+    "settings.update.channel_description": "Stable is the default. Choose Preview to receive prerelease versions.",
+    "settings.update.channel_stable": "Stable",
+    "settings.update.channel_preview": "Preview",
+    "settings.update.install_after_exit": "The update is ready. Installation will finish after the desktop exits."
 }

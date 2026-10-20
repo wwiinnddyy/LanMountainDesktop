@@ -860,5 +860,10 @@
     "component.file_manager": "파일 관리자",
     "component.zhijiao_hub": "智教Hub",
     "component.juya_news": "橘鸦早报",
-    "component.notification_box": "알림 상자"
+    "component.notification_box": "알림 상자",
+    "settings.update.channel_label": "업데이트 채널",
+    "settings.update.channel_description": "기본값은 안정 버전입니다. 미리 보기를 선택하면 사전 릴리스를 받을 수 있습니다.",
+    "settings.update.channel_stable": "안정 버전",
+    "settings.update.channel_preview": "미리 보기",
+    "settings.update.install_after_exit": "업데이트 준비가 완료되었습니다. 데스크톱이 종료된 후 설치가 완료됩니다."
 }

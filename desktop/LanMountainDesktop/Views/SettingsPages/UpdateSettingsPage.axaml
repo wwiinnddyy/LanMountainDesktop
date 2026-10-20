@@ -127,6 +127,19 @@
               </ui:FASettingsExpander.Footer>
             </ui:FASettingsExpander>
 
+            <ui:FASettingsExpander Classes="settings-expander-card" Header="{Binding ChannelLabel}" Description="{Binding ChannelDescription}">
+              <ui:FASettingsExpander.Footer>
+                <ComboBox ItemsSource="{Binding ChannelOptions}" SelectedItem="{Binding SelectedChannel}"
+                          IsEnabled="{Binding CanChangeChannel}" AutomationProperties.Name="{Binding ChannelLabel}">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:SelectionOption">
+                      <TextBlock Text="{Binding Label}" TextWrapping="Wrap" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+              </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
+
             <ui:FASettingsExpander Classes="settings-expander-card" Header="{Binding ModeLabel}" Description="{Binding ModeDescription}" IsVisible="{Binding SmartUpdateEnabled}">
               <ui:FASettingsExpander.IconSource>
                 <ui:FAFontIconSource Glyph="&#xF08E8;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />

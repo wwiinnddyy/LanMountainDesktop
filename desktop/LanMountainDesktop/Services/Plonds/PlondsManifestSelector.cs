@@ -2,10 +2,14 @@ namespace LanMountainDesktop.Services.Plonds;
 
 internal static class PlondsManifestSelector
 {
-    public static IReadOnlyList<PlondsManifestCandidate> SelectHighestVersionCandidates(IEnumerable<PlondsManifestCandidate> candidates)
+    public static IReadOnlyList<PlondsManifestCandidate> SelectHighestVersionCandidates(
+        IEnumerable<PlondsManifestCandidate> candidates, string? platform = null, string? channel = null)
     {
         var usableCandidates = candidates
             .Where(candidate => TryParseVersion(candidate.Manifest.CurrentVersion, out _))
+            .Where(candidate => platform is null || string.Equals(candidate.Manifest.Platform, platform, StringComparison.OrdinalIgnoreCase))
+            .Where(candidate => channel is null || string.Equals(candidate.Manifest.Channel, channel, StringComparison.OrdinalIgnoreCase) ||
+                (channel == UpdateSettingsValues.ChannelPreview && candidate.Manifest.Channel == UpdateSettingsValues.ChannelStable))
             .OrderByDescending(candidate => ParseVersion(candidate.Manifest.CurrentVersion))
             .ThenByDescending(candidate => candidate.Source.Priority)
             .ToArray();

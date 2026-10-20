@@ -141,11 +141,15 @@ C:\Program Files\LanMountainDesktop\
 
 #### 更新流程
 
-1. Host 调用更新源检查更新并按频道过滤版本
-2. Host 下载 PLONDS file map、签名和对象文件到 `.Launcher/update/incoming/`
-3. Host 写入 `deployment.lock` 并调用 `UpdateInstallGateway`
-4. Host 验证签名和文件 hash，创建新 `app-*` 目录，切换 `.current`
-5. Host 写入快照并清理 incoming；旧版本按启动清理策略处理
+当前智慧更新主路径由 `SettingsDomainServices.cs` 的 `UpdateSettingsService` 调用
+`Services/Plonds/` 完成发现、包下载和部署；`Services/Update/` 的 orchestrator
+不是这条主路径的统一状态源，GitHub EXE 回退才会调用其安装网关。
+
+2026-10-07 修复后，PLONDS 先按平台/通道筛选目标并验证增量基线。
+完整包需要更新安装根目录时交给包内 NativeAOT 维护安装器，
+等待 Host 退出后部署并写入结果回执；应用部署须通过完整文件校验才提交活动标记。
+发布使用明确的工作流衔接，分平台/通道 latest 通过匿名公开下载验证后才提升。
+证据、修复范围及验收命令见 [更新链路审计](../audits/2026-10-07-update-chain.md)。
 
 #### 版本回退
 
@@ -153,7 +157,8 @@ C:\Program Files\LanMountainDesktop\
 运行主程序，打开设置页中的更新区域触发回滚。
 ```
 
-回退会切换到上一个有效版本,并保留快照记录。
+回退使用部署提交时写入的有效快照；包含启动器/运行时根目录文件的快照，
+由维护安装器在 Host 退出后恢复，应用目录快照使用 Host 回滚网关。
 
 ## English
 

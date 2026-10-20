@@ -772,11 +772,11 @@ internal sealed class PrivacySettingsService : IPrivacySettingsService
     }
 }
 
-internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposable
+internal sealed partial class UpdateSettingsService : IUpdateSettingsService, IDisposable
 {
     private readonly ISettingsService _settingsService;
     private readonly GitHubReleaseUpdateService _githubReleaseUpdateService = new("wwiinnddyy", "LanMountainDesktop");
-    private readonly IPlondsService _plondsService;
+    private IPlondsService _plondsService;
     private readonly PlondsPreparedPackageInstaller _plondsInstaller = new();
     private readonly UpdateInstallGateway _plondsUpdateInstallGateway = new();
     private readonly Lazy<UpdateOrchestrator> _orchestrator;
@@ -793,10 +793,12 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         IPlondsService? plondsService = null)
     {
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
-        _plondsService = plondsService ?? PlondsClientServiceFactory.CreateDefault();
+        _ownsPlondsService = plondsService is null;
+        _plondsService = plondsService ?? PlondsClientServiceFactory.CreateDefault(channel: Get().UpdateChannel);
         _orchestrator = new Lazy<UpdateOrchestrator>(
             orchestratorFactory ?? HostUpdateOrchestratorProvider.GetOrCreate,
             LazyThreadSafetyMode.ExecutionAndPublication);
+        RestorePendingPlonds();
     }
 
     public UpdatePhase CurrentPhase => IsPlondsSelected()
@@ -836,8 +838,8 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         // 智慧更新：检查/下载默认走 PLONDS（S3 优先）；GitHub 仅作自动回退。
         // UseGhProxyMirror 仅影响 GitHub 全量安装包回退路径，不作为用户“下载源”选项暴露。
         return new UpdateSettingsState(
-            IncludePrereleaseUpdates: false,
-            UpdateChannel: UpdateSettingsValues.ChannelStable,
+            IncludePrereleaseUpdates: UpdateSettingsValues.NormalizeChannel(snapshot.UpdateChannel, snapshot.IncludePrereleaseUpdates) == UpdateSettingsValues.ChannelPreview,
+            UpdateChannel: UpdateSettingsValues.NormalizeChannel(snapshot.UpdateChannel, snapshot.IncludePrereleaseUpdates),
             UpdateMode: UpdateSettingsValues.NormalizeMode(snapshot.UpdateMode),
             UpdateDownloadSource: UpdateSettingsValues.DownloadSourcePlonds,
             UpdateDownloadThreads: UpdateSettingsValues.NormalizeDownloadThreads(snapshot.UpdateDownloadThreads),
@@ -854,8 +856,9 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
     {
         var snapshot = _settingsService.Load();
         // 智慧更新：固定 stable + PLONDS 主路径；GitHub 仅自动回退，不作为用户可选源。
-        var normalizedChannel = UpdateSettingsValues.ChannelStable;
-        snapshot.IncludePrereleaseUpdates = false;
+        var normalizedChannel = UpdateSettingsValues.NormalizeChannel(state.UpdateChannel);
+        var channelChanged = !string.Equals(Get().UpdateChannel, normalizedChannel, StringComparison.Ordinal);
+        snapshot.IncludePrereleaseUpdates = normalizedChannel == UpdateSettingsValues.ChannelPreview;
         snapshot.UpdateChannel = normalizedChannel;
         snapshot.UpdateMode = UpdateSettingsValues.NormalizeMode(state.UpdateMode);
         snapshot.UpdateDownloadSource = UpdateSettingsValues.DownloadSourcePlonds;
@@ -895,32 +898,41 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
                 nameof(AppSettingsSnapshot.LastUpdateCheckUtcMs),
                 nameof(AppSettingsSnapshot.PendingUpdateSha256)
             ]);
+        if (channelChanged && _ownsPlondsService)
+        {
+            _plondsOperationCts?.Cancel();
+            Interlocked.Increment(ref _plondsOperationVersion);
+            ClearPlondsPending();
+            if (_plondsService is IDisposable oldService) oldService.Dispose();
+            _plondsService = PlondsClientServiceFactory.CreateDefault(channel: normalizedChannel);
+            TransitionPlonds(UpdatePhase.Idle);
+        }
     }
 
     public Task<UpdateCheckReport> CheckAsync(CancellationToken cancellationToken = default)
     {
         return IsPlondsSelected()
-            ? CheckPlondsAsync(cancellationToken)
+            ? RunPlondsOperationAsync(CheckPlondsAsync, cancellationToken)
             : GetOrchestrator().CheckAsync(cancellationToken);
     }
 
     public Task<LanMountainDesktop.Services.Update.DownloadResult> DownloadAsync(CancellationToken cancellationToken = default)
     {
         return IsPlondsSelected()
-            ? DownloadPlondsAsync(cancellationToken)
+            ? RunPlondsOperationAsync(DownloadPlondsAsync, cancellationToken)
             : GetOrchestrator().DownloadAsync(cancellationToken);
     }
 
     public Task<InstallResult> InstallAsync(CancellationToken cancellationToken = default)
     {
         return IsPlondsSelected()
-            ? InstallPlondsAsync(cancellationToken)
+            ? RunPlondsOperationAsync(InstallPlondsAsync, cancellationToken)
             : GetOrchestrator().InstallAsync(cancellationToken);
     }
 
     public Task RollbackAsync(CancellationToken cancellationToken = default)
     {
-        return GetOrchestrator().RollbackAsync(cancellationToken);
+        return IsPlondsSelected() ? RollbackPlondsAsync(cancellationToken) : GetOrchestrator().RollbackAsync(cancellationToken);
     }
 
     public Task PauseAsync()
@@ -937,19 +949,18 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
             : GetOrchestrator().ResumeAsync(cancellationToken);
     }
 
-    public Task CancelAsync()
+    public async Task CancelAsync()
     {
         if (IsPlondsSelected())
         {
-            _pendingPlondsLatest = null;
-            _pendingPlondsCleanInstallCandidate = null;
-            _pendingPlondsInstallerManifest = null;
-            _pendingPlondsPackage = null;
-            TransitionPlonds(UpdatePhase.Idle);
-            return Task.CompletedTask;
+            if (_plondsMaintenanceScheduled)
+                throw new InvalidOperationException("The maintenance installer has already been scheduled.");
+            await StopPlondsOperationAsync(UpdatePhase.Idle).ConfigureAwait(false);
+            ClearPlondsPending();
+            return;
         }
 
-        return GetOrchestrator().CancelAsync();
+        await GetOrchestrator().CancelAsync().ConfigureAwait(false);
     }
 
     public Task AutoCheckIfEnabledAsync(CancellationToken cancellationToken = default)
@@ -1024,6 +1035,9 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
 
     public void Dispose()
     {
+        _plondsDisposed = true;
+        _plondsOperationCts?.Cancel();
+        if (_ownsPlondsService && _plondsService is IDisposable ownedService) ownedService.Dispose();
         _githubReleaseUpdateService.Dispose();
         if (_orchestrator.IsValueCreated && _orchestratorEventsSubscribed)
         {
@@ -1073,6 +1087,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         }
 
         var latest = await _plondsService.FindLatestAsync(currentVersion, cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
         if (!latest.Success)
         {
             _pendingPlondsLatest = null;
@@ -1084,7 +1099,9 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
             return new UpdateCheckReport(false, null, currentVersionText, null, null, null, null, null, null, latest.ErrorMessage);
         }
 
-        _pendingPlondsLatest = latest.IsUpdateAvailable ? latest : null;
+        _pendingPlondsLatest = latest.IsUpdateAvailable || Get().ForceUpdateReinstall
+            ? (latest.Candidates.Count > 0 ? latest : await _plondsService.FindLatestAsync(new Version(0, 0, 0), cancellationToken).ConfigureAwait(false))
+            : null;
         _pendingPlondsCleanInstallCandidate = _pendingPlondsLatest?.Candidates
             .FirstOrDefault(candidate => candidate.Manifest.RequiresCleanInstall);
         _pendingPlondsInstallerManifest = null;
@@ -1101,7 +1118,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
             : (UpdatePayloadKind?)null;
 
         return new UpdateCheckReport(
-            latest.IsUpdateAvailable,
+            latest.IsUpdateAvailable || Get().ForceUpdateReinstall,
             latest.LatestVersion?.ToString(),
             currentVersionText,
             payloadKind,
@@ -1133,9 +1150,16 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         TransitionPlonds(UpdatePhase.Downloading);
 
         // 1) Prefer PLONDS packages (S3 first, then GitHub PLONDS mirrors inside the service).
-        var result = await _plondsService
-            .FindAndPrepareLatestAsync(currentVersion, forceFull, cancellationToken)
-            .ConfigureAwait(false);
+        var transferVersion = _plondsOperationVersion;
+        var transferProgress = new Progress<DownloadProgressInfo>(report =>
+        {
+            if (transferVersion != _plondsOperationVersion || cancellationToken.IsCancellationRequested) return;
+            _progressChanged?.Invoke(new UpdateProgressReport(UpdatePhase.Downloading, "Downloading update package", report.Progress,
+                new DownloadProgressReport("PLONDS", report.DownloadedBytes, report.TotalBytes ?? 0, 0, report.Progress >= 1 ? 1 : 0, 1, report.Progress), null));
+        });
+        var result = await _plondsService.PrepareAsync(_pendingPlondsLatest, forceFull, Get().UpdateDownloadThreads,
+                transferProgress, cancellationToken).WaitAsync(cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
         if (result.Success && result.Package is not null)
         {
             _pendingPlondsInstallerManifest = null;
@@ -1146,7 +1170,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         }
 
         // 2) Full / clean / force reinstall: fall back to GitHub release installer assets.
-        if (forceFull)
+        if (_pendingPlondsLatest.Candidates.Count > 0)
         {
             var fallbackCandidate = _pendingPlondsCleanInstallCandidate
                                     ?? _pendingPlondsLatest.Candidates.FirstOrDefault();
@@ -1261,20 +1285,13 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         return new LanMountainDesktop.Services.Update.DownloadResult(true, download.FilePath, null, download.HashVerified);
     }
 
-    private Task PausePlondsAsync()
-    {
-        if (_plondsPhase.CanPause())
-        {
-            TransitionPlonds(UpdatePhase.PausedDownloading);
-        }
-
-        return Task.CompletedTask;
-    }
+    private Task PausePlondsAsync() => _plondsPhase.CanPause()
+        ? StopPlondsOperationAsync(UpdatePhase.PausedDownloading) : Task.CompletedTask;
 
     private async Task<LanMountainDesktop.Services.Update.DownloadResult> ResumePlondsAsync(CancellationToken cancellationToken)
     {
         return _plondsPhase is UpdatePhase.PausedDownloading
-            ? await DownloadPlondsAsync(cancellationToken).ConfigureAwait(false)
+            ? await RunPlondsOperationAsync(DownloadPlondsAsync, cancellationToken).ConfigureAwait(false)
             : new LanMountainDesktop.Services.Update.DownloadResult(false, null, $"Cannot resume in phase {_plondsPhase}.", false);
     }
 
@@ -1309,6 +1326,33 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         });
 
         var install = await _plondsInstaller.InstallAsync(_pendingPlondsPackage, launcherRoot, progress, cancellationToken).ConfigureAwait(false);
+        if (!install.Success && install.ErrorCode == "requires_clean_install")
+        {
+            var scheduled = new PlondsMaintenanceGateway().Schedule(_pendingPlondsPackage, launcherRoot);
+            if (scheduled.Success)
+            {
+                _plondsMaintenanceScheduled = true;
+                return scheduled;
+            }
+            if (_pendingPlondsLatest?.Candidates.FirstOrDefault() is { } candidate)
+            {
+                var download = await DownloadPlondsCleanInstallAsync(candidate, cancellationToken).ConfigureAwait(false);
+                if (download.Success) return await InstallPlondsCleanInstallAsync(cancellationToken).ConfigureAwait(false);
+            }
+            TransitionPlonds(UpdatePhase.Failed);
+            return scheduled;
+        }
+        if (!install.Success && _pendingPlondsPackage.Mode == PlondsPackageMode.Delta && _pendingPlondsLatest is not null)
+        {
+            var full = await _plondsService.PrepareAsync(_pendingPlondsLatest, true, Get().UpdateDownloadThreads, null, cancellationToken).ConfigureAwait(false);
+            if (full.Success && full.Package is not null)
+            {
+                _pendingPlondsPackage = full.Package;
+                SavePendingPlondsPackage(full.Package);
+                TransitionPlonds(UpdatePhase.Downloaded);
+                return await InstallPlondsAsync(cancellationToken).ConfigureAwait(false);
+            }
+        }
         if (!install.Success)
         {
             TransitionPlonds(UpdatePhase.Failed);
@@ -1316,7 +1360,8 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         }
 
         TransitionPlonds(UpdatePhase.Installed);
-        return new InstallResult(true, null, false);
+        ClearPlondsPending();
+        return new InstallResult(true, null, false, RequiresRestart: true);
     }
 
     private async Task<InstallResult> InstallPlondsCleanInstallAsync(CancellationToken cancellationToken)
@@ -1346,6 +1391,11 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
             return install;
         }
 
+        if (install.RequiresExit)
+        {
+            _plondsMaintenanceScheduled = true;
+            return install;
+        }
         TransitionPlonds(UpdatePhase.Installed);
         return install;
     }
@@ -1358,10 +1408,10 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
             return;
         }
 
-        var report = await CheckPlondsAsync(cancellationToken).ConfigureAwait(false);
+        var report = await CheckAsync(cancellationToken).ConfigureAwait(false);
         if (report.IsUpdateAvailable && _plondsPhase.CanDownload())
         {
-            await DownloadPlondsAsync(cancellationToken).ConfigureAwait(false);
+            await DownloadAsync(cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -1415,6 +1465,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
 
     private void SavePendingPlondsPackage(PlondsPreparedPackage package)
     {
+        SavePreparedState(package);
         var state = Get();
         Save(state with
         {
@@ -1428,6 +1479,8 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
 
     private void SavePendingPlondsInstaller(UpdateManifest manifest, string installerPath, string? sha256)
     {
+        File.WriteAllText(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(installerPath))!, "native-installer-state.json"),
+            System.Text.Json.JsonSerializer.Serialize(manifest));
         var state = Get();
         Save(state with
         {
@@ -1441,6 +1494,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
 
     private bool TryApplyPlondsOnExit()
     {
+        if (_plondsMaintenanceScheduled) return true;
         var settings = Get();
         if (!string.Equals(
                 UpdateSettingsValues.NormalizeMode(settings.UpdateMode),
@@ -1463,6 +1517,12 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
                         CancellationToken.None)
                     .GetAwaiter()
                     .GetResult();
+                if (!result.Success && result.ErrorCode == "requires_clean_install")
+                {
+                    var scheduled = new PlondsMaintenanceGateway().Schedule(_pendingPlondsPackage, launcherRoot);
+                    _plondsMaintenanceScheduled = scheduled.Success;
+                    return scheduled.Success;
+                }
                 return result.Success;
             }
 

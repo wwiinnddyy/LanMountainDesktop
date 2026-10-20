@@ -17,6 +17,20 @@ namespace LanMountainDesktop.Tests;
 public sealed class UpdateSettingsInterfaceTests
 {
     [AvaloniaFact]
+    public void PreviewChannelSelection_PersistsAndIsRestored()
+    {
+        var update = new FakeUpdateSettingsService();
+        using (var viewModel = new UpdateSettingsViewModel(new FakeSettingsFacade(update)))
+        {
+            viewModel.SelectedChannel = viewModel.ChannelOptions.Single(option => option.Value == UpdateSettingsValues.ChannelPreview);
+            Assert.Equal(UpdateSettingsValues.ChannelPreview, update.Get().UpdateChannel);
+            Assert.True(update.Get().IncludePrereleaseUpdates);
+        }
+        using var restored = new UpdateSettingsViewModel(new FakeSettingsFacade(update));
+        Assert.Equal(UpdateSettingsValues.ChannelPreview, restored.SelectedChannel?.Value);
+    }
+
+    [AvaloniaFact]
     public async Task UpdateSettingsViewModel_RoutesActionsThroughUpdateSettingsService()
     {
         var update = new FakeUpdateSettingsService();
@@ -608,4 +622,3 @@ public sealed class UpdateSettingsInterfaceTests
         public AppRenderBackendInfo GetRenderBackendInfo() => throw new NotSupportedException();
     }
 }
-

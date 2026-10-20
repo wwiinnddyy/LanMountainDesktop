@@ -61,7 +61,7 @@ public sealed class PlondsS3Client : IDisposable
         {
             try
             {
-                await UploadFileMultipartAsync(sourcePath, key, upload.ContentType, contentLength, cancellationToken).ConfigureAwait(false);
+                await UploadFileMultipartAsync(sourcePath, key, upload.ContentType, contentLength, payloadHash, cancellationToken).ConfigureAwait(false);
                 return;
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
@@ -91,9 +91,10 @@ public sealed class PlondsS3Client : IDisposable
         string key,
         string? contentType,
         long contentLength,
+        string payloadHash,
         CancellationToken cancellationToken)
     {
-        var uploadId = await CreateMultipartUploadAsync(key, contentType, cancellationToken).ConfigureAwait(false);
+        var uploadId = await CreateMultipartUploadAsync(key, contentType, payloadHash, cancellationToken).ConfigureAwait(false);
         var partCount = checked((int)((contentLength + options.MultipartPartSizeBytes - 1) / options.MultipartPartSizeBytes));
         var parts = new PlondsS3UploadedPart[partCount];
 
@@ -136,7 +137,7 @@ public sealed class PlondsS3Client : IDisposable
         }
     }
 
-    private async Task<string> CreateMultipartUploadAsync(string key, string? contentType, CancellationToken cancellationToken)
+    private async Task<string> CreateMultipartUploadAsync(string key, string? contentType, string payloadHash, CancellationToken cancellationToken)
     {
         var requestUri = BuildObjectUri(key, "uploads=");
         using var request = new HttpRequestMessage(HttpMethod.Post, requestUri);
@@ -309,7 +310,8 @@ public sealed class PlondsS3Client : IDisposable
         var key = NormalizeKey(upload.Key);
         var contentLength = new FileInfo(sourcePath).Length;
         var existing = await TryGetObjectInfoForUploadAsync(key, cancellationToken).ConfigureAwait(false);
-        if (existing?.ContentLength == contentLength)
+        if (existing?.ContentLength == contentLength && existing.ContentSha256 is not null &&
+            string.Equals(existing.ContentSha256, PayloadUtilities.ComputeSha256(sourcePath), StringComparison.OrdinalIgnoreCase))
         {
             Console.WriteLine($"Skipping S3 object {key}; existing object has matching size {FormatBytes(contentLength)}.");
             return false;
@@ -343,6 +345,7 @@ public sealed class PlondsS3Client : IDisposable
         {
             Content = content
         };
+        request.Headers.TryAddWithoutValidation("x-amz-meta-sha256", payloadHash);
         SignRequest(request, key, payloadHash, now);
 
         using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
@@ -388,7 +391,30 @@ public sealed class PlondsS3Client : IDisposable
         return new PlondsS3ObjectInfo(
             Key: normalizedKey,
             ContentLength: response.Content.Headers.ContentLength,
-            ETag: response.Headers.ETag?.Tag);
+            ETag: response.Headers.ETag?.Tag,
+            ContentSha256: response.Headers.TryGetValues("x-amz-meta-sha256", out var hashes) ? hashes.FirstOrDefault() : null);
+
+    }
+
+    public async Task<string?> ReadObjectJsonAsync(string key, CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, BuildObjectUri(key));
+        SignRequest(request, key, EmptyPayloadHash, DateTimeOffset.UtcNow);
+        using var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        if (response.StatusCode == HttpStatusCode.NotFound) return null;
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task VerifyPublicObjectAsync(string key, CancellationToken cancellationToken)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(20));
+        using var request = new HttpRequestMessage(HttpMethod.Head, BuildPublicUrl(key));
+        request.Headers.TryAddWithoutValidation("Cache-Control", "no-cache");
+        using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token).ConfigureAwait(false);
+        if (!response.IsSuccessStatusCode)
+            throw new InvalidOperationException($"Public download URL is unavailable: {BuildPublicUrl(key)} (HTTP {(int)response.StatusCode}).");
     }
 
     private async Task<PlondsS3ObjectInfo?> TryGetObjectInfoForUploadAsync(string key, CancellationToken cancellationToken)
@@ -449,8 +475,12 @@ public sealed class PlondsS3Client : IDisposable
         canonicalHeaders.Append("host:").Append(host).Append('\n');
         canonicalHeaders.Append("x-amz-content-sha256:").Append(payloadHash).Append('\n');
         canonicalHeaders.Append("x-amz-date:").Append(amzDate).Append('\n');
-
         var signedHeaders = "host;x-amz-content-sha256;x-amz-date";
+        if (request.Headers.TryGetValues("x-amz-meta-sha256", out var metadataHashes))
+        {
+            canonicalHeaders.Append("x-amz-meta-sha256:").Append(metadataHashes.First()).Append('\n');
+            signedHeaders += ";x-amz-meta-sha256";
+        }
         var canonicalRequest = string.Join('\n',
         [
             request.Method.Method,

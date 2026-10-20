@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using LanMountainDesktop.Shared.Contracts.Deployment;
 
 namespace LanMountainDesktop.Services;
 
@@ -19,15 +20,10 @@ internal static class PlatformIdentifiers
     /// <summary>资产名里的那个架构段：<c>arm64</c> / <c>x86</c>，其余一律落到 <c>x64</c>。</summary>
     public static string ArchitectureToken(Architecture architecture)
     {
-        return architecture switch
-        {
-            Architecture.Arm64 => "arm64",
-            Architecture.X86 => "x86",
-            _ => "x64"
-        };
+        return DeploymentPlatform.ArchitectureToken(architecture);
     }
 
-    public static string CurrentArchitectureToken => ArchitectureToken(RuntimeInformation.OSArchitecture);
+    public static string CurrentArchitectureToken => ArchitectureToken(RuntimeInformation.ProcessArchitecture);
 
     /// <summary>更新清单用的"os-架构"：如 <c>windows-x64</c>。</summary>
     public static string CurrentPlatformId

@@ -62,10 +62,6 @@ public sealed class RawPathContainmentRatchetTests
                 ("ObjectsDirectoryName", "比的是清单里的**相对键**是否落在 objects/ 命名空间下，前缀里已显式带分隔符；"
                     + "同文件 34 行那条真的路径包含必须走家。"),
             ],
-            ["FilesPackageInstaller.cs"] =
-            [
-                ("DeploymentDirectoryPrefix", "比的是相对路径开头的目录名前缀；同文件另一条真包含判定早已走家。"),
-            ],
             ["InstalledProductInspector.cs"] =
             [
                 ("DeploymentDirectoryPrefix", "比的是安装目录的**名字前缀**，用来挑出产品目录，不是父子路径判定。"),

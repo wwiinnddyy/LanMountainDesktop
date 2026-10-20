@@ -3,8 +3,18 @@ namespace LanMountainDesktop.Services.Plonds;
 internal sealed class PlondsHttpPackageDownloader(
     HttpClient httpClient,
     PlondsPackageStore packageStore,
-    PlondsVerifier verifier) : IPlondsPackageDownloader
+    PlondsVerifier verifier,
+    ResumableDownloadService? resumableDownloader = null) : IPlondsPackageDownloader
 {
+    private int _downloadThreads = UpdateSettingsValues.DefaultDownloadThreads;
+    private IProgress<DownloadProgressInfo>? _progress;
+
+    public void ConfigureTransfer(int downloadThreads, IProgress<DownloadProgressInfo>? progress)
+    {
+        _downloadThreads = UpdateSettingsValues.NormalizeDownloadThreads(downloadThreads);
+        _progress = progress;
+    }
+
     public Task<PlondsPreparedPackage> PrepareDeltaAsync(
         PlondsClientManifest manifest,
         PlondsSourceDescriptor source,
@@ -65,6 +75,7 @@ internal sealed class PlondsHttpPackageDownloader(
             {
                 AppLogger.Warn("PLONDS.Download", $"Package URL failed: {url.AbsoluteUri} -> {ex.Message}");
                 lastError = ex;
+                if (File.Exists(staging.PackageZipPath)) File.Delete(staging.PackageZipPath);
             }
         }
 
@@ -84,7 +95,7 @@ internal sealed class PlondsHttpPackageDownloader(
                     ? url.AbsoluteUri[..^PlondsWireFormat.FullPackageFileName.Length] + PlondsWireFormat.FullPackageFileNameLowerCase
                     : url.AbsoluteUri[..^PlondsWireFormat.FullPackageFileNameLowerCase.Length] + PlondsWireFormat.FullPackageFileName;
                 if (Uri.TryCreate(alt, UriKind.Absolute, out var altUri) &&
-                    !string.Equals(altUri.AbsoluteUri, url.AbsoluteUri, StringComparison.OrdinalIgnoreCase))
+                    !string.Equals(altUri.AbsoluteUri, url.AbsoluteUri, StringComparison.Ordinal))
                 {
                     yield return altUri;
                 }
@@ -94,6 +105,13 @@ internal sealed class PlondsHttpPackageDownloader(
 
     private async Task DownloadToFileAsync(Uri url, string destinationPath, CancellationToken cancellationToken)
     {
+        if (resumableDownloader is not null)
+        {
+            var download = await resumableDownloader.DownloadAsync(url.AbsoluteUri, destinationPath,
+                new DownloadOptions(MaxParallelSegments: _downloadThreads), _progress, cancellationToken).ConfigureAwait(false);
+            if (!download.Success) throw new IOException(download.ErrorMessage ?? "Package download failed.");
+            return;
+        }
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.TryAddWithoutValidation("Cache-Control", "no-cache");
         using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
@@ -115,7 +133,16 @@ internal sealed class PlondsHttpPackageDownloader(
             await using (var source = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false))
             await using (var target = File.Create(partialPath))
             {
-                await source.CopyToAsync(target, cancellationToken).ConfigureAwait(false);
+                var buffer = new byte[128 * 1024];
+                long transferred = 0;
+                int read;
+                while ((read = await source.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) > 0)
+                {
+                    await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+                    transferred += read;
+                    var total = response.Content.Headers.ContentLength;
+                    _progress?.Report(new DownloadProgressInfo(transferred, total, total > 0 ? (double)transferred / total.Value : 0, false, false));
+                }
             }
 
             File.Move(partialPath, destinationPath, overwrite: true);

@@ -104,6 +104,20 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private double _downloadThreadsSliderValue = UpdateSettingsValues.DefaultDownloadThreads;
 
     [ObservableProperty] private SelectionOption? _selectedMode;
+    [ObservableProperty] private SelectionOption? _selectedChannel;
+    [ObservableProperty] private string _channelLabel = string.Empty;
+    [ObservableProperty] private string _channelDescription = string.Empty;
+
+    public IReadOnlyList<SelectionOption> ChannelOptions { get; private set; } = [];
+    public bool CanChangeChannel => !IsBusy && !IsPaused;
+
+    partial void OnSelectedChannelChanged(SelectionOption? value)
+    {
+        if (_suppressPreferenceSave || value is null) return;
+        IsUpdateAvailable = false;
+        LatestVersionText = string.Empty;
+        SavePreferenceState();
+    }
 
     public IReadOnlyList<SelectionOption> ModeOptions { get; private set; } = [];
 
@@ -127,6 +141,7 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
     partial void OnCurrentPhaseChanged(UpdatePhase value)
     {
         OnPropertyChanged(nameof(IsBusy));
+        OnPropertyChanged(nameof(CanChangeChannel));
         OnPropertyChanged(nameof(IsPaused));
         OnPropertyChanged(nameof(CanCheck));
         OnPropertyChanged(nameof(CanDownload));
@@ -273,9 +288,19 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
     {
         StatusMessage = GetInstallingStatusText();
         var result = await _updateSettingsService.InstallAsync(CancellationToken.None);
+        if (result.RequiresExit)
+        {
+            StatusMessage = L("settings.update.install_after_exit", "The update is ready. Installation will finish after the desktop exits.");
+            App.CurrentHostApplicationLifecycle?.TryExit(new LanMountainDesktop.AirAppSdk.HostApplicationLifecycleRequest(
+                Source: "update.install", Reason: "Apply the prepared update with its maintenance installer."));
+            return;
+        }
         if (result.Success)
         {
             StatusMessage = GetInstallSuccessStatusText();
+            if (result.RequiresRestart)
+                App.CurrentHostApplicationLifecycle?.TryRestart(new LanMountainDesktop.AirAppSdk.HostApplicationLifecycleRequest(
+                    "update.restart", "Start the verified deployment that was just installed."));
         }
         else
         {
@@ -443,6 +468,18 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
 
     private void RefreshLocalizedText()
     {
+        ChannelLabel = L("settings.update.channel_label", "Update channel");
+        ChannelDescription = L("settings.update.channel_description", "Stable is recommended. Preview includes prerelease versions.");
+        var channel = SelectedChannel?.Value ?? _updateSettingsService.Get().UpdateChannel;
+        ChannelOptions = [
+            new(UpdateSettingsValues.ChannelStable, L("settings.update.channel_stable", "Stable")),
+            new(UpdateSettingsValues.ChannelPreview, L("settings.update.channel_preview", "Preview"))
+        ];
+        OnPropertyChanged(nameof(ChannelOptions));
+        var previousSuppression = _suppressPreferenceSave;
+        _suppressPreferenceSave = true;
+        SelectedChannel = ChannelOptions.FirstOrDefault(item => item.Value == channel) ?? ChannelOptions[0];
+        _suppressPreferenceSave = previousSuppression;
         PageTitle = L("settings.update.title", "更新");
         PageDescription = L("settings.update.description", "通过智慧更新检查并安装正式版。下载源由系统自动使用 S3/CDN，无需手动选择渠道。");
         StatusSectionHeader = L("settings.update.status_section_header", "更新状态");
@@ -528,12 +565,12 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
         var current = _updateSettingsService.Get();
         _updateSettingsService.Save(current with
         {
-            UpdateChannel = UpdateSettingsValues.ChannelStable,
+            UpdateChannel = SelectedChannel?.Value ?? UpdateSettingsValues.ChannelStable,
             UpdateDownloadSource = UpdateSettingsValues.DownloadSourcePlonds,
             UpdateMode = mode,
             UpdateDownloadThreads = UpdateSettingsValues.NormalizeDownloadThreads((int)Math.Round(DownloadThreadsSliderValue)),
             ForceUpdateReinstall = ForceReinstall,
-            IncludePrereleaseUpdates = false
+            IncludePrereleaseUpdates = SelectedChannel?.Value == UpdateSettingsValues.ChannelPreview
             // UseGhProxyMirror: keep existing value; only used when falling back to GitHub full installer.
         });
     }

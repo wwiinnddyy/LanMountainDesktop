@@ -58,7 +58,9 @@ internal sealed class CompositionVisualAnimationService
 
     public bool TryResetOffset(Control target)
     {
-        return TrySetOffset(target, new Point());
+        // Offset contains the layout position, not an additional animation translation.
+        // Keep the current arranged position until Canvas lays out the requested position.
+        return TrySetOffset(target, target.Bounds.Position);
     }
 
     private bool TryApply(Control target, Action<CompositionVisual> apply)

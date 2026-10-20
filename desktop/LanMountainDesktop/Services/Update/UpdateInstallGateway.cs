@@ -9,7 +9,8 @@ using LanMountainDesktop.Shared.Contracts.Update;
 
 namespace LanMountainDesktop.Services.Update;
 
-public sealed record InstallResult(bool Success, string? ErrorMessage, bool UserCancelledElevation, string? ErrorCode = null);
+public sealed record InstallResult(bool Success, string? ErrorMessage, bool UserCancelledElevation, string? ErrorCode = null,
+    bool RequiresExit = false, bool RequiresRestart = false);
 
 internal sealed class UpdateInstallGateway
 {
@@ -65,7 +66,7 @@ internal sealed class UpdateInstallGateway
                 return new InstallResult(false, "No pending installer found.", false, "staging_incomplete");
             }
 
-            var installerLaunched = LaunchFullInstaller(installerPath);
+            var installerLaunched = LaunchFullInstaller(installerPath, launcherRoot, deploymentLock!);
             if (!installerLaunched.Success)
             {
                 return installerLaunched;
@@ -79,7 +80,7 @@ internal sealed class UpdateInstallGateway
                 0,
                 0));
 
-            return new InstallResult(true, null, false);
+            return installerLaunched;
         }
         catch (OperationCanceledException)
         {
@@ -217,24 +218,18 @@ internal sealed class UpdateInstallGateway
         }
     }
 
-    private InstallResult LaunchFullInstaller(string installerPath)
+    private InstallResult LaunchFullInstaller(string installerPath, string launcherRoot, DeploymentLock deploymentLock)
     {
         try
         {
             AppLogger.Info("UpdateInstallGateway", "Launching full installer with elevation.");
-            var workingDir = Path.GetDirectoryName(installerPath) ?? AppContext.BaseDirectory;
-
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = installerPath,
-                WorkingDirectory = workingDir,
-                UseShellExecute = true,
-                Verb = OperatingSystem.IsWindows() ? "runas" : string.Empty,
-                Arguments = "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART"
-            };
+            if (!OperatingSystem.IsWindows()) return new InstallResult(false, "This installer is only supported on Windows.", false);
+            var hash = UpdateHash.ComputeSha256Hex(installerPath);
+            var receipt = Path.Combine(Path.GetDirectoryName(installerPath)!, LanMountainDesktop.Shared.Contracts.Deployment.DeploymentMaintenance.ReceiptFileName);
+            var startInfo = LegacyInstallerWorker.CreateStartInfo(installerPath, launcherRoot, deploymentLock.TargetVersion, hash, receipt);
 
             Process.Start(startInfo);
-            return new InstallResult(true, null, false);
+            return new InstallResult(true, null, false, RequiresExit: true);
         }
         catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
         {

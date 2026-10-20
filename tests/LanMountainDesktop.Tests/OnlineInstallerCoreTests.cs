@@ -193,7 +193,7 @@ public sealed class OnlineInstallerCoreTests : IDisposable
                   }
                 }
                 """)),
-            Path.Combine(_tempRoot, "staging"));
+            Path.Combine(_tempRoot, "staging"), null, "preview");
 
         var candidate = await client.FindLatestAsync(CancellationToken.None);
 
@@ -253,10 +253,12 @@ public sealed class OnlineInstallerCoreTests : IDisposable
             "s3",
             Path.Combine(_tempRoot, "Files.zip"),
             packageRoot,
-            CreateManifest());
+            CreateManifest() with { FilesMap = new Dictionary<string, InstallerPlondsFileEntry> {
+                ["LanMountainDesktop.exe"] = new("replace", LanMountainDesktop.Services.Update.UpdateHash.ComputeSha256Hex(Path.Combine(appRoot, "LanMountainDesktop.exe")), 4)
+            }});
         var target = Path.Combine(_tempRoot, "install", "LanMountainDesktop");
 
-        await new FilesPackageInstaller().InstallAsync(package, target, null, CancellationToken.None);
+        await new FilesPackageInstaller((_, _) => { }).InstallAsync(package, target, null, CancellationToken.None);
 
         var deployment = Directory.GetDirectories(target, "app-1.2.3-0").Single();
         Assert.True(File.Exists(Path.Combine(target, "LanMountainDesktop.Launcher.exe")));

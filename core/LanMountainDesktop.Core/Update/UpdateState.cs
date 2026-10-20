@@ -76,7 +76,7 @@ public static class UpdatePhaseExtensions
         phase is UpdatePhase.Downloaded;
 
     public static bool CanRollback(this UpdatePhase phase) =>
-        phase is UpdatePhase.Failed;
+        phase is UpdatePhase.Failed or UpdatePhase.Installed or UpdatePhase.Completed;
 
     public static bool CanPause(this UpdatePhase phase) =>
         phase is UpdatePhase.Downloading;

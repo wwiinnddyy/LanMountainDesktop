@@ -395,13 +395,16 @@ public sealed class InstallerDeploymentTransactionTests : IDisposable
             "test",
             Path.Combine(_tempRoot, "Files.zip"),
             packageRoot,
-            CreateManifest("3.0.0"));
+            CreateManifest("3.0.0") with { FilesMap = new Dictionary<string, InstallerPlondsFileEntry> {
+                [DeploymentLayout.GetHostExecutableName()] = new("replace", LanMountainDesktop.Services.Update.UpdateHash.ComputeSha256Hex(Path.Combine(appRoot, DeploymentLayout.GetHostExecutableName())), 4),
+                ["data.txt"] = new("replace", LanMountainDesktop.Services.Update.UpdateHash.ComputeSha256Hex(Path.Combine(appRoot, "data.txt")), 4)
+            }});
 
         var installPath = Path.Combine(_tempRoot, "install");
         var launcherRoot = Path.Combine(installPath, InstallerPathGuard.ApplicationDirectoryName);
 
         // Act
-        await new FilesPackageInstaller().InstallAsync(package, launcherRoot, null, CancellationToken.None);
+        await new FilesPackageInstaller((_, _) => { }).InstallAsync(package, launcherRoot, null, CancellationToken.None);
 
         // Assert: 应有 .current 标记
         var deploymentDir = Path.Combine(launcherRoot, "app-3.0.0-0");

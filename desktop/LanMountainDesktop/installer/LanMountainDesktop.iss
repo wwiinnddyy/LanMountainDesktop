@@ -424,6 +424,11 @@ procedure ApplySelectedInstallDirectory;
 var
   CurrentDir: String;
 begin
+  if ExpandConstant('{param:DIR|}') <> '' then
+  begin
+    WizardForm.DirEdit.Text := ExpandConstant('{param:DIR|}');
+    exit;
+  end;
   if not ExistingInstallFound then
   begin
     exit;

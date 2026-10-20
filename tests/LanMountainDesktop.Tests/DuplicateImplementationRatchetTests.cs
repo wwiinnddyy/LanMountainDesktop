@@ -729,7 +729,13 @@ public sealed class DuplicateImplementationRatchetTests
     // DesktopWidgetResizeHandle / 旧融合桌面管理器）后，OnPointerMoved / GetScreenPosition /
     // SetScreenPosition 三族因站点跌破 3 而消失；孤立树（HEAD + 本次补丁）实测 184，
     // 本次新增的桌面板实现没有新增漂移族（OnAddComponentClick / SendToBottom 都刻意没有沿用旧名字）。
-    private const int DriftFamilyCeiling = 184;
+    // 184 → 189（2026-10-20 更新链加固批次）：更新/部署/安装器新增了 6 个同名不同体的名字，
+    // PrepareAsync（服务/规划/下载三层）、CreateStartInfo（AirApp 进程/维护安装/接口）、
+    // Commit（部署事务/overlay 收尾/OOBE 提交）、Verify（部署校验/更新签名/清单签名）、
+    // Capture（遥测/启动执行快照/维护上下文）、ConfigureTransfer（下载接口/规划/实现）。
+    // 六者分属不同契约，不是同一事实的复制真源；以后若要收口，先统一签名校验与下载传输的语义，
+    // 别只按名字硬并（那会改变安全判定或下载行为）。
+    private const int DriftFamilyCeiling = 189;
 
     /// <summary>
     /// 漂移普查认领的声明处数下限（今天实测 5759）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。

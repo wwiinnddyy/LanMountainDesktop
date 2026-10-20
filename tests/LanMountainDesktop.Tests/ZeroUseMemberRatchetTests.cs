@@ -44,7 +44,7 @@ public sealed class ZeroUseMemberRatchetTests
         ["XiaomiWeatherCodeMapper.ResolveBucket"] = "WeatherConditionBucket 那 11 档在宿主内除本文件外零引用："
             + "整个按天气状况分档的维度没接进 UI，属实现了但没入口，接线与否是产品决定",
         ["WindowsShortcutWriter.TryCreateShortcut"] = "真 .lnk 写入器已实现且完整，安装器一处都没调（只交付 .url）：待办 G1-J",
-        ["AuthenticodeVerifier.VerifyFile"] = "Authenticode 校验器只有测试在调，生产零调用：待办 G1-AM",
+        // RuntimePrerequisite now verifies the Microsoft runtime installer before executing it.
         ["ManifestSignatureVerifier.GetSignatureUrl"] = "清单签名校验同上（.sig URL 拼法只被测试用）：待办 G1-AM",
         ["ServiceCollectionExtensions.AddLanMountainDesktopIpcHost"] = "Core 已发布包里的第二套 IPC 装配入口，"
             + "删除属跨二进制破坏性变更，跟 SDK 版本号一起定：待办 G1-U",

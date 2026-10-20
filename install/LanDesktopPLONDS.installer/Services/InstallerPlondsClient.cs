@@ -13,8 +13,7 @@ internal sealed class InstallerPlondsClient
 {
     private const string S3ManifestUrlEnvironmentVariable = "LANMOUNTAIN_PLONDS_S3_MANIFEST_URL";
     private const string GitHubManifestUrlEnvironmentVariable = "LANMOUNTAIN_PLONDS_GITHUB_MANIFEST_URL";
-    private const string DefaultS3ManifestUrl = "https://cn-nb1.rains3.com/lmdesktop/lanmountain/update/plonds/PLONDS.json";
-    private const string DefaultGitHubManifestUrl = "https://github.com/wwiinnddyy/LanMountainDesktop/releases/latest/download/PLONDS.json";
+    private const string DefaultGitHubManifestUrl = "https://api.github.com/repos/wwiinnddyy/LanMountainDesktop/releases?per_page=50";
 
     /// <summary>下载最大重试次数（每 URL）。</summary>
     internal const int MaxDownloadRetries = 3;
@@ -28,6 +27,7 @@ internal sealed class InstallerPlondsClient
     private readonly HttpClient _httpClient;
     private readonly string _stagingRoot;
     private readonly Func<int, TimeSpan>? _retryDelayFactory;
+    private readonly string _channel;
 
     /// <summary>
     /// 生产构造函数。
@@ -40,19 +40,22 @@ internal sealed class InstallerPlondsClient
     /// <summary>
     /// 内部构造函数，允许注入重试延迟策略（用于测试）。
     /// </summary>
-    internal InstallerPlondsClient(HttpClient httpClient, string stagingRoot, Func<int, TimeSpan>? retryDelayFactory)
+    internal InstallerPlondsClient(HttpClient httpClient, string stagingRoot, Func<int, TimeSpan>? retryDelayFactory, string channel = "stable")
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _stagingRoot = stagingRoot ?? throw new ArgumentNullException(nameof(stagingRoot));
         _retryDelayFactory = retryDelayFactory;
+        _channel = channel;
     }
 
-    public static IReadOnlyList<InstallerPlondsSource> CreateBuiltInSources()
+    public static IReadOnlyList<InstallerPlondsSource> CreateBuiltInSources(string channel = "stable")
     {
         return
         [
-            new("s3", "s3", PlondsManifestValues.ResolveManifestUrl(S3ManifestUrlEnvironmentVariable, DefaultS3ManifestUrl), 100),
-            new("github", "github", PlondsManifestValues.ResolveManifestUrl(GitHubManifestUrlEnvironmentVariable, DefaultGitHubManifestUrl), 50)
+            new("s3", "s3", PlondsManifestValues.ResolveManifestUrl(S3ManifestUrlEnvironmentVariable,
+                $"https://cn-nb1.rains3.com/lmdesktop/lanmountain/update/plonds/{DeploymentPlatform.Current}/{channel}/PLONDS.json"), 100),
+            new("github", string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(GitHubManifestUrlEnvironmentVariable)) ? "github-api" : "github",
+                PlondsManifestValues.ResolveManifestUrl(GitHubManifestUrlEnvironmentVariable, DefaultGitHubManifestUrl), 50)
         ];
     }
 
@@ -62,7 +65,7 @@ internal sealed class InstallerPlondsClient
     /// </summary>
     public async Task<InstallerPlondsCandidate> FindLatestAsync(CancellationToken cancellationToken)
     {
-        var sources = CreateBuiltInSources().ToList();
+        var sources = CreateBuiltInSources(_channel).ToList();
         var candidates = new List<InstallerPlondsCandidate>();
         var probeReport = new InstallerSourceProbeReport();
 
@@ -98,6 +101,9 @@ internal sealed class InstallerPlondsClient
 
         var bestCandidate = candidates
             .Where(candidate => SemanticVersion.TryParse(candidate.Manifest.CurrentVersion, out _))
+            .Where(candidate => string.Equals(candidate.Manifest.Platform, DeploymentPlatform.Current, StringComparison.OrdinalIgnoreCase))
+            .Where(candidate => string.Equals(candidate.Manifest.Channel, _channel, StringComparison.OrdinalIgnoreCase) ||
+                (_channel == "preview" && candidate.Manifest.Channel == "stable"))
             .OrderByDescending(candidate => SemanticVersion.Parse(candidate.Manifest.CurrentVersion))
             .ThenByDescending(candidate => candidate.Source.Priority)
             .FirstOrDefault();
@@ -220,11 +226,48 @@ internal sealed class InstallerPlondsClient
         InstallerPlondsSource source,
         CancellationToken cancellationToken)
     {
+        if (source.Kind == "github-api")
+        {
+            using var apiTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            apiTimeout.CancelAfter(TimeSpan.FromSeconds(ManifestFetchTimeoutSeconds));
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, source.ManifestUrl);
+                request.Headers.TryAddWithoutValidation("User-Agent", DeploymentLayout.HostExecutableBaseName);
+                using var apiResponse = await _httpClient.SendAsync(request, apiTimeout.Token).ConfigureAwait(false);
+                apiResponse.EnsureSuccessStatusCode();
+                var json = await apiResponse.Content.ReadAsStringAsync(apiTimeout.Token).ConfigureAwait(false);
+                foreach (var url in ReleaseManifestLocator.SelectAssetUrls(json, DeploymentPlatform.Current, _channel == "preview"))
+                {
+                    try { return await GetManifestAsync(source with { Kind = "github", ManifestUrl = url }, cancellationToken).ConfigureAwait(false); }
+                    catch (Exception ex) when (ex is HttpRequestException or JsonException) { }
+                }
+                throw new InvalidDataException("No compatible release manifest is available in this channel.");
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                throw new HttpRequestException("GitHub release discovery timed out.");
+            }
+        }
         using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(ManifestFetchTimeoutSeconds));
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
-        using var response = await _httpClient.GetAsync(source.ManifestUrl, HttpCompletionOption.ResponseHeadersRead, linkedCts.Token)
-            .ConfigureAwait(false);
+        HttpResponseMessage response;
+        try
+        {
+            response = await _httpClient.GetAsync(source.ManifestUrl, HttpCompletionOption.ResponseHeadersRead, linkedCts.Token).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode && source.Id == "s3" && source.ManifestUrl.Contains("/plonds/", StringComparison.Ordinal))
+            {
+                response.Dispose();
+                var marker = source.ManifestUrl.IndexOf("/plonds/", StringComparison.Ordinal) + "/plonds/".Length;
+                response = await _httpClient.GetAsync(source.ManifestUrl[..marker] + "PLONDS.json", HttpCompletionOption.ResponseHeadersRead, linkedCts.Token).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new HttpRequestException("Update manifest discovery timed out.");
+        }
+        using var responseLease = response;
         response.EnsureSuccessStatusCode();
 
         await using var stream = await response.Content.ReadAsStreamAsync(linkedCts.Token).ConfigureAwait(false);

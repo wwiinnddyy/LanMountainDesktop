@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using LanMountainDesktop.Shared.IO;
 
 namespace LanMountainDesktop.Services.Plonds;
 
@@ -32,11 +33,18 @@ internal sealed class PlondsSourceStore
             return [];
         }
 
-        await using var stream = File.OpenRead(_sourceFilePath);
-        var document = await JsonSerializer.DeserializeAsync<PlondsSourceStoreDocument>(stream, JsonOptions, cancellationToken)
-            .ConfigureAwait(false);
-
-        return document?.Sources ?? [];
+        try
+        {
+            await using var stream = File.OpenRead(_sourceFilePath);
+            var document = await JsonSerializer.DeserializeAsync<PlondsSourceStoreDocument>(stream, JsonOptions, cancellationToken)
+                .ConfigureAwait(false);
+            return document?.Sources ?? [];
+        }
+        catch (Exception ex) when (ex is IOException or JsonException)
+        {
+            AppLogger.Warn("PLONDS.Source", $"Ignoring unreadable source cache: {ex.Message}");
+            return [];
+        }
     }
 
     public async Task SaveAsync(IEnumerable<PlondsSourceDescriptor> sources, CancellationToken cancellationToken)
@@ -49,8 +57,8 @@ internal sealed class PlondsSourceStore
 
         var normalized = new PlondsSourceRegistry(sources).Sources.ToArray();
         var document = new PlondsSourceStoreDocument(normalized);
-        await using var stream = File.Create(_sourceFilePath);
-        await JsonSerializer.SerializeAsync(stream, document, JsonOptions, cancellationToken).ConfigureAwait(false);
+        using var content = new MemoryStream(JsonSerializer.SerializeToUtf8Bytes(document, JsonOptions));
+        await AtomicFileWriter.WriteStreamAsync(_sourceFilePath, content, "PLONDS.Source", cancellationToken).ConfigureAwait(false);
     }
 
     private sealed record PlondsSourceStoreDocument(IReadOnlyList<PlondsSourceDescriptor> Sources);

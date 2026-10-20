@@ -1,7 +1,10 @@
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Rendering.Composition;
+using Avalonia.Threading;
 using LanMountainDesktop.DesktopEditing;
 using Xunit;
 
@@ -9,6 +12,59 @@ namespace LanMountainDesktop.Tests;
 
 public sealed class DesktopEditOverlayPresenterTests
 {
+    [AvaloniaTheory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void UpdatingVisibleOverlayPreservesLayoutOffsetsUntilNextRender(bool movePreview, bool moveCandidate)
+    {
+        var presenter = new DesktopEditOverlayPresenter();
+        var root = Assert.IsType<Canvas>(presenter.Root);
+        var previewRect = new Rect(120, 180, 180, 120);
+        var candidateRect = new Rect(128, 192, 200, 140);
+        presenter.SetViewportSize(new Size(640, 480));
+        presenter.SetPreviewRect(previewRect);
+        presenter.SetCandidateRect(candidateRect);
+        presenter.Show();
+
+        var window = new Window { Width = 640, Height = 480, Content = root };
+        window.Show();
+        try
+        {
+            RenderFrame();
+            var ghost = root.Children.OfType<DesktopEditGhostView>().Single();
+            var candidate = root.Children.OfType<Border>().Single(child => child is not DesktopEditGhostView);
+            var ghostVisual = Assert.IsAssignableFrom<CompositionVisual>(ElementComposition.GetElementVisual(ghost));
+            var candidateVisual = Assert.IsAssignableFrom<CompositionVisual>(ElementComposition.GetElementVisual(candidate));
+            Assert.Equal(previewRect.Position, new Point(ghostVisual.Offset.X, ghostVisual.Offset.Y));
+            Assert.Equal(candidateRect.Position, new Point(candidateVisual.Offset.X, candidateVisual.Offset.Y));
+
+            var nextPreviewRect = movePreview ? new Rect(232, 248, 180, 120) : previewRect;
+            var nextCandidateRect = moveCandidate ? new Rect(240, 256, 200, 140) : candidateRect;
+            presenter.SetPreviewRect(nextPreviewRect);
+            presenter.SetCandidateRect(nextCandidateRect);
+
+            // The compositor must keep the last rendered position until Canvas has arranged the next frame.
+            Assert.Equal(previewRect.Position, new Point(ghostVisual.Offset.X, ghostVisual.Offset.Y));
+            Assert.Equal(candidateRect.Position, new Point(candidateVisual.Offset.X, candidateVisual.Offset.Y));
+
+            RenderFrame();
+            Assert.Equal(nextPreviewRect.Position, new Point(ghostVisual.Offset.X, ghostVisual.Offset.Y));
+            Assert.Equal(nextCandidateRect.Position, new Point(candidateVisual.Offset.X, candidateVisual.Offset.Y));
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    private static void RenderFrame()
+    {
+        Dispatcher.UIThread.RunJobs();
+        AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+        Dispatcher.UIThread.RunJobs();
+    }
+
     [AvaloniaFact]
     public void CompositionOffsetHelperFallsBackWhenVisualIsUnavailable()
     {

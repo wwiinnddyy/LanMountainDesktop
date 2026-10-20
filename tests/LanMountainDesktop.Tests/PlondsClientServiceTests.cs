@@ -134,7 +134,7 @@ public sealed class PlondsClientServiceTests : IDisposable
             new PlondsManifestClient(httpClient),
             new PlondsDownloadPlanner(downloader));
 
-        var result = await service.FindAndPrepareLatestAsync(CancellationToken.None);
+        var result = await service.FindAndPrepareLatestAsync(new Version(1, 0, 0), CancellationToken.None);
 
         Assert.True(result.Success);
         Assert.Equal("1.3.0", result.Package?.Version.ToString());
@@ -149,7 +149,7 @@ public sealed class PlondsClientServiceTests : IDisposable
 
         Assert.Equal(2, sources.Count);
         Assert.Contains(sources, source => source.Id == "s3" && source.Kind == "s3" && source.ManifestUrl.EndsWith("/PLONDS.json", StringComparison.Ordinal));
-        Assert.Contains(sources, source => source.Id == "github" && source.Kind == "github" && source.ManifestUrl.EndsWith("/PLONDS.json", StringComparison.Ordinal));
+        Assert.Contains(sources, source => source.Id == "github" && source.Kind == "github-api" && source.ManifestUrl.Contains("api.github.com", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -205,7 +205,7 @@ public sealed class PlondsClientServiceTests : IDisposable
             new PlondsManifestClient(httpClient),
             new PlondsDownloadPlanner(downloader));
 
-        var result = await service.FindAndPrepareLatestAsync(new Version(1, 5, 0), CancellationToken.None);
+        var result = await service.FindAndPrepareLatestAsync(new Version(1, 0, 0), CancellationToken.None);
 
         Assert.True(result.Success);
         Assert.Equal("github", downloader.SuccessfulSourceId);
@@ -427,7 +427,8 @@ public sealed class PlondsClientServiceTests : IDisposable
         Assert.Equal("keep", File.ReadAllText(Path.Combine(target, "keep.txt")));
         Assert.False(File.Exists(Path.Combine(target, "delete.txt")));
         Assert.True(File.Exists(Path.Combine(target, ".current")));
-        Assert.True(File.Exists(Path.Combine(currentDeployment, ".destroy")));
+        Assert.False(File.Exists(Path.Combine(currentDeployment, ".destroy")));
+        Assert.NotEmpty(Directory.GetFiles(LanMountainDesktop.Shared.Contracts.Update.UpdatePaths.GetSnapshotsDirectory(launcherRoot), "*.json"));
     }
 
     [Fact]
@@ -448,6 +449,15 @@ public sealed class PlondsClientServiceTests : IDisposable
         File.WriteAllText(Path.Combine(fullAppDirectory, ".current"), string.Empty);
         File.WriteAllText(Path.Combine(fullAppDirectory, "LanMountainDesktop.exe"), "new-exe");
         File.WriteAllText(Path.Combine(fullAppDirectory, "app.dll"), "new");
+
+        File.WriteAllText(Path.Combine(launcherRoot, "LanMountainDesktop.Launcher.exe"), "launcher");
+        File.WriteAllText(Path.Combine(launcherRoot, "LanMountainDesktop.AirAppRuntime.exe"), "runtime");
+        var manifestPath = Path.Combine(_tempRoot, "PLONDS.json");
+        var manifest = CreateManifest("1.2.0") with { FilesMap = new Dictionary<string, PlondsClientFileEntry> {
+            ["LanMountainDesktop.exe"] = new("replace", LanMountainDesktop.Services.Update.UpdateHash.ComputeSha256Hex(Path.Combine(fullAppDirectory, "LanMountainDesktop.exe")), 7),
+            ["app.dll"] = new("replace", LanMountainDesktop.Services.Update.UpdateHash.ComputeSha256Hex(Path.Combine(fullAppDirectory, "app.dll")), 3)
+        }};
+        File.WriteAllText(manifestPath, System.Text.Json.JsonSerializer.Serialize(manifest));
 
         var package = new PlondsPreparedPackage(
             new Version(1, 2, 0),
@@ -470,7 +480,8 @@ public sealed class PlondsClientServiceTests : IDisposable
         Assert.Equal("new", File.ReadAllText(Path.Combine(target, "app.dll")));
         Assert.False(File.Exists(Path.Combine(target, "LanMountainDesktop.Launcher.exe")));
         Assert.True(File.Exists(Path.Combine(target, ".current")));
-        Assert.True(File.Exists(Path.Combine(currentDeployment, ".destroy")));
+        Assert.False(File.Exists(Path.Combine(currentDeployment, ".destroy")));
+        Assert.NotEmpty(Directory.GetFiles(LanMountainDesktop.Shared.Contracts.Update.UpdatePaths.GetSnapshotsDirectory(launcherRoot), "*.json"));
     }
 
     private static PlondsClientManifest CreateManifest(

@@ -11,14 +11,16 @@ internal static class InstallerPlondsUrlResolver
 
         if (sourceKind is "s3")
         {
+            urls.Add(LanMountainDesktop.Shared.Contracts.Deployment.ReleaseManifestLocator.ObjectUrl(
+                source.ManifestUrl, manifest.Downloads?.S3?.Bucket, manifest.Downloads?.S3?.FilesZipKey));
             urls.Add(manifest.Downloads?.S3?.FilesZipUrl);
         }
-        else if (sourceKind is "github")
+        else if (sourceKind is "github" or "github-api")
         {
             urls.Add(manifest.Downloads?.GitHub?.FilesZipUrl);
         }
 
-        urls.Add(DerivePackageUrl(source.ManifestUrl));
+        if (sourceKind != "github-api") urls.Add(DerivePackageUrl(source.ManifestUrl));
         urls.Add(manifest.Downloads?.S3?.FilesZipUrl);
         urls.Add(manifest.Downloads?.GitHub?.FilesZipUrl);
 

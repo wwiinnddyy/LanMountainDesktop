@@ -10,7 +10,8 @@ internal sealed class OnlineInstallService(
     FilesPackageInstaller packageInstaller,
     IPrivacyDeviceIdentityProvider privacyIdentity,
     InstalledProductInspector installedProductInspector,
-    IncrementalPlanBuilder incrementalPlanBuilder) : IOnlineInstallService
+    IncrementalPlanBuilder incrementalPlanBuilder,
+    Func<PreparedFilesPackage, CancellationToken, Task>? ensureRuntime = null) : IOnlineInstallService
 {
     private InstallerPlondsCandidate? _latestCandidate;
 
@@ -22,6 +23,7 @@ internal sealed class OnlineInstallService(
         {
             Timeout = Timeout.InfiniteTimeSpan
         };
+        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", DeploymentLayout.HostExecutableBaseName);
         var stagingRoot = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             UserDataRoot.FolderName,
@@ -32,7 +34,7 @@ internal sealed class OnlineInstallService(
             new FilesPackageInstaller(),
             privacyIdentity,
             new InstalledProductInspector(),
-            new IncrementalPlanBuilder());
+            new IncrementalPlanBuilder(), RuntimePrerequisite.EnsureAsync);
     }
 
     public async Task<OnlineInstallPackageInfo> CheckLatestAsync(CancellationToken cancellationToken)
@@ -64,6 +66,7 @@ internal sealed class OnlineInstallService(
         _ = privacyIdentity.GetOrCreateDeviceId();
         var candidate = _latestCandidate ?? await plondsClient.FindLatestAsync(cancellationToken).ConfigureAwait(false);
         var package = await plondsClient.DownloadAndPrepareFullPackageAsync(candidate, progress, cancellationToken).ConfigureAwait(false);
+        if (ensureRuntime is not null) await ensureRuntime(package, cancellationToken).ConfigureAwait(false);
         await packageInstaller.InstallAsync(package, installPath, options, progress, cancellationToken).ConfigureAwait(false);
     }
 
@@ -111,6 +114,7 @@ internal sealed class OnlineInstallService(
 
         // 3. 下载并准备完整包
         var package = await plondsClient.DownloadAndPrepareFullPackageAsync(candidate, progress, cancellationToken).ConfigureAwait(false);
+        if (ensureRuntime is not null) await ensureRuntime(package, cancellationToken).ConfigureAwait(false);
 
         // 4. 通过 FilesPackageInstaller 部署（自增目录命名避免冲突）
         await packageInstaller.InstallAsync(package, launcherRoot, progress, cancellationToken).ConfigureAwait(false);
@@ -193,162 +197,12 @@ internal sealed class OnlineInstallService(
 
         // 4. 下载完整包（当前不支持单文件下载，采用下载完整包后选择性提取的策略）
         var package = await plondsClient.DownloadAndPrepareFullPackageAsync(candidate, progress, cancellationToken).ConfigureAwait(false);
+        if (ensureRuntime is not null) await ensureRuntime(package, cancellationToken).ConfigureAwait(false);
 
-        // 5. 创建新部署目录并执行增量部署
-        var targetDeployment = DeploymentLayout.BuildDeploymentDirectory(launcherRoot, package.Version);
-
-        InstallerElevation.EnsureCanInstall(launcherRoot);
-        InstallerPathGuard.EnsureUsableInstallPath(launcherRoot, 0);
-        Directory.CreateDirectory(launcherRoot);
-
-        // 5a. 创建目标目录并标记为 .partial（事务安全：失败后标记残留可被清理）
-        if (Directory.Exists(targetDeployment))
-        {
-            Directory.Delete(targetDeployment, recursive: true);
-        }
-
-        Directory.CreateDirectory(targetDeployment);
-        DeploymentStaging.MarkPartial(targetDeployment);
-
-        progress?.Report(new InstallerDeployProgress(
-            "复制未变更文件",
-            remoteVersion,
-            0,
-            0.10,
-            null,
-            0,
-            null));
-
-        // 5b. 从当前部署目录复制未变更文件到新部署目录
-        var unchangedCount = 0;
-        foreach (var unchangedFile in plan.FilesUnchanged)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var sourcePath = Path.Combine(installed.DeploymentPath, unchangedFile.Replace('/', Path.DirectorySeparatorChar));
-            var targetPath = Path.Combine(targetDeployment, unchangedFile.Replace('/', Path.DirectorySeparatorChar));
-
-            var targetParent = Path.GetDirectoryName(targetPath);
-            if (!string.IsNullOrWhiteSpace(targetParent))
-            {
-                Directory.CreateDirectory(targetParent);
-            }
-
-            File.Copy(sourcePath, targetPath, overwrite: false);
-            unchangedCount++;
-
-            if (plan.FilesToReplace.Count + plan.FilesUnchanged.Count > 0)
-            {
-                var fraction = 0.10 + (0.65 * unchangedCount / Math.Max(1, plan.FilesToReplace.Count + plan.FilesUnchanged.Count));
-                progress?.Report(new InstallerDeployProgress(
-                    "复制未变更文件",
-                    remoteVersion,
-                    0,
-                    Math.Clamp(fraction, 0.10, 0.75),
-                    unchangedFile,
-                    unchangedCount,
-                    plan.FilesToReplace.Count + plan.FilesUnchanged.Count));
-            }
-        }
-
-        progress?.Report(new InstallerDeployProgress(
-            "提取变更文件",
-            remoteVersion,
-            0,
-            0.76,
-            null,
-            0,
-            null));
-
-        // 5c. 从下载的包中提取变更/缺失文件到新部署目录
-        var extractDir = package.ExtractDirectory;
-        var extractedCount = 0;
-        foreach (var fileAction in plan.FilesToReplace)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var sourcePath = Path.Combine(extractDir, fileAction.RelativePath.Replace('/', Path.DirectorySeparatorChar));
-            var targetPath = Path.Combine(targetDeployment, fileAction.RelativePath.Replace('/', Path.DirectorySeparatorChar));
-
-            if (File.Exists(sourcePath))
-            {
-                var targetParent = Path.GetDirectoryName(targetPath);
-                if (!string.IsNullOrWhiteSpace(targetParent))
-                {
-                    Directory.CreateDirectory(targetParent);
-                }
-
-                File.Copy(sourcePath, targetPath, overwrite: true);
-            }
-
-            extractedCount++;
-            if (plan.FilesToReplace.Count > 0)
-            {
-                var fraction = 0.76 + (0.16 * extractedCount / plan.FilesToReplace.Count);
-                progress?.Report(new InstallerDeployProgress(
-                    "提取变更文件",
-                    remoteVersion,
-                    0,
-                    Math.Clamp(fraction, 0.76, 0.92),
-                    fileAction.RelativePath,
-                    extractedCount,
-                    plan.FilesToReplace.Count));
-            }
-        }
-
-        // 6. 激活部署（事务语义：先移除旧 .current，再移除 .partial，最后写入 .current）
-        progress?.Report(new InstallerDeployProgress(
-            "激活部署",
-            remoteVersion,
-            0,
-            0.93,
-            null,
-            0,
-            null));
-
-        ActivateDeployment(launcherRoot, targetDeployment);
-
-        // 7. 清理旧的多余文件（如果在计划中指定）
-        // 注意：旧部署目录的清理由 Launcher 自身的 CleanupOldDeployments 负责
-
-        progress?.Report(new InstallerDeployProgress(
-            "完成",
-            remoteVersion,
-            1,
-            1,
-            null,
-            0,
-            null));
-    }
-
-    /// <summary>
-    /// 激活部署：移除所有旧的 .current 标记，移除新部署的 .partial 标记，写入 .current 标记。
-    /// 与 FilesPackageInstaller.ActivateInitialDeployment 相同的事务语义。
-    /// </summary>
-    private static void ActivateDeployment(string launcherRoot, string targetDeployment)
-    {
-        // 移除所有旧的 .current 标记
-        foreach (var existingCurrent in Directory.EnumerateFiles(launcherRoot, DeploymentLayout.CurrentMarkerFileName, SearchOption.AllDirectories))
-        {
-            try
-            {
-                File.Delete(existingCurrent);
-            }
-            catch
-            {
-                // 忽略删除失败（文件可能被锁定）
-            }
-        }
-
-        // 移除新部署的 .partial 标记
-        var partialMarker = Path.Combine(targetDeployment, DeploymentLayout.PartialMarkerFileName);
-        if (File.Exists(partialMarker))
-        {
-            File.Delete(partialMarker);
-        }
-
-        // 写入 .current 标记
-        File.WriteAllText(Path.Combine(targetDeployment, DeploymentLayout.CurrentMarkerFileName), string.Empty);
-
-        // 确保 .Launcher 状态目录存在
-        Directory.CreateDirectory(Path.Combine(launcherRoot, DeploymentLayout.LauncherStateDirectoryName));
+        // All deployment paths share verification, root-payload copying, and marker commit.
+        if (candidate.Manifest.RequiresCleanInstall || candidate.Manifest.IsFullUpdate || plan.RequiresFullUpdate)
+            await packageInstaller.InstallAsync(package, launcherRoot, progress, cancellationToken).ConfigureAwait(false);
+        else
+            await packageInstaller.InstallIncrementalAsync(package, launcherRoot, installed.DeploymentPath, plan, progress, cancellationToken).ConfigureAwait(false);
     }
 }

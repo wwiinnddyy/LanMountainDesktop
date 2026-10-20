@@ -822,5 +822,10 @@
     "component.file_manager": "ファイルマネージャー",
     "component.zhijiao_hub": "智教Hub",
     "component.juya_news": "橘鸦早报",
-    "component.notification_box": "通知ボックス"
+    "component.notification_box": "通知ボックス",
+    "settings.update.channel_label": "更新チャンネル",
+    "settings.update.channel_description": "既定は安定版です。プレビュー版を選ぶとプレリリースを受け取れます。",
+    "settings.update.channel_stable": "安定版",
+    "settings.update.channel_preview": "プレビュー版",
+    "settings.update.install_after_exit": "更新の準備が完了しました。デスクトップ終了後にインストールを完了します。"
 }
