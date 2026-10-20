@@ -155,7 +155,7 @@
   <data name="Oobe_ShowInTaskbar" xml:space="preserve"><value>在任务栏显示主桌面窗口</value></data>
   <data name="Oobe_SlideTransition" xml:space="preserve"><value>以滑动方式显示主窗口</value></data>
   <data name="Oobe_FadeTransition" xml:space="preserve"><value>启动时使用淡入过渡</value></data>
-  <data name="Oobe_FusedDesktop" xml:space="preserve"><value>融合桌面与弹入手势</value></data>
+  <data name="Oobe_DesktopPanel" xml:space="preserve"><value>桌面板与弹入手势</value></data>
   <data name="Oobe_AutoStart" xml:space="preserve"><value>登录 Windows 时自动启动阑山桌面</value></data>
   <data name="Oobe_PrivacyTitle" xml:space="preserve"><value>信息与隐私</value></data>
   <data name="Oobe_CrashReports" xml:space="preserve"><value>发送匿名崩溃报告</value></data>
@@ -176,7 +176,7 @@
   <data name="Oobe_ShowInTaskbarDesc" xml:space="preserve"><value>开启后最小化时可在任务栏保留条目；关闭则更多依赖托盘图标。</value></data>
   <data name="Oobe_SlideTransitionDesc" xml:space="preserve"><value>自屏幕边缘滑入；与「淡入」二选一。</value></data>
   <data name="Oobe_FadeTransitionDesc" xml:space="preserve"><value>在未启用滑动入场时建议使用。</value></data>
-  <data name="Oobe_FusedDesktopDesc" xml:space="preserve"><value>同时启用融合桌面与三指滑动手势，以便使用边缘弹入与相关实验特性（与设置中开发者选项一致）。</value></data>
+  <data name="Oobe_DesktopPanelDesc" xml:space="preserve"><value>启用桌面板（所有组件在同一窗口内运行）与三指滑动手势，以便使用边缘弹入与相关特性。</value></data>
   <data name="Oobe_AutoStartDesc" xml:space="preserve"><value>通过当前用户的启动项注册本启动器（与安装程序可选任务使用同一注册表项）。</value></data>
   <data name="Oobe_AutoStartDescNonWindows" xml:space="preserve"><value>当前平台仅保存偏好；是否随系统自启动请使用系统提供的应用自启动设置。</value></data>
   <data name="Oobe_PrivacyDesc" xml:space="preserve"><value>选择是否参与遥测计划，查看隐私政策</value></data>

@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Reflection;
+using System.Text.Json.Serialization;
 
 using LanMountainDesktop.Launcher.Oobe;
 using LanMountainDesktop.Models;
@@ -22,9 +23,16 @@ public sealed class OobeHostSettingsContractTests
     [Fact]
     public void EveryKeyOobeWrites_IsAPropertyTheHostReads()
     {
+        // 契约是磁盘上的 JSON 键，不是 C# 属性名：桌面板开关保留了旧键 EnableFusedDesktop，
+        // 靠 AppSettingsSnapshot 上的 [JsonPropertyName] 对接。只比属性名会把这条升级兼容判成断线。
         var hostProperties = typeof(AppSettingsSnapshot)
             .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Select(property => property.Name)
+            .SelectMany(property => new[]
+            {
+                property.Name,
+                property.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name
+            })
+            .Where(name => !string.IsNullOrWhiteSpace(name))
             .ToHashSet(StringComparer.Ordinal);
 
         var writtenKeys = typeof(HostAppSettingsOobeMerger)

@@ -184,7 +184,20 @@ public sealed class AppSettingsSnapshot
     public MultiInstanceLaunchBehavior MultiInstanceLaunchBehavior { get; set; } =
         MultiInstanceLaunchBehavior.NotifyAndOpenDesktop;
 
-    public bool EnableFusedDesktop { get; set; } = false;
+    /// <summary>
+    /// 桌面板总开关。磁盘键沿用 <c>EnableFusedDesktop</c>，让升级用户原来的开关状态继续生效；
+    /// 产品语义已经替换为单窗口桌面板。
+    /// </summary>
+    [JsonPropertyName("EnableFusedDesktop")]
+    public bool EnableDesktopPanel { get; set; } = false;
+
+    public double DesktopPanelCellSize { get; set; } = DesktopPanelMetrics.DefaultCellSize;
+
+    public int DesktopPanelColumns { get; set; } = DesktopPanelMetrics.DefaultColumns;
+
+    public int DesktopPanelRows { get; set; } = DesktopPanelMetrics.DefaultRows;
+
+    public bool DesktopPanelUseDesktopLayer { get; set; } = true;
 
     public bool EnableMainWindowDesktopLayer { get; set; } = false;
 

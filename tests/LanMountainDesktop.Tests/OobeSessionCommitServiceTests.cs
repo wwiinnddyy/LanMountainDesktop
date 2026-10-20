@@ -106,7 +106,7 @@ public sealed class OobeSessionCommitServiceTests : IDisposable
                 ShowInTaskbar: true,
                 EnableFadeTransition: true,
                 EnableSlideTransition: false,
-                FusedPopupExperience: false,
+                DesktopPanelExperience: false,
                 AutoStartWithWindows: false),
             PrivacyConfig = new PrivacyConfig
             {

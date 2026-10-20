@@ -141,7 +141,7 @@ public static class Strings
     public static string Oobe_ShowInTaskbar => ResourceManager.GetString(nameof(Oobe_ShowInTaskbar), Culture)!;
     public static string Oobe_SlideTransition => ResourceManager.GetString(nameof(Oobe_SlideTransition), Culture)!;
     public static string Oobe_FadeTransition => ResourceManager.GetString(nameof(Oobe_FadeTransition), Culture)!;
-    public static string Oobe_FusedDesktop => ResourceManager.GetString(nameof(Oobe_FusedDesktop), Culture)!;
+    public static string Oobe_DesktopPanel => ResourceManager.GetString(nameof(Oobe_DesktopPanel), Culture)!;
     public static string Oobe_AutoStart => ResourceManager.GetString(nameof(Oobe_AutoStart), Culture)!;
     public static string Oobe_PrivacyTitle => ResourceManager.GetString(nameof(Oobe_PrivacyTitle), Culture)!;
     public static string Oobe_CrashReports => ResourceManager.GetString(nameof(Oobe_CrashReports), Culture)!;
@@ -162,7 +162,7 @@ public static class Strings
     public static string Oobe_ShowInTaskbarDesc => ResourceManager.GetString(nameof(Oobe_ShowInTaskbarDesc), Culture)!;
     public static string Oobe_SlideTransitionDesc => ResourceManager.GetString(nameof(Oobe_SlideTransitionDesc), Culture)!;
     public static string Oobe_FadeTransitionDesc => ResourceManager.GetString(nameof(Oobe_FadeTransitionDesc), Culture)!;
-    public static string Oobe_FusedDesktopDesc => ResourceManager.GetString(nameof(Oobe_FusedDesktopDesc), Culture)!;
+    public static string Oobe_DesktopPanelDesc => ResourceManager.GetString(nameof(Oobe_DesktopPanelDesc), Culture)!;
     public static string Oobe_AutoStartDesc => ResourceManager.GetString(nameof(Oobe_AutoStartDesc), Culture)!;
     public static string Oobe_AutoStartDescNonWindows => ResourceManager.GetString(nameof(Oobe_AutoStartDescNonWindows), Culture)!;
     public static string Oobe_PrivacyDesc => ResourceManager.GetString(nameof(Oobe_PrivacyDesc), Culture)!;

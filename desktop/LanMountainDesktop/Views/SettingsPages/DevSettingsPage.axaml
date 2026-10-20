@@ -38,27 +38,13 @@
                 </ui:FASettingsExpander.Footer>
             </ui:FASettingsExpander>
 
-            <ui:FASettingsExpander Header="{Binding FusedHeader}"
-                                 Description="{Binding FusedDescription}">
-                <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF01A8;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-                </ui:FASettingsExpander.IconSource>
-                <ui:FASettingsExpander.Footer>
-                    <ToggleSwitch x:Name="FusedDesktopToggle"
-                                  IsChecked="{Binding EnableFusedDesktop, Mode=OneWay}"
-                                  IsCheckedChanged="OnFusedDesktopToggleChanged" />
-                </ui:FASettingsExpander.Footer>
-            </ui:FASettingsExpander>
-
             <ui:FASettingsExpander Header="{Binding MainWindowDesktopLayerHeader}"
                                  Description="{Binding MainWindowDesktopLayerDescription}">
                 <ui:FASettingsExpander.IconSource>
                     <ui:FAFontIconSource Glyph="&#xF1BE0;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
-                    <ToggleSwitch x:Name="MainWindowDesktopLayerToggle"
-                                  IsChecked="{Binding EnableMainWindowDesktopLayer, Mode=OneWay}"
-                                  IsCheckedChanged="OnMainWindowDesktopLayerToggleChanged" />
+                    <ToggleSwitch IsChecked="{Binding EnableMainWindowDesktopLayer, Mode=TwoWay}" />
                 </ui:FASettingsExpander.Footer>
             </ui:FASettingsExpander>
 

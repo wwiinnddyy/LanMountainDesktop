@@ -143,22 +143,23 @@ public sealed class WindowLayerIsolationTests
     }
 
     [Fact]
-    public void FusedDesktopWindows_KeepDesktopBottomMostBoundary()
+    public void DesktopPanelWindow_KeepsDesktopBottomMostBoundary()
     {
-        var desktopWidgetWindow = ReadRepositoryFile("desktop", "LanMountainDesktop", "Views", "DesktopWidgetWindow.axaml.cs");
+        var panelWindow = ReadRepositoryFile("desktop", "LanMountainDesktop", "Views", "DesktopPanelWindow.axaml.cs");
 
-        Assert.Contains("WindowBottomMostServiceFactory.GetOrCreate()", desktopWidgetWindow);
-        Assert.Contains("RefreshDesktopLayer", desktopWidgetWindow);
-        Assert.Contains("SendToBottom", desktopWidgetWindow);
+        Assert.Contains("WindowBottomMostServiceFactory.GetOrCreate()", panelWindow);
+        Assert.Contains("SetupBottomMost", panelWindow);
+        Assert.Contains("SendToBottom", panelWindow);
     }
 
     [Fact]
-    public void FusedDesktopManager_RefreshesDesktopLayerAfterShowingWidgets()
+    public void DesktopPanelManager_OwnsExactlyOneWindow()
     {
-        var source = ReadRepositoryFile("desktop", "LanMountainDesktop", "Services", "FusedDesktopManagerService.cs");
+        var source = ReadRepositoryFile("desktop", "LanMountainDesktop", "Services", "DesktopPanelManagerService.cs");
 
-        Assert.Contains("existingWindow.RefreshDesktopLayer()", source);
-        Assert.Contains("window.RefreshDesktopLayer()", source);
+        Assert.Equal(1, CountOccurrences(source, "new DesktopPanelWindow("));
+        Assert.Contains("private DesktopPanelWindow? _window;", source);
+        Assert.DoesNotContain("DesktopWidgetWindow", source);
     }
 
     [Fact]
@@ -199,7 +200,8 @@ public sealed class WindowLayerIsolationTests
         Assert.Contains("ActivateOrRefreshMainWindowLayer(mainWindow", trayFallbackSource);
         Assert.DoesNotContain("Topmost = true", trayFallbackSource);
 
-        Assert.Contains("FusedDesktopManagerServiceFactory.GetOrCreate().Shutdown()", applyLayerSource);
+        // 单窗口桌面板与主窗口桌面层互不替代：主窗口下沉时不许顺带关掉桌面板。
+        Assert.DoesNotContain("DesktopPanelManagerServiceFactory", applyLayerSource);
     }
 
     [Fact]
@@ -209,22 +211,49 @@ public sealed class WindowLayerIsolationTests
     }
 
     [Fact]
-    public void DeveloperSettings_DefinesMutuallyExclusiveDesktopLayerToggles()
+    public void DesktopPanelSettings_LiveInTheComponentsPage()
     {
         var viewModelSource = ReadRepositoryFile("desktop", "LanMountainDesktop", "ViewModels", "SettingsViewModels.cs");
-        var pageSource = ReadRepositoryFile("desktop", "LanMountainDesktop", "Views", "SettingsPages", "DevSettingsPage.axaml.cs");
-        var xamlSource = ReadRepositoryFile("desktop", "LanMountainDesktop", "Views", "SettingsPages", "DevSettingsPage.axaml");
+        var componentsXaml = ReadRepositoryFile(
+            "desktop",
+            "LanMountainDesktop",
+            "Views",
+            "SettingsPages",
+            "ComponentsSettingsPage.axaml");
+        var devXaml = ReadRepositoryFile(
+            "desktop",
+            "LanMountainDesktop",
+            "Views",
+            "SettingsPages",
+            "DevSettingsPage.axaml");
 
-        Assert.Contains("EnableMainWindowDesktopLayer", viewModelSource);
-        Assert.Contains("ApplyFusedDesktopPreference", viewModelSource);
-        Assert.Contains("ApplyMainWindowDesktopLayerPreference", viewModelSource);
-        Assert.Contains("nameof(AppSettingsSnapshot.EnableFusedDesktop)", viewModelSource);
-        Assert.Contains("nameof(AppSettingsSnapshot.EnableMainWindowDesktopLayer)", viewModelSource);
+        Assert.Contains("EnableDesktopPanel", viewModelSource);
+        Assert.Contains("DesktopPanelCellSize", viewModelSource);
+        Assert.Contains("DesktopPanelColumns", viewModelSource);
+        Assert.Contains("DesktopPanelRows", viewModelSource);
+        Assert.Contains("DesktopPanelUseDesktopLayer", viewModelSource);
 
-        Assert.Contains("ConfirmDesktopLayerSwitchAsync", pageSource);
-        Assert.Contains("OnFusedDesktopToggleChanged", xamlSource);
-        Assert.Contains("OnMainWindowDesktopLayerToggleChanged", xamlSource);
-        Assert.Contains("Mode=OneWay", xamlSource);
+        Assert.Contains("EnableDesktopPanel", componentsXaml);
+        Assert.Contains("DesktopPanelCellSize", componentsXaml);
+        Assert.Contains("DesktopPanelColumns", componentsXaml);
+        Assert.Contains("DesktopPanelRows", componentsXaml);
+        Assert.Contains("DesktopPanelDockModeOptions", componentsXaml);
+
+        Assert.DoesNotContain("EnableDesktopPanel", devXaml);
+        Assert.Contains("EnableMainWindowDesktopLayer", devXaml);
+    }
+
+    private static int CountOccurrences(string source, string value)
+    {
+        var count = 0;
+        var index = 0;
+        while ((index = source.IndexOf(value, index, StringComparison.Ordinal)) >= 0)
+        {
+            count++;
+            index += value.Length;
+        }
+
+        return count;
     }
 
     private static string ReadRepositoryFile(params string[] segments)

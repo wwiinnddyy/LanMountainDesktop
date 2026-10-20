@@ -680,17 +680,17 @@
                   <fi:SymbolIcon Symbol="SlideLayout"
                                  FontSize="20"
                                  Foreground="{DynamicResource AccentFillColorDefaultBrush}" />
-                  <TextBlock Text="{x:Static res:Strings.Oobe_FusedDesktop}"
+                  <TextBlock Text="{x:Static res:Strings.Oobe_DesktopPanel}"
                              FontSize="14"
                              FontWeight="SemiBold"
                              Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                 </StackPanel>
-                <TextBlock Text="{x:Static res:Strings.Oobe_FusedDesktopDesc}"
+                <TextBlock Text="{x:Static res:Strings.Oobe_DesktopPanelDesc}"
                            FontSize="12"
                            TextWrapping="Wrap"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
               </StackPanel>
-              <ToggleSwitch x:Name="OobeFusedPopupToggle"
+              <ToggleSwitch x:Name="OobeDesktopPanelToggle"
                             Grid.Column="1"
                             VerticalAlignment="Center" />
             </Grid>

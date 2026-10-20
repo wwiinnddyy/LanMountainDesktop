@@ -15,7 +15,7 @@ using LanMountainDesktop.Views.Components;
 
 namespace LanMountainDesktop.Views;
 
-public partial class FusedDesktopComponentLibraryControl : UserControl
+public partial class DesktopPanelComponentLibraryControl : UserControl
 {
     public event EventHandler<string>? AddComponentRequested;
 
@@ -37,11 +37,11 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
     private DesktopComponentRuntimeRegistry? _componentRuntimeRegistry;
     private Control? _selectedPreviewControl;
     private DesktopComponentDefinition? _selectedPreviewDefinition;
-    private FusedDesktopLibraryPreviewMetrics? _selectedPreviewMetrics;
+    private DesktopPanelLibraryPreviewMetrics? _selectedPreviewMetrics;
     private bool _isPreviewSwipeActive;
     private Point _previewSwipeStartPoint;
 
-    public FusedDesktopComponentLibraryControl()
+    public DesktopPanelComponentLibraryControl()
     {
         InitializeComponent();
         DataContext = _viewModel;
@@ -63,18 +63,18 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
     private void ApplyLocalization()
     {
         var languageCode = _settingsFacade.Region.Get().LanguageCode;
-        _viewModel.Title = L(languageCode, "fused_desktop.library.title", "Add widgets");
+        _viewModel.Title = L(languageCode, "desktop_panel.library.title", "Add widgets");
         FindMoreComponentsTextBlock.Text = L(
             languageCode,
-            "fused_desktop.library.find_more",
+            "desktop_panel.library.find_more",
             "Find more widgets");
         AddComponentButtonTextBlock.Text = L(
             languageCode,
-            "fused_desktop.library.add_button",
+            "desktop_panel.library.add_button",
             "Add widget");
         EmptySelectionTextBlock.Text = L(
             languageCode,
-            "fused_desktop.library.empty_selection",
+            "desktop_panel.library.empty_selection",
             "Choose a category to view widgets.");
     }
 
@@ -216,7 +216,7 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
         var categoryTitle = GetLocalizedCategoryTitle(languageCode, definition.Category);
         var fallbackFormat = L(
             languageCode,
-            "fused_desktop.library.component_summary_format",
+            "desktop_panel.library.component_summary_format",
             "{0} - {1} x {2}");
         return string.Format(
             System.Globalization.CultureInfo.CurrentCulture,
@@ -380,7 +380,7 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
             return;
         }
 
-        var metrics = FusedDesktopLibraryPreviewLayout.Calculate(
+        var metrics = DesktopPanelLibraryPreviewLayout.Calculate(
             _selectedPreviewDefinition,
             PreviewInteractionHost.Bounds.Size);
         if (!force &&
@@ -402,7 +402,7 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
 
     private Control? CreateStaticPreviewControl(
         DesktopComponentDefinition definition,
-        FusedDesktopLibraryPreviewMetrics metrics)
+        DesktopPanelLibraryPreviewMetrics metrics)
     {
         if (_componentRuntimeRegistry is null ||
             !_componentRuntimeRegistry.TryGetDescriptor(definition.Id, out var descriptor))
@@ -429,7 +429,7 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
         {
             AppLogger.Warn(
                 "ComponentLibrary",
-                $"Failed to create static fused preview for component '{definition.Id}'.",
+                $"Failed to create static desktop panel preview for component '{definition.Id}'.",
                 ex);
             return null;
         }
@@ -437,7 +437,7 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
 
     private static void ApplyPreviewMetricsToControl(
         Control control,
-        FusedDesktopLibraryPreviewMetrics metrics)
+        DesktopPanelLibraryPreviewMetrics metrics)
     {
         control.Width = metrics.Width;
         control.Height = metrics.Height;
@@ -450,8 +450,8 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
     }
 
     private static bool ArePreviewMetricsClose(
-        FusedDesktopLibraryPreviewMetrics first,
-        FusedDesktopLibraryPreviewMetrics second)
+        DesktopPanelLibraryPreviewMetrics first,
+        DesktopPanelLibraryPreviewMetrics second)
     {
         const double tolerance = 0.5d;
         return first.WidthCells == second.WidthCells &&
@@ -505,7 +505,7 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
     {
         if (Application.Current is App app)
         {
-            app.OpenIndependentSettingsModule("FusedDesktopComponentLibrary", "plugin-catalog");
+            app.OpenIndependentSettingsModule("DesktopPanelComponentLibrary", "plugin-catalog");
         }
 
         this.FindAncestorOfType<Window>()?.Close();

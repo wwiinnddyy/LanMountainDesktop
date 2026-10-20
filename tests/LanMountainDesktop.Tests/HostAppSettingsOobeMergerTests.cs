@@ -29,7 +29,7 @@ public sealed class HostAppSettingsOobeMergerTests
                     ShowInTaskbar: true,
                     EnableFadeTransition: false,
                     EnableSlideTransition: true,
-                    FusedPopupExperience: true,
+                    DesktopPanelExperience: true,
                     AutoStartWithWindows: true));
 
             var json = File.ReadAllText(path);
@@ -64,7 +64,7 @@ public sealed class HostAppSettingsOobeMergerTests
                     ShowInTaskbar: true,
                     EnableFadeTransition: true,
                     EnableSlideTransition: false,
-                    FusedPopupExperience: false,
+                    DesktopPanelExperience: false,
                     AutoStartWithWindows: false,
                     ThemeMode: HostAppSettingsOobeMerger.ThemeModeDarkValue));
 
@@ -91,7 +91,7 @@ public sealed class HostAppSettingsOobeMergerTests
                     ShowInTaskbar: true,
                     EnableFadeTransition: true,
                     EnableSlideTransition: false,
-                    FusedPopupExperience: false,
+                    DesktopPanelExperience: false,
                     AutoStartWithWindows: false));
 
             using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
@@ -149,7 +149,7 @@ public sealed class HostAppSettingsOobeMergerTests
                     ShowInTaskbar: false,
                     EnableFadeTransition: true,
                     EnableSlideTransition: false,
-                    FusedPopupExperience: false,
+                    DesktopPanelExperience: false,
                     AutoStartWithWindows: false,
                     ThemeMode: HostAppSettingsOobeMerger.ThemeModeDarkValue));
             HostAppSettingsOobeMerger.MergePrivacyChoices(path, crashTelemetryEnabled: false, usageTelemetryEnabled: false);
@@ -206,7 +206,7 @@ public sealed class HostAppSettingsOobeMergerTests
         try
         {
             var d = HostAppSettingsOobeMerger.LoadStartupDefaults(path);
-            Assert.False(d.FusedPopupExperience);
+            Assert.False(d.DesktopPanelExperience);
         }
         finally
         {

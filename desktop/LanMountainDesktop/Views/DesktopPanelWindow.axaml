@@ -1,0 +1,80 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:fi="using:FluentIcons.Avalonia"
+        x:Class="LanMountainDesktop.Views.DesktopPanelWindow"
+        Title="Desktop Panel"
+        ShowInTaskbar="False"
+        WindowDecorations="None"
+        Background="Transparent"
+        Topmost="False"
+        SizeToContent="Manual"
+        TransparencyLevelHint="Transparent"
+        CanResize="False"
+        Focusable="True"
+        RenderOptions.BitmapInterpolationMode="HighQuality">
+
+    <Window.Styles>
+        <Style Selector="Border.panel-component-host">
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="2" />
+        </Style>
+        <Style Selector="Border.panel-component-host.panel-edit-host">
+            <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveButtonBorderBrush}" />
+        </Style>
+        <Style Selector="Border.panel-component-host.panel-edit-host:pointerover">
+            <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveTextSecondaryBrush}" />
+        </Style>
+        <Style Selector="Border.panel-component-host.panel-edit-host.panel-selected">
+            <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveAccentBrush}" />
+        </Style>
+    </Window.Styles>
+
+    <Border x:Name="PanelShell"
+            Classes="surface-translucent-strong"
+            CornerRadius="{DynamicResource DesignCornerRadiusLg}"
+            ClipToBounds="True"
+            BoxShadow="none">
+        <Grid>
+            <Grid x:Name="PanelGrid"
+                  Background="Transparent"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  PointerPressed="OnPanelBackgroundPointerPressed" />
+
+            <StackPanel x:Name="EmptyStatePanel"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="6"
+                        Margin="12">
+                <fi:FluentIcon x:Name="EmptyStateIcon"
+                               Icon="Apps"
+                               FontSize="28"
+                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                               HorizontalAlignment="Center" />
+                <TextBlock x:Name="EmptyStateTitleTextBlock"
+                           FontSize="15"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                           HorizontalAlignment="Center"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap" />
+                <TextBlock x:Name="EmptyStateDescriptionTextBlock"
+                           FontSize="12"
+                           Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                           HorizontalAlignment="Center"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
+                           MaxWidth="360" />
+                <Button x:Name="AddComponentButton"
+                        Margin="0,4,0,0"
+                        HorizontalAlignment="Center"
+                        Click="OnPanelAddComponentClick">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <fi:FluentIcon Icon="Add" FontSize="14" />
+                        <TextBlock x:Name="AddComponentButtonTextBlock" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

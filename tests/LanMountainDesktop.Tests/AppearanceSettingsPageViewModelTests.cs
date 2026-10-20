@@ -79,6 +79,7 @@ public sealed class AppearanceSettingsPageViewModelTests
         private readonly FakeThemeAppearanceService _theme = new(themeState);
         private readonly FakeRegionSettingsService _region = new();
         private readonly FakeGridSettingsService _grid = new();
+        private readonly FakeSettingsService _settings = new();
 
         public ThemeAppearanceSettingsState ThemeState => _theme.State;
 
@@ -86,7 +87,7 @@ public sealed class AppearanceSettingsPageViewModelTests
 
         public IRegionSettingsService Region => _region;
 
-        public ISettingsService Settings => throw new NotSupportedException();
+        public ISettingsService Settings => _settings;
         public ISettingsCatalog Catalog => throw new NotSupportedException();
         public IGridSettingsService Grid => _grid;
         public IWallpaperSettingsService Wallpaper => throw new NotSupportedException();
@@ -101,6 +102,123 @@ public sealed class AppearanceSettingsPageViewModelTests
         public IAirAppManagementSettingsService AirAppManagement => throw new NotSupportedException();
         public IAirAppCatalogSettingsService AirAppCatalog => throw new NotSupportedException();
         public IApplicationInfoService ApplicationInfo => throw new NotSupportedException();
+    }
+
+    private sealed class FakeSettingsService : ISettingsService
+    {
+        private AppSettingsSnapshot _snapshot = new();
+
+        public event EventHandler<SettingsChangedEvent>? Changed;
+
+        public T LoadSnapshot<T>(AirAppSettingsScope scope, string? subjectId = null, string? placementId = null)
+            where T : new()
+        {
+            _ = scope;
+            _ = subjectId;
+            _ = placementId;
+            return _snapshot is T typed ? typed : new T();
+        }
+
+        public void SaveSnapshot<T>(
+            AirAppSettingsScope scope,
+            T snapshot,
+            string? subjectId = null,
+            string? placementId = null,
+            string? sectionId = null,
+            IReadOnlyCollection<string>? changedKeys = null)
+        {
+            _ = scope;
+            _ = subjectId;
+            _ = placementId;
+            _ = sectionId;
+            _ = changedKeys;
+            if (snapshot is AppSettingsSnapshot appSnapshot)
+            {
+                _snapshot = appSnapshot;
+            }
+        }
+
+        public T LoadSection<T>(
+            AirAppSettingsScope scope,
+            string subjectId,
+            string sectionId,
+            string? placementId = null)
+            where T : new()
+        {
+            _ = scope;
+            _ = subjectId;
+            _ = sectionId;
+            _ = placementId;
+            return new T();
+        }
+
+        public void SaveSection<T>(
+            AirAppSettingsScope scope,
+            string subjectId,
+            string sectionId,
+            T section,
+            string? placementId = null,
+            IReadOnlyCollection<string>? changedKeys = null)
+        {
+            _ = scope;
+            _ = subjectId;
+            _ = sectionId;
+            _ = section;
+            _ = placementId;
+            _ = changedKeys;
+        }
+
+        public void DeleteSection(
+            AirAppSettingsScope scope,
+            string subjectId,
+            string sectionId,
+            string? placementId = null)
+        {
+            _ = scope;
+            _ = subjectId;
+            _ = sectionId;
+            _ = placementId;
+        }
+
+        public T? GetValue<T>(
+            AirAppSettingsScope scope,
+            string key,
+            string? subjectId = null,
+            string? placementId = null,
+            string? sectionId = null)
+        {
+            _ = scope;
+            _ = key;
+            _ = subjectId;
+            _ = placementId;
+            _ = sectionId;
+            return default;
+        }
+
+        public void SetValue<T>(
+            AirAppSettingsScope scope,
+            string key,
+            T value,
+            string? subjectId = null,
+            string? placementId = null,
+            string? sectionId = null,
+            IReadOnlyCollection<string>? changedKeys = null)
+        {
+            _ = scope;
+            _ = key;
+            _ = value;
+            _ = subjectId;
+            _ = placementId;
+            _ = sectionId;
+            _ = changedKeys;
+        }
+
+        public IComponentSettingsAccessor GetComponentAccessor(string componentId, string? placementId)
+        {
+            _ = componentId;
+            _ = placementId;
+            throw new NotSupportedException();
+        }
     }
 
     private sealed class FakeThemeAppearanceService(ThemeAppearanceSettingsState state) : IThemeAppearanceService

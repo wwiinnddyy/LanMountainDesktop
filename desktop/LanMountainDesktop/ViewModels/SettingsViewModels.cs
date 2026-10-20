@@ -1227,6 +1227,53 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
     [ObservableProperty]
     private string _cornerRadiusSpecTooltip = string.Empty;
 
+    [ObservableProperty]
+    private bool _enableDesktopPanel;
+
+    [ObservableProperty]
+    private double _desktopPanelCellSize = DesktopPanelMetrics.DefaultCellSize;
+
+    [ObservableProperty]
+    private int _desktopPanelColumns = DesktopPanelMetrics.DefaultColumns;
+
+    [ObservableProperty]
+    private int _desktopPanelRows = DesktopPanelMetrics.DefaultRows;
+
+    [ObservableProperty]
+    private SelectionOption? _selectedDesktopPanelDockMode;
+
+    public IReadOnlyList<SelectionOption> DesktopPanelDockModeOptions { get; private set; } = [];
+
+    public double DesktopPanelCellSizeMinimum => DesktopPanelMetrics.MinCellSize;
+
+    public double DesktopPanelCellSizeMaximum => DesktopPanelMetrics.MaxCellSize;
+
+    public double DesktopPanelColumnsMinimum => DesktopPanelMetrics.MinColumns;
+
+    public double DesktopPanelColumnsMaximum => DesktopPanelMetrics.MaxColumns;
+
+    public double DesktopPanelRowsMinimum => DesktopPanelMetrics.MinRows;
+
+    public double DesktopPanelRowsMaximum => DesktopPanelMetrics.MaxRows;
+
+    [ObservableProperty]
+    private string _desktopPanelHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _desktopPanelDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _desktopPanelCellSizeLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _desktopPanelColumnsLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _desktopPanelRowsLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _desktopPanelDockModeLabel = string.Empty;
+
     public void Load()
     {
         var state = _settingsFacade.Grid.Get();
@@ -1243,6 +1290,18 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
             string.Equals(option.Value, CornerRadiusStyle, StringComparison.OrdinalIgnoreCase))
             ?? CornerRadiusStyleOptions.FirstOrDefault(o => o.Value == GlobalAppearanceSettings.DefaultCornerRadiusStyle);
         CornerRadiusPreviewValue = AppearanceCornerRadiusTokenFactory.Create(CornerRadiusStyle).Component.TopLeft;
+
+        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
+        EnableDesktopPanel = snapshot.EnableDesktopPanel;
+        DesktopPanelCellSize = DesktopPanelMetrics.NormalizeCellSize(snapshot.DesktopPanelCellSize);
+        DesktopPanelColumns = DesktopPanelMetrics.NormalizeColumns(snapshot.DesktopPanelColumns);
+        DesktopPanelRows = DesktopPanelMetrics.NormalizeRows(snapshot.DesktopPanelRows);
+        SelectedDesktopPanelDockMode = DesktopPanelDockModeOptions.FirstOrDefault(option =>
+            string.Equals(
+                option.Value,
+                snapshot.DesktopPanelUseDesktopLayer ? "Desktop" : "Bottom",
+                StringComparison.OrdinalIgnoreCase))
+            ?? DesktopPanelDockModeOptions[0];
     }
 
     partial void OnShortSideCellsChanged(int value)
@@ -1287,6 +1346,56 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
         SaveComponentCornerRadius();
     }
 
+    partial void OnEnableDesktopPanelChanged(bool value)
+    {
+        if (_isInitializing)
+        {
+            return;
+        }
+
+        SaveDesktopPanelField(nameof(AppSettingsSnapshot.EnableDesktopPanel));
+    }
+
+    partial void OnDesktopPanelCellSizeChanged(double value)
+    {
+        if (_isInitializing)
+        {
+            return;
+        }
+
+        SaveDesktopPanelField(nameof(AppSettingsSnapshot.DesktopPanelCellSize));
+    }
+
+    partial void OnDesktopPanelColumnsChanged(int value)
+    {
+        if (_isInitializing)
+        {
+            return;
+        }
+
+        SaveDesktopPanelField(nameof(AppSettingsSnapshot.DesktopPanelColumns));
+    }
+
+    partial void OnDesktopPanelRowsChanged(int value)
+    {
+        if (_isInitializing)
+        {
+            return;
+        }
+
+        SaveDesktopPanelField(nameof(AppSettingsSnapshot.DesktopPanelRows));
+    }
+
+    partial void OnSelectedDesktopPanelDockModeChanged(SelectionOption? value)
+    {
+        if (_isInitializing || value is null)
+        {
+            return;
+        }
+
+        SaveDesktopPanelField(nameof(AppSettingsSnapshot.DesktopPanelUseDesktopLayer));
+    }
+
     private void SaveGrid()
     {
         _settingsFacade.Grid.Save(new GridSettingsState(
@@ -1302,6 +1411,37 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
         {
             CornerRadiusStyle = GlobalAppearanceSettings.NormalizeCornerRadiusStyle(CornerRadiusStyle)
         });
+    }
+
+    private void SaveDesktopPanelField(string changedKey)
+    {
+        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
+        switch (changedKey)
+        {
+            case nameof(AppSettingsSnapshot.EnableDesktopPanel):
+                snapshot.EnableDesktopPanel = EnableDesktopPanel;
+                break;
+            case nameof(AppSettingsSnapshot.DesktopPanelCellSize):
+                snapshot.DesktopPanelCellSize = DesktopPanelMetrics.NormalizeCellSize(DesktopPanelCellSize);
+                break;
+            case nameof(AppSettingsSnapshot.DesktopPanelColumns):
+                snapshot.DesktopPanelColumns = DesktopPanelMetrics.NormalizeColumns(DesktopPanelColumns);
+                break;
+            case nameof(AppSettingsSnapshot.DesktopPanelRows):
+                snapshot.DesktopPanelRows = DesktopPanelMetrics.NormalizeRows(DesktopPanelRows);
+                break;
+            case nameof(AppSettingsSnapshot.DesktopPanelUseDesktopLayer):
+                snapshot.DesktopPanelUseDesktopLayer =
+                    string.Equals(SelectedDesktopPanelDockMode?.Value, "Desktop", StringComparison.OrdinalIgnoreCase);
+                break;
+            default:
+                return;
+        }
+
+        _settingsFacade.Settings.SaveSnapshot(
+            AirAppSettingsScope.App,
+            snapshot,
+            changedKeys: [changedKey]);
     }
 
     private IReadOnlyList<SelectionOption> CreateSpacingPresets()
@@ -1327,8 +1467,20 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
             "settings.components.corner_radius.description",
             "Select a fixed corner radius style (inspired by Xiaomi HyperOS) to ensure consistency across all components.");
         CornerRadiusSpecTooltip = L("settings.components.corner_radius.spec_tooltip", "View Corner Radius Specification");
-            
-            
+        DesktopPanelHeader = L("settings.components.panel.header", "Desktop panel");
+        DesktopPanelDescription = L(
+            "settings.components.panel.description",
+            "Place widgets into one bottom-docked panel. Every widget runs inside a single window, so there are no per-widget window layers to manage.");
+        DesktopPanelCellSizeLabel = L("settings.components.panel.cell_size", "Cell size");
+        DesktopPanelColumnsLabel = L("settings.components.panel.columns", "Columns");
+        DesktopPanelRowsLabel = L("settings.components.panel.rows", "Rows");
+        DesktopPanelDockModeLabel = L("settings.components.panel.dock_mode", "Dock position");
+        DesktopPanelDockModeOptions =
+        [
+            new SelectionOption("Bottom", L("settings.components.panel.dock_bottom", "Screen bottom")),
+            new SelectionOption("Desktop", L("settings.components.panel.dock_desktop", "Desktop bottom (behind apps)"))
+        ];
+
         CornerRadiusStyleOptions = GlobalAppearanceSettings.AllCornerRadiusStyles
             .Select(style => new SelectionOption(style, L($"settings.appearance.corner_radius.style_{style.ToLower()}", style)))
             .ToList();
@@ -2366,9 +2518,6 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase, IDisposabl
     private bool _enableThreeFingerSwipe;
 
     [ObservableProperty]
-    private bool _enableFusedDesktop;
-
-    [ObservableProperty]
     private bool _enableMainWindowDesktopLayer;
 
     [ObservableProperty]
@@ -2390,31 +2539,10 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase, IDisposabl
     private string _threeFingerDescription = string.Empty;
 
     [ObservableProperty]
-    private string _fusedHeader = string.Empty;
-
-    [ObservableProperty]
-    private string _fusedDescription = string.Empty;
-
-    [ObservableProperty]
     private string _mainWindowDesktopLayerHeader = string.Empty;
 
     [ObservableProperty]
     private string _mainWindowDesktopLayerDescription = string.Empty;
-
-    [ObservableProperty]
-    private string _desktopLayerConflictTitle = string.Empty;
-
-    [ObservableProperty]
-    private string _desktopLayerConflictEnableMainMessage = string.Empty;
-
-    [ObservableProperty]
-    private string _desktopLayerConflictEnableFusedMessage = string.Empty;
-
-    [ObservableProperty]
-    private string _desktopLayerConflictConfirmText = string.Empty;
-
-    [ObservableProperty]
-    private string _desktopLayerConflictCancelText = string.Empty;
 
     [ObservableProperty]
     private string _airAppPathHeader = string.Empty;
@@ -2460,15 +2588,8 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase, IDisposabl
         DevModeDescription = L("settings.dev.mode_description", "Enable developer-focused startup helpers and diagnostics.");
         ThreeFingerHeader = L("settings.dev.three_finger_header", "Three-finger desktop swipe");
         ThreeFingerDescription = L("settings.dev.three_finger_description", "Enable desktop page switching gestures when supported.");
-        FusedHeader = L("settings.dev.fused_header", "Fused desktop experience");
-        FusedDescription = L("settings.dev.fused_description", "Enable the fused desktop shell and experimental entry points.");
         MainWindowDesktopLayerHeader = L("settings.dev.main_window_desktop_layer_header", "Prevent covering other apps");
         MainWindowDesktopLayerDescription = L("settings.dev.main_window_desktop_layer_description", "Keep the main desktop window on the desktop layer so ordinary app windows can stay above it.");
-        DesktopLayerConflictTitle = L("settings.dev.desktop_layer_conflict_title", "Switch desktop layer mode?");
-        DesktopLayerConflictEnableMainMessage = L("settings.dev.desktop_layer_conflict_enable_main", "Main desktop layer mode and fused desktop cannot run at the same time. Enabling this option will turn off fused desktop.");
-        DesktopLayerConflictEnableFusedMessage = L("settings.dev.desktop_layer_conflict_enable_fused", "Fused desktop and main desktop layer mode cannot run at the same time. Enabling fused desktop will turn off main desktop layer mode.");
-        DesktopLayerConflictConfirmText = L("settings.dev.desktop_layer_conflict_confirm", "Switch");
-        DesktopLayerConflictCancelText = L("settings.dev.desktop_layer_conflict_cancel", "Cancel");
         AirAppPathHeader = L("settings.dev.airapp_path_header", "Development AirApp path");
         AirAppPathDescription = L("settings.dev.airapp_path_description", "Load a local AirApp output directory without packaging.");
         AirAppPathPlaceholder = L("settings.dev.airapp_path_placeholder", "e.g. C:\\path\\to\\AirApp\\bin\\Debug\\net10.0");
@@ -2504,12 +2625,6 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase, IDisposabl
         SaveField(nameof(AppSettingsSnapshot.EnableThreeFingerSwipe), value);
     }
 
-    partial void OnEnableFusedDesktopChanged(bool value)
-    {
-        if (_isInitializing) return;
-        SaveField(nameof(AppSettingsSnapshot.EnableFusedDesktop), value);
-    }
-
     partial void OnEnableMainWindowDesktopLayerChanged(bool value)
     {
         if (_isInitializing) return;
@@ -2522,7 +2637,6 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase, IDisposabl
         IsDevModeEnabled = snapshot.IsDevModeEnabled;
         DevAirAppPath = snapshot.DevAirAppPath ?? string.Empty;
         EnableThreeFingerSwipe = snapshot.EnableThreeFingerSwipe;
-        EnableFusedDesktop = snapshot.EnableFusedDesktop;
         EnableMainWindowDesktopLayer = snapshot.EnableMainWindowDesktopLayer;
     }
 
@@ -2544,7 +2658,6 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase, IDisposabl
         {
             var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
             EnableThreeFingerSwipe = snapshot.EnableThreeFingerSwipe;
-            EnableFusedDesktop = snapshot.EnableFusedDesktop;
             EnableMainWindowDesktopLayer = snapshot.EnableMainWindowDesktopLayer;
         }
         finally
@@ -2565,50 +2678,4 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase, IDisposabl
         _settingsFacade.Settings.SaveSnapshot(AirAppSettingsScope.App, snapshot, changedKeys: [key]);
     }
 
-    public void ApplyFusedDesktopPreference(bool enabled, bool disableMainWindowDesktopLayer)
-    {
-        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
-        snapshot.EnableFusedDesktop = enabled;
-        if (enabled && disableMainWindowDesktopLayer)
-        {
-            snapshot.EnableMainWindowDesktopLayer = false;
-        }
-
-        SaveDesktopLayerPreferences(snapshot);
-    }
-
-    public void ApplyMainWindowDesktopLayerPreference(bool enabled, bool disableFusedDesktop)
-    {
-        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
-        snapshot.EnableMainWindowDesktopLayer = enabled;
-        if (enabled && disableFusedDesktop)
-        {
-            snapshot.EnableFusedDesktop = false;
-        }
-
-        SaveDesktopLayerPreferences(snapshot);
-    }
-
-    private void SaveDesktopLayerPreferences(AppSettingsSnapshot snapshot)
-    {
-        _settingsFacade.Settings.SaveSnapshot(
-            AirAppSettingsScope.App,
-            snapshot,
-            changedKeys:
-            [
-                nameof(AppSettingsSnapshot.EnableFusedDesktop),
-                nameof(AppSettingsSnapshot.EnableMainWindowDesktopLayer)
-            ]);
-
-        _isInitializing = true;
-        try
-        {
-            EnableFusedDesktop = snapshot.EnableFusedDesktop;
-            EnableMainWindowDesktopLayer = snapshot.EnableMainWindowDesktopLayer;
-        }
-        finally
-        {
-            _isInitializing = false;
-        }
-    }
 }

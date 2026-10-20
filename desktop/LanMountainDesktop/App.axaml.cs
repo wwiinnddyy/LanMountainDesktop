@@ -78,7 +78,7 @@ public partial class App : Application
     private DispatcherTimer? _shellRecoveryTimer;
     private AirAppRuntimeService? _airAppRuntimeService;
     private MainWindow? _mainWindow;
-    private FusedDesktopComponentLibraryWindow? _fusedComponentLibraryWindow;
+    private DesktopPanelComponentLibraryWindow? _desktopPanelLibraryWindow;
     private bool _mainWindowClosed;
     private DesktopShellHost? _desktopShellHost;
     private PublicIpcHostService? _publicIpcHostService;
@@ -213,7 +213,7 @@ public partial class App : Application
 
         if (!Design.IsDesignMode && OperatingSystem.IsWindows())
         {
-            FusedDesktopManagerServiceFactory.GetOrCreate().Initialize();
+            DesktopPanelManagerServiceFactory.GetOrCreate().Initialize();
         }
 
         base.OnFrameworkInitializationCompleted();
@@ -467,34 +467,34 @@ public partial class App : Application
 
         if (IsShutdownInProgress)
         {
-            AppLogger.Info("FusedDesktop", "Tray Component Library ignored because shutdown is in progress.");
+            AppLogger.Info("DesktopPanel", "Tray Component Library ignored because shutdown is in progress.");
             return;
         }
         
         if (!OperatingSystem.IsWindows())
         {
-            AppLogger.Warn("FusedDesktop", "Fused desktop is only supported on Windows.");
+            AppLogger.Warn("DesktopPanel", "The desktop panel component library is only supported on Windows.");
             return;
         }
         
         Dispatcher.UIThread.Post(
-            () => OpenFusedDesktopComponentLibraryFromUi(centerInWorkArea: false),
+            () => OpenDesktopPanelComponentLibraryFromUi(centerInWorkArea: false),
             DispatcherPriority.Send);
     }
 
-    private void OpenFusedDesktopComponentLibraryFromUi(bool centerInWorkArea)
+    internal void OpenDesktopPanelComponentLibraryFromUi(bool centerInWorkArea)
     {
         if (IsShutdownInProgress)
         {
-            AppLogger.Info("FusedDesktop", "Deferred Component Library open ignored because shutdown is in progress.");
+            AppLogger.Info("DesktopPanel", "Deferred Component Library open ignored because shutdown is in progress.");
             return;
         }
 
         try
         {
-            FusedDesktopManagerServiceFactory.GetOrCreate().EnterEditMode();
+            DesktopPanelManagerServiceFactory.GetOrCreate().EnterEditMode();
 
-            if (_fusedComponentLibraryWindow is { } existingWindow)
+            if (_desktopPanelLibraryWindow is { } existingWindow)
             {
                 if (!existingWindow.IsVisible)
                 {
@@ -510,10 +510,10 @@ public partial class App : Application
                 return;
             }
 
-            var window = new FusedDesktopComponentLibraryWindow();
-            _fusedComponentLibraryWindow = window;
+            var window = new DesktopPanelComponentLibraryWindow();
+            _desktopPanelLibraryWindow = window;
 
-            window.Closed += OnFusedComponentLibraryWindowClosed;
+            window.Closed += OnDesktopPanelComponentLibraryWindowClosed;
             window.Show();
             if (centerInWorkArea)
             {
@@ -524,37 +524,37 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            AppLogger.Warn("FusedDesktop", "Failed to open fused desktop component library.", ex);
-            FusedDesktopManagerServiceFactory.GetOrCreate().ExitEditMode();
-            if (_fusedComponentLibraryWindow is { } libWindow)
+            AppLogger.Warn("DesktopPanel", "Failed to open desktop panel component library.", ex);
+            DesktopPanelManagerServiceFactory.GetOrCreate().ExitEditMode();
+            if (_desktopPanelLibraryWindow is { } libWindow)
             {
-                _fusedComponentLibraryWindow = null;
-                libWindow.Closed -= OnFusedComponentLibraryWindowClosed;
+                _desktopPanelLibraryWindow = null;
+                libWindow.Closed -= OnDesktopPanelComponentLibraryWindowClosed;
                 libWindow.Close();
             }
         }
     }
 
-    private void OnFusedComponentLibraryWindowClosed(object? sender, EventArgs e)
+    private void OnDesktopPanelComponentLibraryWindowClosed(object? sender, EventArgs e)
     {
-        if (sender is not FusedDesktopComponentLibraryWindow window)
+        if (sender is not DesktopPanelComponentLibraryWindow window)
         {
             return;
         }
 
-        window.Closed -= OnFusedComponentLibraryWindowClosed;
-        if (ReferenceEquals(_fusedComponentLibraryWindow, window))
+        window.Closed -= OnDesktopPanelComponentLibraryWindowClosed;
+        if (ReferenceEquals(_desktopPanelLibraryWindow, window))
         {
-            _fusedComponentLibraryWindow = null;
+            _desktopPanelLibraryWindow = null;
         }
 
         try
         {
-            FusedDesktopManagerServiceFactory.GetOrCreate().ExitEditMode();
+            DesktopPanelManagerServiceFactory.GetOrCreate().ExitEditMode();
         }
         catch (Exception ex)
         {
-            AppLogger.Warn("FusedDesktop", "Failed to exit fused desktop edit mode after library closed.", ex);
+            AppLogger.Warn("DesktopPanel", "Failed to exit desktop panel edit mode after library closed.", ex);
         }
     }
 
@@ -656,7 +656,7 @@ public partial class App : Application
         _trayInitialized = _desktopTrayService?.IsReady == true;
     }
 
-    private void RefreshFusedDesktopMenuItemVisibility()
+    private void RefreshDesktopPanelMenuItemVisibility()
     {
         RefreshTrayIconContent();
     }
@@ -787,7 +787,7 @@ public partial class App : Application
         }
 
         var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
-        return appSnapshot.EnableFusedDesktop;
+        return appSnapshot.EnableDesktopPanel;
     }
 
     private void EnsureSettingsWindowService()
@@ -1096,16 +1096,21 @@ public partial class App : Application
                 _localizationService.ClearCache();
                 ApplyCurrentCultureFromSettings();
                 RefreshTrayIconContent();
+                DesktopPanelManagerServiceFactory.GetOrCreate().RefreshLocalization();
             }
 
-            var fusedDesktopChanged =
+            var desktopPanelChanged =
                 refreshAll ||
-                changedKeys.Contains(nameof(AppSettingsSnapshot.EnableFusedDesktop), StringComparer.OrdinalIgnoreCase);
+                changedKeys.Contains(nameof(AppSettingsSnapshot.EnableDesktopPanel), StringComparer.OrdinalIgnoreCase) ||
+                changedKeys.Contains(nameof(AppSettingsSnapshot.DesktopPanelCellSize), StringComparer.OrdinalIgnoreCase) ||
+                changedKeys.Contains(nameof(AppSettingsSnapshot.DesktopPanelColumns), StringComparer.OrdinalIgnoreCase) ||
+                changedKeys.Contains(nameof(AppSettingsSnapshot.DesktopPanelRows), StringComparer.OrdinalIgnoreCase) ||
+                changedKeys.Contains(nameof(AppSettingsSnapshot.DesktopPanelUseDesktopLayer), StringComparer.OrdinalIgnoreCase);
 
-            if (fusedDesktopChanged)
+            if (desktopPanelChanged)
             {
-                ApplyFusedDesktopRuntimeState();
-                RefreshFusedDesktopMenuItemVisibility();
+                ApplyDesktopPanelRuntimeState();
+                RefreshDesktopPanelMenuItemVisibility();
             }
 
             var mainWindowDesktopLayerChanged =
@@ -1242,29 +1247,29 @@ public partial class App : Application
             disposableRegistry.Dispose();
         }
 
-        if (_fusedComponentLibraryWindow is not null)
+        if (_desktopPanelLibraryWindow is not null)
         {
             try
             {
-                _fusedComponentLibraryWindow.Close();
+                _desktopPanelLibraryWindow.Close();
             }
             catch (Exception ex)
             {
-                AppLogger.Warn("FusedDesktop", "Failed to close fused desktop component library during shutdown.", ex);
+                AppLogger.Warn("DesktopPanel", "Failed to close desktop panel component library during shutdown.", ex);
             }
             finally
             {
-                _fusedComponentLibraryWindow = null;
+                _desktopPanelLibraryWindow = null;
             }
         }
 
         try
         {
-            FusedDesktopManagerServiceFactory.GetOrCreate().Shutdown();
+            DesktopPanelManagerServiceFactory.GetOrCreate().Shutdown();
         }
         catch (Exception ex)
         {
-            AppLogger.Warn("FusedDesktop", "Failed to shut down fused desktop manager during exit cleanup.", ex);
+            AppLogger.Warn("DesktopPanel", "Failed to shut down desktop panel manager during exit cleanup.", ex);
         }
 
         AudioRecorderServiceFactory.DisposeSharedServices();
@@ -1689,7 +1694,6 @@ public partial class App : Application
 
         if (IsMainWindowDesktopLayerEnabled())
         {
-            FusedDesktopManagerServiceFactory.GetOrCreate().Shutdown();
             _mainWindow.ShowInTaskbar = false;
             _mainWindowDesktopLayerService.EnableOrRefresh(_mainWindow);
             AppLogger.Info("DesktopShell", $"Main window desktop layer enabled. Source='{source}'.");
@@ -1701,27 +1705,29 @@ public partial class App : Application
         AppLogger.Info("DesktopShell", $"Main window desktop layer disabled. Source='{source}'.");
     }
 
-    private void ApplyFusedDesktopRuntimeState()
+    private void ApplyDesktopPanelRuntimeState()
     {
         var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(AirAppSettingsScope.App);
         try
         {
-            if (snapshot.EnableFusedDesktop)
+            if (snapshot.EnableDesktopPanel)
             {
-                if (_mainWindow is not null)
-                {
-                    _mainWindowDesktopLayerService.Disable(_mainWindow);
-                }
-
-                FusedDesktopManagerServiceFactory.GetOrCreate().Initialize();
+                DesktopPanelManagerServiceFactory.GetOrCreate().Initialize();
                 return;
             }
 
-            FusedDesktopManagerServiceFactory.GetOrCreate().Shutdown();
+            if (_desktopPanelLibraryWindow is { } libraryWindow)
+            {
+                _desktopPanelLibraryWindow = null;
+                libraryWindow.Closed -= OnDesktopPanelComponentLibraryWindowClosed;
+                libraryWindow.Close();
+            }
+
+            DesktopPanelManagerServiceFactory.GetOrCreate().Shutdown();
         }
         catch (Exception ex)
         {
-            AppLogger.Warn("FusedDesktop", "Failed to apply fused desktop runtime state.", ex);
+            AppLogger.Warn("DesktopPanel", "Failed to apply desktop panel runtime state.", ex);
         }
     }
 

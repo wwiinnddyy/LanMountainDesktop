@@ -725,7 +725,11 @@ public sealed class DuplicateImplementationRatchetTests
     // 同笔逐字面**不动**（10 → 10）：那三份现在字面相同，从"2x in 2 files"变成"3x in 3 files"，
     // 仍是一个族——这一笔的收益在"三份抄本里两份用 IsNullOrEmpty、一份用 IsNullOrWhiteSpace，
     // 同一个存档值在两个面板显示成两种档"这件事只有一处说法，不在族数上。
-    private const int DriftFamilyCeiling = 187;
+    // 187 → 184（2026-10-20 单窗口桌面板重构）：删掉每组件一窗的实现（DesktopWidgetWindow /
+    // DesktopWidgetResizeHandle / 旧融合桌面管理器）后，OnPointerMoved / GetScreenPosition /
+    // SetScreenPosition 三族因站点跌破 3 而消失；孤立树（HEAD + 本次补丁）实测 184，
+    // 本次新增的桌面板实现没有新增漂移族（OnAddComponentClick / SendToBottom 都刻意没有沿用旧名字）。
+    private const int DriftFamilyCeiling = 184;
 
     /// <summary>
     /// 漂移普查认领的声明处数下限（今天实测 5759）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。

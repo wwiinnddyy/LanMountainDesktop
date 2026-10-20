@@ -1783,7 +1783,7 @@ public partial class MainWindow : Window
             _componentEditorWindowService.Close();
         }
 
-        ClearTimeZoneServiceBindings(_selectedDesktopComponentHost);
+        DesktopComponentContext.ClearTimeZoneServiceBindings(_selectedDesktopComponentHost);
         DisposeComponentIfNeeded(_selectedDesktopComponentHost);
 
         if (_desktopPageComponentGrids.TryGetValue(placement.PageIndex, out var pageGrid))
@@ -1877,7 +1877,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        ClearTimeZoneServiceBindings(host);
+        DesktopComponentContext.ClearTimeZoneServiceBindings(host);
         DisposeComponentIfNeeded(host);
         contentHost.Child = component;
         ApplyDesktopEditStateToHost(host, _isComponentLibraryOpen);
@@ -1932,7 +1932,7 @@ public partial class MainWindow : Window
 
         if (_desktopPageComponentGrids.TryGetValue(_currentDesktopSurfaceIndex, out var pageGrid))
         {
-            ClearTimeZoneServiceBindings(pageGrid.Children.OfType<Control>().ToList());
+            DesktopComponentContext.ClearTimeZoneServiceBindings(pageGrid.Children.OfType<Control>().ToList());
             foreach (var child in pageGrid.Children.OfType<Border>())
             {
                 DisposeComponentIfNeeded(child);
@@ -2019,7 +2019,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        ClearTimeZoneServiceBindings(pageGrid.Children.OfType<Control>().ToList());
+        DesktopComponentContext.ClearTimeZoneServiceBindings(pageGrid.Children.OfType<Control>().ToList());
         pageGrid.Children.Clear();
         InvalidateDesktopPageAwareComponentContextCache();
 
@@ -2481,30 +2481,6 @@ public partial class MainWindow : Window
         return null;
     }
 
-    private static void ClearTimeZoneServiceBindings(IEnumerable<Control> roots)
-    {
-        foreach (var root in roots)
-        {
-            ClearTimeZoneServiceBindings(root);
-        }
-    }
-
-    private static void ClearTimeZoneServiceBindings(Control root)
-    {
-        if (root is ITimeZoneAwareComponentWidget timeZoneAwareRoot)
-        {
-            timeZoneAwareRoot.ClearTimeZoneService();
-        }
-
-        foreach (var descendant in root.GetVisualDescendants())
-        {
-            if (descendant is ITimeZoneAwareComponentWidget timeZoneAwareChild)
-            {
-                timeZoneAwareChild.ClearTimeZoneService();
-            }
-        }
-    }
-
     private void InvalidateDesktopPageAwareComponentContextCache()
     {
         _desktopPageContextInitialized = false;
@@ -2594,7 +2570,7 @@ public partial class MainWindow : Window
 
                 if (TryGetContentHost(host)?.Child is Control componentRoot)
                 {
-                    ApplyDesktopPageContext(componentRoot, isOnActivePage, isEditMode);
+                    DesktopComponentContext.ApplyPageContext(componentRoot, isOnActivePage, isEditMode);
                 }
             }
         }
@@ -2602,22 +2578,6 @@ public partial class MainWindow : Window
         _desktopPageContextInitialized = true;
         _desktopPageContextEditMode = isEditMode;
         _desktopPageContextActiveMask = activeMask;
-    }
-
-    private static void ApplyDesktopPageContext(Control root, bool isOnActivePage, bool isEditMode)
-    {
-        if (root is IDesktopPageVisibilityAwareComponentWidget awareRoot)
-        {
-            awareRoot.SetDesktopPageContext(isOnActivePage, isEditMode);
-        }
-
-        foreach (var descendant in root.GetVisualDescendants())
-        {
-            if (descendant is IDesktopPageVisibilityAwareComponentWidget awareChild)
-            {
-                awareChild.SetDesktopPageContext(isOnActivePage, isEditMode);
-            }
-        }
     }
 
     /// <summary>
@@ -3509,7 +3469,7 @@ public partial class MainWindow : Window
         _componentLibraryActiveComponents = category.Components;
         var componentCount = _componentLibraryActiveComponents.Count;
 
-        ClearTimeZoneServiceBindings(ComponentLibraryComponentPagesContainer.Children.OfType<Control>().ToList());
+        DesktopComponentContext.ClearTimeZoneServiceBindings(ComponentLibraryComponentPagesContainer.Children.OfType<Control>().ToList());
         DisposeStaticComponentLibraryPreviews(ComponentLibraryComponentPagesContainer.Children.OfType<Control>());
         ComponentLibraryComponentPagesContainer.Children.Clear();
         ComponentLibraryComponentPagesContainer.RowDefinitions.Clear();
@@ -3742,7 +3702,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        ClearTimeZoneServiceBindings(ComponentLibraryComponentPagesContainer.Children.OfType<Control>().ToList());
+        DesktopComponentContext.ClearTimeZoneServiceBindings(ComponentLibraryComponentPagesContainer.Children.OfType<Control>().ToList());
         DisposeStaticComponentLibraryPreviews(ComponentLibraryComponentPagesContainer.Children.OfType<Control>());
         ComponentLibraryComponentPagesContainer.Children.Clear();
         ComponentLibraryComponentPagesContainer.RowDefinitions.Clear();

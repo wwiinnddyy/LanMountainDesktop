@@ -11,11 +11,11 @@ using LanMountainDesktop.Services.Settings;
 
 namespace LanMountainDesktop.Views;
 
-public partial class FusedDesktopComponentLibraryWindow : Window
+public partial class DesktopPanelComponentLibraryWindow : Window
 {
     private static readonly LocalizationService LocalizationService = new();
 
-    public FusedDesktopComponentLibraryWindow()
+    public DesktopPanelComponentLibraryWindow()
     {
         InitializeComponent();
         Win32Properties.SetWindowCornerPreference(
@@ -29,10 +29,10 @@ public partial class FusedDesktopComponentLibraryWindow : Window
         KeyDown += OnWindowKeyDown;
 
         var mainWindow = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow as MainWindow;
-        mainWindow?.RegisterFusedLibraryWindow(this);
+        mainWindow?.RegisterDesktopPanelLibraryWindow(this);
 
-        FusedDesktopManagerServiceFactory.GetOrCreate().EnterEditMode();
-        AppLogger.Info("FusedDesktopLibrary", "Entered edit mode via library window open.");
+        DesktopPanelManagerServiceFactory.GetOrCreate().EnterEditMode();
+        AppLogger.Info("DesktopPanelLibrary", "Entered edit mode via library window open.");
     }
 
     private void ApplyLocalization()
@@ -40,7 +40,7 @@ public partial class FusedDesktopComponentLibraryWindow : Window
         var languageCode = HostSettingsFacadeProvider.GetOrCreate().Region.Get().LanguageCode;
         var title = LocalizationService.GetString(
             languageCode,
-            "fused_desktop.library.title",
+            "desktop_panel.library.title",
             "Add widgets");
         Title = title;
         WindowTitleTextBlock.Text = title;
@@ -87,8 +87,8 @@ public partial class FusedDesktopComponentLibraryWindow : Window
 
     private void OnAddComponentRequested(object? sender, string componentId)
     {
-        FusedDesktopManagerServiceFactory.GetOrCreate().AddComponent(componentId, this);
-        AppLogger.Info("FusedDesktopLibrary", $"Added component '{componentId}' directly to fused desktop.");
+        DesktopPanelManagerServiceFactory.GetOrCreate().AddComponent(componentId);
+        AppLogger.Info("DesktopPanelLibrary", $"Added component '{componentId}' directly to the desktop panel.");
     }
 
     private void OnCloseClick(object? sender, RoutedEventArgs e)
@@ -126,8 +126,8 @@ public partial class FusedDesktopComponentLibraryWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
-        FusedDesktopManagerServiceFactory.GetOrCreate().ExitEditMode();
-        AppLogger.Info("FusedDesktopLibrary", "Exited edit mode via library window close.");
+        DesktopPanelManagerServiceFactory.GetOrCreate().ExitEditMode();
+        AppLogger.Info("DesktopPanelLibrary", "Exited edit mode via library window close.");
 
         LibraryControl.AddComponentRequested -= OnAddComponentRequested;
         Opened -= OnWindowOpened;
@@ -135,6 +135,6 @@ public partial class FusedDesktopComponentLibraryWindow : Window
         base.OnClosed(e);
 
         var mainWindow = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow as MainWindow;
-        mainWindow?.UnregisterFusedLibraryWindow(this);
+        mainWindow?.UnregisterDesktopPanelLibraryWindow(this);
     }
 }

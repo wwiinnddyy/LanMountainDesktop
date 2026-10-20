@@ -3,12 +3,12 @@ using Xunit;
 
 namespace LanMountainDesktop.Tests;
 
-public sealed class FusedDesktopLibraryPreviewLayoutTests
+public sealed class DesktopPanelLibraryPreviewLayoutTests
 {
     [Fact]
     public void Calculate_PreservesLandscapeComponentRatio()
     {
-        var metrics = FusedDesktopLibraryPreviewLayout.Calculate(
+        var metrics = DesktopPanelLibraryPreviewLayout.Calculate(
             widthCells: 4,
             heightCells: 2,
             stageWidth: 520,
@@ -23,7 +23,7 @@ public sealed class FusedDesktopLibraryPreviewLayoutTests
     [Fact]
     public void Calculate_PreservesPortraitComponentRatio()
     {
-        var metrics = FusedDesktopLibraryPreviewLayout.Calculate(
+        var metrics = DesktopPanelLibraryPreviewLayout.Calculate(
             widthCells: 2,
             heightCells: 4,
             stageWidth: 520,
@@ -38,7 +38,7 @@ public sealed class FusedDesktopLibraryPreviewLayoutTests
     [Fact]
     public void Calculate_FitsPreviewInsideStageInsets()
     {
-        var metrics = FusedDesktopLibraryPreviewLayout.Calculate(
+        var metrics = DesktopPanelLibraryPreviewLayout.Calculate(
             widthCells: 4,
             heightCells: 4,
             stageWidth: 420,
@@ -53,7 +53,7 @@ public sealed class FusedDesktopLibraryPreviewLayoutTests
     [Fact]
     public void Calculate_UsesFallbackStageWhenBoundsAreNotMeasured()
     {
-        var metrics = FusedDesktopLibraryPreviewLayout.Calculate(
+        var metrics = DesktopPanelLibraryPreviewLayout.Calculate(
             widthCells: 4,
             heightCells: 2,
             stageWidth: 0,
@@ -68,7 +68,7 @@ public sealed class FusedDesktopLibraryPreviewLayoutTests
     public void Calculate_RespectsMinCellSize()
     {
         // 测试非常小的 stage 尺寸，确保 cellSize 不会小于 MinCellSize
-        var metrics = FusedDesktopLibraryPreviewLayout.Calculate(
+        var metrics = DesktopPanelLibraryPreviewLayout.Calculate(
             widthCells: 10,
             heightCells: 10,
             stageWidth: 50,

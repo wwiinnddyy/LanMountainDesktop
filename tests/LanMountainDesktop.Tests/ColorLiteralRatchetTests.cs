@@ -118,7 +118,10 @@ public sealed class ColorLiteralRatchetTests
     // 2026-09-30 汇率计算器那一笔（标记面 −13）**没动这个数**：这条对账只加 .cs 的两本账，
     // 标记面另有自己的等值格（MarkupMeasuredTotal）——这一点是我改错一次才被这条红出来的，
     // 别再把标记面的降幅算进这里。
-    private const int MeasuredGrandTotal = 1068;
+    // 2026-10-20 单窗口桌面板重构：删掉已下线的每组件一窗实现（DesktopWidgetWindow /
+    // DesktopWidgetResizeHandle），代码面带走 1 个裸色值（ResizeHandle 的 #0078D4）。这不是烧角色色，
+    // 是删除旧实现；组件面 508、豁免 559、总数 1067。
+    private const int MeasuredGrandTotal = 1067;
 
     // 2026-09-29 新量的一面：.axaml 里的颜色属性此前这条判据**完全看不见**（只扫 *.cs）。
     // 量出来是 412 处 / 40 个文件——比组件里剩下的 659 少不到一半，绝不是"边角料"。
@@ -181,10 +184,12 @@ public sealed class ColorLiteralRatchetTests
     // `_isNightVisual ? #3D4451 : #E7EBF4`，比行板（overlay）更亮一档——主题只有 raised/overlay 两层，
     // 而这块面板有"卡底／行板／头像格"三层，1:1 不存在，硬并会让头像格和行板同色、圆片直接看不见
     // （与键盘特殊键、通知盒未读/已读同形）。已并进 #G1-CY 那条"第三层表面"的口径，另加 #112 记账。
-    private const int MarkupColorLiteralCeiling = 319;
+    // 2026-10-20 单窗口桌面板重构：DesktopWidgetWindow.axaml 随每组件一窗实现一起删除，
+    // 标记面带走 1 个裸色值（编辑态边框 #0078D4）。319 -> 318。
+    private const int MarkupColorLiteralCeiling = 318;
 
     // 总数对账（与 .cs 面同一个套路：这条先于上限红，用来分"真收口"与"判据少看一片"）。
-    private const int MarkupMeasuredTotal = 319;
+    private const int MarkupMeasuredTotal = 318;
 
     private const int MarkupFileFloor = 38;
 

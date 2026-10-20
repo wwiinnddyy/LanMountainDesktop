@@ -155,7 +155,7 @@
   <data name="Oobe_ShowInTaskbar" xml:space="preserve"><value>작업 표시줄에 기본 데스크톱 창 표시</value></data>
   <data name="Oobe_SlideTransition" xml:space="preserve"><value>슬라이드 전환으로 기본 창 표시</value></data>
   <data name="Oobe_FadeTransition" xml:space="preserve"><value>시작 시 페이드인 전환 사용</value></data>
-  <data name="Oobe_FusedDesktop" xml:space="preserve"><value>퓨즈드 데스크톱 및 스와이프 제스처</value></data>
+  <data name="Oobe_DesktopPanel" xml:space="preserve"><value>데스크톱 패널 및 스와이프 제스처</value></data>
   <data name="Oobe_AutoStart" xml:space="preserve"><value>Windows 로그인 시 란산 데스크톱 자동 시작</value></data>
   <data name="Oobe_PrivacyTitle" xml:space="preserve"><value>정보 및 개인정보</value></data>
   <data name="Oobe_CrashReports" xml:space="preserve"><value>익명 크래시 보고서 보내기</value></data>
@@ -176,7 +176,7 @@
   <data name="Oobe_ShowInTaskbarDesc" xml:space="preserve"><value>활성화하면 최소화 시 작업 표시줄에 항목이 유지됩니다. 비활성화하면 트레이 아이콘에 더 의존합니다.</value></data>
   <data name="Oobe_SlideTransitionDesc" xml:space="preserve"><value>화면 가장자리에서 슬라이드 인. 페이드 인과 상호 배타적.</value></data>
   <data name="Oobe_FadeTransitionDesc" xml:space="preserve"><value>슬라이드 인이 비활성화된 경우 권장.</value></data>
-  <data name="Oobe_FusedDesktopDesc" xml:space="preserve"><value>퓨즈드 데스크톱과 세 손가락 스와이프 제스처를 활성화하여 에지 팝인 및 관련 실험 기능을 사용합니다(설정의 개발자 옵션과 동일).</value></data>
+  <data name="Oobe_DesktopPanelDesc" xml:space="preserve"><value>데스크톱 패널(모든 위젯이 하나의 창에서 실행)과 세 손가락 스와이프 제스처를 활성화하여 에지 팝인 및 관련 기능을 사용합니다.</value></data>
   <data name="Oobe_AutoStartDesc" xml:space="preserve"><value>이 런처를 현재 사용자의 시작 프로그램으로 등록합니다(설치 프로그램의 선택적 작업과 동일한 레지스트리 항목).</value></data>
   <data name="Oobe_AutoStartDescNonWindows" xml:space="preserve"><value>이 플랫폼에서는 설정만 저장됩니다. 자동 시작은 시스템의 앱 자동 시작 설정을 사용하세요.</value></data>
   <data name="Oobe_PrivacyDesc" xml:space="preserve"><value>원격 측정 프로그램 참여 여부를 선택하고 개인정보 정책을 확인</value></data>

@@ -155,7 +155,7 @@
   <data name="Oobe_ShowInTaskbar" xml:space="preserve"><value>Show main desktop window in taskbar</value></data>
   <data name="Oobe_SlideTransition" xml:space="preserve"><value>Show main window with slide transition</value></data>
   <data name="Oobe_FadeTransition" xml:space="preserve"><value>Use fade-in transition on startup</value></data>
-  <data name="Oobe_FusedDesktop" xml:space="preserve"><value>Fused desktop with swipe gesture</value></data>
+  <data name="Oobe_DesktopPanel" xml:space="preserve"><value>Desktop panel with swipe gesture</value></data>
   <data name="Oobe_AutoStart" xml:space="preserve"><value>Automatically start LanMountain Desktop on Windows login</value></data>
   <data name="Oobe_PrivacyTitle" xml:space="preserve"><value>Information &amp; Privacy</value></data>
   <data name="Oobe_CrashReports" xml:space="preserve"><value>Send anonymous crash reports</value></data>
@@ -176,7 +176,7 @@
   <data name="Oobe_ShowInTaskbarDesc" xml:space="preserve"><value>When enabled, a taskbar entry remains when minimized; when disabled, rely more on the tray icon.</value></data>
   <data name="Oobe_SlideTransitionDesc" xml:space="preserve"><value>Slide in from screen edge; mutually exclusive with fade-in.</value></data>
   <data name="Oobe_FadeTransitionDesc" xml:space="preserve"><value>Recommended when slide-in is not enabled.</value></data>
-  <data name="Oobe_FusedDesktopDesc" xml:space="preserve"><value>Enable fused desktop and three-finger swipe gesture for edge pop-in and related experimental features (same as developer options in Settings).</value></data>
+  <data name="Oobe_DesktopPanelDesc" xml:space="preserve"><value>Enable the desktop panel (all widgets run in one window) and the three-finger swipe gesture for edge pop-in and related features.</value></data>
   <data name="Oobe_AutoStartDesc" xml:space="preserve"><value>Register this launcher as the current user's startup item (same registry entry as the optional installer task).</value></data>
   <data name="Oobe_AutoStartDescNonWindows" xml:space="preserve"><value>Only the preference is saved on this platform; use the system's app auto-start settings for actual auto-start behavior.</value></data>
   <data name="Oobe_PrivacyDesc" xml:space="preserve"><value>Choose whether to participate in the telemetry program and review the privacy policy</value></data>

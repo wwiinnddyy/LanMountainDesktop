@@ -155,7 +155,7 @@
   <data name="Oobe_ShowInTaskbar" xml:space="preserve"><value>タスクバーにメインデスクトップウィンドウを表示</value></data>
   <data name="Oobe_SlideTransition" xml:space="preserve"><value>スライド遷移でメインウィンドウを表示</value></data>
   <data name="Oobe_FadeTransition" xml:space="preserve"><value>起動時にフェードイン遷移を使用</value></data>
-  <data name="Oobe_FusedDesktop" xml:space="preserve"><value>フューズドデスクトップとスワイプジェスチャー</value></data>
+  <data name="Oobe_DesktopPanel" xml:space="preserve"><value>デスクトップパネルとスワイプジェスチャー</value></data>
   <data name="Oobe_AutoStart" xml:space="preserve"><value>Windowsログイン時に蘭山デスクトップを自動起動</value></data>
   <data name="Oobe_PrivacyTitle" xml:space="preserve"><value>情報とプライバシー</value></data>
   <data name="Oobe_CrashReports" xml:space="preserve"><value>匿名クラッシュレポートを送信</value></data>
@@ -176,7 +176,7 @@
   <data name="Oobe_ShowInTaskbarDesc" xml:space="preserve"><value>有効にすると最小化時にタスクバーにエントリが残ります。無効にするとトレイアイコンに依存します。</value></data>
   <data name="Oobe_SlideTransitionDesc" xml:space="preserve"><value>画面端からスライドイン。フェードインとは排他的。</value></data>
   <data name="Oobe_FadeTransitionDesc" xml:space="preserve"><value>スライドインが無効の場合に推奨。</value></data>
-  <data name="Oobe_FusedDesktopDesc" xml:space="preserve"><value>フューズドデスクトップと三本指スワイプジェスチャーを有効にし、エッジポップインと関連実験機能を使用します（設定の開発者オプションと同じ）。</value></data>
+  <data name="Oobe_DesktopPanelDesc" xml:space="preserve"><value>デスクトップパネル（すべてのウィジェットが 1 つのウィンドウで動作）と三本指スワイプジェスチャーを有効にし、エッジポップインと関連機能を使用します。</value></data>
   <data name="Oobe_AutoStartDesc" xml:space="preserve"><value>このランチャーを現在のユーザーのスタートアップ項目として登録します（インストーラーのオプションタスクと同じレジストリエントリ）。</value></data>
   <data name="Oobe_AutoStartDescNonWindows" xml:space="preserve"><value>このプラットフォームでは設定のみ保存されます。自動起動にはシステムのアプリ自動起動設定を使用してください。</value></data>
   <data name="Oobe_PrivacyDesc" xml:space="preserve"><value>テレメトリプログラムへの参加を選択し、プライバシーポリシーを確認</value></data>

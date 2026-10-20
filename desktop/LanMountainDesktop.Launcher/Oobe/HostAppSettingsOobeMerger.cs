@@ -15,7 +15,8 @@ public static class HostAppSettingsOobeMerger
     public const string ShowInTaskbarKey = "ShowInTaskbar";
     public const string EnableFadeTransitionKey = "EnableFadeTransition";
     public const string EnableSlideTransitionKey = "EnableSlideTransition";
-    public const string EnableFusedDesktopKey = "EnableFusedDesktop";
+    /// <summary>磁盘键沿用旧名，升级用户的开关状态继续生效；产品语义是单窗口桌面板。</summary>
+    public const string EnableDesktopPanelKey = "EnableFusedDesktop";
     public const string EnableThreeFingerSwipeKey = "EnableThreeFingerSwipe";
     public const string AutoStartWithWindowsKey = "AutoStartWithWindows";
     public const string MultiInstanceLaunchBehaviorKey = "MultiInstanceLaunchBehavior";
@@ -64,7 +65,7 @@ public static class HostAppSettingsOobeMerger
                 ShowInTaskbar: ReadBool(root, ShowInTaskbarKey, defaultValue: false),
                 EnableFadeTransition: normalized.EnableFadeTransition,
                 EnableSlideTransition: normalized.EnableSlideTransition,
-                FusedPopupExperience: ReadBool(root, EnableFusedDesktopKey, defaultValue: false) &&
+                DesktopPanelExperience: ReadBool(root, EnableDesktopPanelKey, defaultValue: false) &&
                                       ReadBool(root, EnableThreeFingerSwipeKey, defaultValue: false),
                 AutoStartWithWindows: ReadBool(root, AutoStartWithWindowsKey, defaultValue: false));
         }
@@ -110,8 +111,8 @@ public static class HostAppSettingsOobeMerger
         root[ShowInTaskbarKey] = choices.ShowInTaskbar;
         root[EnableFadeTransitionKey] = normalized.EnableFadeTransition;
         root[EnableSlideTransitionKey] = normalized.EnableSlideTransition;
-        root[EnableFusedDesktopKey] = choices.FusedPopupExperience;
-        root[EnableThreeFingerSwipeKey] = choices.FusedPopupExperience;
+        root[EnableDesktopPanelKey] = choices.DesktopPanelExperience;
+        root[EnableThreeFingerSwipeKey] = choices.DesktopPanelExperience;
         root[AutoStartWithWindowsKey] = choices.AutoStartWithWindows;
         root[ThemeModeKey] = string.IsNullOrWhiteSpace(choices.ThemeMode)
             ? ThemeModeLightValue
@@ -216,14 +217,14 @@ public readonly record struct HostAppSettingsStartupDefaults(
     bool ShowInTaskbar,
     bool EnableFadeTransition,
     bool EnableSlideTransition,
-    bool FusedPopupExperience,
+    bool DesktopPanelExperience,
     bool AutoStartWithWindows)
 {
     public static HostAppSettingsStartupDefaults Fallback { get; } = new(
         ShowInTaskbar: false,
         EnableFadeTransition: true,
         EnableSlideTransition: false,
-        FusedPopupExperience: false,
+        DesktopPanelExperience: false,
         AutoStartWithWindows: false);
 }
 
@@ -231,6 +232,6 @@ public readonly record struct HostAppSettingsStartupChoices(
     bool ShowInTaskbar,
     bool EnableFadeTransition,
     bool EnableSlideTransition,
-    bool FusedPopupExperience,
+    bool DesktopPanelExperience,
     bool AutoStartWithWindows,
     string ThemeMode = HostAppSettingsOobeMerger.ThemeModeLightValue);

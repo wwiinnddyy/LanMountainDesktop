@@ -4,14 +4,14 @@ using LanMountainDesktop.ComponentSystem;
 
 namespace LanMountainDesktop.Views;
 
-internal readonly record struct FusedDesktopLibraryPreviewMetrics(
+internal readonly record struct DesktopPanelLibraryPreviewMetrics(
     int WidthCells,
     int HeightCells,
     double CellSize,
     double Width,
     double Height);
 
-internal static class FusedDesktopLibraryPreviewLayout
+internal static class DesktopPanelLibraryPreviewLayout
 {
     internal const double DefaultStageWidth = 460d;
     internal const double DefaultStageHeight = 300d;
@@ -21,7 +21,7 @@ internal static class FusedDesktopLibraryPreviewLayout
     private const double MinCellSize = 32d;
     private const double MaxCellSize = 128d;
 
-    public static FusedDesktopLibraryPreviewMetrics Calculate(
+    public static DesktopPanelLibraryPreviewMetrics Calculate(
         DesktopComponentDefinition definition,
         Size stageSize)
     {
@@ -34,7 +34,7 @@ internal static class FusedDesktopLibraryPreviewLayout
             stageSize.Height);
     }
 
-    public static FusedDesktopLibraryPreviewMetrics Calculate(
+    public static DesktopPanelLibraryPreviewMetrics Calculate(
         int widthCells,
         int heightCells,
         double stageWidth,
@@ -62,7 +62,7 @@ internal static class FusedDesktopLibraryPreviewLayout
             ? Math.Min(fitCellSize, MaxCellSize)
             : MinCellSize;
 
-        return new FusedDesktopLibraryPreviewMetrics(
+        return new DesktopPanelLibraryPreviewMetrics(
             normalizedWidthCells,
             normalizedHeightCells,
             cellSize,

@@ -9,12 +9,12 @@ using Xunit;
 
 namespace LanMountainDesktop.Tests;
 
-public sealed class FusedDesktopLibraryMetadataTests : IDisposable
+public sealed class DesktopPanelLibraryMetadataTests : IDisposable
 {
     private readonly string _tempRoot = Path.Combine(
         Path.GetTempPath(),
         "LanMountainDesktop.Tests",
-        nameof(FusedDesktopLibraryMetadataTests),
+        nameof(DesktopPanelLibraryMetadataTests),
         Guid.NewGuid().ToString("N"));
 
     [Fact]
@@ -106,15 +106,15 @@ public sealed class FusedDesktopLibraryMetadataTests : IDisposable
     }
 
     [Fact]
-    public void FusedDesktopLibraryLocalizationFiles_ContainRequiredKeys()
+    public void DesktopPanelLibraryLocalizationFiles_ContainRequiredKeys()
     {
         var requiredKeys = new[]
         {
-            "fused_desktop.library.title",
-            "fused_desktop.library.add_button",
-            "fused_desktop.library.find_more",
-            "fused_desktop.library.empty_selection",
-            "fused_desktop.library.component_summary_format"
+            "desktop_panel.library.title",
+            "desktop_panel.library.add_button",
+            "desktop_panel.library.find_more",
+            "desktop_panel.library.empty_selection",
+            "desktop_panel.library.component_summary_format"
         };
 
         foreach (var language in new[] { "zh-CN", "en-US", "ja-JP", "ko-KR" })
@@ -131,17 +131,17 @@ public sealed class FusedDesktopLibraryMetadataTests : IDisposable
     }
 
     [Fact]
-    public void FusedDesktopLibraryLifecycle_KeepsAddOpenAndUsesEditModeBoundary()
+    public void DesktopPanelLibraryLifecycle_KeepsAddOpenAndUsesEditModeBoundary()
     {
         var appSource = ReadRepositoryFile("desktop", "LanMountainDesktop", "App.axaml.cs");
-        var openSource = ExtractMethodSource(appSource, "OpenFusedDesktopComponentLibraryFromUi");
-        var closedSource = ExtractMethodSource(appSource, "OnFusedComponentLibraryWindowClosed");
-        var librarySource = ReadRepositoryFile("desktop", "LanMountainDesktop", "Views", "FusedDesktopComponentLibraryWindow.axaml.cs");
+        var openSource = ExtractMethodSource(appSource, "OpenDesktopPanelComponentLibraryFromUi");
+        var closedSource = ExtractMethodSource(appSource, "OnDesktopPanelComponentLibraryWindowClosed");
+        var librarySource = ReadRepositoryFile("desktop", "LanMountainDesktop", "Views", "DesktopPanelComponentLibraryWindow.axaml.cs");
         var addSource = ExtractMethodSource(librarySource, "OnAddComponentRequested");
 
         Assert.Contains("EnterEditMode()", openSource);
         Assert.Contains("ExitEditMode()", closedSource);
-        Assert.Contains("AddComponent(componentId, this)", addSource);
+        Assert.Contains("AddComponent(componentId)", addSource);
         Assert.DoesNotContain("Close()", addSource);
     }
 
@@ -183,7 +183,12 @@ public sealed class FusedDesktopLibraryMetadataTests : IDisposable
 
     private static string ExtractMethodSource(string source, string methodName)
     {
-        var methodIndex = source.IndexOf($"private void {methodName}(", StringComparison.Ordinal);
+        var methodIndex = source.IndexOf($"internal void {methodName}(", StringComparison.Ordinal);
+        if (methodIndex < 0)
+        {
+            methodIndex = source.IndexOf($"private void {methodName}(", StringComparison.Ordinal);
+        }
+
         if (methodIndex < 0)
         {
             methodIndex = source.IndexOf($"private bool {methodName}(", StringComparison.Ordinal);

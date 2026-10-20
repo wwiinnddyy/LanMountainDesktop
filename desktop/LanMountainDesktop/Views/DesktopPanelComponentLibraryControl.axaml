@@ -3,7 +3,7 @@
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:fi="using:FluentIcons.Avalonia"
              xmlns:converters="using:Avalonia.Data.Converters"
-             x:Class="LanMountainDesktop.Views.FusedDesktopComponentLibraryControl"
+             x:Class="LanMountainDesktop.Views.DesktopPanelComponentLibraryControl"
              x:DataType="vm:ComponentLibraryWindowViewModel">
     <UserControl.Styles>
         <Style Selector="ListBoxItem.category-item">
@@ -32,17 +32,17 @@
             <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
-        <Style Selector="Button.fused-library-link">
+        <Style Selector="Button.panel-library-link">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="6,4"/>
             <Setter Property="MinHeight" Value="28"/>
             <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextSecondaryBrush}"/>
         </Style>
-        <Style Selector="Button.fused-library-link:pointerover">
+        <Style Selector="Button.panel-library-link:pointerover">
             <Setter Property="Background" Value="{DynamicResource AdaptiveButtonHoverBackgroundBrush}"/>
         </Style>
-        <Style Selector="Button.fused-library-add-button">
+        <Style Selector="Button.panel-library-add-button">
             <Setter Property="Background" Value="{DynamicResource AdaptiveAccentBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveAccentBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource AdaptiveOnAccentBrush}"/>
@@ -50,13 +50,13 @@
             <Setter Property="MinHeight" Value="38"/>
             <Setter Property="Padding" Value="22,8"/>
         </Style>
-        <Style Selector="Button.fused-library-add-button:pointerover">
+        <Style Selector="Button.panel-library-add-button:pointerover">
             <Setter Property="Background" Value="{DynamicResource AdaptiveAccentLightBrush}"/>
         </Style>
-        <Style Selector="Button.fused-library-add-button TextBlock">
+        <Style Selector="Button.panel-library-add-button TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource AdaptiveOnAccentBrush}"/>
         </Style>
-        <Style Selector="Button.fused-library-add-button fi|FluentIcon">
+        <Style Selector="Button.panel-library-add-button fi|FluentIcon">
             <Setter Property="Foreground" Value="{DynamicResource AdaptiveOnAccentBrush}"/>
         </Style>
     </UserControl.Styles>
@@ -103,7 +103,7 @@
                             Background="{DynamicResource AdaptiveGlassPanelBorderBrush}"
                             Opacity="0.4"
                             Margin="0,0,0,8"/>
-                    <Button Classes="fused-library-link"
+                    <Button Classes="panel-library-link"
                             HorizontalAlignment="Left"
                             Click="OnFindMoreComponentsClick">
                         <StackPanel Orientation="Horizontal" Spacing="6">
@@ -182,7 +182,7 @@
                 <Button Grid.Row="3"
                         HorizontalAlignment="Center"
                         Margin="0,18,0,0"
-                        Classes="fused-library-add-button"
+                        Classes="panel-library-add-button"
                         Tag="{Binding SelectedComponent.ComponentId}"
                         Click="OnAddComponentClick">
                     <StackPanel Orientation="Horizontal" Spacing="8">

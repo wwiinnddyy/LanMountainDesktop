@@ -12,7 +12,7 @@ namespace LanMountainDesktop.Views;
 
 public partial class MainWindow : Window
 {
-    private FusedDesktopComponentLibraryWindow? _fusedLibraryWindow;
+    private DesktopPanelComponentLibraryWindow? _desktopPanelLibraryWindow;
 
     private Control CreateStaticComponentLibraryPreview(
         string componentId,
@@ -135,16 +135,16 @@ public partial class MainWindow : Window
         _desktopEditOverlayPresenter?.SetPreviewImage(null);
     }
 
-    public void RegisterFusedLibraryWindow(FusedDesktopComponentLibraryWindow window)
+    public void RegisterDesktopPanelLibraryWindow(DesktopPanelComponentLibraryWindow window)
     {
-        _fusedLibraryWindow = window;
+        _desktopPanelLibraryWindow = window;
     }
 
-    public void UnregisterFusedLibraryWindow(FusedDesktopComponentLibraryWindow window)
+    public void UnregisterDesktopPanelLibraryWindow(DesktopPanelComponentLibraryWindow window)
     {
-        if (ReferenceEquals(_fusedLibraryWindow, window))
+        if (ReferenceEquals(_desktopPanelLibraryWindow, window))
         {
-            _fusedLibraryWindow = null;
+            _desktopPanelLibraryWindow = null;
         }
     }
 }

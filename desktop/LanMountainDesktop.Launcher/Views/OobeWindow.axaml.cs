@@ -540,9 +540,9 @@ public partial class OobeWindow : Window
                 }
             }
 
-            if (this.FindControl<ToggleSwitch>("OobeFusedPopupToggle") is { } fused)
+            if (this.FindControl<ToggleSwitch>("OobeDesktopPanelToggle") is { } desktopPanel)
             {
-                fused.IsChecked = defaults.FusedPopupExperience;
+                desktopPanel.IsChecked = defaults.DesktopPanelExperience;
             }
 
             if (this.FindControl<ToggleSwitch>("OobeAutoStartToggle") is { } autoStart)
@@ -560,7 +560,7 @@ public partial class OobeWindow : Window
     private HostAppSettingsStartupChoices CollectOobeStartupChoices()
     {
         var showTaskbar = this.FindControl<ToggleSwitch>("OobeShowInTaskbarToggle")?.IsChecked == true;
-        var fused = this.FindControl<ToggleSwitch>("OobeFusedPopupToggle")?.IsChecked == true;
+        var desktopPanel = this.FindControl<ToggleSwitch>("OobeDesktopPanelToggle")?.IsChecked == true;
         var autoStart = OperatingSystem.IsWindows() &&
                         this.FindControl<ToggleSwitch>("OobeAutoStartToggle")?.IsChecked == true;
 
@@ -581,7 +581,7 @@ public partial class OobeWindow : Window
             ShowInTaskbar: showTaskbar,
             EnableFadeTransition: fade,
             EnableSlideTransition: slide,
-            FusedPopupExperience: fused,
+            DesktopPanelExperience: desktopPanel,
             AutoStartWithWindows: autoStart,
             // 向导里选的黑白档必须落到宿主的 ThemeMode，否则用户选完首启还是默认浅色。
             ThemeMode: _selectedThemeMode == ThemeMode.Dark

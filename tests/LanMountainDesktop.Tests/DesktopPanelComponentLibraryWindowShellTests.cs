@@ -2,7 +2,7 @@ using Xunit;
 
 namespace LanMountainDesktop.Tests;
 
-public sealed class FusedDesktopComponentLibraryWindowShellTests
+public sealed class DesktopPanelComponentLibraryWindowShellTests
 {
     [Fact]
     public void Window_UsesTransparentFullClientArea()
@@ -11,7 +11,7 @@ public sealed class FusedDesktopComponentLibraryWindowShellTests
             "desktop",
             "LanMountainDesktop",
             "Views",
-            "FusedDesktopComponentLibraryWindow.axaml");
+            "DesktopPanelComponentLibraryWindow.axaml");
         var window = ExtractElementStart(xaml, "<Window ");
 
         Assert.Contains("WindowDecorations=\"None\"", window);
@@ -28,7 +28,7 @@ public sealed class FusedDesktopComponentLibraryWindowShellTests
             "desktop",
             "LanMountainDesktop",
             "Views",
-            "FusedDesktopComponentLibraryWindow.axaml");
+            "DesktopPanelComponentLibraryWindow.axaml");
         var panelShell = ExtractElementStart(xaml, "<Border x:Name=\"PanelShell\"");
 
         Assert.Contains("Classes=\"surface-translucent-strong\"", panelShell);
@@ -48,7 +48,7 @@ public sealed class FusedDesktopComponentLibraryWindowShellTests
             "desktop",
             "LanMountainDesktop",
             "Views",
-            "FusedDesktopComponentLibraryWindow.axaml.cs");
+            "DesktopPanelComponentLibraryWindow.axaml.cs");
 
         Assert.Contains("Win32Properties.SetWindowCornerPreference(", codeBehind);
         Assert.Contains("Win32Properties.WindowCornerPreference.DoNotRound", codeBehind);
