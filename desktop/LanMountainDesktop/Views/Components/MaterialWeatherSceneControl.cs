@@ -50,7 +50,9 @@ internal static class WeatherSceneProfileResolver
 
 public sealed class MaterialWeatherSceneControl : Control
 {
-    private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(66) };
+    // 2026-10-25 性能修复：66ms（≈15fps）常驻重绘一个装饰性背景，是空闲时最贵的一项。
+    // 降到 100ms（10fps）对这种缓慢漂移的场景几乎没有视觉差别，但少 1/3 次全画布重绘。
+    private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(100) };
     private MaterialWeatherPalette _palette = MaterialWeatherVisualTheme.ResolvePalette(MaterialWeatherCondition.Clear, false);
     private MaterialWeatherCondition _condition = MaterialWeatherCondition.Clear;
     private string _styleId = WeatherVisualStyleId.Default;
@@ -64,6 +66,13 @@ public sealed class MaterialWeatherSceneControl : Control
         IsHitTestVisible = false;
         _timer.Tick += (_, _) =>
         {
+            // 不可见就立刻停表：此前只判断了"已附着"，切页/抽屉遮挡时仍在以 15fps 重绘。
+            if (!_isAttached || !IsEffectivelyVisible)
+            {
+                _timer.Stop();
+                return;
+            }
+
             _phase = (_phase + 0.0065) % 1d;
             InvalidateVisual();
         };

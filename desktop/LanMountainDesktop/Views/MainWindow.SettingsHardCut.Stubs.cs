@@ -229,13 +229,20 @@ public partial class MainWindow : Window
     private void ApplyAdaptiveThemeResources()
     {
         var context = BuildAdaptiveThemeContext();
-        ThemeColorSystemService.ApplyThemeResources(Resources, context);
-        GlassEffectService.ApplyGlassResources(Resources, context);
 
+        // 2026-10-25 性能修复：此前同一批 40+ 个键会被写两遍——先写窗口级 Resources，
+        // 再写 Application.Resources。Avalonia 的资源查找本来就会沿视觉树向上走到 Application，
+        // 窗口级那份是纯重复：多一次混色、多一批画刷分配，且同一份颜色出现两个来源。
+        // 现在只写应用级；窗口级留给设计时静态资源（DesignCornerRadius 等）。
         if (Application.Current?.Resources is { } applicationResources)
         {
             ThemeColorSystemService.ApplyThemeResources(applicationResources, context);
             GlassEffectService.ApplyGlassResources(applicationResources, context);
+        }
+        else
+        {
+            ThemeColorSystemService.ApplyThemeResources(Resources, context);
+            GlassEffectService.ApplyGlassResources(Resources, context);
         }
 
         _defaultDesktopBackground = CreateNeutralWallpaperFallbackBrush();
