@@ -8,6 +8,8 @@ public partial class WeatherClockWidget : WeatherWidgetBase, ITimeZoneAwareCompo
 {
     private readonly DispatcherTimer _clockTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     private TimeZoneService? _timeZoneService;
+    // 日期行一天/一次位置变更才重写：记上一次写入时的"日"。
+    private DateTime _lastDateTextDate = DateTime.MinValue;
 
     public WeatherClockWidget()
     {
@@ -66,14 +68,27 @@ public partial class WeatherClockWidget : WeatherWidgetBase, ITimeZoneAwareCompo
             : State == WeatherWidgetState.Error
                 ? "Unavailable"
                 : MaterialWeatherVisualTheme.ResolveDisplayText(Snapshot, "Weather");
+
+        // 天气快照可能换了位置：失效日期守卫，让紧跟着的 UpdateClock 把新位置写进日期行。
+        _lastDateTextDate = DateTime.MinValue;
         UpdateClock();
     }
 
     private void UpdateClock()
     {
         var now = _timeZoneService?.GetCurrentTime() ?? DateTime.Now;
-        TimeTextBlock.Text = now.ToString("HH:mm");
-        DateTextBlock.Text = $"{now:ddd, MMM d} · {DisplayLocation}";
+        var timeText = now.ToString("HH:mm");
+        if (!string.Equals(TimeTextBlock.Text, timeText, StringComparison.Ordinal))
+        {
+            TimeTextBlock.Text = timeText;
+        }
+
+        // 日期与位置一天/一次设置才变：先比"日"，换日才拼那条插值字符串，别每秒白付一次分配。
+        if (now.Date != _lastDateTextDate)
+        {
+            _lastDateTextDate = now.Date;
+            DateTextBlock.Text = $"{now:ddd, MMM d} · {DisplayLocation}";
+        }
     }
 
     private void OnTimeZoneChanged(object? sender, EventArgs e)

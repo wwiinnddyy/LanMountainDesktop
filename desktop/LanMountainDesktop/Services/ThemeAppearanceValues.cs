@@ -26,27 +26,6 @@ public static class ThemeAppearanceValues
     public const string MaterialMica = "mica";
     public const string MaterialAcrylic = "acrylic";
 
-    public static readonly IReadOnlyList<string> AllColorModes =
-    [
-        ColorModeDefaultNeutral,
-        ColorModeSeedMonet,
-        ColorModeWallpaperMonet
-    ];
-
-    public static readonly IReadOnlyList<string> AllMaterialModes =
-    [
-        MaterialAuto,
-        MaterialNone,
-        MaterialMica,
-        MaterialAcrylic
-    ];
-
-    public static readonly IReadOnlyList<string> AllWallpaperColorSources =
-    [
-        WallpaperColorSourceAuto,
-        WallpaperColorSourceApp,
-        WallpaperColorSourceSystem
-    ];
 
     public static string NormalizeThemeColorMode(string? value, string? themeColor = null)
     {

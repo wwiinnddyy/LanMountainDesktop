@@ -418,7 +418,7 @@
                                                         <StackPanel Spacing="12">
                                                             <Grid ColumnDefinitions="Auto,*"
                                                                   ColumnSpacing="12">
-                                                                <Border x:Name="TaskbarProfileHeaderAvatarBorder"
+                                                                <Border
                                                                         Classes="taskbar-profile-popup-avatar"
                                                                         Width="44"
                                                                         Height="44"
@@ -445,11 +445,11 @@
                                                                 </StackPanel>
                                                             </Grid>
 
-                                                            <Border x:Name="TaskbarProfilePopupDivider"
+                                                            <Border
                                                                     Height="1"
                                                                     Background="{DynamicResource TaskbarProfilePopupDividerBrush}" />
 
-                                                            <Button x:Name="TaskbarProfileSettingsActionButton"
+                                                            <Button
                                                                     Classes="taskbar-profile-popup-action"
                                                                     Click="OnOpenSettingsClick">
                                                                 <Grid ColumnDefinitions="Auto,*"
@@ -463,7 +463,7 @@
                                                                 </Grid>
                                                             </Button>
 
-                                                            <Button x:Name="TaskbarProfileDesktopEditActionButton"
+                                                            <Button
                                                                     Classes="taskbar-profile-popup-action"
                                                                     Click="OnOpenComponentLibraryClick">
                                                                 <Grid ColumnDefinitions="Auto,*"
@@ -515,7 +515,7 @@
                                                             </TranslateTransform>
                                                         </Grid.RenderTransform>
                                                         <StackPanel Spacing="8">
-                                                            <Button x:Name="TaskbarPowerBackButton"
+                                                            <Button
                                                                     Classes="taskbar-profile-popup-action"
                                                                     HorizontalAlignment="Left"
                                                                     Click="OnPowerMenuBackClick">
@@ -539,7 +539,7 @@
                                                             <Border Height="1"
                                                                     Background="{DynamicResource TaskbarProfilePopupDividerBrush}" />
 
-                                                            <Button x:Name="PowerShutdownButton"
+                                                            <Button
                                                                     Classes="taskbar-profile-popup-action"
                                                                     Click="OnPowerShutdownClick">
                                                                 <Grid ColumnDefinitions="Auto,*"
@@ -553,7 +553,7 @@
                                                                 </Grid>
                                                             </Button>
 
-                                                            <Button x:Name="PowerRestartButton"
+                                                            <Button
                                                                     Classes="taskbar-profile-popup-action"
                                                                     Click="OnPowerRestartClick">
                                                                 <Grid ColumnDefinitions="Auto,*"
@@ -567,7 +567,7 @@
                                                                 </Grid>
                                                             </Button>
 
-                                                            <Button x:Name="PowerLogoutButton"
+                                                            <Button
                                                                     Classes="taskbar-profile-popup-action"
                                                                     Click="OnPowerLogoutClick">
                                                                 <Grid ColumnDefinitions="Auto,*"
@@ -581,7 +581,7 @@
                                                                 </Grid>
                                                             </Button>
 
-                                                            <Button x:Name="PowerSleepButton"
+                                                            <Button
                                                                     Classes="taskbar-profile-popup-action"
                                                                     Click="OnPowerSleepClick">
                                                                 <Grid ColumnDefinitions="Auto,*"
@@ -595,7 +595,7 @@
                                                                 </Grid>
                                                             </Button>
 
-                                                            <Button x:Name="PowerLockButton"
+                                                            <Button
                                                                     Classes="taskbar-profile-popup-action"
                                                                     Click="OnPowerLockClick">
                                                                 <Grid ColumnDefinitions="Auto,*"
@@ -655,7 +655,7 @@
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
                                    Text="Widgets" />
-                        <Button x:Name="CloseComponentLibraryButton"
+                        <Button
                                 Grid.Column="1"
                                 Padding="8"
                                 Width="32"
@@ -704,7 +704,7 @@
                                   IsVisible="False"
                                   RowDefinitions="Auto,*"
                                   RowSpacing="10">
-                                <Button x:Name="ComponentLibraryBackButton"
+                                <Button
                                         Grid.Row="0"
                                         HorizontalAlignment="Left"
                                         Padding="8,6"

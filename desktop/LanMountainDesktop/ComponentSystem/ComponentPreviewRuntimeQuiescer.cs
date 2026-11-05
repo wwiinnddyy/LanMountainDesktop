@@ -11,9 +11,6 @@ namespace LanMountainDesktop.ComponentSystem;
 
 internal static class ComponentPreviewRuntimeQuiescer
 {
-    private static readonly BindingFlags TimerMemberFlags =
-        BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
-
     public static void Attach(Control control)
     {
         ArgumentNullException.ThrowIfNull(control);
@@ -71,25 +68,21 @@ internal static class ComponentPreviewRuntimeQuiescer
 
     private static void StopDispatcherTimers(object target)
     {
-        var type = target.GetType();
-        foreach (var field in type.GetFields(TimerMemberFlags))
+        // 每个控件一次 GetFields+GetProperties 在 Avalonia 控件上是 686µs 实测的大头
+        // （属性系统上千个成员 + GetIndexParameters 分配）。成员集合只取决于类型，按类型查缓存计划，
+        // 没有计时器的控件类型（Border/TextBlock 这些）查表后是空数组，一次树走就是常数开销。
+        var plan = ComponentTypeMemberPlans.GetTimerPlan(target.GetType());
+
+        foreach (var field in plan.TimerFields)
         {
-            if (typeof(DispatcherTimer).IsAssignableFrom(field.FieldType) &&
-                field.GetValue(target) is DispatcherTimer timer)
+            if (field.GetValue(target) is DispatcherTimer timer)
             {
                 timer.Stop();
             }
         }
 
-        foreach (var property in type.GetProperties(TimerMemberFlags))
+        foreach (var property in plan.TimerProperties)
         {
-            if (!property.CanRead ||
-                property.GetIndexParameters().Length != 0 ||
-                !typeof(DispatcherTimer).IsAssignableFrom(property.PropertyType))
-            {
-                continue;
-            }
-
             try
             {
                 if (property.GetValue(target) is DispatcherTimer timer)

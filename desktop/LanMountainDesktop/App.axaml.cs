@@ -98,7 +98,6 @@ public partial class App : Application
 
     public AirAppRuntimeService? AirAppRuntimeService => _airAppRuntimeService;
     public ISettingsFacadeService SettingsFacade => _settingsFacade;
-    public IHostApplicationLifecycle HostApplicationLifecycle => _hostApplicationLifecycle;
     internal ISettingsWindowService? SettingsWindowService => _settingsWindowService;
     internal INotificationService? NotificationService => _notificationService;
     internal bool IsShutdownInProgress => _shutdownGate.IsShutdownRequested || _shutdownIntent != ShutdownIntent.None;

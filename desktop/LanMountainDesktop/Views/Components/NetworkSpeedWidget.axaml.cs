@@ -12,7 +12,7 @@ using Symbol = FluentIcons.Common.Symbol;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class NetworkSpeedWidget : UserControl, IDesktopComponentWidget
+public partial class NetworkSpeedWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget
 {
     private readonly DispatcherTimer _timer = new();
     private readonly DispatcherTimer _networkTypeTimer = new();
@@ -25,6 +25,8 @@ public partial class NetworkSpeedWidget : UserControl, IDesktopComponentWidget
     private string _displayMode = "Both"; // "Upload", "Download", "Both"
     private bool _showNetworkTypeIcon;
     private string _fontSize = "Medium"; // Small, Medium, Large
+    // 多页桌面里非当前页只是被平移出屏；测速与图标探测在看不见的页上照跑纯属白付。默认 true 维持推送不到的宿主现状。
+    private bool _isOnActivePage = true;
 
     public NetworkSpeedWidget()
     {
@@ -106,8 +108,10 @@ public partial class NetworkSpeedWidget : UserControl, IDesktopComponentWidget
         _timer.Tick += (_, _) => UpdateSpeed();
         _timer.Start();
 
-        // 网络类型检测定时器（每500ms，满足响应延迟要求）
-        _networkTypeTimer.Interval = TimeSpan.FromMilliseconds(500);
+        // 网络类型检测定时器：图标只会随漫游/热点/插拔变化，5 秒足够跟手。
+        // 500ms 那版在网卡不健康时每 0.5s 全量枚举一次系统网卡（GetActiveNetworkInterface 的兜底路径），
+        // 2Hz × UI 线程 × 每个实例，VPN 抖动/Wi-Fi 漫游期间就是一段持续的 CPU 白付。
+        _networkTypeTimer.Interval = TimeSpan.FromSeconds(5);
         _networkTypeTimer.Tick += (_, _) => UpdateNetworkTypeIcon();
         _networkTypeTimer.Start();
     }
@@ -416,6 +420,33 @@ public partial class NetworkSpeedWidget : UserControl, IDesktopComponentWidget
     }
 
     private void ApplyChrome() => ComponentChromePanel.Apply(RootBorder, _transparentBackground);
+
+    public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)
+    {
+        _ = isEditMode;
+        // isAttached 传 true 与旧状态对齐：这张表的起表点在构造器里（SetupTimer），
+        // 挂树前的推送按"就当挂着"处理，行为与改造前一致；真正的停表只会更早不会更晚。
+        ComponentPagePauseLifetime.Apply(ref _isOnActivePage, isOnActivePage, true, [_timer, _networkTypeTimer],
+            onActive: UpdateNetworkTypeIcon);
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        // 重挂（同实例回到桌面）时把构造器起过的表续上：Detach 后构造器不会再跑一次。
+        if (_isOnActivePage)
+        {
+            if (!_timer.IsEnabled)
+            {
+                _timer.Start();
+            }
+
+            if (!_networkTypeTimer.IsEnabled)
+            {
+                _networkTypeTimer.Start();
+            }
+        }
+    }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {

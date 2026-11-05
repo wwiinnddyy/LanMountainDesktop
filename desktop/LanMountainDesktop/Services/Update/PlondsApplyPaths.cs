@@ -16,8 +16,6 @@ internal sealed class PlondsApplyPaths
     public string SnapshotsRoot { get; }
     public string InstallCheckpointPath => UpdatePaths.GetInstallCheckpointPath(LauncherRoot);
 
-    public string ApplyLockPath => UpdatePaths.GetApplyInProgressLockPath(LauncherRoot);
-    public string DeploymentLockPath => UpdatePaths.GetDeploymentLockPath(LauncherRoot);
     public string DownloadMarkerPath => UpdatePaths.GetDownloadMarkerPath(LauncherRoot);
 
     public string FileMapPath => Path.Combine(IncomingRoot, UpdatePaths.GetLegacyFileMapName());
@@ -33,8 +31,6 @@ internal sealed class PlondsApplyPaths
         UpdatePaths.GetLauncherDataRoot(LauncherRoot),
         UpdatePaths.UpdateDirectoryName,
         UpdatePaths.GetPublicKeyFileName());
-
-    public bool HasPlondsPayload => File.Exists(PlondsFileMapPath) && File.Exists(PlondsSignaturePath);
 
     public string GetSnapshotPath(string snapshotId) => Path.Combine(SnapshotsRoot, $"{snapshotId}.json");
 }

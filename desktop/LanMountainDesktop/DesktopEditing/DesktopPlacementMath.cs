@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Avalonia;
 
 namespace LanMountainDesktop.DesktopEditing;
@@ -46,11 +46,6 @@ internal static class DesktopPlacementMath
     public static double ComputeDragStartThreshold(double cellSize)
     {
         return Math.Max(10d, Math.Max(0d, cellSize) * 0.18d);
-    }
-
-    public static double Distance(Point start, Point end)
-    {
-        return Math.Sqrt(DistanceSquared(start, end));
     }
 
     public static double DistanceSquared(Point start, Point end)

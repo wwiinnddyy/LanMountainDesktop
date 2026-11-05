@@ -75,7 +75,7 @@
                         </Button>
                     </Grid>
 
-                    <ScrollViewer x:Name="NewsScrollViewer"
+                    <ScrollViewer
                                   Grid.Row="1"
                                   VerticalScrollBarVisibility="Auto">
                         <StackPanel x:Name="NewsStackPanel" Spacing="6">

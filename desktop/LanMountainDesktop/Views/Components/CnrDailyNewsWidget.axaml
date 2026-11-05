@@ -33,7 +33,7 @@
                                FontSize="24"
                                FontWeight="Bold"
                                TextTrimming="CharacterEllipsis" />
-                    <TextBlock x:Name="BrandSecondaryTextBlock"
+                    <TextBlock
                                Text="·头条"
                                Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                FontSize="24"
@@ -155,7 +155,7 @@
                                VerticalAlignment="Top"
                                LineHeight="24" />
 
-                    <Border x:Name="News2ImageHost"
+                    <Border
                             Grid.Column="1"
                             Width="140"
                             Height="80"

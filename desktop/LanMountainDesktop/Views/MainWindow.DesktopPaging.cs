@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -80,7 +80,13 @@ public partial class MainWindow : Window
     private bool _desktopGridRebuildPending;
     private bool _desktopCellSizeChangedForReflow;
 
-    // 婵犵數鍋為崹鍫曞箰閹间絸鍥箥椤旂懓浜鹃柛顭戝亯婢规ɑ銇勯婊冨妤犵偛顑呴埞鎴﹀窗?闂傚倷绀侀幉锟犳偡閿旂晫绠惧┑鐘叉搐閺嬩焦銇勯幘鍗炵仼缂佺媭鍨堕弻鈥崇暤椤旂厧鏁俊銈呮噺閻撶喖鏌嶉崫鍕灓闁绘帡绠栭弻?
+    // 已经摆好组件宿主的页。启动与重排只建当前页，其余页保持空 grid（几何照常就位），
+    // 等切页时 EnsureDesktopPageComponents 再建——实测单组件构造 0.15~10.4ms（WeatherClock 最重），
+    // 全量预建 3 页就是首帧前几十到上百毫秒的同步 UI 线程开销，其中大半花在看不见的页上。
+    // 判据只有一条：页的宿主建过一次，就永远留在集合里（重排只复用）；删页时随 placements 一起平移。
+    private readonly HashSet<int> _populatedDesktopPages = [];
+
+        // 三指滑动与右侧拖拽共用的“手势进行中”标志：两者走同一套翻页判定，看这一个位就够。
     private bool _isThreeFingerOrRightDragSwipeActive;
     private readonly HashSet<int> _activePointerIds = [];
 
@@ -236,6 +242,7 @@ public partial class MainWindow : Window
                      .Where(index => index >= _desktopPageCount)
                      .ToArray())
         {
+            _populatedDesktopPages.Remove(staleIndex);
             if (!_desktopPageComponentGrids.Remove(staleIndex, out var staleGrid))
             {
                 continue;
@@ -290,9 +297,14 @@ public partial class MainWindow : Window
 
             Grid.SetColumn(pageGrid, index);
             Grid.SetRow(pageGrid, 0);
-            var (reused, created) = RepositionDesktopPageComponents(index, refreshContext: false);
-            reusedHosts += reused;
-            createdHosts += created;
+            var isCurrentComponentPage = index < _desktopPageCount && index == _currentDesktopSurfaceIndex;
+            if (_populatedDesktopPages.Contains(index) || isCurrentComponentPage)
+            {
+                var (reused, created) = RepositionDesktopPageComponents(index, refreshContext: false);
+                reusedHosts += reused;
+                createdHosts += created;
+                _populatedDesktopPages.Add(index);
+            }
         }
 
         _desktopCellSizeChangedForReflow = false;
@@ -316,7 +328,7 @@ public partial class MainWindow : Window
         LauncherPagePanel.MaxWidth = pageWidth - launcherMargin * 2;
         LauncherPagePanel.MaxHeight = pageHeight - launcherMargin * 2;
 
-        // 闂傚倷绀侀幖顐⒚洪妶澶嬪仱闁靛ň鏅涢拑鐔封攽閻樺弶鎼愰悷娆欓檮閵囧嫰寮介妸銊ヮ棟閻炴氨鍠栧娲川婵犲嫭鍣┑鐘灪閿氶棁澶嬫叏濡炶浜鹃悗娈垮枙缁瑥鐣烽幆閭︽Ь濡炪倕绻戦幐鎶藉箖濮椻偓閹瑩鍩℃担宄邦棜
+                // 启动器面板高度落定后重排磁贴网格。
         UpdateLauncherTileLayout();
 
         _desktopSurfacePageWidth = pageWidth;
@@ -384,6 +396,12 @@ public partial class MainWindow : Window
 
         var targetOffset = -_currentDesktopSurfaceIndex * _desktopSurfacePageWidth;
         _desktopPagesHostTransform.X = targetOffset;
+
+        if (_currentDesktopSurfaceIndex < _desktopPageCount)
+        {
+            // 切到组件页时把那一页的宿主建起来（懒建）：只补没建过的页，已建页直接跳过。
+            EnsureDesktopPageComponents(_currentDesktopSurfaceIndex);
+        }
 
         if (_currentDesktopSurfaceIndex != LauncherSurfaceIndex)
         {
@@ -541,7 +559,7 @@ public partial class MainWindow : Window
         var isRightButtonPressed = currentPoint.Properties.IsRightButtonPressed;
         var isLeftButtonPressed = currentPoint.Properties.IsLeftButtonPressed;
 
-        // 婵犵數濮伴崹鐓庘枖濞戞埃鍋撳鐓庢珝妤犵偛鍟换婵嬪礃椤忎焦鐏冨┑鐘灱濞夋盯顢栭崨瀛樺剨閻熸瑥瀚弧鈧繝鐢靛Т閸燁偊鎮橀妷銉㈡斀?闂傚倷绀侀幉锟犳偡閿旂晫绠惧┑鐘叉搐閺嬩焦銇勯幘鍗炵仼缂佺媭鍨堕弻鈥崇暤椤旂厧鏁俊銈勬缁诲棙銇勯弽銊ｄ粶闁稿鎸搁悾鐑藉炊閳哄﹥鏁?
+                // 三指滑动开关开着才走手势判定；关着时这些指针事件按普通拖拽处理。
         if (isThreeFingerSwipeEnabled)
         {
             if (isLeftButtonPressed || isRightButtonPressed)
@@ -949,10 +967,10 @@ public partial class MainWindow : Window
         var hasDistanceIntent = absDeltaX >= distanceThreshold && absDeltaX > absDeltaY * 1.05;
         var hasVelocityIntent = Math.Abs(_desktopSwipeVelocityX) >= velocityThreshold;
 
-        // 濠电姷顣藉Σ鍛村磻閳ь剟鏌涚€ｎ偅宕岄柡宀嬬磿娴狅妇鎷犻幓鎺懶ョ紓鍌欐祰娴滎剚鏅跺Δ鍐煓濠㈣泛顑呯欢鐐烘倵閿濆簼绨芥俊?闂傚倷绀侀幉锟犳偡閿旂晫绠惧┑鐘叉搐閺嬩焦銇勯幘鍗炵仼缂佺媭鍨堕弻鈥崇暤椤旂厧鏁?&& 闂傚倷绶氬鑽ゆ嫻閻旂厧绀夐幖鎼厛閺佸嫰鏌涢妷锝呭闁崇粯妫冮弻宥堫檨闁告挻宀告俊?&& 闂傚倷绀侀幉锛勫枈瀹ュ鍨傚ù锝呭暔娴滃湱绱掔€ｎ偒鍎ラ柣鎾卞劦閺岀喓鈧稒顭囩粻鎾舵偖?
+                // 首页向右滑（三指或右侧拖拽）且距离/速度意图成立：不是翻页，是收窗进托盘——启动器就在首页右边那一面。
         if (wasThreeFingerOrRightDrag && 
             _currentDesktopSurfaceIndex == 0 && 
-            deltaX > 0 && // 闂傚倷绀侀幉锛勫枈瀹ュ鍨傚ù锝呭暔娴滃湱绱掔€ｎ偒鍎ラ柣鎾卞劦閺岀喓鈧稒顭囩粻鎾舵偖?
+            deltaX > 0 &&
             (hasDistanceIntent || hasVelocityIntent))
         {
             if (Application.Current is App app)

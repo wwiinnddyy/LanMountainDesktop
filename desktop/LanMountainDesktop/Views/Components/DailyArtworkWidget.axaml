@@ -56,16 +56,16 @@
                     <Canvas x:Name="BrickPatternCanvas"
                             IsHitTestVisible="False"
                             Opacity="0.44">
-                        <shapes:Path x:Name="BrickHorizontalPath"
+                        <shapes:Path
                                      Stroke="#7D838E"
                                      StrokeThickness="1.2"
                                      Data="M0,12 L800,12 M0,40 L800,40 M0,68 L800,68 M0,96 L800,96 M0,124 L800,124 M0,152 L800,152 M0,180 L800,180 M0,208 L800,208 M0,236 L800,236 M0,264 L800,264 M0,292 L800,292 M0,320 L800,320" />
-                        <shapes:Path x:Name="BrickVerticalPathA"
+                        <shapes:Path
                                      Stroke="#5A606B"
                                      StrokeThickness="1"
                                      Opacity="0.55"
                                      Data="M56,12 L56,40 M116,12 L116,40 M176,12 L176,40 M236,12 L236,40 M26,40 L26,68 M86,40 L86,68 M146,40 L146,68 M206,40 L206,68 M56,68 L56,96 M116,68 L116,96 M176,68 L176,96 M236,68 L236,96" />
-                        <shapes:Path x:Name="BrickVerticalPathB"
+                        <shapes:Path
                                      Stroke="#49505A"
                                      StrokeThickness="1"
                                      Opacity="0.36"

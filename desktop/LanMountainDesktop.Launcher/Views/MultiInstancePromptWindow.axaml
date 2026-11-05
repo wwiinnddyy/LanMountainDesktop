@@ -66,7 +66,7 @@
                    FontWeight="SemiBold"
                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                    TextWrapping="Wrap" />
-        <TextBlock x:Name="MessageText"
+        <TextBlock
                    Text="{x:Static res:Strings.MultiInstance_AlreadyRunningMessage}"
                    FontSize="14"
                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"

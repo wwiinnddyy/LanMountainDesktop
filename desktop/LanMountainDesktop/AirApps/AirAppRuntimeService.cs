@@ -93,8 +93,6 @@ public sealed class AirAppRuntimeService : IDisposable
     public IReadOnlyList<AirAppDesktopComponentContribution> DesktopComponents => _desktopComponents;
     public IReadOnlyList<AirAppDesktopComponentEditorContribution> DesktopComponentEditors => _desktopComponentEditors;
 
-    public IAirAppExportRegistry ExportRegistry => _exportRegistry;
-
     public ISettingsFacadeService SettingsFacade => _settingsFacade;
 
     public void LoadInstalledAirApps()

@@ -29,12 +29,7 @@ internal readonly record struct DesktopEditSession
 
     public bool IsActive => Mode != DesktopEditSessionMode.None;
     public bool IsPendingNew => Mode == DesktopEditSessionMode.PendingNew;
-    public bool IsDraggingNew => Mode == DesktopEditSessionMode.DraggingNew;
-    public bool IsDraggingExisting => Mode == DesktopEditSessionMode.DraggingExisting;
-    public bool IsResizingExisting => Mode == DesktopEditSessionMode.ResizingExisting;
     public bool HasTargetCell => TargetRow >= 0 && TargetColumn >= 0;
-
-    public double PointerTravelDistance => DesktopPlacementMath.Distance(StartPointerInViewport, CurrentPointerInViewport);
 
     public bool HasExceededThreshold(double threshold)
     {
@@ -115,28 +110,6 @@ internal readonly record struct DesktopEditSession
             ComponentLibraryBounds = componentLibraryBounds,
             TargetRow = -1,
             TargetColumn = -1
-        };
-    }
-
-    public static DesktopEditSession CreateDraggingNew(
-        string componentId,
-        int pageIndex,
-        int widthCells,
-        int heightCells,
-        Point startPointerInViewport,
-        Point pointerOffsetInViewport,
-        Rect? componentLibraryBounds)
-    {
-        return CreatePendingNew(
-            componentId,
-            pageIndex,
-            widthCells,
-            heightCells,
-            startPointerInViewport,
-            pointerOffsetInViewport,
-            componentLibraryBounds) with
-        {
-            Mode = DesktopEditSessionMode.DraggingNew
         };
     }
 

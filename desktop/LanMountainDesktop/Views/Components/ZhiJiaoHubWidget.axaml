@@ -54,7 +54,7 @@
                            Text="加载中..."
                            Foreground="#AAAAAA"
                            FontSize="12" />
-                <ProgressBar x:Name="LoadingProgressBar"
+                <ProgressBar
                              IsIndeterminate="True"
                              Width="60"
                              Height="2"
@@ -86,7 +86,7 @@
             </Border>
 
             <!-- 触摸/鼠标捕获层 -->
-            <Border x:Name="InputCaptureBorder"
+            <Border
                     Background="Transparent"
                     PointerPressed="OnPointerPressed"
                     PointerMoved="OnPointerMoved"

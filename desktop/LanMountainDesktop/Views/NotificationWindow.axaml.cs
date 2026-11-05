@@ -22,7 +22,6 @@ public partial class NotificationWindow : Window
     private bool _isClosing;
     private TimeSpan _remainingDuration;
 
-    public Guid NotificationId => _viewModel?.Id ?? Guid.Empty;
     public NotificationPosition NotificationPositionValue => _viewModel?.Position ?? NotificationPosition.TopRight;
 
     public NotificationWindow()

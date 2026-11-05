@@ -296,11 +296,17 @@ public partial class DailyNewsView : UserControl
             {
                 await using var stream = await response.Content.ReadAsStreamAsync();
                 var bitmap = new Bitmap(stream);
-                _coverBitmap = bitmap;
 
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
+                    // 旧位图要在换成新图后立刻释放：封面随刷新计时器反复换图，
+                    // 只把 _coverBitmap 覆盖掉会让旧的本部位图等终结器来收，内存峰值一路走高。
+                    // 在 UI 线程闭包里同时更新 _coverBitmap 与 Source，两处引用永远同步，
+                    // 并发的两次加载也不会把还在显示的位图释放掉。
+                    var previous = _coverBitmap;
+                    _coverBitmap = bitmap;
                     CoverImage.Source = bitmap;
+                    previous?.Dispose();
                 });
             }
         }
@@ -514,6 +520,9 @@ public partial class DailyNewsView : UserControl
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
+        // Source 与 _coverBitmap 指向同一张位图：只 Dispose 字段不清 Source，
+        // 重挂回视觉树后的第一帧可能还在画那块已经释放的本部位图。
+        CoverImage.Source = null;
         _coverBitmap?.Dispose();
         _coverBitmap = null;
     }

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input;
 using LanMountainDesktop.ComponentSystem;
+using LanMountainDesktop.Helpers;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 
@@ -110,42 +111,10 @@ public partial class OfficeRecentDocumentsWidget : UserControl, IDesktopComponen
         {
             FileName = d.FileName,
             FilePath = d.FilePath,
-            TimeAgo = GetTimeAgo(d.LastModifiedTime)
+            TimeAgo = RelativeTimeText.Ago(d.LastModifiedTime, RelativeTimeText.Scale.UpToWeeksWithDateFallback)
         }).ToList();
 
         DocumentsItemsControl.ItemsSource = displayItems;
-    }
-
-    private static string GetTimeAgo(DateTime dateTime)
-    {
-        var span = DateTime.Now - dateTime;
-
-        if (span.TotalMinutes < 1)
-        {
-            return "\u521a\u521a";
-        }
-
-        if (span.TotalMinutes < 60)
-        {
-            return $"{(int)span.TotalMinutes} \u5206\u949f\u524d";
-        }
-
-        if (span.TotalHours < 24)
-        {
-            return $"{(int)span.TotalHours} \u5c0f\u65f6\u524d";
-        }
-
-        if (span.TotalDays < 7)
-        {
-            return $"{(int)span.TotalDays} \u5929\u524d";
-        }
-
-        if (span.TotalDays < 30)
-        {
-            return $"{(int)(span.TotalDays / 7)} \u5468\u524d";
-        }
-
-        return dateTime.ToString("MM/dd");
     }
 
     private void OnRefreshPointerPressed(object? sender, PointerPressedEventArgs e)
@@ -155,15 +124,10 @@ public partial class OfficeRecentDocumentsWidget : UserControl, IDesktopComponen
 
     private void OnDocumentCardPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (sender is Border border && border.DataContext is { } data)
+        if (sender is Border border && border.DataContext is OfficeRecentDocumentViewModel document
+            && !string.IsNullOrEmpty(document.FilePath))
         {
-            var filePathProperty = data.GetType().GetProperty("FilePath");
-            var filePath = filePathProperty?.GetValue(data) as string;
-
-            if (!string.IsNullOrEmpty(filePath))
-            {
-                _recentDocumentsService.OpenDocument(filePath);
-            }
+            _recentDocumentsService.OpenDocument(document.FilePath);
         }
     }
 }

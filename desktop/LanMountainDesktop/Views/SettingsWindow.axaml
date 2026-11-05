@@ -110,7 +110,7 @@
                   Margin="12,0,16,16">
                 <Grid Grid.Column="0"
                       RowDefinitions="Auto,*">
-                    <Grid x:Name="PageTitleContainer"
+                    <Grid
                           Grid.Row="0"
                           Classes="page-title-container"
                           IsVisible="{Binding IsPageTitleVisible}">
@@ -269,7 +269,7 @@
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="MoreOptionsButton"
+                    <Button
                             Classes="titlebar-icon-button"
                             ToolTip.Tip="{Binding MoreOptionsText}">
                         <fi:FluentIcon Icon="MoreHorizontal"

@@ -22,7 +22,7 @@
                             Spacing="0">
 
                     <!-- H1 digit — tilted left, shifted right and up -->
-                    <Border x:Name="H1Clip"
+                    <Border
                             ClipToBounds="True"
                             Width="88"
                             Height="130"
@@ -46,7 +46,7 @@
                     </Border>
 
                     <!-- H2 digit — tilted right, shifted left and down -->
-                    <Border x:Name="H2Clip"
+                    <Border
                             ClipToBounds="True"
                             Width="88"
                             Height="130"
@@ -87,7 +87,7 @@
                     </TextBlock>
 
                     <!-- M1 digit — slightly tilted left, shifted right and slightly up -->
-                    <Border x:Name="M1Clip"
+                    <Border
                             ClipToBounds="True"
                             Width="88"
                             Height="130"
@@ -111,7 +111,7 @@
                     </Border>
 
                     <!-- M2 digit — tilted right more, shifted left and down -->
-                    <Border x:Name="M2Clip"
+                    <Border
                             ClipToBounds="True"
                             Width="88"
                             Height="130"

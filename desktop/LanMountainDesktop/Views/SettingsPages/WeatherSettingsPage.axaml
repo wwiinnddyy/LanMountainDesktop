@@ -215,7 +215,7 @@
                     <StackPanel Spacing="14">
                         <Grid ColumnDefinitions="*,Auto"
                               ColumnSpacing="12">
-                            <TextBox x:Name="SearchKeywordTextBox"
+                            <TextBox
                                      Text="{Binding SearchKeyword}"
                                      PlaceholderText="{Binding SearchPlaceholder}"
                                      Focusable="True"
@@ -301,14 +301,14 @@
                     </Grid>
                 </ui:FASettingsExpanderItem>
                 <ui:FASettingsExpanderItem>
-                    <TextBox x:Name="LocationKeyTextBox"
+                    <TextBox
                              Text="{Binding LocationKey}"
                              PlaceholderText="{Binding LocationKeyPlaceholder}"
                              Focusable="True"
                              IsTabStop="True" />
                 </ui:FASettingsExpanderItem>
                 <ui:FASettingsExpanderItem>
-                    <TextBox x:Name="LocationNameTextBox"
+                    <TextBox
                              Text="{Binding LocationName}"
                              PlaceholderText="{Binding LocationNamePlaceholder}"
                              Focusable="True"
@@ -359,7 +359,7 @@
                     <ui:FAFontIconSource Glyph="&#xF04E8;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
-                    <TextBox x:Name="ExcludedAlertsTextBox"
+                    <TextBox
                              Width="360"
                              MinHeight="120"
                              AcceptsReturn="True"

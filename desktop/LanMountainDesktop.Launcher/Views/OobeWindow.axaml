@@ -127,7 +127,7 @@
             IsVisible="False">
 
         <!-- 方框边框（由鼠标画出） -->
-        <Border x:Name="DrawnBorder"
+        <Border
                 Width="160"
                 Height="56"
                 HorizontalAlignment="Left"
@@ -271,7 +271,7 @@
                          FontSize="14"
                          FontWeight="SemiBold"
                          Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-              <WrapPanel x:Name="AccentColorPanel" HorizontalAlignment="Left">
+              <WrapPanel HorizontalAlignment="Left">
                 <!-- 预设颜色 -->
                 <Border x:Name="BlueColor"
                         Width="40"

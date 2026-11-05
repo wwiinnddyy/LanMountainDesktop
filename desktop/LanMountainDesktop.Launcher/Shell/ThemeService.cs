@@ -13,11 +13,6 @@ public static class ThemeService
     private static string _accentColor = "#0078D4";
 
     /// <summary>
-    /// 获取当前主题
-    /// </summary>
-    public static ThemeVariant CurrentTheme => _currentTheme;
-
-    /// <summary>
     /// 获取当前主题色
     /// </summary>
     public static string AccentColor => _accentColor;

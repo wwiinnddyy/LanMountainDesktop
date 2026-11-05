@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
@@ -14,7 +15,7 @@ public enum ClockDisplayFormat
     HourMinute          // HH:mm
 }
 
-public partial class ClockWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget
+public partial class ClockWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget, IDesktopPageVisibilityAwareComponentWidget
 {
     private readonly DispatcherTimer _timer = new()
     {
@@ -26,6 +27,10 @@ public partial class ClockWidget : UserControl, IDesktopComponentWidget, ITimeZo
     private bool _transparentBackground;
     private double _lastAppliedCellSize = 100;
     private string _fontSize = "Medium"; // Small, Medium, Large
+    // 多页桌面里非当前页的组件仍挂在视觉树上（只是被平移出屏），DetachedFromVisualTree 不会来；
+    // 不按页停表的话，4 页桌面 × 每页一只钟 = 4 倍的逐秒空转。默认 true：推送不到的宿主（组件库预览等）维持现状。
+    private bool _isOnActivePage = true;
+    private bool _isAttached;
 
     public ClockWidget()
     {
@@ -43,6 +48,7 @@ public partial class ClockWidget : UserControl, IDesktopComponentWidget, ITimeZo
         set
         {
             _displayFormat = value;
+            AlignTimerToDisplayFormat();
             UpdateClock();
         }
     }
@@ -104,17 +110,36 @@ public partial class ClockWidget : UserControl, IDesktopComponentWidget, ITimeZo
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
+        _isAttached = true;
         UpdateClock();
-        _timer.Start();
+        AlignTimerToDisplayFormat();
+        if (_isOnActivePage)
+        {
+            _timer.Start();
+        }
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        _timer.Stop();
+        ComponentPagePauseLifetime.Detach(ref _isAttached, _timer);
+    }
+
+    public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)
+    {
+        _ = isEditMode;
+        ComponentPagePauseLifetime.Apply(ref _isOnActivePage, isOnActivePage, _isAttached, [_timer],
+            onActive: () =>
+            {
+                UpdateClock();
+                AlignTimerToDisplayFormat();
+            });
     }
 
     private void OnTimerTick(object? sender, EventArgs e)
     {
+        // HH:mm 档里秒位根本不显示，逐秒醒来只是白付 60 倍的唤醒和字符串分配——
+        // 把下一次 tick 排到下一个分钟边界上，秒档维持 1s 不变。
+        AlignTimerToDisplayFormat();
         UpdateClock();
     }
 
@@ -126,11 +151,24 @@ public partial class ClockWidget : UserControl, IDesktopComponentWidget, ITimeZo
     private void UpdateClock()
     {
         var now = _timeZoneService?.GetCurrentTime() ?? DateTime.Now;
-        
+
         MainTimeTextBlock.Text = now.ToString("HH:mm", CultureInfo.CurrentCulture);
         SecondsTextBlock.Text = now.ToString("ss", CultureInfo.CurrentCulture);
-        
+
         SecondsTextBlock.IsVisible = _displayFormat == ClockDisplayFormat.HourMinuteSecond;
+    }
+
+    private void AlignTimerToDisplayFormat()
+    {
+        if (_displayFormat == ClockDisplayFormat.HourMinute)
+        {
+            var now = DateTime.Now;
+            _timer.Interval = TimeSpan.FromSeconds(now.Second == 0 ? 60 : 60 - now.Second);
+        }
+        else
+        {
+            _timer.Interval = TimeSpan.FromSeconds(1);
+        }
     }
 
     public void ApplyCellSize(double cellSize)

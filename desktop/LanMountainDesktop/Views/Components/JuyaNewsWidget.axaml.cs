@@ -31,6 +31,31 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
     };
 
     private const string RssUrl = "https://imjuya.github.io/juya-ai-daily/rss.xml";
+    // RSS 正文解析的每一条正则都收在这里：此前 21 个内联 Regex.Match/Replace 散在四个解析方法里，
+    // 超过 Regex.CacheSize(15) 后每次调用都重新解释模式；静态编译一份，刷新时只付一次编译钱。
+    private static readonly Regex ImgSrcRegex = new(@"<img[^>]+src=[""']([^""']+)[""']", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex BilibiliLinkRegex = new(@"<a[^>]+href=[""'](https?://(?:www\.)?bilibili\.com/[^""']+)[""'][^>]*>", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex YoutubeLinkRegex = new(@"<a[^>]+href=[""'](https?://(?:www\.)?(?:youtube\.com|youtu\.be)/[^""']+)[""'][^>]*>", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex OverviewSectionRegex = new(@"<h2>\s*概览\s*</h2>(.*?)(?:<hr>|$)", RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.IgnoreCase);
+    private static readonly Regex H3SectionRegex = new(@"<h3>([^<]+)</h3>\s*<ul>(.*?)</ul>", RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.IgnoreCase);
+    private static readonly Regex ListItemRegex = new(@"<li>(.*?)</li>", RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.IgnoreCase);
+    private static readonly Regex AnchorWithTextRegex = new(@"<a[^>]+href=[""']([^""']+)[""'][^>]*>(.*?)</a>", RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.IgnoreCase);
+    private static readonly Regex HtmlTagRegex = new(@"<[^>]+>", RegexOptions.Compiled);
+    private static readonly Regex ItemNumberRegex = new(@"<code>\s*#(\d+)\s*</code>|#(\d+)", RegexOptions.Compiled);
+    private static readonly Regex LeadingIssueNumberRegex = new(@"^\s*#\d+\s*", RegexOptions.Compiled);
+    private static readonly Regex TrailingArrowRegex = new(@"[→↗\s]+$", RegexOptions.Compiled);
+    private static readonly Regex DetailedSectionRegex = new(@"<hr>(.*)$", RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.IgnoreCase);
+    private static readonly Regex NewsSectionRegex = new(@"<h2>(.*?)</h2>(.*?)(?=<h2>|<hr>|$)", RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.IgnoreCase);
+    private static readonly Regex CodeIssueNumberRegex = new(@"<code>\s*#(\d+)\s*</code>", RegexOptions.Compiled);
+    private static readonly Regex IssueNumberRegex = new(@"#(\d+)", RegexOptions.Compiled);
+    private static readonly Regex AnchorTextRegex = new(@"<a[^>]*>(.*?)</a>", RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.IgnoreCase);
+    private static readonly Regex CodeTagRegex = new(@"<code>.*?</code>", RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.IgnoreCase);
+    private static readonly Regex AnchorHrefRegex = new(@"<a[^>]+href=[""']([^""']+)[""'][^>]*>", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex BlockquoteRegex = new(@"<blockquote>(.*?)</blockquote>", RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.IgnoreCase);
+    private static readonly Regex ParagraphRegex = new(@"<p>(.*?)</p>", RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.IgnoreCase);
+    private static readonly Regex MultiNewlineRegex = new(@"\n{3,}", RegexOptions.Compiled);
+    private static readonly Regex IssueNumberPrefixRegex = new(@"#\d+", RegexOptions.Compiled);
+
     private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 4;
     private const int InitialLoadDays = 3;
@@ -255,7 +280,7 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
             return "";
         }
 
-        var match = Regex.Match(content, @"<img[^>]+src=[""']([^""']+)[""']", RegexOptions.IgnoreCase);
+        var match = ImgSrcRegex.Match(content);
         return match.Success ? match.Groups[1].Value : "";
     }
 
@@ -269,13 +294,13 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
         string bilibiliUrl = "";
         string youtubeUrl = "";
 
-        var bilibiliMatch = Regex.Match(content, @"<a[^>]+href=[""'](https?://(?:www\.)?bilibili\.com/[^""']+)[""'][^>]*>", RegexOptions.IgnoreCase);
+        var bilibiliMatch = BilibiliLinkRegex.Match(content);
         if (bilibiliMatch.Success)
         {
             bilibiliUrl = bilibiliMatch.Groups[1].Value;
         }
 
-        var youtubeMatch = Regex.Match(content, @"<a[^>]+href=[""'](https?://(?:www\.)?(?:youtube\.com|youtu\.be)/[^""']+)[""'][^>]*>", RegexOptions.IgnoreCase);
+        var youtubeMatch = YoutubeLinkRegex.Match(content);
         if (youtubeMatch.Success)
         {
             youtubeUrl = youtubeMatch.Groups[1].Value;
@@ -326,7 +351,7 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
             ["摘要"] = "📝"
         };
 
-        var overviewMatch = Regex.Match(content, @"<h2>\s*概览\s*</h2>(.*?)(?:<hr>|$)", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+        var overviewMatch = OverviewSectionRegex.Match(content);
         
         if (!overviewMatch.Success)
         {
@@ -335,7 +360,7 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
 
         var overviewContent = overviewMatch.Groups[1].Value;
 
-        var h3Matches = Regex.Matches(overviewContent, @"<h3>([^<]+)</h3>\s*<ul>(.*?)</ul>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+        var h3Matches = H3SectionRegex.Matches(overviewContent);
         
         foreach (Match match in h3Matches)
         {
@@ -345,7 +370,7 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
             var icon = categoryIcons.GetValueOrDefault(categoryName, "•");
             
             var items = new List<JuyaOverviewItem>();
-            var itemMatches = Regex.Matches(listContent, @"<li>(.*?)</li>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+            var itemMatches = ListItemRegex.Matches(listContent);
             
             foreach (Match itemMatch in itemMatches)
             {
@@ -355,15 +380,15 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
                 string itemUrl;
                 int? number = null;
                 
-                var linkMatch = Regex.Match(itemText, @"<a[^>]+href=[""']([^""']+)[""'][^>]*>(.*?)</a>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+                var linkMatch = AnchorWithTextRegex.Match(itemText);
                 
                 if (linkMatch.Success)
                 {
                     itemUrl = linkMatch.Groups[1].Value;
-                    var linkText = Regex.Replace(linkMatch.Groups[2].Value, @"<[^>]+>", "").Trim();
+                    var linkText = HtmlTagRegex.Replace(linkMatch.Groups[2].Value, "").Trim();
                     
                     var beforeLink = itemText.Substring(0, itemText.IndexOf("<a", StringComparison.OrdinalIgnoreCase));
-                    itemTitle = Regex.Replace(beforeLink, @"<[^>]+>", "").Trim();
+                    itemTitle = HtmlTagRegex.Replace(beforeLink, "").Trim();
                     
                     if (string.IsNullOrWhiteSpace(itemTitle))
                     {
@@ -372,18 +397,18 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
                 }
                 else
                 {
-                    itemTitle = Regex.Replace(itemText, @"<[^>]+>", "").Trim();
+                    itemTitle = HtmlTagRegex.Replace(itemText, "").Trim();
                     itemUrl = "";
                 }
                 
-                var numberMatch = Regex.Match(itemText, @"<code>\s*#(\d+)\s*</code>|#(\d+)");
+                var numberMatch = ItemNumberRegex.Match(itemText);
                 if (numberMatch.Success)
                 {
                     number = int.Parse(numberMatch.Groups[1].Success ? numberMatch.Groups[1].Value : numberMatch.Groups[2].Value);
                 }
                 
-                itemTitle = Regex.Replace(itemTitle, @"^\s*#\d+\s*", "").Trim();
-                itemTitle = Regex.Replace(itemTitle, @"[→↗\s]+$", "").Trim();
+                itemTitle = LeadingIssueNumberRegex.Replace(itemTitle, "").Trim();
+                itemTitle = TrailingArrowRegex.Replace(itemTitle, "").Trim();
                 
                 if (!string.IsNullOrWhiteSpace(itemTitle) && itemTitle.Length > 1)
                 {
@@ -409,7 +434,7 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
             return newsItems;
         }
 
-        var detailedMatch = Regex.Match(content, @"<hr>(.*)$", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+        var detailedMatch = DetailedSectionRegex.Match(content);
         if (!detailedMatch.Success)
         {
             return newsItems;
@@ -417,38 +442,38 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
 
         var detailedContent = detailedMatch.Groups[1].Value;
 
-        var newsMatches = Regex.Matches(detailedContent, @"<h2>(.*?)</h2>(.*?)(?=<h2>|<hr>|$)", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+        var newsMatches = NewsSectionRegex.Matches(detailedContent);
         
         foreach (Match match in newsMatches)
         {
             var headerContent = match.Groups[1].Value;
             var bodyContent = match.Groups[2].Value;
             
-            var numberMatch = Regex.Match(headerContent, @"<code>\s*#(\d+)\s*</code>");
+            var numberMatch = CodeIssueNumberRegex.Match(headerContent);
             if (!numberMatch.Success)
             {
-                numberMatch = Regex.Match(headerContent, @"#(\d+)");
+                numberMatch = IssueNumberRegex.Match(headerContent);
             }
             
             int? number = numberMatch.Success ? int.Parse(numberMatch.Groups[1].Value) : null;
             
             string title;
-            var linkMatch = Regex.Match(headerContent, @"<a[^>]*>(.*?)</a>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+            var linkMatch = AnchorTextRegex.Match(headerContent);
             if (linkMatch.Success)
             {
-                title = Regex.Replace(linkMatch.Groups[1].Value, @"<[^>]+>", "").Trim();
+                title = HtmlTagRegex.Replace(linkMatch.Groups[1].Value, "").Trim();
             }
             else
             {
-                title = Regex.Replace(headerContent, @"<code>.*?</code>", "", RegexOptions.Singleline | RegexOptions.IgnoreCase);
-                title = Regex.Replace(title, @"<[^>]+>", "").Trim();
-                title = Regex.Replace(title, @"#\d+", "").Trim();
+                title = CodeTagRegex.Replace(headerContent, "");
+                title = HtmlTagRegex.Replace(title, "").Trim();
+                title = IssueNumberPrefixRegex.Replace(title, "").Trim();
             }
             
             var bodyText = ExtractBodyText(bodyContent);
             
             var relatedLinks = new List<string>();
-            var linkMatches = Regex.Matches(bodyContent, @"<a[^>]+href=[""']([^""']+)[""'][^>]*>", RegexOptions.IgnoreCase);
+            var linkMatches = AnchorHrefRegex.Matches(bodyContent);
             foreach (Match linkMatch2 in linkMatches)
             {
                 var url = linkMatch2.Groups[1].Value;
@@ -475,30 +500,30 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
         }
 
         // 提取 blockquote 内容
-        var blockquoteMatch = Regex.Match(htmlContent, @"<blockquote>(.*?)</blockquote>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+        var blockquoteMatch = BlockquoteRegex.Match(htmlContent);
         if (blockquoteMatch.Success)
         {
             var text = blockquoteMatch.Groups[1].Value;
             // 移除 <p> 标签但保留内容
-            text = Regex.Replace(text, @"<p>(.*?)</p>", "$1\n\n", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+            text = ParagraphRegex.Replace(text, "$1\n\n");
             // 移除其他 HTML 标签
-            text = Regex.Replace(text, @"<[^>]+>", "");
+            text = HtmlTagRegex.Replace(text, "");
             // 清理多余空白
-            text = Regex.Replace(text, @"\n{3,}", "\n\n");
+            text = MultiNewlineRegex.Replace(text, "\n\n");
             return text.Trim();
         }
 
         // 如果没有 blockquote，提取所有 <p> 标签内容
-        var paragraphs = Regex.Matches(htmlContent, @"<p>(.*?)</p>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+        var paragraphs = ParagraphRegex.Matches(htmlContent);
         if (paragraphs.Count > 0)
         {
             var text = string.Join("\n\n", paragraphs.Cast<Match>().Select(m => 
-                Regex.Replace(m.Groups[1].Value, @"<[^>]+>", "").Trim()));
+                HtmlTagRegex.Replace(m.Groups[1].Value, "").Trim()));
             return text.Trim();
         }
 
         // 最后尝试直接移除所有 HTML 标签
-        return Regex.Replace(htmlContent, @"<[^>]+>", "").Trim();
+        return HtmlTagRegex.Replace(htmlContent, "").Trim();
     }
 
     private void AddDailyNewsToView(JuyaDailyNews news)

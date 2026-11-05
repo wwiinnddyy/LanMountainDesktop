@@ -14,10 +14,6 @@ internal interface IUpdateProgressReporter
 
 internal sealed class InstallProgressBridge(IProgress<InstallProgressReport>? progress) : IUpdateProgressReporter
 {
-    private InstallCompleteReport? _complete;
-
-    public InstallCompleteReport? CompleteReport => _complete;
-
     public void ReportProgress(InstallProgressReport report)
     {
         progress?.Report(report);
@@ -25,7 +21,7 @@ internal sealed class InstallProgressBridge(IProgress<InstallProgressReport>? pr
 
     public void ReportComplete(InstallCompleteReport report)
     {
-        _complete = report;
+        // 接口要求的收尾哨：完成报告的消费方在调起方（applier 流程）手里，这里无处可送、存下也无人读。
     }
 }
 

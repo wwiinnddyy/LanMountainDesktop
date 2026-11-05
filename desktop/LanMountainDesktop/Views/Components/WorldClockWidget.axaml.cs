@@ -9,6 +9,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
@@ -20,7 +21,8 @@ public partial class WorldClockWidget : UserControl,
     ITimeZoneAwareComponentWidget,
     IComponentPlacementContextAware,
     IComponentRuntimeContextAware,
-    ISettingsAwareComponentWidget
+    ISettingsAwareComponentWidget,
+    IDesktopPageVisibilityAwareComponentWidget
 {
     private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 2;
@@ -72,6 +74,9 @@ public partial class WorldClockWidget : UserControl,
     private double _currentCellSize = ComponentDesignMetrics.BaseCellSize;
     private DateTime _nextLanguageProbeUtc = DateTime.MinValue;
     private string _secondHandMode = ClockSecondHandMode.Tick;
+    // 多页桌面里非当前页只是被平移出屏；四块表盘 × 扫秒档不按页停表就是 4 倍的看不见的 30fps。默认 true 维持推送不到的宿主现状。
+    private bool _isOnActivePage = true;
+    private bool _isAttached;
     private bool _isNightVisual = true;
     private string _componentId = BuiltInComponentIds.DesktopWorldClock;
     private string _placementId = string.Empty;
@@ -186,15 +191,26 @@ public partial class WorldClockWidget : UserControl,
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
+        _isAttached = true;
         LoadFromSettings();
         ApplySecondHandTimerInterval();
         UpdateClockVisuals();
-        _clockTimer.Start();
+        if (_isOnActivePage)
+        {
+            _clockTimer.Start();
+        }
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        _clockTimer.Stop();
+        ComponentPagePauseLifetime.Detach(ref _isAttached, _clockTimer);
+    }
+
+    public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)
+    {
+        _ = isEditMode;
+        ComponentPagePauseLifetime.Apply(ref _isOnActivePage, isOnActivePage, _isAttached, [_clockTimer],
+            onActive: UpdateClockVisuals);
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -501,8 +517,9 @@ public partial class WorldClockWidget : UserControl,
 
     private void ApplySecondHandTimerInterval()
     {
+        // 扫秒档 33ms（≈30fps）：16ms 是 60fps，四块表盘 × 每帧全部重算重赋值，多付的唤醒肉眼换不回来。
         _clockTimer.Interval = ClockSecondHandMode.IsSweep(_secondHandMode)
-            ? TimeSpan.FromMilliseconds(16)
+            ? TimeSpan.FromMilliseconds(33)
             : TimeSpan.FromSeconds(1);
     }
 
@@ -537,11 +554,25 @@ public partial class WorldClockWidget : UserControl,
             SetHandGeometry(entry.MinuteHand, minuteAngle, forwardLength: 33, backwardLength: 6);
             SetHandGeometry(entry.SecondHand, secondAngle, forwardLength: 37, backwardLength: 8.5);
 
-            entry.CityTextBlock.Text = ClockCityNames.ResolveByLanguage(_languageCode, zone);
-            entry.DayTextBlock.Text = ResolveRelativeDayLabel((zonedNow.Date - baseNow.Date).Days);
+            // 城市名/相对日/时差标签最多一天或一次设置变更才动一次，扫秒档每帧重算重赋值纯属白付。
+            var cityText = ClockCityNames.ResolveByLanguage(_languageCode, zone);
+            if (!string.Equals(entry.CityTextBlock.Text, cityText, StringComparison.Ordinal))
+            {
+                entry.CityTextBlock.Text = cityText;
+            }
+
+            var dayText = ResolveRelativeDayLabel((zonedNow.Date - baseNow.Date).Days);
+            if (!string.Equals(entry.DayTextBlock.Text, dayText, StringComparison.Ordinal))
+            {
+                entry.DayTextBlock.Text = dayText;
+            }
 
             var offsetDelta = zone.GetUtcOffset(utcNow) - baseOffset;
-            entry.OffsetTextBlock.Text = ResolveOffsetLabel(offsetDelta);
+            var offsetText = ResolveOffsetLabel(offsetDelta);
+            if (!string.Equals(entry.OffsetTextBlock.Text, offsetText, StringComparison.Ordinal))
+            {
+                entry.OffsetTextBlock.Text = offsetText;
+            }
         }
     }
 

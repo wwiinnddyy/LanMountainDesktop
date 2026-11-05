@@ -66,8 +66,6 @@ public sealed class UpdateOrchestrator : IDisposable
 
     public UpdatePhase CurrentPhase => _stateStore.CurrentPhase;
 
-    public UpdateManifest? CurrentManifest => _stateStore.PendingManifest;
-
     public event Action<UpdatePhase>? PhaseChanged;
     public event Action<UpdateProgressReport>? ProgressChanged;
 

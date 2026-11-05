@@ -21,7 +21,4 @@ internal static class StartupTimeoutPolicy
     public static readonly TimeSpan ExistingHostProbeTimeout = TimeSpan.FromMilliseconds(1500);
     public static readonly TimeSpan ShellStatusPollInterval = TimeSpan.FromSeconds(1);
     public static readonly TimeSpan IpcReconnectInterval = TimeSpan.FromSeconds(3);
-
-    /// <summary>Maximum time to wait for host process exit after it starts (for early-exit detection).</summary>
-    public static readonly TimeSpan HostEarlyExitWindow = TimeSpan.FromSeconds(5);
 }

@@ -3495,11 +3495,18 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         var normalizedSource = ZhiJiaoHubSources.Normalize(source);
         var normalizedMirror = ZhiJiaoHubMirrorSources.Normalize(mirrorSource);
 
-        var localPathMap = _zhiJiaoHubCacheService.LoadLocalPathMap(normalizedSource);
+        // 清单读取 + 逐图 File.Exists 是纯同步盘 I/O，且锁着 manifest 锁；挂载即刷的组件会让这段
+        // 落在 UI 线程上（GetZhiJiaoHubHybridImagesAsync 的第一个 await 在这之后），缓存一多就是一次卡顿。
+        var localPathMap = await Task.Run(
+            () => _zhiJiaoHubCacheService.LoadLocalPathMap(normalizedSource),
+            cancellationToken);
 
         try
         {
-            var query = new ZhiJiaoHubQuery(normalizedSource, ForceRefresh: true, MirrorSource: normalizedMirror);
+            // 组件的自动刷新走这里。列表 TTL 是 1 小时（见 SetZhiJiaoHubCache），自动刷新尊重它：
+            // 写成强刷会让 5 分钟一轮的定时器每轮都打 GitHub Contents API。
+            // 要绕过 TTL 的显式同步走 SyncZhiJiaoHubImagesAsync（那边才是 ForceRefresh: true）。
+            var query = new ZhiJiaoHubQuery(normalizedSource, ForceRefresh: false, MirrorSource: normalizedMirror);
             var result = await GetZhiJiaoHubImagesAsync(query, cancellationToken);
 
             if (!result.Success || result.Data == null)

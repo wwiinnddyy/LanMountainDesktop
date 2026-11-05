@@ -116,6 +116,11 @@ public partial class MainWindow : Window
     private Color? _wallpaperSolidColor;
     private string? _wallpaperPath;
     private int _systemWallpaperRefreshIntervalSeconds = 300;
+    // 恢复壁纸入参的"已armed"标记：首次恢复必须执行；此后入参全同的重复恢复直接跳过——
+    // 任意未列入排除表的设置变更都会走一遍 ReloadFromPersistedSettings，不跳就会把（常常是 4K 的）
+    // 壁纸位图在 UI 线程上重新解码一遍。
+    private bool _isWallpaperRestoreArmed;
+    private string? _lastWallpaperRestoreSignature;
     private DispatcherTimer? _systemWallpaperRefreshTimer;
     private readonly ISystemWallpaperProvider _systemWallpaperProvider = HostSystemWallpaperProvider.GetOrCreate();
     private Color _selectedThemeColor = Color.Parse("#FF3B82F6");

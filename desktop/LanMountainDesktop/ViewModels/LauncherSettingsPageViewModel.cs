@@ -68,6 +68,7 @@ public sealed partial class LauncherSettingsPageViewModel : ViewModelBase, IDisp
     private readonly LocalizationService _localizationService = new();
     private readonly string _languageCode;
     private bool _disposed;
+    private int _reloadGeneration;
 
     public LauncherSettingsPageViewModel(ISettingsFacadeService settingsFacade)
     {
@@ -164,10 +165,31 @@ public sealed partial class LauncherSettingsPageViewModel : ViewModelBase, IDisp
 
     private void ReloadData()
     {
-        var root = LoadCatalogSafe();
+        // 目录扫描（开始菜单全量 .lnk 解析 + 图标提取，一台普通机器几秒钟）不能放在 UI 线程上：
+        // 这个页面一打开就调这里，任何一次 Launcher 范围的设置变更还会再来一遍。
+        // 扫描与隐藏项的整理都在后台做，回 UI 线程只贴列表；代次号保证晚到的旧扫描不会盖掉新数据。
+        var generation = ++_reloadGeneration;
         var snapshot = _settingsFacade.LauncherPolicy.Get()?.Clone() ?? new LauncherSettingsSnapshot();
-        var hiddenItems = BuildHiddenItems(root, snapshot);
 
+        _ = Task.Run(async () =>
+        {
+            var root = LoadCatalogSafe();
+            var hiddenItems = BuildHiddenItems(root, snapshot);
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (_disposed || generation != _reloadGeneration)
+                {
+                    return;
+                }
+
+                ApplyHiddenItems(hiddenItems, snapshot);
+            });
+        });
+    }
+
+    private void ApplyHiddenItems(IReadOnlyList<LauncherHiddenItemViewModel> hiddenItems, LauncherSettingsSnapshot snapshot)
+    {
         HiddenItems.Clear();
         foreach (var hiddenItem in hiddenItems)
         {

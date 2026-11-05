@@ -43,7 +43,7 @@
         <Border Classes="component-editor-card"
                 Padding="20">
             <StackPanel Spacing="12">
-                <TextBlock x:Name="DisplayDbHeaderTextBlock"
+                <TextBlock
                            Classes="component-editor-section-title" />
                 <ToggleSwitch x:Name="DisplayDbToggleSwitch"
                               IsCheckedChanged="OnToggleChanged" />
@@ -53,7 +53,7 @@
         <Border Classes="component-editor-card"
                 Padding="20">
             <StackPanel Spacing="12">
-                <TextBlock x:Name="DbfsHeaderTextBlock"
+                <TextBlock
                            Classes="component-editor-section-title" />
                 <ToggleSwitch x:Name="DbfsToggleSwitch"
                               IsCheckedChanged="OnToggleChanged" />

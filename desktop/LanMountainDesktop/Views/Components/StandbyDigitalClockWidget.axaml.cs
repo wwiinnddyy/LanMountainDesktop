@@ -9,6 +9,7 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.AirAppSdk;
@@ -22,7 +23,8 @@ public partial class StandbyDigitalClockWidget : UserControl,
     IDesktopComponentWidget,
     ITimeZoneAwareComponentWidget,
     IComponentPlacementContextAware,
-    IComponentRuntimeContextAware
+    IComponentRuntimeContextAware,
+    IDesktopPageVisibilityAwareComponentWidget
 {
     private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 2;
@@ -48,6 +50,12 @@ public partial class StandbyDigitalClockWidget : UserControl,
     private char _prevH1, _prevH2, _prevM1, _prevM2;
     private bool _colonVisible = true;
     private bool? _isNightModeApplied;
+
+    // 日期文本一天才变一次：记录上一次写日期时的"日"，没换日就不重写（UpdateClock 每秒都会来）。
+    private DateTime _lastDateTextDate = DateTime.MinValue;
+    // 多页桌面里非当前页只是被平移出屏；逐秒翻牌动画在看不见的页上照跑纯属白付。默认 true 维持推送不到的宿主现状。
+    private bool _isOnActivePage = true;
+    private bool _isAttached;
 
     // Digit state: track the current TextBlock for each digit position
     private TextBlock _h1Current, _h2Current, _m1Current, _m2Current;
@@ -121,14 +129,25 @@ public partial class StandbyDigitalClockWidget : UserControl,
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
+        _isAttached = true;
         LoadClockSettings();
         InitializeDigitsWithoutAnimation();
-        _timer.Start();
+        if (_isOnActivePage)
+        {
+            _timer.Start();
+        }
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        _timer.Stop();
+        ComponentPagePauseLifetime.Detach(ref _isAttached, _timer);
+    }
+
+    public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)
+    {
+        _ = isEditMode;
+        ComponentPagePauseLifetime.Apply(ref _isOnActivePage, isOnActivePage, _isAttached, [_timer],
+            onActive: InitializeDigitsWithoutAnimation);
     }
 
     private void OnTimerTick(object? sender, EventArgs e)
@@ -202,8 +221,12 @@ public partial class StandbyDigitalClockWidget : UserControl,
         // Colon breathing
         ToggleColonOpacity();
 
-        // Date
-        UpdateDateText(now);
+        // Date：日期一天才变一次，没换日就别每秒新建 CultureInfo、拼两遍 ToString。
+        if (now.Date != _lastDateTextDate)
+        {
+            _lastDateTextDate = now.Date;
+            UpdateDateText(now);
+        }
     }
 
     // ─── Digit scroll animation ─────────────────────────────────
@@ -415,6 +438,9 @@ public partial class StandbyDigitalClockWidget : UserControl,
 
         _clockTimeZone = WorldClockTimeZoneCatalog.ResolveTimeZoneOrLocal(configuredTimeZoneId);
         _componentColorScheme = componentSnapshot.ColorSchemeSource;
+
+        // 语言/时区变了日期文案就得重写：失效"换日才写"的守卫，让下一次 tick 把新文案带上。
+        _lastDateTextDate = DateTime.MinValue;
     }
 
     // ─── Scaling ────────────────────────────────────────────────

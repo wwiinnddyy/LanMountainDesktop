@@ -14,7 +14,7 @@
         </Style>
     </UserControl.Styles>
     
-    <StackPanel x:Name="RootStackPanel" Spacing="16">
+    <StackPanel Spacing="16">
         <Border x:Name="CoverImageBorder"
                 CornerRadius="{DynamicResource DesignCornerRadiusXs}"
                 ClipToBounds="True"

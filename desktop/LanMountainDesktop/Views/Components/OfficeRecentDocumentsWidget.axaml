@@ -64,7 +64,7 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:OfficeRecentDocumentViewModel">
-                                <Border x:Name="DocumentCard"
+                                <Border
                                         Width="130"
                                         Height="90"
                                         CornerRadius="{DynamicResource DesignCornerRadiusXs}"

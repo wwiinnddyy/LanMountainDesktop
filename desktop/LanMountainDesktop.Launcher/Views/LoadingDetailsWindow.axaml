@@ -1,4 +1,4 @@
-<Window xmlns="https://github.com/avaloniaui"
+﻿<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -219,11 +219,6 @@
                    Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                    VerticalAlignment="Center"/>
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-          <Button x:Name="DetailsButton"
-                  Content="{x:Static res:Strings.Loading_ButtonDetails}"
-                  Width="90"
-                  Height="32"
-                  FontSize="13"/>
           <Button x:Name="CancelButton"
                   Content="{x:Static res:Strings.Loading_ButtonCancel}"
                   Width="90"

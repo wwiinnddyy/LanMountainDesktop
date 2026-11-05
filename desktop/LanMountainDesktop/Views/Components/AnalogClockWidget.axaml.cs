@@ -8,6 +8,7 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.AirAppSdk;
@@ -17,7 +18,7 @@ using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget, IComponentPlacementContextAware, IComponentRuntimeContextAware, ISettingsAwareComponentWidget
+public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget, IComponentPlacementContextAware, IComponentRuntimeContextAware, ISettingsAwareComponentWidget, IDesktopPageVisibilityAwareComponentWidget
 {
     private readonly DispatcherTimer _timer = new()
     {
@@ -40,6 +41,9 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
     private TimeZoneInfo _clockTimeZone = WorldClockTimeZoneCatalog.ResolveTimeZoneOrLocal("China Standard Time");
     private string _languageCode = LocalizationService.DefaultLanguageCode;
     private string _secondHandMode = ClockSecondHandMode.Tick;
+    // 多页桌面里非当前页只是被平移出屏，不按页停表的话扫秒档在看不见的页上照跑 30fps。默认 true 维持推送不到的宿主现状。
+    private bool _isOnActivePage = true;
+    private bool _isAttached;
     private readonly Line _hourHandLine = CreateHandLine("#1A2A46", 12);
     private readonly Line _minuteHandLine = CreateHandLine("#29406B", 8);
     private readonly Line _secondHandLine = CreateHandLine("#1A74F2", 4);
@@ -102,17 +106,28 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
+        _isAttached = true;
         InitializeDialIfNeeded();
         InitializeHandsIfNeeded();
         LoadClockSettings();
         ApplySecondHandTimerInterval();
         UpdateClock();
-        _timer.Start();
+        if (_isOnActivePage)
+        {
+            _timer.Start();
+        }
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        _timer.Stop();
+        ComponentPagePauseLifetime.Detach(ref _isAttached, _timer);
+    }
+
+    public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)
+    {
+        _ = isEditMode;
+        ComponentPagePauseLifetime.Apply(ref _isOnActivePage, isOnActivePage, _isAttached, [_timer],
+            onActive: UpdateClock);
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -259,7 +274,12 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
         SetHandGeometry(_minuteHandLine, minuteAngle, forwardLength: 76, backwardLength: 8);
         SetHandGeometry(_secondHandLine, secondAngle, forwardLength: 94, backwardLength: 18);
 
-        CityTextBlock.Text = ClockCityNames.ResolveByLanguage(_languageCode, _clockTimeZone);
+        // 城市名最多随语言/时区设置变一次，扫秒档每帧重算重赋值纯属白付。
+        var cityText = ClockCityNames.ResolveByLanguage(_languageCode, _clockTimeZone);
+        if (!string.Equals(CityTextBlock.Text, cityText, StringComparison.Ordinal))
+        {
+            CityTextBlock.Text = cityText;
+        }
     }
 
     private void ApplyModeVisualIfNeeded()
@@ -349,8 +369,9 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
 
     private void ApplySecondHandTimerInterval()
     {
+        // 扫秒档 33ms（≈30fps）：16ms 是 60fps，多付一倍 UI 线程唤醒，肉眼分不出扫针平滑度差异。
         _timer.Interval = ClockSecondHandMode.IsSweep(_secondHandMode)
-            ? TimeSpan.FromMilliseconds(16)
+            ? TimeSpan.FromMilliseconds(33)
             : TimeSpan.FromSeconds(1);
     }
 

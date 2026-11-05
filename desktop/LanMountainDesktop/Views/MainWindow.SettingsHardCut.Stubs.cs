@@ -255,6 +255,19 @@ public partial class MainWindow : Window
         string? placement = null,
         int systemWallpaperRefreshIntervalSeconds = 300)
     {
+        // 入参全同的重复恢复直接跳过：任意未列入排除表的设置变更都会走一遍 ReloadFromPersistedSettings，
+        // 没有这道闸，改个语言码也会把 4K 壁纸位图在 UI 线程上重新解码一遍。
+        // 首次调用不跳（_isWallpaperRestoreArmed 还没置位），保证开机真的把壁纸装上。
+        var signature = $"{savedWallpaperPath ?? "<null>"}|{type ?? "<null>"}|{color ?? "<null>"}"
+            + $"|{placement ?? "<null>"}|{systemWallpaperRefreshIntervalSeconds}";
+        if (_isWallpaperRestoreArmed && string.Equals(_lastWallpaperRestoreSignature, signature, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _isWallpaperRestoreArmed = true;
+        _lastWallpaperRestoreSignature = signature;
+
         _wallpaperPath = string.IsNullOrWhiteSpace(savedWallpaperPath) ? null : savedWallpaperPath;
         _wallpaperType = string.IsNullOrWhiteSpace(type) ? "Image" : type.Trim();
         _wallpaperPlacement = WallpaperImageBrushFactory.NormalizePlacement(placement);

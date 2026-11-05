@@ -7,7 +7,6 @@
         xmlns:themes="clr-namespace:Material.Styles.Themes;assembly=Material.Styles"
         mc:Ignorable="d"
         x:Class="LanMountainDesktop.Views.ComponentEditorWindow"
-        x:Name="RootWindow"
         Classes="component-editor-window"
         Width="720"
         Height="540"
@@ -107,7 +106,7 @@
                 </ScrollViewer>
 
                 <!-- Floating Save Button (MD3 Style) -->
-                <Button x:Name="SaveFAB"
+                <Button
                         HorizontalAlignment="Right"
                         VerticalAlignment="Bottom"
                         Margin="28"

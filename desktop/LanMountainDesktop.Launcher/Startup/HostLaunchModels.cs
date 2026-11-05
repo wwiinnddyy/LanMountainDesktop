@@ -37,19 +37,6 @@ internal sealed record HostStartAttempt(
             HostLaunchPlanBuilder.FormatArgumentsForLog(plan.Arguments),
             stderrOutput);
 
-    public static HostStartAttempt EarlyExit(HostStartMode startMode, Process process, int exitCode, HostLaunchPlan plan, string? stderrOutput = null) =>
-        new(
-            startMode,
-            true,
-            process,
-            true,
-            exitCode,
-            null,
-            plan.PackageRoot,
-            plan.WorkingDirectory,
-            HostLaunchPlanBuilder.FormatArgumentsForLog(plan.Arguments),
-            stderrOutput);
-
     public static HostStartAttempt StartFailed(HostStartMode startMode, string failureReason, HostLaunchPlan? plan = null, string? stderrOutput = null) =>
         new(
             startMode,

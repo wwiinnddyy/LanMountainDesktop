@@ -43,8 +43,6 @@ internal sealed class ComponentLibraryCollapsePresenter
         _collapsedChipHost.Opacity = 0;
     }
 
-    public bool IsCollapsed => _state.VisualState is ComponentLibraryCollapseVisualState.Collapsing or ComponentLibraryCollapseVisualState.Collapsed;
-
     public ComponentLibraryCollapseVisualState VisualState => _state.VisualState;
 
     public void SyncExpandedState(Thickness margin)

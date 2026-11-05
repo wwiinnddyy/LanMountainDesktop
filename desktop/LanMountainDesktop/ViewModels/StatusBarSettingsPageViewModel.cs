@@ -280,165 +280,42 @@ public sealed partial class StatusBarSettingsPageViewModel : ViewModelBase
         StatusBarShadowOpacity = Math.Clamp(state.ShadowOpacity * 100, 0, 100);
     }
 
-    partial void OnShowClockChanged(bool value)
-    {
-        if (_isInitializing)
-        {
-            return;
-        }
+    // 十七个属性变更里十三个是同一个形状："初始化中就别存"。收口成两个守卫助手，
+    // 各 partial 只剩一句转手——新加一个状态栏属性时不要再抄一遍这段五行。
+    partial void OnShowClockChanged(bool value) => SaveAfterChange();
 
-        Save();
-    }
+    partial void OnSelectedClockFormatChanged(SelectionOption value) => SaveAfterSelectionChanged(value);
 
-    partial void OnSelectedClockFormatChanged(SelectionOption value)
-    {
-        if (_isInitializing || value is null)
-        {
-            return;
-        }
+    partial void OnClockTransparentBackgroundChanged(bool value) => SaveAfterChange();
 
-        Save();
-    }
+    partial void OnSelectedClockPositionChanged(SelectionOption value) => SaveAfterSelectionChanged(value);
 
-    partial void OnClockTransparentBackgroundChanged(bool value)
-    {
-        if (_isInitializing)
-        {
-            return;
-        }
+    partial void OnSelectedClockFontSizeChanged(SelectionOption value) => SaveAfterSelectionChanged(value);
 
-        Save();
-    }
+    partial void OnShowTextCapsuleChanged(bool value) => SaveAfterChange();
 
-    partial void OnSelectedClockPositionChanged(SelectionOption value)
-    {
-        if (_isInitializing || value is null)
-        {
-            return;
-        }
+    partial void OnTextCapsuleContentChanged(string value) => SaveAfterChange();
 
-        Save();
-    }
+    partial void OnSelectedTextCapsulePositionChanged(SelectionOption value) => SaveAfterSelectionChanged(value);
 
-    partial void OnSelectedClockFontSizeChanged(SelectionOption value)
-    {
-        if (_isInitializing || value is null)
-        {
-            return;
-        }
+    partial void OnTextCapsuleTransparentBackgroundChanged(bool value) => SaveAfterChange();
 
-        Save();
-    }
+    partial void OnShowNetworkSpeedChanged(bool value) => SaveAfterChange();
 
-    partial void OnShowTextCapsuleChanged(bool value)
-    {
-        if (_isInitializing)
-        {
-            return;
-        }
+    partial void OnSelectedNetworkSpeedPositionChanged(SelectionOption value) => SaveAfterSelectionChanged(value);
 
-        Save();
-    }
+    partial void OnSelectedNetworkSpeedDisplayModeChanged(SelectionOption value) => SaveAfterSelectionChanged(value);
 
-    partial void OnTextCapsuleContentChanged(string value)
-    {
-        if (_isInitializing)
-        {
-            return;
-        }
+    partial void OnNetworkSpeedTransparentBackgroundChanged(bool value) => SaveAfterChange();
 
-        Save();
-    }
+    partial void OnShowNetworkTypeIconChanged(bool value) => SaveAfterChange();
 
-    partial void OnSelectedTextCapsulePositionChanged(SelectionOption value)
-    {
-        if (_isInitializing || value is null)
-        {
-            return;
-        }
-
-        Save();
-    }
-
-    partial void OnTextCapsuleTransparentBackgroundChanged(bool value)
-    {
-        if (_isInitializing)
-        {
-            return;
-        }
-
-        Save();
-    }
-
-    partial void OnShowNetworkSpeedChanged(bool value)
-    {
-        if (_isInitializing)
-        {
-            return;
-        }
-
-        Save();
-    }
-
-    partial void OnSelectedNetworkSpeedPositionChanged(SelectionOption value)
-    {
-        if (_isInitializing || value is null)
-        {
-            return;
-        }
-
-        Save();
-    }
-
-    partial void OnSelectedNetworkSpeedDisplayModeChanged(SelectionOption value)
-    {
-        if (_isInitializing || value is null)
-        {
-            return;
-        }
-
-        Save();
-    }
-
-    partial void OnNetworkSpeedTransparentBackgroundChanged(bool value)
-    {
-        if (_isInitializing)
-        {
-            return;
-        }
-
-        Save();
-    }
-
-    partial void OnShowNetworkTypeIconChanged(bool value)
-    {
-        if (_isInitializing)
-        {
-            return;
-        }
-
-        Save();
-    }
-
-    partial void OnSelectedNetworkSpeedFontSizeChanged(SelectionOption value)
-    {
-        if (_isInitializing || value is null)
-        {
-            return;
-        }
-
-        Save();
-    }
+    partial void OnSelectedNetworkSpeedFontSizeChanged(SelectionOption value) => SaveAfterSelectionChanged(value);
 
     partial void OnSelectedSpacingModeChanged(SelectionOption value)
     {
         IsCustomSpacingVisible = string.Equals(value?.Value, "Custom", StringComparison.OrdinalIgnoreCase);
-        if (_isInitializing || value is null)
-        {
-            return;
-        }
-
-        Save();
+        SaveAfterSelectionChanged(value);
     }
 
     partial void OnCustomSpacingPercentChanged(int value)
@@ -458,19 +335,18 @@ public sealed partial class StatusBarSettingsPageViewModel : ViewModelBase
         Save();
     }
 
-    partial void OnStatusBarShadowEnabledChanged(bool value)
-    {
-        if (_isInitializing)
-        {
-            return;
-        }
-
-        Save();
-    }
+    partial void OnStatusBarShadowEnabledChanged(bool value) => SaveAfterChange();
 
     partial void OnStatusBarShadowColorChanged(Color value)
     {
         OnPropertyChanged(nameof(StatusBarShadowColorBrush));
+        SaveAfterChange();
+    }
+
+    partial void OnStatusBarShadowOpacityChanged(double value) => SaveAfterChange();
+
+    private void SaveAfterChange()
+    {
         if (_isInitializing)
         {
             return;
@@ -479,9 +355,9 @@ public sealed partial class StatusBarSettingsPageViewModel : ViewModelBase
         Save();
     }
 
-    partial void OnStatusBarShadowOpacityChanged(double value)
+    private void SaveAfterSelectionChanged(SelectionOption? value)
     {
-        if (_isInitializing)
+        if (_isInitializing || value is null)
         {
             return;
         }

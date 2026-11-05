@@ -65,7 +65,7 @@
                            TextAlignment="Center"
                            TextWrapping="Wrap"
                            MaxWidth="360" />
-                <Button x:Name="AddComponentButton"
+                <Button
                         Margin="0,4,0,0"
                         HorizontalAlignment="Center"
                         Click="OnPanelAddComponentClick">

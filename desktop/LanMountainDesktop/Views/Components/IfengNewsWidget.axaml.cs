@@ -140,7 +140,8 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
 
     private async void OnRefreshTimerTick(object? sender, EventArgs e)
     {
-        await RefreshNewsAsync(forceRefresh: true);
+        // 自动刷新尊重服务端 20 分钟缓存 TTL；强刷留给手动刷新按钮。
+        await RefreshNewsAsync(forceRefresh: false);
     }
 
     private async void OnRefreshButtonClick(object? sender, RoutedEventArgs e)
@@ -211,6 +212,7 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
                 _itemControls.Add(control);
             }
 
+            TrimToCapacityUnsafe();
             UpdateAdaptiveLayout();
         });
 
@@ -234,6 +236,28 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
         });
 
         await Task.WhenAll(imageTasks);
+    }
+
+    /// <summary>
+    /// 展示容量裁剪：这个组件一挂可能就是几天，每 20 分钟插一批新条目，
+    /// 不裁的话行控件、URL 字典和图片位图都只增不减（旧条目沉底后永远没人看）。
+    /// 只能在 UI 线程调用；同步清掉被裁条目的字典项与位图，别留给终结器。
+    /// </summary>
+    private void TrimToCapacityUnsafe()
+    {
+        while (_itemControls.Count > MaxDisplayItemCount)
+        {
+            var oldest = _itemControls[0];
+            _itemControls.RemoveAt(0);
+            NewsStackPanel.Children.Remove(oldest);
+
+            _newsByUrl.Remove(oldest.NewsUrl);
+
+            if (_imageCache.Remove(oldest.NewsUrl, out var evictedBitmap))
+            {
+                evictedBitmap.Dispose();
+            }
+        }
     }
 
     private void ApplyLoadingState()

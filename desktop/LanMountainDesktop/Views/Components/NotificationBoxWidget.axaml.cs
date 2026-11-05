@@ -9,6 +9,7 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using LanMountainDesktop.ComponentSystem;
+using LanMountainDesktop.Helpers;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
@@ -421,7 +422,7 @@ public class NotificationItemControl : Border
             var timeBlock = new TextBlock
             {
                 Text = _settings.NotificationBoxTimeFormat == "Relative"
-                    ? GetRelativeTime(_item.ReceivedTime)
+                    ? RelativeTimeText.Ago(_item.ReceivedTime, RelativeTimeText.Scale.UpToDays)
                     : _item.ReceivedTime.ToString("HH:mm"),
                 FontSize = 10,
                 Foreground = ComponentRoleBrushes.MutedText(this),
@@ -469,16 +470,6 @@ public class NotificationItemControl : Border
         }
 
         e.Handled = true;
-    }
-
-    private static string GetRelativeTime(DateTime time)
-    {
-        var diff = DateTime.Now - time;
-
-        if (diff.TotalMinutes < 1) return "刚刚";
-        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes} 分钟前";
-        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours} 小时前";
-        return $"{(int)diff.TotalDays} 天前";
     }
 
     public bool IsSelected { get; set; }

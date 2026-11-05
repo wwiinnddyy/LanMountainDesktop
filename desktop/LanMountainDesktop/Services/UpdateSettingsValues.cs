@@ -13,9 +13,7 @@ public static class UpdateSettingsValues
     public const string ModeSilentDownload = ModeDownloadThenConfirm;
     public const string ModeSilentInstall = ModeSilentOnExit;
 
-    // NOTE: keep constant name for compatibility with existing call sites.
     public const string DownloadSourcePlonds = "plonds-api";
-    public const string DownloadSourceStcn = DownloadSourcePlonds;
     public const string DownloadSourceGitHub = "github";
     public const string DownloadSourceGhProxy = "gh-proxy";
     public const string PlondsStaticBaseUrlEnvironmentVariable = "LANMOUNTAIN_UPDATE_BASE_URL";

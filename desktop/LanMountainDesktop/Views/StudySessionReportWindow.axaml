@@ -69,7 +69,7 @@
                 <StackPanel Spacing="20">
                     <!-- Summary Cards -->
                     <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="12">
-                        <Border x:Name="AvgScoreCard"
+                        <Border
                                 Background="White"
                                 CornerRadius="12"
                                 Padding="16"

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -212,7 +212,7 @@ internal sealed class NotificationService : INotificationService
         }
         catch
         {
-            // 濠电姷顣介埀顒€鍟块埀顒€缍婇幃妯诲緞鐏炴儳鐝伴柣鐘叉处瑜板啰寰婇崹顕呯唵闁诡垱澹嗙花鍧楁偡濞嗘瑧鐣甸柡浣哥Т閻ｆ繈宕熼鐐殿偧闂佽崵濮抽梽宥夊磹閺囥垹绠氶幖娣妽閸嬨劑鏌曟繛鐐澒闁稿鎸搁～婵囨綇閳轰礁缁?
+                    // 设置读取失败按“允许通知”兜底：宁可多试一次，也别静默吞掉通知能力。
             return true;
         }
     }
@@ -363,7 +363,7 @@ internal sealed class NotificationWindowManager
         var position = viewModel.Position;
         var windows = _windowsByPosition[position];
 
-        // 濠电偛顕慨鏉戭潩閿曞偆鏁婇柡鍥╁Х绾剧偓銇勯弮鈧Σ鎺楀储椤掑嫭鍋ｉ柛銉憾閸ゆ瑧鎲搁弶鎸庡枠鐎殿喚鏁婚崺鈧い鎺嶇缁剁偟鎲搁弮鍫濈劦妞ゆ帊鐒﹂惃鎴︽煟閹垮嫮绡€鐎殿噮鍋呯€靛ジ寮堕幋鐑嗕画
+                // 每个位置同时只保留设置允许的条数：满了就关最旧的那条，再腾位给新通知。
         var maxNotifications = GetMaxNotificationsPerPosition();
 
         if (windows.Count >= maxNotifications)

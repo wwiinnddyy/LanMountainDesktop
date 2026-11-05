@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
@@ -57,6 +57,18 @@ public sealed class MaterialWeatherSceneControl : Control
     private MaterialWeatherCondition _condition = MaterialWeatherCondition.Clear;
     private string _styleId = WeatherVisualStyleId.Default;
     private double _phase;
+
+    // 画刷是不可变的：同色同透明度跨帧、跨实例共用一支。场景每帧 new 出全部画刷/渐变，
+    // 实测（2026-11-05，Rain 400x300 headless 渲染泵）每帧 31.6KB 里约 25KB 是绘制自身的分配，
+    // 10fps 常驻就是 ~250KB/s 的 GC 压力。几何是真动画（phase 每帧变）不缓存；
+    // 画笔因厚度随尺寸连续变化也不缓存。
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Color Color, double Opacity), IBrush> SolidBrushCache = new();
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Color Top, Color Bottom, double Sx, double Sy, double Ex, double Ey), IBrush> LinearGradientCache = new();
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Color Color, double PeakAlpha), IBrush> RadialGradientCache = new();
+
+    private static IBrush SharedSolidBrush(Color color, double opacity) =>
+        SolidBrushCache.GetOrAdd((color, opacity), static key => new SolidColorBrush(key.Color, key.Opacity));
+
     private bool _isLive;
     private bool _isAttached;
     private bool _isNight;
@@ -371,8 +383,8 @@ public sealed class MaterialWeatherSceneControl : Control
         var min = Math.Min(r.Width, r.Height);
         var cx = r.Width * nx;
         var cy = r.Height * ny;
-        var brush = filled ? new SolidColorBrush(color, alpha) : null;
-        var pen = filled ? null : new Pen(new SolidColorBrush(color, alpha), Math.Max(1.4, min * 0.012), lineCap: PenLineCap.Round);
+        var brush = filled ? SharedSolidBrush(color, alpha) : null;
+        var pen = filled ? null : new Pen(SharedSolidBrush(color, alpha), Math.Max(1.4, min * 0.012), lineCap: PenLineCap.Round);
         var radius = min * scale;
 
         DrawEllipse(ctx, brush, pen, cx - radius * 0.34, cy + radius * 0.04, radius * 0.34, radius * 0.18);
@@ -382,7 +394,7 @@ public sealed class MaterialWeatherSceneControl : Control
         if (filled)
         {
             var baseRect = new Rect(cx - radius * 0.66, cy + radius * 0.04, radius * 1.24, radius * 0.25);
-            ctx.DrawRectangle(new SolidColorBrush(color, alpha * 0.78), null, baseRect, radius * 0.12, radius * 0.12);
+            ctx.DrawRectangle(SharedSolidBrush(color, alpha * 0.78), null, baseRect, radius * 0.12, radius * 0.12);
         }
     }
 
@@ -394,7 +406,7 @@ public sealed class MaterialWeatherSceneControl : Control
             var y = r.Height * (yBase + i * 0.085);
             var shift = Oscillate(i * 0.32) * r.Width * 0.035;
             var thickness = Math.Max(8, min * (0.075 - i * 0.006));
-            var brush = new SolidColorBrush(i % 2 == 0 ? _palette.SurfaceTint : _palette.SecondaryShape, alpha * (1 - i * 0.10));
+            var brush = SharedSolidBrush(i % 2 == 0 ? _palette.SurfaceTint : _palette.SecondaryShape, alpha * (1 - i * 0.10));
             ctx.DrawRectangle(
                 brush,
                 null,
@@ -407,7 +419,7 @@ public sealed class MaterialWeatherSceneControl : Control
     private void DrawRainField(DrawingContext ctx, Rect r, double startY, double densityScale, Color color, double alpha, bool storm)
     {
         var count = Math.Clamp((int)(r.Width * densityScale), 8, storm ? 32 : 24);
-        var pen = new Pen(new SolidColorBrush(color, alpha), Math.Max(1.2, r.Width / 160), lineCap: PenLineCap.Round);
+        var pen = new Pen(SharedSolidBrush(color, alpha), Math.Max(1.2, r.Width / 160), lineCap: PenLineCap.Round);
         for (var i = 0; i < count; i++)
         {
             var p = (_phase * (storm ? 1.4 : 0.95) + i * 0.137) % 1d;
@@ -424,7 +436,7 @@ public sealed class MaterialWeatherSceneControl : Control
     {
         var min = Math.Min(r.Width, r.Height);
         var count = Math.Clamp((int)(r.Width / 18), 9, storm ? 28 : 22);
-        var pen = new Pen(new SolidColorBrush(color, alpha), Math.Max(1.3, min * 0.009), lineCap: PenLineCap.Square);
+        var pen = new Pen(SharedSolidBrush(color, alpha), Math.Max(1.3, min * 0.009), lineCap: PenLineCap.Square);
         for (var i = 0; i < count; i++)
         {
             var p = (_phase * (storm ? 1.15 : 0.75) + i * 0.091) % 1d;
@@ -438,7 +450,7 @@ public sealed class MaterialWeatherSceneControl : Control
     {
         var min = Math.Min(r.Width, r.Height);
         var count = Math.Clamp((int)(r.Width / 22), 8, storm ? 26 : 20);
-        var pen = new Pen(new SolidColorBrush(color, alpha), Math.Max(2.2, min * 0.014), lineCap: PenLineCap.Round);
+        var pen = new Pen(SharedSolidBrush(color, alpha), Math.Max(2.2, min * 0.014), lineCap: PenLineCap.Round);
         for (var i = 0; i < count; i++)
         {
             var p = (_phase * (storm ? 1.35 : 0.85) + i * 0.118) % 1d;
@@ -452,7 +464,7 @@ public sealed class MaterialWeatherSceneControl : Control
     {
         var min = Math.Min(r.Width, r.Height);
         var count = Math.Clamp((int)(r.Width / 22), 8, 24);
-        var brush = new SolidColorBrush(color, alpha);
+        var brush = SharedSolidBrush(color, alpha);
         var pen = new Pen(brush, Math.Max(1.1, min * 0.007), lineCap: PenLineCap.Round);
         for (var i = 0; i < count; i++)
         {
@@ -478,7 +490,7 @@ public sealed class MaterialWeatherSceneControl : Control
         {
             var y = r.Height * (0.35 + i * 0.105);
             var shift = Oscillate(i * 0.25) * r.Width * 0.045;
-            var pen = new Pen(new SolidColorBrush(color, alpha * (1 - i * 0.08)), Math.Max(2.2, min * 0.015), lineCap: PenLineCap.Round);
+            var pen = new Pen(SharedSolidBrush(color, alpha * (1 - i * 0.08)), Math.Max(2.2, min * 0.015), lineCap: PenLineCap.Round);
             if (curved)
             {
                 DrawWavePath(ctx, r.Width * 0.10 + shift, y, r.Width * 0.82, min * 0.020, i, pen);
@@ -497,7 +509,7 @@ public sealed class MaterialWeatherSceneControl : Control
         {
             var y = r.Height * (0.22 + i * 0.16);
             var shift = Oscillate(i * 0.22) * r.Width * 0.06;
-            var pen = new Pen(new SolidColorBrush(color, alpha * (1 - i * 0.06)), Math.Max(1.6, min * 0.010), lineCap: PenLineCap.Round);
+            var pen = new Pen(SharedSolidBrush(color, alpha * (1 - i * 0.06)), Math.Max(1.6, min * 0.010), lineCap: PenLineCap.Round);
             DrawWavePath(ctx, r.Width * 0.06 + shift, y, r.Width * 0.88, min * 0.030 * amplitudeScale, i, pen);
         }
     }
@@ -538,12 +550,12 @@ public sealed class MaterialWeatherSceneControl : Control
             g.EndFigure(true);
         }
 
-        ctx.DrawGeometry(new SolidColorBrush(color, alpha), null, bolt);
+        ctx.DrawGeometry(SharedSolidBrush(color, alpha), null, bolt);
     }
 
     private void DrawSunRays(DrawingContext ctx, double cx, double cy, double inner, double outer, int count, Color color, double alpha)
     {
-        var pen = new Pen(new SolidColorBrush(color, alpha), Math.Max(1.4, inner * 0.055), lineCap: PenLineCap.Round);
+        var pen = new Pen(SharedSolidBrush(color, alpha), Math.Max(1.4, inner * 0.055), lineCap: PenLineCap.Round);
         for (var i = 0; i < count; i++)
         {
             var angle = (i / (double)count) * Math.PI * 2 + _phase * 0.45;
@@ -586,7 +598,7 @@ public sealed class MaterialWeatherSceneControl : Control
             g.EndFigure(true);
         }
 
-        ctx.DrawGeometry(new SolidColorBrush(color, alpha), null, triangle);
+        ctx.DrawGeometry(SharedSolidBrush(color, alpha), null, triangle);
     }
 
     private void DrawCircle(DrawingContext ctx, double cx, double cy, double radius, Color color, double alpha)
@@ -596,7 +608,7 @@ public sealed class MaterialWeatherSceneControl : Control
             return;
         }
 
-        ctx.DrawEllipse(new SolidColorBrush(color, alpha), null, new Point(cx, cy), radius, radius);
+        ctx.DrawEllipse(SharedSolidBrush(color, alpha), null, new Point(cx, cy), radius, radius);
     }
 
     private void DrawSoftBlob(DrawingContext ctx, double cx, double cy, double radius, Color color, double peakAlpha)
@@ -606,16 +618,18 @@ public sealed class MaterialWeatherSceneControl : Control
             return;
         }
 
-        var brush = new RadialGradientBrush
-        {
-            Center = new RelativePoint(0.5, 0.5, RelativeUnit.Relative),
-            GradientStops =
+        var brush = RadialGradientCache.GetOrAdd(
+            (color, peakAlpha),
+            static key => new RadialGradientBrush
             {
-                new GradientStop(WithAlpha(color, peakAlpha), 0),
-                new GradientStop(WithAlpha(color, peakAlpha * 0.52), 0.42),
-                new GradientStop(WithAlpha(color, 0), 1)
-            }
-        };
+                Center = new RelativePoint(0.5, 0.5, RelativeUnit.Relative),
+                GradientStops =
+                {
+                    new GradientStop(WithAlpha(key.Color, key.PeakAlpha), 0),
+                    new GradientStop(WithAlpha(key.Color, key.PeakAlpha * 0.52), 0.42),
+                    new GradientStop(WithAlpha(key.Color, 0), 1)
+                }
+            });
 
         ctx.DrawEllipse(brush, null, new Point(cx, cy), radius, radius);
     }
@@ -648,7 +662,7 @@ public sealed class MaterialWeatherSceneControl : Control
             g.EndFigure(false);
         }
 
-        ctx.DrawGeometry(null, new Pen(new SolidColorBrush(color, alpha), Math.Max(1, thickness), lineCap: PenLineCap.Round), stream);
+        ctx.DrawGeometry(null, new Pen(SharedSolidBrush(color, alpha), Math.Max(1, thickness), lineCap: PenLineCap.Round), stream);
     }
 
     private double Oscillate(double offset)
@@ -680,11 +694,13 @@ public sealed class MaterialWeatherSceneControl : Control
 
     private static IBrush CreateLinearBrush(Color top, Color bottom, double sx, double sy, double ex, double ey)
     {
-        return new LinearGradientBrush
-        {
-            StartPoint = new RelativePoint(sx, sy, RelativeUnit.Relative),
-            EndPoint = new RelativePoint(ex, ey, RelativeUnit.Relative),
-            GradientStops = { new GradientStop(top, 0), new GradientStop(bottom, 1) }
-        };
+        return LinearGradientCache.GetOrAdd(
+            (top, bottom, sx, sy, ex, ey),
+            static key => new LinearGradientBrush
+            {
+                StartPoint = new RelativePoint(key.Sx, key.Sy, RelativeUnit.Relative),
+                EndPoint = new RelativePoint(key.Ex, key.Ey, RelativeUnit.Relative),
+                GradientStops = { new GradientStop(key.Top, 0), new GradientStop(key.Bottom, 1) }
+            });
     }
 }

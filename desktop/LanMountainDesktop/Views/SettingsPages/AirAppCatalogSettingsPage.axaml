@@ -16,7 +16,7 @@
                 <ui:FASettingsExpander.Footer>
                     <Grid ColumnDefinitions="*,Auto"
                           ColumnSpacing="12">
-                        <TextBox x:Name="SearchTextBox"
+                        <TextBox
                                  Text="{Binding SearchText}"
                                  PlaceholderText="{Binding SearchPlaceholder}"
                                  Focusable="True"

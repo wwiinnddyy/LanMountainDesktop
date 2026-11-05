@@ -28,7 +28,7 @@
                         ClipToBounds="True">
                     <Grid x:Name="ViewportRoot"
                           ClipToBounds="True">
-                        <Canvas x:Name="ViewportCanvas"
+                        <Canvas
                                 ClipToBounds="True">
                             <inking:InkCanvas x:Name="InkCanvas"
                                                Width="1"
@@ -63,7 +63,7 @@
                                 CornerRadius="15"
                                 ToolTip.Tip="Pen"
                                 Click="OnPenButtonClick">
-                            <fi:SymbolIcon x:Name="PenIcon"
+                            <fi:SymbolIcon
                                            Symbol="Pen"
                                            IconVariant="Regular"
                                            FontSize="14" />
@@ -75,7 +75,7 @@
                                 CornerRadius="15"
                                 ToolTip.Tip="Eraser"
                                 Click="OnEraserButtonClick">
-                            <fi:SymbolIcon x:Name="EraserIcon"
+                            <fi:SymbolIcon
                                            Symbol="EraserTool"
                                            IconVariant="Regular"
                                            FontSize="14" />
@@ -87,7 +87,7 @@
                                 CornerRadius="15"
                                 ToolTip.Tip="Pan / Zoom"
                                 Click="OnHandButtonClick">
-                            <fi:SymbolIcon x:Name="HandIcon"
+                            <fi:SymbolIcon
                                            Symbol="HandDraw"
                                            IconVariant="Regular"
                                            FontSize="14" />
@@ -99,7 +99,7 @@
                                 CornerRadius="15"
                                 ToolTip.Tip="Clear"
                                 Click="OnClearButtonClick">
-                            <fi:SymbolIcon x:Name="ClearIcon"
+                            <fi:SymbolIcon
                                            Symbol="Delete"
                                            IconVariant="Regular"
                                            FontSize="14" />
@@ -110,7 +110,7 @@
                                 Padding="0"
                                 CornerRadius="15"
                                 ToolTip.Tip="SVG">
-                            <fi:SymbolIcon x:Name="FileIcon"
+                            <fi:SymbolIcon
                                            Symbol="Document"
                                            IconVariant="Regular"
                                            FontSize="14" />

@@ -149,7 +149,8 @@ public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget
 
     private async void OnRefreshTimerTick(object? sender, EventArgs e)
     {
-        await RefreshHotSearchAsync(forceRefresh: true);
+        // 自动刷新尊重服务端 20 分钟缓存 TTL；强刷留给手动刷新按钮。
+        await RefreshHotSearchAsync(forceRefresh: false);
     }
 
     private async void OnRefreshButtonClick(object? sender, RoutedEventArgs e)

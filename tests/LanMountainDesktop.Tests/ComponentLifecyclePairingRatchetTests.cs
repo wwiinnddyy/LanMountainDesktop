@@ -45,11 +45,13 @@ public sealed class ComponentLifecyclePairingRatchetTests
             // 起与收都认"把表整个交给生命周期家"这种写法（新增一个家只往这个名字列表里加一条，别复制正则）。
             // 两侧认的方法**不一样**，这是刻意的：Reschedule / Apply 按设置既可能起也可能停，
             // Detach 只停不起——把它算进"起"的一侧会把 11 处 detach 虚报成 11 个起点（实测 35 → 46）。
+            // 2026-11-03 ComponentPagePauseLifetime 入列：多页桌面"非当前页停表"收口进这个家，
+            // Apply 起停都做（与 Reschedule 同侧，表名与 Apply 同行才认得出 key），Detach 只停。
             new Regex(@"\b(?<key>[\w]*[Tt]imer\w*)\s*\??\.\s*Start\s*\(" +
-                      @"|\b(?:ComponentRefreshLifetime|DailyWordAutoRefresh)\s*\.\s*(?:Reschedule|Apply)\s*\([^;]*?(?<key>[\w]*[Tt]imer\w*)",
+                      @"|\b(?:ComponentRefreshLifetime|DailyWordAutoRefresh|ComponentPagePauseLifetime)\s*\.\s*(?:Reschedule|Apply)\s*\([^;]*?(?<key>[\w]*[Tt]imer\w*)",
                   RegexOptions.Compiled),
             new Regex(@"\b(?<key>[\w]*[Tt]imer\w*)\s*\??\.\s*Stop\s*\(" +
-                      @"|\b(?:ComponentRefreshLifetime|DailyWordAutoRefresh)\s*\.\s*(?:Detach|Reschedule|Apply)\s*\([^;]*?(?<key>[\w]*[Tt]imer\w*)",
+                      @"|\b(?:ComponentRefreshLifetime|DailyWordAutoRefresh|ComponentPagePauseLifetime)\s*\.\s*(?:Detach|Reschedule|Apply)\s*\([^;]*?(?<key>[\w]*[Tt]imer\w*)",
                   RegexOptions.Compiled),
             true, 35, 59),
         new("subscription",

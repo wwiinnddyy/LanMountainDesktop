@@ -718,7 +718,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// 濠碘槅鍋€閸嬫挻绻涢弶鎴剳濠殿喗鎮傞獮鈧ù锝呮贡閸╁绱撴担绋款仹婵炲棎鍨藉浼搭敍濮橆厼鍓ㄦ繛鏉戝悑閼规崘銇愰崒鐐村仺闁绘柧璀﹀楣冩煙?    /// </summary>
+        /// 判定顶部状态栏再放一个组件时，三段会不会互相挤撞（以当前布局试排一次）。
     private bool WouldComponentsCollide()
     {
         if (TopStatusBarHost is null)
@@ -791,7 +791,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// 闂佸吋鍎抽崲鑼躲亹閸ャ劎鈻旀い鎾卞灪閿涚喖姊婚崼娑樼仾婵犮垺锕㈠畷锟犳偐閸偅娈㈤梺姹囧妼鐎氼剟顢欓弮鈧幆鏃堟晜閼测晝顦╅梺鍛婄墪閹冲繒鈧凹鍙冨鑽ゅ鐎ｎ剛宕洪梺?    /// </summary>
+        /// 统计顶部状态栏中央段已占用的宽度（含段内间距）。
     private double GetCenterPanelOccupiedWidth()
     {
         if (TopStatusCenterPanel is null)
@@ -820,7 +820,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// 闂佸吋鍎抽崲鑼躲亹閸ヮ剙鐭楅柛蹇撴噺濞呯娀姊婚崼娑樼仾婵犮垺锕㈠畷锟犳偐閸偅娈㈤梺姹囧妼鐎氼剟顢欓弮鈧幆鏃堟晜閼测晝顦╅梺鍛婄墪閹冲繒鈧凹鍙冨鑽ゅ鐎ｎ剛宕洪梺?    /// </summary>
+        /// 统计顶部状态栏右段已占用的宽度（含段内间距）。
     private double GetRightPanelOccupiedWidth()
     {
         if (TopStatusRightPanel is null)
@@ -849,7 +849,8 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// 濠碘槅鍋€閸嬫捇鏌＄仦璇插姕婵″弶鎮傚畷銉╂晝閳ь剝銇愰崣澶岊浄闁靛鍎查煬顒勬煙缁嬫寧鎼愰柣锝囧亾閹峰懎顓奸崶鈺傜€┑鐑囩秬椤曆勬叏閻愮數纾奸柛鏇ㄤ簼椤?    /// </summary>
+        /// 判定某个位置还能不能放新组件：先查会不会撞上现有组件，
+        /// 撞了再按三段已占宽度与一个 2 格宽的估计新组件算剩余空间。
     private bool CanAddComponentAtPosition(string position)
     {
         var wouldCollide = WouldComponentsCollide();
@@ -1258,7 +1259,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// 闂佸吋鍎抽崲鑼躲亹閸パ屽晠闁挎梹瀵у▍鐘绘煕濞嗘ê鐏ユい顐㈡缁辨帡宕熼鍜佸仺闂佸憡甯楅〃澶愬Υ?    /// </summary>
+        /// 收集顶部状态栏左段当前可见的组件控件。
     private List<Control> GetVisibleLeftComponents()
     {
         var result = new List<Control>();
@@ -1273,7 +1274,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// 闂佸吋鍎抽崲鑼躲亹閸ャ劎鈻旀い鎾卞灪閿涚喖鏌涘▎妯虹仴妞ゎ偄妫涚槐鎺楀礋椤忓拋鍋ㄩ梺鍛婂笚椤ㄥ濡?    /// </summary>
+        /// 收集顶部状态栏中央段当前可见的组件控件。
     private List<Control> GetVisibleCenterComponents()
     {
         var result = new List<Control>();
@@ -1288,7 +1289,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// 闂佸吋鍎抽崲鑼躲亹閸ヮ剙鐭楅柛蹇撴噺濞呯娀鏌涘▎妯虹仴妞ゎ偄妫涚槐鎺楀礋椤忓拋鍋ㄩ梺鍛婂笚椤ㄥ濡?    /// </summary>
+        /// 收集顶部状态栏右段当前可见的组件控件。
     private List<Control> GetVisibleRightComponents()
     {
         var result = new List<Control>();
@@ -1968,6 +1969,20 @@ public partial class MainWindow : Window
             }
         }
 
+        // 已建页的索引跟着同一条平移规则走：被删页移除，其后各页前移一位。
+        if (_populatedDesktopPages.Count > 0)
+        {
+            var shiftedPages = _populatedDesktopPages
+                .Where(pageIndex => pageIndex != _currentDesktopSurfaceIndex)
+                .Select(pageIndex => pageIndex > _currentDesktopSurfaceIndex ? pageIndex - 1 : pageIndex)
+                .ToHashSet();
+            _populatedDesktopPages.Clear();
+            foreach (var pageIndex in shiftedPages)
+            {
+                _populatedDesktopPages.Add(pageIndex);
+            }
+        }
+
         RebuildDesktopGrid();
         PersistSettings();
         
@@ -2139,6 +2154,36 @@ public partial class MainWindow : Window
     private static bool IsDesktopComponentHost(Border host)
     {
         return host.Classes.Contains(DesktopComponentHostClass);
+    }
+
+    /// <summary>
+    /// 懒建的入口：页的宿主还没摆过（不在 <c>_populatedDesktopPages</c>）就摆一次。
+    /// 网格几何没就绪（首次 <c>UpdateDesktopSurfaceLayout</c> 之前）时先不动——下一轮切页/重排会再来。
+    /// 已建页是纯跳过，切页来回不会重复创建。
+    /// </summary>
+    private void EnsureDesktopPageComponents(int pageIndex)
+    {
+        if (pageIndex < 0 || pageIndex >= _desktopPageCount)
+        {
+            return;
+        }
+
+        if (_populatedDesktopPages.Contains(pageIndex))
+        {
+            return;
+        }
+
+        if (!_desktopPageComponentGrids.TryGetValue(pageIndex, out var pageGrid) ||
+            pageGrid.ColumnDefinitions.Count <= 0)
+        {
+            return;
+        }
+
+        _populatedDesktopPages.Add(pageIndex);
+        AppLogger.Info(
+            "DesktopPaging",
+            $"Lazily populating desktop page components. PageIndex={pageIndex}; PopulatedPages=[{string.Join(',', _populatedDesktopPages.OrderBy(p => p))}]");
+        RepositionDesktopPageComponents(pageIndex, refreshContext: true);
     }
 
     private void RestoreDesktopPageComponents(int pageIndex)

@@ -15,7 +15,11 @@ public sealed class LocalizationService
         AllowTrailingCommas = true
     };
 
-    private readonly Dictionary<string, Dictionary<string, string>> _cache =
+    // 语言表是进程级共享的：语言文件一张就是 60-75KB、上千键，而组件/视图各自 new 实例（现量 40+ 处），
+    // 实例级缓存会让同一份 JSON 在每个实例上重复读盘+解析一遍，页面重排重建组件时再涨一轮。
+    // 实例 API 保持不变，调用方无感；ClearCache 语义随之上移为"全进程清表"，正是语言切换想要的。
+    private static readonly object CacheGate = new();
+    private static readonly Dictionary<string, Dictionary<string, string>> SharedCache =
         new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>宿主默认语言，也是读不到设置快照时的退路。取值集合与归一化表在 <see cref="LanguageCodes"/>。</summary>
@@ -66,12 +70,18 @@ public sealed class LocalizationService
     {
         if (string.IsNullOrWhiteSpace(languageCode))
         {
-            _cache.Clear();
+            lock (CacheGate)
+            {
+                SharedCache.Clear();
+            }
         }
         else
         {
             var normalizedCode = NormalizeLanguageCode(languageCode);
-            _cache.Remove(normalizedCode);
+            lock (CacheGate)
+            {
+                SharedCache.Remove(normalizedCode);
+            }
         }
     }
 
@@ -94,11 +104,36 @@ public sealed class LocalizationService
 
     private Dictionary<string, string> LoadLanguageTable(string languageCode)
     {
-        if (_cache.TryGetValue(languageCode, out var table))
+        lock (CacheGate)
         {
-            return table;
+            if (SharedCache.TryGetValue(languageCode, out var cachedTable))
+            {
+                return cachedTable;
+            }
         }
 
+        var result = LoadLanguageTableFromDisk(languageCode);
+
+        // 只有当语言表非空时才缓存，这样如果加载失败可以下次重试
+        if (result.Count > 0)
+        {
+            lock (CacheGate)
+            {
+                // 双检：并发首载时晚到的那份直接复用先到者，避免互相覆盖。
+                if (SharedCache.TryGetValue(languageCode, out var winner))
+                {
+                    return winner;
+                }
+
+                SharedCache[languageCode] = result;
+            }
+        }
+
+        return result;
+    }
+
+    private static Dictionary<string, string> LoadLanguageTableFromDisk(string languageCode)
+    {
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         try
         {
@@ -123,15 +158,10 @@ public sealed class LocalizationService
             // Keep empty table for resilience.
         }
 
-        // 只有当语言表非空时才缓存，这样如果加载失败可以下次重试
-        if (result.Count > 0)
-        {
-            _cache[languageCode] = result;
-        }
         return result;
     }
 
-    private string? TryLoadFromFileSystem(string languageCode)
+    private static string? TryLoadFromFileSystem(string languageCode)
     {
         try
         {
@@ -148,7 +178,7 @@ public sealed class LocalizationService
         return null;
     }
 
-    private string? TryLoadFromEmbeddedResource(string languageCode)
+    private static string? TryLoadFromEmbeddedResource(string languageCode)
     {
         try
         {

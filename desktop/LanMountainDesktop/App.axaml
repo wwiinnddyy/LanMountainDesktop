@@ -14,7 +14,6 @@
         <FontFamily x:Key="AppFontFamily">MiSans VF, avares://LanMountainDesktop/Assets/Fonts#MiSans, avares://LanMountainDesktop/Assets/Fonts#MiSans VF</FontFamily>
         <FontFamily x:Key="AppFontFamilyJP">avares://LanMountainDesktop/Assets/Fonts#MiSans JP</FontFamily>
         <FontFamily x:Key="AppFontFamilyKR">avares://LanMountainDesktop/Assets/Fonts#MiSans KR</FontFamily>
-        <conv:HexToColorConverter x:Key="HexToColorConverter" />
         <conv:HexToBrushConverter x:Key="HexToBrushConverter" />
     </Application.Resources>
 

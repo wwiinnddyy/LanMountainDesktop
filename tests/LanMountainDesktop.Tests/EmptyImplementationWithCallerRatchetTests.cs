@@ -110,6 +110,12 @@ public sealed class EmptyImplementationWithCallerRatchetTests
             "格子变大时 RSS 条目字号/行数不跟着变。这一格要动不是接个家就完事：该文件里没有" +
             "_currentCellSize、也没有 UpdateAdaptiveLayout 之类的布局函数，等于要先写一遍自适应布局" +
             "再加真实例探针，等于「怎么缩放」既是产品设计、也是一块不小的实现，等他拍。",
+
+        // —— 收口后剩下的接口哨：完成报告的消费方在调起方手里，桥无处可送 ——
+        ["PlondsUpdateApplier.cs|ReportComplete"] =
+            "InstallProgressBridge 只做进度转发；IUpdateProgressReporter.ReportComplete 的 5 个调用点都在 " +
+            "PlondsUpdateApplier 流程内部，完成状态由流程自身的返回值/异常表达，桥里存一份没有人读" +
+            "（2026-11-04 冗余收口把只写不读的 _complete 摘掉后剩下的接口形状）。",
     };
 
     /// <summary>一行方法签名（参数表不跨行）：抓名字，并把 <c>)</c> 之后的残余留给 <see cref="IsEmptyBody"/> 判体形。</summary>

@@ -35,7 +35,7 @@
     <views:SplashWindow />
   </Design.DataContext>
 
-  <Border x:Name="RootShell"
+  <Border
           Background="#0B0B0B"
           CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
           ClipToBounds="True">
@@ -48,7 +48,7 @@
              IsVisible="False"
              Opacity="0"/>
 
-      <Border x:Name="BackgroundOverlay"
+      <Border
               Grid.RowSpan="2"
               Background="#0B0B0B"
               Opacity="0.42"/>
