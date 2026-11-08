@@ -142,6 +142,71 @@ public sealed class PlondsPublishingRegressionTests : IDisposable
             "lanmountain/update/plonds/windows-x64/stable", Options);
     }
 
+    [Fact]
+    public void GitHubEnrich_CompletesChecksumsAndDownloadUrls()
+    {
+        var changedZip = Path.Combine(_root, "changed-windows-x64.zip");
+        var filesZip = Path.Combine(_root, "files-windows-x64.zip");
+        Directory.CreateDirectory(_root);
+        using (var archive = ZipFile.Open(changedZip, ZipArchiveMode.Create))
+            archive.CreateEntry("app-2.0.0/delta.txt").Open().Write("delta"u8);
+        using (var archive = ZipFile.Open(filesZip, ZipArchiveMode.Create))
+            archive.CreateEntry("app-2.0.0/full.txt").Open().Write("full"u8);
+
+        var manifest = Manifest("2.0.0") with
+        {
+            Checksums = new Dictionary<string, string> { ["changed.zip"] = "sha256:preexisting" }
+        };
+
+        var enriched = PlondsPublisher.EnrichForGitHubChannel(
+            manifest, "v2.0.0", "foo/bar", "PLONDS-windows-x64.json", changedZip, filesZip);
+
+        Assert.NotNull(enriched.Downloads);
+        Assert.Null(enriched.Downloads.S3);
+        Assert.Equal("sha256:preexisting", enriched.Checksums["changed.zip"]);
+        Assert.StartsWith("md5:", enriched.Checksums["Files.zip"]);
+        Assert.Equal("https://github.com/foo/bar/releases/download/v2.0.0/PLONDS-windows-x64.json",
+            enriched.Downloads.GitHub.ManifestUrl);
+        Assert.Equal("https://github.com/foo/bar/releases/download/v2.0.0/changed-windows-x64.zip",
+            enriched.Downloads.GitHub.ChangedZipUrl);
+        Assert.Equal("https://github.com/foo/bar/releases/download/v2.0.0/files-windows-x64.zip",
+            enriched.Downloads.GitHub.FilesZipUrl);
+    }
+
+    [Fact]
+    public void GitHubEnrichFile_WritesLegacyBootstrapThatSurvivesMissingS3()
+    {
+        var root = Path.Combine(_root, "enrich-file");
+        Directory.CreateDirectory(root);
+        var changedZip = Path.Combine(root, "changed.zip");
+        var filesZip = Path.Combine(root, "Files.zip");
+        using (var archive = ZipFile.Open(changedZip, ZipArchiveMode.Create))
+            archive.CreateEntry("app-2.0.0/delta.txt").Open().Write("delta"u8);
+        using (var archive = ZipFile.Open(filesZip, ZipArchiveMode.Create))
+            archive.CreateEntry("app-2.0.0/full.txt").Open().Write("full"u8);
+
+        var manifestPath = Path.Combine(root, "PLONDS-windows-x64.json");
+        File.WriteAllText(manifestPath, JsonSerializer.Serialize(Manifest("2.0.0"), PayloadUtilities.JsonOptions));
+
+        var enriched = PlondsPublisher.EnrichForGitHubChannelFile(
+            manifestPath, "v2.0.0", "foo/bar", changedZip, filesZip, writeLegacyCopy: true);
+
+        var fromDisk = JsonSerializer.Deserialize<PlondsManifest>(File.ReadAllText(manifestPath), PayloadUtilities.JsonOptions);
+        Assert.NotNull(fromDisk);
+        Assert.NotNull(fromDisk!.Downloads);
+        Assert.Equal("md5:" + Convert.ToHexString(System.Security.Cryptography.MD5.HashData(File.ReadAllBytes(filesZip))).ToLowerInvariant(),
+            fromDisk.Checksums["Files.zip"]);
+
+        var legacyPath = Path.Combine(root, "PLONDS.json");
+        Assert.True(File.Exists(legacyPath), "legacy bootstrap copy should be written");
+        var legacy = JsonSerializer.Deserialize<PlondsManifest>(File.ReadAllText(legacyPath), PayloadUtilities.JsonOptions);
+        Assert.NotNull(legacy);
+        Assert.True(legacy!.RequiresCleanInstall);
+        Assert.Empty(legacy.Downloads!.GitHub.FilesZipUrl);
+        Assert.Null(legacy.Downloads.S3);
+        Assert.Equal(enriched.Downloads!.GitHub.ManifestUrl, legacy.Downloads.GitHub.ManifestUrl);
+    }
+
     private static PlondsManifest Manifest(string version) =>
         new("2.0", version, "1.0.0", false, false, "stable", "windows-x64", DateTimeOffset.UtcNow,
             new Dictionary<string, PlondsFileEntry>(), new Dictionary<string, PlondsChangedFileEntry>(), new Dictionary<string, string>());

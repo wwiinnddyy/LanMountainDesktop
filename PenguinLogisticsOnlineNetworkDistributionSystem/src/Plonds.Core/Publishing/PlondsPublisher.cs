@@ -76,23 +76,13 @@ public sealed class PlondsPublisher
         var changedFileCount = await UploadDirectoryAsync(s3, changedExtractRoot, changedFolderKey, directoryConcurrency, cancellationToken).ConfigureAwait(false);
         var filesFileCount = await UploadDirectoryAsync(s3, filesExtractRoot, filesFolderKey, directoryConcurrency, cancellationToken).ConfigureAwait(false);
 
-        var updatedChecksums = new Dictionary<string, string>(manifest.Checksums, StringComparer.OrdinalIgnoreCase)
+        var enriched = EnrichForGitHubChannel(
+            manifest, releaseTag, repository, Path.GetFileName(manifestPath), changedZipPath, filesZipPath);
+        var updatedManifest = enriched with
         {
-            ["changed.zip"] = NormalizeChecksum(manifest.Checksums, "changed.zip", changedZipPath),
-            ["Files.zip"] = $"md5:{ComputeMd5Hex(filesZipPath)}"
-        };
-
-        var updatedManifest = manifest with
-        {
-            Checksums = updatedChecksums,
-            Downloads = new PlondsDownloadInfo(
-                ReleaseTag: releaseTag,
-                GitHub: new PlondsGitHubDownloadInfo(
-                    ReleaseUrl: $"https://github.com/{repository}/releases/tag/{releaseTag}",
-                    ManifestUrl: $"https://github.com/{repository}/releases/download/{releaseTag}/{Path.GetFileName(manifestPath)}",
-                    ChangedZipUrl: $"https://github.com/{repository}/releases/download/{releaseTag}/{Path.GetFileName(changedZipPath)}",
-                    FilesZipUrl: $"https://github.com/{repository}/releases/download/{releaseTag}/{Path.GetFileName(filesZipPath)}"),
-                S3: new PlondsS3DownloadInfo(
+            Downloads = enriched.Downloads! with
+            {
+                S3 = new PlondsS3DownloadInfo(
                     Bucket: options.S3.Bucket,
                     Prefix: versionPrefix,
                     ManifestKey: manifestKey,
@@ -104,7 +94,8 @@ public sealed class PlondsPublisher
                     FilesZipKey: filesZipKey,
                     FilesZipUrl: s3.BuildPublicUrl(filesZipKey),
                     FilesFolderKey: filesFolderKey,
-                    FilesFolderUrl: s3.BuildPublicUrl(filesFolderKey)))
+                    FilesFolderUrl: s3.BuildPublicUrl(filesFolderKey))
+            }
         };
 
         File.WriteAllText(manifestPath, JsonSerializer.Serialize(updatedManifest, JsonOptions), new UTF8Encoding(false));
@@ -155,6 +146,66 @@ public sealed class PlondsPublisher
             FilesFileCount: filesFileCount);
     }
 
+    /// <summary>
+    /// GitHub 通道自洽 enrich：补齐 Files.zip 校验和并写入 GitHub 下载地址。
+    /// 不依赖 S3——S3 上传失败时发布到 Release 的清单依然完整可用。
+    /// </summary>
+    public static PlondsManifest EnrichForGitHubChannel(
+        PlondsManifest manifest,
+        string releaseTag,
+        string repository,
+        string manifestFileName,
+        string changedZipPath,
+        string filesZipPath)
+    {
+        // Comparator 产物的 checksums 理论上恒存在，但清单是外部输入：缺字段反序列化后为 null，这里必须容忍。
+        var sourceChecksums = manifest.Checksums ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var updatedChecksums = new Dictionary<string, string>(sourceChecksums, StringComparer.OrdinalIgnoreCase)
+        {
+            ["changed.zip"] = NormalizeChecksum(sourceChecksums, "changed.zip", changedZipPath),
+            ["Files.zip"] = $"md5:{ComputeMd5Hex(filesZipPath)}"
+        };
+
+        return manifest with
+        {
+            Checksums = updatedChecksums,
+            Downloads = new PlondsDownloadInfo(
+                ReleaseTag: releaseTag,
+                GitHub: new PlondsGitHubDownloadInfo(
+                    ReleaseUrl: $"https://github.com/{repository}/releases/tag/{releaseTag}",
+                    ManifestUrl: $"https://github.com/{repository}/releases/download/{releaseTag}/{manifestFileName}",
+                    ChangedZipUrl: $"https://github.com/{repository}/releases/download/{releaseTag}/{Path.GetFileName(changedZipPath)}",
+                    FilesZipUrl: $"https://github.com/{repository}/releases/download/{releaseTag}/{Path.GetFileName(filesZipPath)}"),
+                S3: null)
+        };
+    }
+
+    /// <summary>enrich-manifest 命令入口：就地 enrich 清单文件，可选写出旧客户端 bootstrap 副本。</summary>
+    public static PlondsManifest EnrichForGitHubChannelFile(
+        string manifestPath,
+        string releaseTag,
+        string repository,
+        string changedZipPath,
+        string filesZipPath,
+        bool writeLegacyCopy)
+    {
+        var manifest = LoadManifest(manifestPath);
+        var enriched = EnrichForGitHubChannel(
+            manifest, releaseTag, repository, Path.GetFileName(manifestPath), changedZipPath, filesZipPath);
+        File.WriteAllText(manifestPath, JsonSerializer.Serialize(enriched, JsonOptions), new UTF8Encoding(false));
+
+        if (writeLegacyCopy)
+        {
+            var legacyPath = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(manifestPath))!, "PLONDS.json");
+            if (!string.Equals(legacyPath, Path.GetFullPath(manifestPath), StringComparison.OrdinalIgnoreCase))
+            {
+                File.WriteAllText(legacyPath, JsonSerializer.Serialize(CreateLegacyBootstrapManifest(enriched), JsonOptions), new UTF8Encoding(false));
+            }
+        }
+
+        return enriched;
+    }
+
     public static PlondsManifest CreateLegacyBootstrapManifest(PlondsManifest manifest)
     {
         // Old clients cannot update launcher-root files from Files.zip. Force their existing EXE fallback.
@@ -165,11 +216,13 @@ public sealed class PlondsPublisher
             Downloads = downloads is null ? null : downloads with
             {
                 GitHub = downloads.GitHub with { ChangedZipUrl = string.Empty, FilesZipUrl = string.Empty },
-                S3 = downloads.S3 with
-                {
-                    ChangedZipKey = string.Empty, ChangedZipUrl = string.Empty, ChangedFolderUrl = string.Empty,
-                    FilesZipKey = string.Empty, FilesZipUrl = string.Empty, FilesFolderUrl = string.Empty
-                }
+                S3 = downloads.S3 is null
+                    ? null
+                    : downloads.S3 with
+                    {
+                        ChangedZipKey = string.Empty, ChangedZipUrl = string.Empty, ChangedFolderUrl = string.Empty,
+                        FilesZipKey = string.Empty, FilesZipUrl = string.Empty, FilesFolderUrl = string.Empty
+                    }
             }
         };
     }

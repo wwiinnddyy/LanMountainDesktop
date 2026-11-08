@@ -83,7 +83,28 @@ jobs:
           jq -e . plonds-assets/PLONDS-windows-${{ matrix.arch }}.json >/dev/null
           echo "RELEASE_CHANNEL=$(jq -r .channel plonds-assets/PLONDS-windows-${{ matrix.arch }}.json)" >> "$GITHUB_ENV"
 
+      - name: Enrich manifest and publish to GitHub channel
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet run --project PenguinLogisticsOnlineNetworkDistributionSystem/src/Plonds.Tool/Plonds.Tool.csproj --configuration Release -- \
+            enrich-manifest \
+            --manifest "$PWD/plonds-assets/PLONDS-windows-${{ matrix.arch }}.json" \
+            --changed-zip "$PWD/plonds-assets/changed-windows-${{ matrix.arch }}.zip" \
+            --files-zip "$PWD/plonds-assets/files-windows-${{ matrix.arch }}.zip" \
+            --release-tag "$RELEASE_TAG" \
+            --repository "${{ github.repository }}" \
+            --write-legacy-copy
+
+          gh release upload "$RELEASE_TAG" "plonds-assets/PLONDS-windows-${{ matrix.arch }}.json" --clobber
+          if [[ "${{ matrix.arch }}" == x64 && -f plonds-assets/PLONDS.json ]]; then
+            gh release upload "$RELEASE_TAG" plonds-assets/PLONDS.json --clobber
+          fi
+
       - name: Publish PLONDS assets to Rainyun S3
+        continue-on-error: true
         env:
           S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
           S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
@@ -99,6 +120,8 @@ jobs:
             exit 1
           fi
 
+          # 本步骤失败（runner 到 Rainyun 的连接重置）不阻塞 GitHub 回退通道——
+          # enrich 步骤已保证 Release 上的清单自洽；S3 成功时清单会被升级为含 S3 地址。
           REGION="${S3_REGION:-us-east-1}"
           PUBLIC_BASE="${S3_PUBLIC_BASE_URL:-https://cn-nb1.rains3.com/lmdesktop}"
           PUBLIC_BASE="${PUBLIC_BASE%/}"

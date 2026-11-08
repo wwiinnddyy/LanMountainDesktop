@@ -27,6 +27,9 @@ internal static class PlondsCli
                     return 0;
                 case "publish-s3":
                     return await RunPublishS3Async(options).ConfigureAwait(false);
+                case "enrich-manifest":
+                    RunEnrichManifest(options);
+                    return 0;
                 case "pack-payload":
                     RunPackPayload(options);
                     return 0;
@@ -41,6 +44,21 @@ internal static class PlondsCli
             Console.Error.WriteLine(ex.Message);
             return 1;
         }
+    }
+
+    private static void RunEnrichManifest(Dictionary<string, string> options)
+    {
+        var manifest = PlondsPublisher.EnrichForGitHubChannelFile(
+            Require(options, "manifest"),
+            Require(options, "release-tag"),
+            Require(options, "repository"),
+            Require(options, "changed-zip"),
+            Require(options, "files-zip"),
+            writeLegacyCopy: Get(options, "write-legacy-copy") is not null);
+
+        Console.WriteLine($"Enriched PLONDS manifest for GitHub channel: v{manifest.CurrentVersion}");
+        Console.WriteLine($"  checksums: {string.Join(", ", manifest.Checksums.Keys)}");
+        Console.WriteLine($"  downloads.github.manifestUrl: {manifest.Downloads?.GitHub.ManifestUrl}");
     }
 
     private static void RunBuildDelta(Dictionary<string, string> options)
@@ -207,6 +225,7 @@ internal static class PlondsCli
         Console.WriteLine("    --output-zip <file>     Output zip path");
         Console.WriteLine();
         Console.WriteLine("  publish-s3               Publish PLONDS.json and changed.zip to S3");
+        Console.WriteLine("  enrich-manifest          Enrich PLONDS.json with GitHub download URLs and checksums");
         Console.WriteLine("    --release-tag <tag>     GitHub release tag");
         Console.WriteLine("    --repository <owner/repo> GitHub repository");
         Console.WriteLine("    --manifest <file>       PLONDS.json path");
