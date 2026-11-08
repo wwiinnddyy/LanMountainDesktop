@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
@@ -31,8 +32,11 @@ public sealed class PlondsS3Client : IDisposable
             PublicBaseKeyPrefix = NormalizeOptionalKeyPrefix(options.PublicBaseKeyPrefix),
             RequestTimeout = options.RequestTimeout <= TimeSpan.Zero ? TimeSpan.FromMinutes(30) : options.RequestTimeout,
             MaxUploadAttempts = Math.Max(1, options.MaxUploadAttempts),
-            MultipartThresholdBytes = Math.Max(5L * 1024 * 1024, options.MultipartThresholdBytes),
-            MultipartPartSizeBytes = Math.Max(5L * 1024 * 1024, options.MultipartPartSizeBytes),
+            RetryMaxDelay = options.RetryMaxDelay <= TimeSpan.Zero ? TimeSpan.FromSeconds(30) : options.RetryMaxDelay,
+            MultipartThresholdBytes = Math.Max(1L * 1024 * 1024, options.MultipartThresholdBytes),
+            // 分片下限放到 1MB：跨境链路被中间设备掐断时，更小的分片更可能在窗口内传完。
+            // S3 兼容端若强制 5MiB 下限，会在 CompleteMultipartUpload 报 EntityTooSmall，日志可见。
+            MultipartPartSizeBytes = Math.Max(1L * 1024 * 1024, options.MultipartPartSizeBytes),
             MultipartConcurrency = Math.Max(1, options.MultipartConcurrency)
         };
 
@@ -41,6 +45,90 @@ public sealed class PlondsS3Client : IDisposable
         {
             Timeout = this.options.RequestTimeout
         };
+
+        if (this.options.ForceHttp1)
+        {
+            // 部分中间设备会掐断长 HTTP/2 数据帧；S3 兼容端点用 HTTP/1.1 最稳。
+            this.httpClient.DefaultRequestVersion = System.Net.HttpVersion.Version11;
+            this.httpClient.DefaultVersionPolicy = System.Net.Http.HttpVersionPolicy.RequestVersionExact;
+        }
+    }
+
+    /// <summary>
+    /// 限速流：把读取速度压在指定 KB/s 以下，绕过对持续大流量上传的中间设备干扰——慢慢传。
+    /// </summary>
+    private sealed class ThrottledStream(Stream inner, int kilobytesPerSecond) : Stream
+    {
+        private readonly Stopwatch stopwatch = Stopwatch.StartNew();
+        private long totalBytes;
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            var read = inner.Read(buffer, offset, count);
+            Pace(read);
+            return read;
+        }
+
+        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            var read = await inner.ReadAsync(buffer.AsMemory(offset, count), cancellationToken).ConfigureAwait(false);
+            await PaceAsync(read, cancellationToken).ConfigureAwait(false);
+            return read;
+        }
+
+        private void Pace(int bytesRead)
+        {
+            if (PaceCore(bytesRead) is { } waitMs && waitMs > 0)
+            {
+                Thread.Sleep(Math.Min(waitMs, 5_000));
+            }
+        }
+
+        private async Task PaceAsync(int bytesRead, CancellationToken cancellationToken)
+        {
+            if (PaceCore(bytesRead) is { } waitMs && waitMs > 0)
+            {
+                await Task.Delay(Math.Min(waitMs, 5_000), cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        private int? PaceCore(int bytesRead)
+        {
+            if (kilobytesPerSecond <= 0 || bytesRead <= 0)
+            {
+                return null;
+            }
+
+            totalBytes += bytesRead;
+            var allowedMs = totalBytes * 1000d / (kilobytesPerSecond * 1024d);
+            var wait = (int)(allowedMs - stopwatch.ElapsedMilliseconds);
+            return wait > 0 ? wait : null;
+        }
+
+        public override void Flush() { }
+        public override Task FlushAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+        public override long Seek(long offset, SeekOrigin origin) => inner.Seek(offset, origin);
+        public override void SetLength(long value) => inner.SetLength(value);
+        public override void Write(byte[] buffer, int offset, int count) => inner.Write(buffer, offset, count);
+        public override long Length => inner.Length;
+        public override long Position { get => inner.Position; set => inner.Position = value; }
+        public override bool CanRead => inner.CanRead;
+        public override bool CanSeek => inner.CanSeek;
+        public override bool CanWrite => inner.CanWrite;
+        protected override void Dispose(bool disposing) { if (disposing) inner.Dispose(); base.Dispose(disposing); }
+    }
+
+    private HttpContent CreateUploadContent(Stream source, string contentType, long contentLength)
+    {
+        var stream = options.UploadRateKilobytesPerSecond > 0
+            ? new ThrottledStream(source, options.UploadRateKilobytesPerSecond)
+            : source;
+        var content = new StreamContent(stream);
+        content.Headers.ContentType = new MediaTypeHeaderValue(string.IsNullOrWhiteSpace(contentType)
+            ? "application/octet-stream"
+            : contentType);
+        content.Headers.ContentLength = contentLength;
+        return content;
     }
 
     public async Task UploadFileAsync(PlondsS3ObjectUpload upload, CancellationToken cancellationToken = default)
@@ -79,7 +167,7 @@ public sealed class PlondsS3Client : IDisposable
             }
             catch (Exception ex) when (attempt < options.MaxUploadAttempts && IsRetriable(ex))
             {
-                var delay = TimeSpan.FromSeconds(Math.Min(30, Math.Pow(2, attempt)));
+                var delay = TimeSpan.FromSeconds(Math.Min(options.RetryMaxDelay.TotalSeconds, Math.Pow(2, attempt)));
                 Console.Error.WriteLine($"S3 upload retry {attempt + 1}/{options.MaxUploadAttempts} for {key} after {delay.TotalSeconds:0}s: {ex.Message}");
                 await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
             }
@@ -186,7 +274,7 @@ public sealed class PlondsS3Client : IDisposable
             }
             catch (Exception ex) when (attempt < options.MaxUploadAttempts && IsRetriable(ex))
             {
-                var delay = TimeSpan.FromSeconds(Math.Min(30, Math.Pow(2, attempt)));
+                var delay = TimeSpan.FromSeconds(Math.Min(options.RetryMaxDelay.TotalSeconds, Math.Pow(2, attempt)));
                 Console.Error.WriteLine($"S3 multipart retry {attempt + 1}/{options.MaxUploadAttempts} for {key} part {partNumber} after {delay.TotalSeconds:0}s: {ex.Message}");
                 await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
             }
@@ -226,7 +314,10 @@ public sealed class PlondsS3Client : IDisposable
         var payloadHash = Sha256Hex(bytes);
         Console.WriteLine($"Uploading S3 multipart part {partNumber} for {key} ({FormatBytes(length)}), attempt {attempt}/{options.MaxUploadAttempts}.");
 
-        using var content = new ByteArrayContent(bytes);
+        var partStream = options.UploadRateKilobytesPerSecond > 0
+            ? new ThrottledStream(new MemoryStream(bytes), options.UploadRateKilobytesPerSecond)
+            : (Stream)new MemoryStream(bytes);
+        using var content = new StreamContent(partStream);
         content.Headers.ContentLength = length;
         using var request = new HttpRequestMessage(HttpMethod.Put, requestUri)
         {
@@ -335,11 +426,7 @@ public sealed class PlondsS3Client : IDisposable
         Console.WriteLine($"Uploading S3 object {key} ({FormatBytes(contentLength)}), attempt {attempt}/{options.MaxUploadAttempts}.");
 
         await using var fileStream = File.OpenRead(sourcePath);
-        using var content = new StreamContent(fileStream);
-        content.Headers.ContentType = new MediaTypeHeaderValue(string.IsNullOrWhiteSpace(contentType)
-            ? "application/octet-stream"
-            : contentType);
-        content.Headers.ContentLength = contentLength;
+        using var content = CreateUploadContent(fileStream, contentType, contentLength);
 
         using var request = new HttpRequestMessage(HttpMethod.Put, requestUri)
         {

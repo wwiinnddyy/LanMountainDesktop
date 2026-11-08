@@ -1,3 +1,4 @@
+using System.Globalization;
 using Plonds.Core.Publishing;
 
 return await PlondsCli.RunAsync(args);
@@ -135,6 +136,10 @@ internal static class PlondsCli
             {
                 MultipartThresholdBytes = GetLong(options, "multipart-threshold-mb", 8) * 1024 * 1024,
                 MultipartPartSizeBytes = GetLong(options, "multipart-part-size-mb", 8) * 1024 * 1024,
+                MaxUploadAttempts = int.Parse(Get(options, "upload-attempts", "3") ?? "3", CultureInfo.InvariantCulture),
+                RetryMaxDelay = TimeSpan.FromSeconds(GetLong(options, "upload-retry-max-delay-seconds", 30)),
+                UploadRateKilobytesPerSecond = int.Parse(Get(options, "upload-rate-kbps", "0") ?? "0", CultureInfo.InvariantCulture),
+                ForceHttp1 = Get(options, "force-http1") is not null,
                 MultipartConcurrency = GetInt(options, "multipart-concurrency", 4)
             })
         {

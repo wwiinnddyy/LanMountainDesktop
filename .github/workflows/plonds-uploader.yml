@@ -19,11 +19,17 @@ env:
   DOTNET_VERSION: '10.0.x'
   PLONDS_S3_PREFIX: lanmountain/update/plonds
   PLONDS_S3_PUBLIC_BASE_KEY_PREFIX: ''
-  # GitHub runner 到 Rainyun S3 的大对象并发上传会被重置；改为单连接 + 5MB 分片换稳定性。
+  # GitHub runner 到 Rainyun S3 的跨境链路对持续大流量上传极不稳定（连接重置）。
+  # 策略：限速慢传 + 1MB 小分片（每个分片几秒内传完，落在干扰窗口之外）+ 强制 HTTP/1.1
+  #       + 12 次退避重试（上限 120s）。即使全部失败，enrich 步骤已保证 GitHub 通道可用。
   PLONDS_S3_DIRECTORY_UPLOAD_CONCURRENCY: '1'
-  PLONDS_S3_MULTIPART_THRESHOLD_MB: '5'
-  PLONDS_S3_MULTIPART_PART_SIZE_MB: '5'
+  PLONDS_S3_MULTIPART_THRESHOLD_MB: '1'
+  PLONDS_S3_MULTIPART_PART_SIZE_MB: '1'
   PLONDS_S3_MULTIPART_CONCURRENCY: '1'
+  PLONDS_S3_UPLOAD_ATTEMPTS: '12'
+  PLONDS_S3_UPLOAD_RETRY_MAX_DELAY_SECONDS: '120'
+  PLONDS_S3_UPLOAD_RATE_KBPS: '128'
+  PLONDS_S3_FORCE_HTTP1: 'true'
 
 jobs:
   publish:
@@ -145,7 +151,11 @@ jobs:
             --directory-upload-concurrency "$PLONDS_S3_DIRECTORY_UPLOAD_CONCURRENCY" \
             --multipart-threshold-mb "$PLONDS_S3_MULTIPART_THRESHOLD_MB" \
             --multipart-part-size-mb "$PLONDS_S3_MULTIPART_PART_SIZE_MB" \
-            --multipart-concurrency "$PLONDS_S3_MULTIPART_CONCURRENCY"
+            --multipart-concurrency "$PLONDS_S3_MULTIPART_CONCURRENCY" \
+            --upload-attempts "$PLONDS_S3_UPLOAD_ATTEMPTS" \
+            --upload-retry-max-delay-seconds "$PLONDS_S3_UPLOAD_RETRY_MAX_DELAY_SECONDS" \
+            --upload-rate-kbps "$PLONDS_S3_UPLOAD_RATE_KBPS" \
+            --force-http1 "$PLONDS_S3_FORCE_HTTP1"
 
           jq -e '.downloads.github.changedZipUrl and .downloads.github.filesZipUrl and .downloads.s3.changedFolderUrl and .downloads.s3.filesFolderUrl' plonds-assets/PLONDS-windows-${{ matrix.arch }}.json >/dev/null
 
