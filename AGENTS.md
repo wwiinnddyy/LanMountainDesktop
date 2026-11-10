@@ -2103,3 +2103,14 @@ HttpClientTimeout 100000 毫秒、BlockTimeout 5000、ConnectTimeout 30000。
   那个 run 号是我凭印象写的，仓库里从没出现过——属"把没观察到的当证据报出"。
 - 教训：引用外部状态要带**当场查到的 id + 状态**，别把上一笔的结论顺到这一笔头上；
   提交说明一旦推出去，更正走新提交，不改历史。
+
+## 2026-11-11 智教Hub Rin's 图库：成人内容确认闸（每次选择都弹，取消则还原）
+- 入口只有一个：`ZhiJiaoHubComponentEditor.OnSourceSelectionChanged`（全仓写 `ZhiJiaoHubSource` 的唯一用户可达点）。
+  切到 `rinlit` 先过 `ConfirmAdultContentAsync`（FAContentDialog，默认按钮=取消）；取消 → 不落盘、不 RequestRefresh、
+  选中还原回盘上当前值；确认 → 才走原来的 SaveSnapshot。其它三个源不弹。
+- 文案四键 `zhijiaohub.settings.adult_warning.*` 四份词表同步（标题/正文/确认/取消），正文口径：
+  可能含 18 禁内容、我们不是提供方、不作任何担保、继续即视为已年满 18 并自担风险。
+- 行为钉 `ZhiJiaoHubAdultWarningTests`（单会话四场景：取消还原 / 确认落盘 / 切走不弹 / 再切回仍要问）。
+  弹窗用子类覆写确认缝注入，钉的是决策链不是像素；两个变异各红各的：绕过确认 → 场景1"应弹 1 次实际 0"；
+  摘掉还原 → 场景1"选中应还原回 ClassIsland"。真实弹窗宿主沿用 About 页 parameterless `ShowAsync()` 先例，
+  真机像素未验（用户自启动验收）。

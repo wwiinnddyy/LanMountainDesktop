@@ -1,6 +1,8 @@
 using System;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using FluentAvalonia.UI.Controls;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 
@@ -64,13 +66,7 @@ public partial class ZhiJiaoHubComponentEditor : ComponentEditorViewBase
 
         // 数据源
         var source = ZhiJiaoHubSources.Normalize(snapshot.ZhiJiaoHubSource);
-        SourceComboBox.SelectedItem = source switch
-        {
-            ZhiJiaoHubSources.Sectl => SectlItem,
-            ZhiJiaoHubSources.RinLit => RinLitItem,
-            ZhiJiaoHubSources.Jiangtokoto => JiangtokotoItem,
-            _ => ClassIslandItem
-        };
+        SelectSourceItem(source);
 
         // 镜像加速源
         var mirrorSource = ZhiJiaoHubMirrorSources.Normalize(snapshot.ZhiJiaoHubMirrorSource);
@@ -91,7 +87,7 @@ public partial class ZhiJiaoHubComponentEditor : ComponentEditorViewBase
         _suppressEvents = false;
     }
 
-    private void OnSourceSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    private async void OnSourceSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (_suppressEvents)
         {
@@ -103,8 +99,43 @@ public partial class ZhiJiaoHubComponentEditor : ComponentEditorViewBase
             : ZhiJiaoHubSources.ClassIsland;
 
         var snapshot = LoadSnapshot();
+        if (source == ZhiJiaoHubSources.RinLit && !await ConfirmAdultContentAsync())
+        {
+            _suppressEvents = true;
+            SelectSourceItem(ZhiJiaoHubSources.Normalize(snapshot.ZhiJiaoHubSource));
+            _suppressEvents = false;
+            return;
+        }
+
         snapshot.ZhiJiaoHubSource = source;
         SaveSnapshot(snapshot, nameof(ComponentSettingsSnapshot.ZhiJiaoHubSource));
+    }
+
+    // Rin's 图库是第三方成人向内容源：每次切过去都要先确认，取消则不落盘。
+    protected virtual async Task<bool> ConfirmAdultContentAsync()
+    {
+        var dialog = new FAContentDialog
+        {
+            Title = L("zhijiaohub.settings.adult_warning.title", "成人内容提醒"),
+            Content = L("zhijiaohub.settings.adult_warning.message",
+                "Rin's 图库来自第三方社区，可能包含成人（18 禁）内容。\n\n阑山桌面不是内容提供方，不对内容作任何担保。继续即表示你已年满 18 岁，并自行承担使用风险。"),
+            PrimaryButtonText = L("zhijiaohub.settings.adult_warning.confirm", "我已年满 18 岁，继续使用"),
+            CloseButtonText = L("zhijiaohub.settings.adult_warning.cancel", "取消"),
+            DefaultButton = FAContentDialogButton.Close
+        };
+
+        return await dialog.ShowAsync() == FAContentDialogResult.Primary;
+    }
+
+    private void SelectSourceItem(string source)
+    {
+        SourceComboBox.SelectedItem = source switch
+        {
+            ZhiJiaoHubSources.Sectl => SectlItem,
+            ZhiJiaoHubSources.RinLit => RinLitItem,
+            ZhiJiaoHubSources.Jiangtokoto => JiangtokotoItem,
+            _ => ClassIslandItem
+        };
     }
 
     private void OnMirrorSourceSelectionChanged(object? sender, SelectionChangedEventArgs e)
