@@ -24,8 +24,9 @@ public sealed class LocalizationParityRatchetTests
     {
         // en-US 2026-11-08 补齐 settings.update.* 全部 25 键后归零；棘轮只许再紧。
         ["en-US"] = 0,
-        ["ja-JP"] = 313,
-        ["ko-KR"] = 275,
+        // ja-JP/ko-KR 2026-11-11 补齐全部缺口（ja 306、ko 268，含 settings.update.* 与 rss.* 等）后归零。
+        ["ja-JP"] = 0,
+        ["ko-KR"] = 0,
     };
 
     /// <summary>

@@ -338,7 +338,7 @@ platform/packaging/scripts）加 `tests/.../ApprovalFiles`（已发布 SDK 公�
 库里每个条目必须有在 zh/en/ja/ko 都能取到文案的 `DisplayNameLocalizationKey`、
 每个条目都要能在 LibraryPreview 下被创建并布局出非零尺寸（`DesktopBrowser` 因 WebView2 会改线程套间而免检，
 免检清单本身也有守卫防烂掉）。`LocalizationParityRatchetTests` 以 zh-CN 为源语言记着
-en/ja/ko 还缺 25/313/275 条，只许降不许升；补翻译就把数字改小。
+en/ja/ko 缺口已全部归零（2026-11-11 补齐 ja 306 / ko 268 条；en 25 条于 2026-11-08 补齐），只许降不许升；新增键必须四份词表同步。
 组件的 `DisplayName` 必须是语言中立的兜底文案（历史上 5 个写死中文，已改；守卫会拦新增）。
 
 **词表一键一条、键不许重复**：`desktop/LanMountainDesktop/Localization/*.json` 是扁平点号键表，
