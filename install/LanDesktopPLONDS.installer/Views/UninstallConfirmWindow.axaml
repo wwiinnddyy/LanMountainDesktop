@@ -8,58 +8,115 @@
         Height="300"
         CanResize="False"
         WindowStartupLocation="CenterOwner"
-        Background="#1E1E1E"
-        ExtendClientAreaToDecorationsHint="False"
-        WindowDecorations="Full">
-  <Grid RowDefinitions="Auto,*,Auto"
-        Margin="24">
-    <StackPanel Spacing="8">
-      <TextBlock Text="确认卸载"
-                 FontSize="20"
-                 FontWeight="SemiBold"
-                 Foreground="White" />
-      <TextBlock Text="确定要卸载阑山桌面吗？此操作将删除所有已安装的文件。"
-                 TextWrapping="Wrap"
-                 Foreground="#99FFFFFF"
-                 FontSize="14" />
-    </StackPanel>
+        Background="Transparent"
+        TransparencyLevelHint="Mica, AcrylicBlur, None"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="48"
+        WindowDecorations="None">
+  <Window.Styles>
+    <Style Selector="TextBlock.muted">
+      <Setter Property="Foreground" Value="{DynamicResource InstallerTextSecondaryBrush}" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="LineHeight" Value="20" />
+    </Style>
+    <Style Selector="Border.info-panel">
+      <Setter Property="Background" Value="{DynamicResource InstallerSurfaceAltBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource InstallerBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusMd}" />
+      <Setter Property="Padding" Value="12" />
+    </Style>
+    <Style Selector="Button.titlebar-icon-button">
+      <Setter Property="Width" Value="40" />
+      <Setter Property="Height" Value="40" />
+      <Setter Property="MinWidth" Value="40" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusSm}" />
+    </Style>
+    <Style Selector="Button.titlebar-icon-button:pointerover">
+      <Setter Property="Background" Value="{DynamicResource InstallerSubtleFillHoverBrush}" />
+    </Style>
+    <Style Selector="Button.titlebar-icon-button:pressed">
+      <Setter Property="Background" Value="{DynamicResource InstallerStrongBorderBrush}" />
+    </Style>
+  </Window.Styles>
+  <Border Background="{DynamicResource InstallerWindowBackgroundBrush}"
+          CornerRadius="{DynamicResource DesignCornerRadiusXl}"
+          ClipToBounds="True">
+    <Grid RowDefinitions="48,Auto,*,Auto"
+          Margin="0">
+      <!-- 自绘标题栏，与主安装窗口一致 -->
+      <Border Grid.Row="0"
+              Background="Transparent"
+              PointerPressed="OnTitleBarPointerPressed">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Text="确认卸载阑山桌面"
+                     FontSize="13"
+                     FontWeight="SemiBold"
+                     VerticalAlignment="Center"
+                     Margin="16,0,0,0" />
+          <Button Grid.Column="1"
+                  Classes="titlebar-icon-button"
+                  ToolTip.Tip="关闭"
+                  Click="OnCloseClick">
+            <TextBlock Classes="installer-icon"
+                       Text="&#xE711;"
+                       FontSize="14" />
+          </Button>
+        </Grid>
+      </Border>
 
-    <Border Grid.Row="1"
-            Background="#2D2D2D"
-            CornerRadius="8"
-            Padding="16"
-            Margin="0,16,0,0">
-      <StackPanel Spacing="4">
-        <TextBlock Text="安装路径"
-                   FontSize="12"
-                   Foreground="#99FFFFFF" />
-        <TextBlock Text="{Binding InstallPath}"
-                   FontFamily="Consolas"
-                   FontSize="13"
-                   Foreground="#CCFFFFFF"
-                   TextWrapping="Wrap" />
+      <StackPanel Grid.Row="1"
+                  Spacing="8"
+                  Margin="24,8,24,0">
+        <TextBlock Text="确认卸载"
+                   FontSize="20"
+                   FontWeight="SemiBold" />
+        <TextBlock Text="确定要卸载阑山桌面吗？此操作将删除所有已安装的文件。"
+                   TextWrapping="Wrap"
+                   Classes="muted" />
       </StackPanel>
-    </Border>
 
-    <StackPanel Grid.Row="2"
-                Orientation="Horizontal"
-                HorizontalAlignment="Right"
-                Spacing="8"
-                Margin="0,16,0,0">
-      <Button Content="取消"
-              Width="100"
-              Height="36"
-              CornerRadius="6"
-              Background="#3D3D3D"
-              Foreground="White"
-              Click="OnCancelClick" />
-      <Button Content="确认卸载"
-              Width="100"
-              Height="36"
-              CornerRadius="6"
-              Background="#C42B1C"
-              Foreground="White"
-              Click="OnConfirmClick" />
-    </StackPanel>
-  </Grid>
+      <Border Grid.Row="2"
+              Classes="info-panel"
+              Margin="24,16,24,0">
+        <StackPanel Spacing="4">
+          <TextBlock Text="安装路径"
+                     FontSize="12"
+                     Foreground="{DynamicResource InstallerTextTertiaryBrush}" />
+          <TextBlock Text="{Binding InstallPath}"
+                     FontFamily="Consolas"
+                     FontSize="13"
+                     Foreground="{DynamicResource InstallerTextSecondaryBrush}"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <StackPanel Grid.Row="3"
+                  Orientation="Horizontal"
+                  HorizontalAlignment="Right"
+                  Spacing="8"
+                  Margin="24,16,24,24">
+        <Button Content="取消"
+                Classes="secondary-command"
+                MinWidth="100"
+                Click="OnCancelClick" />
+        <Button MinWidth="100"
+                Click="OnConfirmClick">
+          <Button.Styles>
+            <Style Selector="Button">
+              <Setter Property="Background" Value="{DynamicResource InstallerErrorBrush}" />
+              <Setter Property="Foreground" Value="{DynamicResource InstallerOnAccentBrush}" />
+              <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusSm}" />
+              <Setter Property="Padding" Value="16,9" />
+              <Setter Property="MinHeight" Value="38" />
+            </Style>
+          </Button.Styles>
+          确认卸载
+        </Button>
+      </StackPanel>
+    </Grid>
+  </Border>
 </Window>

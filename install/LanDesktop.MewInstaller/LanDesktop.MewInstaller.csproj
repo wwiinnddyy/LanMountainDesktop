@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk" TreatAsLocalProperty="Version;PackageVersion;InformationalVersion;AssemblyVersion;FileVersion">
+  <Import Project="LanDesktop.MewInstaller.AOT.props" Condition="Exists('LanDesktop.MewInstaller.AOT.props')" />
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Version>0.0.0-dev</Version>
+    <PackageVersion>$(Version)</PackageVersion>
+    <ApplicationIcon>Assets\logo.ico</ApplicationIcon>
+    <ApplicationManifest Condition="'$(Configuration)' == 'Debug'">app.Debug.manifest</ApplicationManifest>
+    <ApplicationManifest Condition="'$(Configuration)' != 'Debug'">app.manifest</ApplicationManifest>
+    <!-- 复用 PLONDS 安装器的部署服务层：以源码链接方式引入（零 Avalonia 依赖），避免引用整个 PLONDS exe 工程。 -->
+    <PlondsInstallerRoot>$(MSBuildThisFileDirectory)..\LanDesktopPLONDS.installer</PlondsInstallerRoot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="$(PlondsInstallerRoot)\Services\**\*.cs" LinkBase="Linked\PLONDS\Services" />
+    <Compile Include="$(PlondsInstallerRoot)\Models\**\*.cs" LinkBase="Linked\PLONDS\Models" />
+    <Compile Include="$(PlondsInstallerRoot)\Localization\InstallerStrings.cs" LinkBase="Linked\PLONDS\Localization" />
+    <Compile Include="$(PlondsInstallerRoot)\InstallerStartupDiagnostics.cs" LinkBase="Linked\PLONDS" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aprillz.MewUI.Windows" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\logo.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\core\LanMountainDesktop.Core\LanMountainDesktop.Core.csproj" />
+  </ItemGroup>
+</Project>

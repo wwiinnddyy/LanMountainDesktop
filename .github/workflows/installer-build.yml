@@ -8,12 +8,14 @@ on:
       - '.github/workflows/installer-build.yml'
       - 'Directory.Packages.props'
       - 'install/LanDesktopPLONDS.installer/**'
+      - 'install/LanDesktop.MewInstaller/**'
       - 'core/LanMountainDesktop.Core/**'
   pull_request:
     paths:
       - '.github/workflows/installer-build.yml'
       - 'Directory.Packages.props'
       - 'install/LanDesktopPLONDS.installer/**'
+      - 'install/LanDesktop.MewInstaller/**'
       - 'core/LanMountainDesktop.Core/**'
   workflow_dispatch:
 
@@ -133,4 +135,54 @@ jobs:
         with:
           name: LanDesktopPLONDS-online-installer-${{ env.INSTALLER_RUNTIME }}
           path: ${{ env.INSTALLER_ARTIFACT_DIR }}/**
+          if-no-files-found: error
+
+  build-mew-installer:
+    runs-on: windows-latest
+    name: Build_MewInstaller
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: preview
+
+      - name: Restore
+        run: dotnet restore install/LanDesktop.MewInstaller/LanDesktop.MewInstaller.csproj
+
+      - name: Build
+        run: dotnet build install/LanDesktop.MewInstaller/LanDesktop.MewInstaller.csproj --no-restore -c Debug -v minimal
+
+      - name: Publish AOT artifact
+        shell: pwsh
+        run: |
+          $publishDir = Join-Path $env:GITHUB_WORKSPACE 'artifacts/installer-mew/win-x64'
+          dotnet publish install/LanDesktop.MewInstaller/LanDesktop.MewInstaller.csproj `
+            -c Release -r win-x64 --self-contained true `
+            -p:PublishAot=true -p:MewUIBackend=Direct2D `
+            -p:DebugType=none -p:DebugSymbols=false -p:StripSymbols=true `
+            -o $publishDir -v minimal
+          if ($LASTEXITCODE -ne 0) {
+            throw "MewInstaller AOT publish failed with exit code $LASTEXITCODE."
+          }
+
+          Get-ChildItem -Path $publishDir -Recurse -Filter '*.pdb' |
+            Remove-Item -Force
+
+          Get-ChildItem -Path $publishDir -File |
+            Sort-Object Name |
+            Select-Object Name, Length
+
+      - name: Upload MewInstaller artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: LanDesktop.MewInstaller-win-x64
+          path: artifacts/installer-mew/win-x64/**
           if-no-files-found: error

@@ -91,6 +91,9 @@ public sealed partial class AirAppCatalogItemViewModel : ViewModelBase, IDisposa
     private bool _isInstalling;
 
     [ObservableProperty]
+    private bool _isOtherInstalling;
+
+    [ObservableProperty]
     private bool _isInstalled;
 
     [ObservableProperty]
@@ -144,6 +147,18 @@ public sealed partial class AirAppCatalogItemViewModel : ViewModelBase, IDisposa
         RefreshActionPresentation();
     }
 
+    /// <summary>目录同时只允许一个安装：其他行在安装期间整体禁用。</summary>
+    public void SetOtherInstalling(bool value)
+    {
+        if (IsOtherInstalling == value)
+        {
+            return;
+        }
+
+        IsOtherInstalling = value;
+        RefreshActionPresentation();
+    }
+
     public void ApplyInstallState(AirAppInstalledInfo? installedAirApp, Version? hostVersion, bool hasPendingRestart = false)
     {
         var isCompatible = hostVersion is null
@@ -173,6 +188,13 @@ public sealed partial class AirAppCatalogItemViewModel : ViewModelBase, IDisposa
             ActionState = IsUpdateAvailable ? AirAppCatalogPrimaryActionState.Update : AirAppCatalogPrimaryActionState.Install;
             ActionSymbol = Symbol.ArrowClockwise;
             ActionTooltip = L("market.button.installing", "Installing...");
+            IsActionEnabled = false;
+            return;
+        }
+
+        if (IsOtherInstalling)
+        {
+            ActionTooltip = L("market.button.wait_other_install", "Another AirApp is installing. Please wait.");
             IsActionEnabled = false;
             return;
         }
@@ -584,6 +606,7 @@ public sealed partial class AirAppCatalogSettingsPageViewModel : ViewModelBase, 
         try
         {
             item.SetInstalling(true);
+            SetOtherInstallingGuard(excluding: item, enabled: true);
             StatusMessage = string.Format(
                 CultureInfo.CurrentCulture,
                 L("market.status.installing_format", "Downloading and staging AirApp '{0}'..."),
@@ -595,14 +618,14 @@ public sealed partial class AirAppCatalogSettingsPageViewModel : ViewModelBase, 
                 _pendingRestartAirAppIds.Add(result.AirAppId ?? item.AirAppId);
                 RefreshInstalledSnapshot();
                 RefreshItemStates();
-                
+
                 // 设置更明显的状态消息
                 var airAppName = result.AirAppName ?? item.Name;
                 StatusMessage = string.Format(
                     CultureInfo.CurrentCulture,
                     L("market.status.install_success_restart_format", "AirApp '{0}' has been staged. Restart the app to apply it."),
                     airAppName);
-                
+
                 // 触发重启提醒
                 RestartRequested?.Invoke(string.Format(
                     CultureInfo.CurrentCulture,
@@ -624,7 +647,19 @@ public sealed partial class AirAppCatalogSettingsPageViewModel : ViewModelBase, 
         finally
         {
             item.SetInstalling(false);
+            SetOtherInstallingGuard(excluding: item, enabled: false);
             RefreshItemStates();
+        }
+    }
+
+    private void SetOtherInstallingGuard(AirAppCatalogItemViewModel excluding, bool enabled)
+    {
+        foreach (var other in CatalogAirApps)
+        {
+            if (!ReferenceEquals(other, excluding))
+            {
+                other.SetOtherInstalling(enabled);
+            }
         }
     }
 

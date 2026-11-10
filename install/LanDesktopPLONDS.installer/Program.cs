@@ -156,6 +156,12 @@ public static class Program
             }
             catch
             {
+                // 异常路径也要放行等待方；正常关窗路径由 finally 兜底。
+            }
+            finally
+            {
+                // 用户直接关窗时不会走 ConfirmAction，必须在这里放行，
+                // 否则 ShowUninstallConfirmation 的 Wait 永久挂起。
                 resetEvent.Set();
             }
         });

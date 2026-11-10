@@ -415,6 +415,7 @@
     "market.button.update":  "アップデート",
     "market.button.installed":  "インストール済み",
     "market.button.installing":  "インストール中...",
+    "market.button.wait_other_install":  "他のAirAppをインストール中です。お待ちください。",
     "market.button.restart":  "再起動して適用",
     "button.component_library":  "デスクトップを編集",
     "component_library.title":  "ウィジェット",

@@ -102,6 +102,24 @@ english.UpgradeCleanupFailedPrefix=Setup could not remove the existing installat
 chinesesimplified.UpgradeCleanupFailedPrefix=安装程序无法自动移除现有安装。错误代码：
 english.UpgradeCleanupFailedSuffix=Please close LanMountainDesktop, uninstall the current version manually, and then run this installer again.
 chinesesimplified.UpgradeCleanupFailedSuffix=请关闭 LanMountain Desktop，手动卸载当前版本，然后重新运行此安装程序。
+english.VerifyLauncherMissingTitle=LanMountainDesktop Setup Verification Failed
+chinesesimplified.VerifyLauncherMissingTitle=阑山桌面安装验证失败
+english.VerifyLauncherMissingMessage=Setup verification failed: the launcher executable is missing.
+chinesesimplified.VerifyLauncherMissingMessage=安装验证失败：Launcher 可执行文件不存在。
+english.VerifyExpectedPathLabel=Expected path:
+chinesesimplified.VerifyExpectedPathLabel=预期路径：
+english.VerifyContactSupport=Please contact the developer to report this problem.
+chinesesimplified.VerifyContactSupport=请联系开发者报告此问题。
+english.VerifyAppDirMissingMessage=Setup verification failed: the application version directory is missing.
+chinesesimplified.VerifyAppDirMissingMessage=安装验证失败：应用版本目录不存在。
+english.LanguageSwitchCurrentZh=Current language: Simplified Chinese
+chinesesimplified.LanguageSwitchCurrentZh=当前语言：简体中文
+english.LanguageSwitchCurrentEn=Current language: English
+chinesesimplified.LanguageSwitchCurrentEn=当前语言：English
+english.LanguageSwitchPromptZh=Switch to English? Setup will restart to apply the new language.
+chinesesimplified.LanguageSwitchPromptZh=是否切换到 English？（安装程序将重新启动以应用新语言）
+english.LanguageSwitchPromptEn=Switch to 简体中文? Setup will restart to apply the new language.
+chinesesimplified.LanguageSwitchPromptEn=是否切换到 简体中文？（安装程序将重新启动以应用新语言）
 english.DotNetRuntimeMissingTitle=.NET Desktop Runtime Required
 chinesesimplified.DotNetRuntimeMissingTitle=需要 .NET Desktop Runtime
 english.DotNetRuntimeMissingMessage=This application requires .NET 10.0 Desktop Runtime to run.
@@ -372,7 +390,10 @@ begin
   if ActiveLanguage = 'chinesesimplified' then
   begin
     { 当前是中文，询问是否切换到英文 }
-    if MsgBox('当前语言：简体中文' + #13#10#13#10 + '是否切换到 English？' + #13#10 + '(安装程序将重新启动以应用新语言)', mbConfirmation, MB_YESNO) = IDYES then
+    if MsgBox(
+         CustomMessage('LanguageSwitchCurrentZh') + #13#10#13#10 +
+         CustomMessage('LanguageSwitchPromptZh'),
+         mbConfirmation, MB_YESNO) = IDYES then
     begin
       NewLanguage := 'english';
     end
@@ -384,7 +405,10 @@ begin
   else
   begin
     { 当前是英文，询问是否切换到中文 }
-    if MsgBox('Current language: English' + #13#10#13#10 + 'Switch to 简体中文？' + #13#10 + '(The setup will restart to apply the new language)', mbConfirmation, MB_YESNO) = IDYES then
+    if MsgBox(
+         CustomMessage('LanguageSwitchCurrentEn') + #13#10#13#10 +
+         CustomMessage('LanguageSwitchPromptEn'),
+         mbConfirmation, MB_YESNO) = IDYES then
     begin
       NewLanguage := 'chinesesimplified';
     end
@@ -780,6 +804,15 @@ begin
   end;
 end;
 
+procedure ShowVerificationError(const MessageText: String);
+begin
+  MsgBox(
+    CustomMessage('VerifyLauncherMissingTitle') + #13#10#13#10 +
+    MessageText + #13#10#13#10 +
+    CustomMessage('VerifyContactSupport'),
+    mbError, MB_OK);
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   LauncherPath: String;
@@ -792,26 +825,26 @@ begin
       Abort;
     end;
   end;
-  
+
   if CurStep = ssPostInstall then
   begin
     // 验证 Launcher 是否存在
     LauncherPath := ExpandConstant('{app}\{#MyAppExeName}');
     if not FileExists(LauncherPath) then
     begin
-      MsgBox('安装验证失败: Launcher 可执行文件不存在。' + #13#10 + 
-             '预期路径: ' + LauncherPath + #13#10 + #13#10 +
-             '请联系开发者报告此问题。', mbError, MB_OK);
+      ShowVerificationError(
+        CustomMessage('VerifyLauncherMissingMessage') + #13#10 +
+        CustomMessage('VerifyExpectedPathLabel') + ' ' + LauncherPath);
       Abort;
     end;
-    
+
     // 验证至少存在一个 app-* 目录
     AppDirPath := ExpandConstant('{app}\app-{#MyAppVersion}');
     if not DirExists(AppDirPath) then
     begin
-      MsgBox('安装验证失败: 应用版本目录不存在。' + #13#10 + 
-             '预期路径: ' + AppDirPath + #13#10 + #13#10 +
-             '请联系开发者报告此问题。', mbError, MB_OK);
+      ShowVerificationError(
+        CustomMessage('VerifyAppDirMissingMessage') + #13#10 +
+        CustomMessage('VerifyExpectedPathLabel') + ' ' + AppDirPath);
       Abort;
     end;
   end;

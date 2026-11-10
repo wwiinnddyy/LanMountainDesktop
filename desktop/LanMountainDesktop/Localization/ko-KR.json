@@ -454,6 +454,7 @@
     "market.button.update":  "업데이트",
     "market.button.installed":  "설치됨",
     "market.button.installing":  "설치 중...",
+    "market.button.wait_other_install":  "다른 AirApp을 설치하는 중입니다. 잠시만 기다려 주세요.",
     "market.button.restart":  "재시작 후 적용",
     "button.component_library":  "바탕화면 편집",
     "component_library.title":  "바탕화면 편집",

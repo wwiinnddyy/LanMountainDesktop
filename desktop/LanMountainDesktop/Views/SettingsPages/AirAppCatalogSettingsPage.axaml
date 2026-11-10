@@ -79,6 +79,11 @@
                                                    Text="{Binding Name}" />
                                         <TextBlock Classes="settings-item-description"
                                                    Text="{Binding DeveloperInfo}" />
+                                        <ProgressBar IsIndeterminate="True"
+                                                     IsVisible="{Binding IsInstalling}"
+                                                     MinHeight="3"
+                                                     Margin="0,6,0,0"
+                                                     HorizontalAlignment="Stretch" />
                                     </StackPanel>
                                 </Button>
 

@@ -22,7 +22,8 @@ public sealed class LocalizationParityRatchetTests
 
     private static readonly Dictionary<string, int> KnownGaps = new()
     {
-        ["en-US"] = 25,
+        // en-US 2026-11-08 补齐 settings.update.* 全部 25 键后归零；棘轮只许再紧。
+        ["en-US"] = 0,
         ["ja-JP"] = 313,
         ["ko-KR"] = 275,
     };

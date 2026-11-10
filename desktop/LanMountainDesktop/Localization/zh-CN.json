@@ -601,6 +601,7 @@
     "market.button.update":  "更新",
     "market.button.installed":  "已安装",
     "market.button.installing":  "安装中...",
+    "market.button.wait_other_install":  "正在安装其他应用，请稍候。",
     "market.button.restart":  "重启后应用",
     "button.component_library":  "桌面编辑",
     "component_library.title":  "桌面编辑",
