@@ -12,8 +12,8 @@
 | 项 | 值 |
 |---|---|
 | SDK 包 | `LanMountainDesktop.AirAppSdk` |
-| SDK / API 版本 | `1.0.0` |
-| 传递依赖 | `LanMountainDesktop.Core` `1.0.0` |
+| SDK / API 版本 | `1.0.1` |
+| 传递依赖 | `LanMountainDesktop.Core` `1.0.1` |
 | 清单文件 | `airapp.json` |
 | 包格式 | `.laapp` |
 | 目标框架 | `net10.0` |

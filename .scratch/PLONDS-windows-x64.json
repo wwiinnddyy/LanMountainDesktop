@@ -1,0 +1,931 @@
+{
+  "formatVersion": "2.0",
+  "currentVersion": "0.9.2.3",
+  "previousVersion": "0.9.2.1",
+  "isFullUpdate": false,
+  "requiresCleanInstall": true,
+  "channel": "preview",
+  "platform": "windows-x64",
+  "updatedAt": "2026-10-20T02:26:01.2587489+00:00",
+  "filesMap": {
+    "0Harmony.dll": {
+      "action": "reuse",
+      "hash": "64b8b8f926efe5b926b832aaedb93e73de34af2e84d9f8f5d51c6fb70ab61149",
+      "size": 292352,
+      "hashAlgorithm": "sha256"
+    },
+    "Avalonia.Base.dll": {
+      "action": "reuse",
+      "hash": "91eb28e9af3aaa79bbe63d19209b2bc5d723378db6732037decb8f20e8a77ce1",
+      "size": 2341888,
+      "hashAlgorithm": "sha256"
+    },
+    "Avalonia.Controls.ColorPicker.dll": {
+      "action": "reuse",
+      "hash": "4f915e32b5dbd20606e2b7be250fbf5cfb2ad2161fb4aff5d97e1b986040ba62",
+      "size": 480256,
+      "hashAlgorithm": "sha256"
+    },
+    "Avalonia.Controls.DataGrid.dll": {
+      "action": "reuse",
+      "hash": "7990faec95a9c0f95dfcbd1b47019410ba332b4a03e8ea0a3e3ac9951507a3fe",
+      "size": 366592,
+      "hashAlgorithm": "sha256"
+    },
+    "Avalonia.Controls.dll": {
+      "action": "reuse",
+      "hash": "61532fdc20b2b0b0ceb277182d9e7dd126215315f7383238ab46f9525a448682",
+      "size": 1339392,
+      "hashAlgorithm": "sha256"
+    },
+    "Avalonia.Controls.WebView.dll": {
+      "action": "reuse",
+      "hash": "affe14c7d2238890e89fd6bbd1c357e84aba1f115e731df9915f04763f355590",
+      "size": 1363968,
+      "hashAlgorithm": "sha256"
+    },
+    "Avalonia.DesignerSupport.dll": {
+      "action": "reuse",
+      "hash": "d917540e50c0cf8ccdb24dfe41f1ed5f232fca65269bf1d7f86d2cf51703d2b7",
+      "size": 214528,
+      "hashAlgorithm": "sha256"
+    },
+    "Avalonia.Desktop.dll": {
+      "action": "reuse",
+      "hash": "bb30870abbf7f60aa2ae0d9a1f92b940df982030cdf9548f7768565e001ea08d",
+      "size": 15360,
+      "hashAlgorithm": "sha256"
+    },
+    "Avalonia.Dialogs.dll": {
+      "action": "reuse",
+      "hash": "7d76158dedb7196a46b5942a8dee5e670c609ec38ab36f90d14853c0deb1b6c4",
+      "size": 242688,
+      "hashAlgorithm": "sha256"
+    },
+    "Avalonia.dll": {
+      "action": "reuse",
+      "hash": "676b7e93936ec7197e3221366104e89f0b8336b7916d599e031a7bc7b353b8cf",
+      "size": 4096,
+      "hashAlgorithm": "sha256"
+    },
+    "Avalonia.Fonts.Inter.dll": {
+      "action": "reuse",
+      "hash": "36a6aec52c30e43a655332195501982c4af642f388b687deb51a8cddd055ae5f",
+      "size": 1892864,
+      "hashAlgorithm": "sha256"
+    },
+    "Avalonia.FreeDesktop.AtSpi.dll": {
+      "action": "reuse",
+      "hash": "59e4c91657823a3620ee26b67eab711f987a307cf3f316ed2f6baa5bf10d5e2a",
+      "size": 562688,
+      "hashAlgorithm": "sha256"
+    },
+    "Avalonia.FreeDesktop.dll": {
+      "action": "reuse",
+      "hash": "9c1d71ddb18c475b3848b6f070be61da934d60af1f517a7d6399de1ec65b83da",
+      "size": 253952,
+      "hashAlgorithm": "sha256"
+    },
+    "Avalonia.HarfBuzz.dll": {
+      "action": "reuse",
+      "hash": "b3ff6150e64f14f816ebd4b1d5158fc89c5048d414ca90b38a6d8331067e2f89",
+      "size": 22016,
+      "hashAlgorithm": "sha256"
+    },
+    "Avalonia.Markup.dll": {
+      "action": "reuse",
+      "hash": "3c6b04f6287914919debf33bfb6eb3ec8e9b1ec2300804238f7485a4846f16a6",
+      "size": 45568,
+      "hashAlgorithm": "sha256"
+    },
+    "Avalonia.Markup.Xaml.dll": {
+      "action": "reuse",
+      "hash": "cd3d37f82b28162cdb99b127a05c9cafa401848c1507e54266bd714d25b5b209",
+      "size": 74752,
+      "hashAlgorithm": "sha256"
+    },
+    "Avalonia.Metal.dll": {
+      "action": "reuse",
+      "hash": "442be8e98b19a496619fb5f8f54c5a6b8b99ec105e54940c6c7a94879a22eb11",
+      "size": 15360,
+      "hashAlgorithm": "sha256"
+    },
+    "Avalonia.MicroCom.dll": {
+      "action": "reuse",
+      "hash": "bb4c10481e708d4985a8fc97e761126c73689664010601dd6be466974ab15398",
+      "size": 15360,
+      "hashAlgorithm": "sha256"
+    },
+    "Avalonia.Native.dll": {
+      "action": "reuse",
+      "hash": "80a89a7dd5ff1b9f127d1a99ab94c0a1b372d91e37c0115d6e13c2739e634636",
+      "size": 350208,
+      "hashAlgorithm": "sha256"
+    },
+    "Avalonia.OpenGL.dll": {
+      "action": "reuse",
+      "hash": "963f859a910f2c3ecde780a5f552135db109a89374707f8ee500e878c009a0c9",
+      "size": 128512,
+      "hashAlgorithm": "sha256"
+    },
+    "Avalonia.Remote.Protocol.dll": {
+      "action": "reuse",
+      "hash": "bd3be7c4f8eb98db8b9a022b629d1c313f1065bd1a002e6e44acfcd33381f1e1",
+      "size": 75776,
+      "hashAlgorithm": "sha256"
+    },
+    "Avalonia.Skia.dll": {
+      "action": "reuse",
+      "hash": "2f6b12ddbac1c90fe56c8daf8362dcc1e102f3de485ae6de16d35615481c240c",
+      "size": 125440,
+      "hashAlgorithm": "sha256"
+    },
+    "Avalonia.Themes.Fluent.dll": {
+      "action": "reuse",
+      "hash": "2c6c40407551dff2da5059142753fe8ca6c10c7956c31723328ea89ca5340aa1",
+      "size": 733184,
+      "hashAlgorithm": "sha256"
+    },
+    "Avalonia.Vulkan.dll": {
+      "action": "reuse",
+      "hash": "d6dcd5b102f108c22f0ac79936fe04932f5030b898347829cdb35eecffb38464",
+      "size": 190976,
+      "hashAlgorithm": "sha256"
+    },
+    "Avalonia.Win32.Automation.dll": {
+      "action": "reuse",
+      "hash": "18a7b82abb1217c84f8fc299479b2267beb5e384fdc240d40e38a27a76d73b6d",
+      "size": 123904,
+      "hashAlgorithm": "sha256"
+    },
+    "Avalonia.Win32.dll": {
+      "action": "reuse",
+      "hash": "f59fde0a61f385effb94da9dcc97d91593a3355054d15ab8ac05ea6ea481b5b3",
+      "size": 943104,
+      "hashAlgorithm": "sha256"
+    },
+    "Avalonia.X11.dll": {
+      "action": "reuse",
+      "hash": "9a0f4471180a0f9a44f08000030a3cf699fe486dc124a8854ff701da0562f065",
+      "size": 406016,
+      "hashAlgorithm": "sha256"
+    },
+    "AvaloniaEdit.dll": {
+      "action": "reuse",
+      "hash": "2dd1131865198f72ec84f8c9f7b0cfd2ff4227817978019c0214e82fbcaadf21",
+      "size": 642560,
+      "hashAlgorithm": "sha256"
+    },
+    "av_libglesv2.dll": {
+      "action": "reuse",
+      "hash": "53191a77fe783cd757ca7767077c2a64a662e7043777a5b4ab74980d4a0b73e3",
+      "size": 5394096,
+      "hashAlgorithm": "sha256"
+    },
+    "ColorDocument.Avalonia.dll": {
+      "action": "reuse",
+      "hash": "516e8923fe8213f929fa27f908f285ba88015b24175eacda10f2d18515a15b21",
+      "size": 37888,
+      "hashAlgorithm": "sha256"
+    },
+    "ColorTextBlock.Avalonia.dll": {
+      "action": "reuse",
+      "hash": "733e74a1f0f12f723ce5345b15629e74a051df51136a199a33f88399a71953ec",
+      "size": 64000,
+      "hashAlgorithm": "sha256"
+    },
+    "CommunityToolkit.Mvvm.dll": {
+      "action": "reuse",
+      "hash": "19b2144fed9600d58a742a5a4a5fd7b10d4d0d2c2e79f5d8019307cf5657044f",
+      "size": 146760,
+      "hashAlgorithm": "sha256"
+    },
+    "DotNetCampus.AvaloniaInkCanvas.dll": {
+      "action": "reuse",
+      "hash": "f5489f9b36d91b85d70a9013c12cf31b6390dd6bfcb784aba96cacbd2990711a",
+      "size": 408576,
+      "hashAlgorithm": "sha256"
+    },
+    "dotnetCampus.Ipc.dll": {
+      "action": "reuse",
+      "hash": "1476875dfa9f6661b3bc27e8387f51ef133d01d956b3d5e682310aa0087fe78d",
+      "size": 422400,
+      "hashAlgorithm": "sha256"
+    },
+    "DotNetCampus.Logger.dll": {
+      "action": "reuse",
+      "hash": "e8d1666768eb479918c771d8a45e1137c3c90143b03111a08967ead1a163d1ec",
+      "size": 52224,
+      "hashAlgorithm": "sha256"
+    },
+    "DotNetCampus.Numerics.dll": {
+      "action": "reuse",
+      "hash": "e4b05fcc760ee3be4fde017a6d0b06f75b6b11b3fe6e187a7753d15aa2d41019",
+      "size": 156672,
+      "hashAlgorithm": "sha256"
+    },
+    "DotNetCampus.Numerics.Geometry.dll": {
+      "action": "reuse",
+      "hash": "1ab043c88efcd25052e1dfdeb37feb9c5a3ab5af65d56a285a68884193c74280",
+      "size": 52736,
+      "hashAlgorithm": "sha256"
+    },
+    "Downloader.dll": {
+      "action": "reuse",
+      "hash": "04e98f63a0469cf200173ac65388f8cf4de4d65adde7ad4f7b367d8c2c400fa7",
+      "size": 182272,
+      "hashAlgorithm": "sha256"
+    },
+    "ExCSS.dll": {
+      "action": "reuse",
+      "hash": "6b166e638181eba3150f0d10379d1cc8362af6dfd518e9e9e194aa9a746293c2",
+      "size": 347136,
+      "hashAlgorithm": "sha256"
+    },
+    "e_sqlite3.dll": {
+      "action": "reuse",
+      "hash": "aabf85d7a8b416fb15203cb754fcfc9858c8f1dd3bbc7eab82335f6c362ba0d6",
+      "size": 1911296,
+      "hashAlgorithm": "sha256"
+    },
+    "FluentAvalonia.dll": {
+      "action": "reuse",
+      "hash": "8802b987029d5ae048f765605854c7000dec9d328fff1350feeb6e1e0c326a29",
+      "size": 3672064,
+      "hashAlgorithm": "sha256"
+    },
+    "FluentIcons.Avalonia.dll": {
+      "action": "reuse",
+      "hash": "9fc3b0df41c33750340d5b54bec3c6173372d70ace687989ec5d9400725950e3",
+      "size": 25088,
+      "hashAlgorithm": "sha256"
+    },
+    "FluentIcons.Common.dll": {
+      "action": "reuse",
+      "hash": "4ff7b7bd032697926d36416a2e5b72333ddce772d7a7decd850018c806521a0b",
+      "size": 132608,
+      "hashAlgorithm": "sha256"
+    },
+    "FluentIcons.Resources.Avalonia.dll": {
+      "action": "reuse",
+      "hash": "737e25475a917290aa0fb3311959470ffc160a82b3e584f836902173115ac1c7",
+      "size": 5037568,
+      "hashAlgorithm": "sha256"
+    },
+    "HarfBuzzSharp.dll": {
+      "action": "reuse",
+      "hash": "55e72ac23263f8e12484f3435e02ec22fac9eff6e6d169bb0a8c246be6b99d29",
+      "size": 122400,
+      "hashAlgorithm": "sha256"
+    },
+    "HtmlAgilityPack.dll": {
+      "action": "reuse",
+      "hash": "9e845f8529ef33e482f352a9bfbda8667fdce20bd63c715ef59a45250dec7e41",
+      "size": 163328,
+      "hashAlgorithm": "sha256"
+    },
+    "LanMountainDesktop.AirAppHost.deps.json": {
+      "action": "replace",
+      "hash": "013fcb5ca807aa7511179a198acfc0be90e486ec36e468d8095156eeb1c00f47",
+      "size": 79681,
+      "hashAlgorithm": "sha256"
+    },
+    "LanMountainDesktop.AirAppHost.dll": {
+      "action": "replace",
+      "hash": "628012bcaa04ddc2412d946b5f70a5f7cc18b618bd67b99c7b61c2a000cfff47",
+      "size": 20269568,
+      "hashAlgorithm": "sha256"
+    },
+    "LanMountainDesktop.AirAppHost.exe": {
+      "action": "replace",
+      "hash": "7a095c465f07c009e8a8f33236118546fdd67e78cd5463f4d7411bc775ac8949",
+      "size": 174080,
+      "hashAlgorithm": "sha256"
+    },
+    "LanMountainDesktop.AirAppHost.runtimeconfig.json": {
+      "action": "reuse",
+      "hash": "345393f10aae1ead2d246d3eef2d8917ca000590f549f69df75061c9f3e987b5",
+      "size": 517,
+      "hashAlgorithm": "sha256"
+    },
+    "LanMountainDesktop.AirAppSdk.dll": {
+      "action": "replace",
+      "hash": "eaeb6fdb84b2b49d53d362e64b8d90d9c5fd915501ff65af5693e966eec99c3f",
+      "size": 316928,
+      "hashAlgorithm": "sha256"
+    },
+    "LanMountainDesktop.Core.dll": {
+      "action": "replace",
+      "hash": "a6ce11103ec6c2621e0282b64696dedd09e6a6dce9dc8bcc226ea3961d16661d",
+      "size": 264192,
+      "hashAlgorithm": "sha256"
+    },
+    "LanMountainDesktop.deps.json": {
+      "action": "replace",
+      "hash": "20b4e95c0796f730f59e9d66a1c2bdcc96109f08c6d5442aed115d8f3ea30504",
+      "size": 78929,
+      "hashAlgorithm": "sha256"
+    },
+    "LanMountainDesktop.dll": {
+      "action": "replace",
+      "hash": "300c74d7e5b6a77b187469f3a13f4eedbfe5ad953f0e0f53cb93d825e5b1ce8d",
+      "size": 29840384,
+      "hashAlgorithm": "sha256"
+    },
+    "LanMountainDesktop.exe": {
+      "action": "replace",
+      "hash": "661d100aa0cdcac1b26b7672678e01bc05ca4bfa1c05d3b8b925120f17311502",
+      "size": 174592,
+      "hashAlgorithm": "sha256"
+    },
+    "LanMountainDesktop.Platform.dll": {
+      "action": "replace",
+      "hash": "ee9990f992a0e7220289971960b87b0e6d8deee2cd3cd57e9cb059efd402e519",
+      "size": 69632,
+      "hashAlgorithm": "sha256"
+    },
+    "LanMountainDesktop.runtimeconfig.json": {
+      "action": "reuse",
+      "hash": "345393f10aae1ead2d246d3eef2d8917ca000590f549f69df75061c9f3e987b5",
+      "size": 517,
+      "hashAlgorithm": "sha256"
+    },
+    "libHarfBuzzSharp.dll": {
+      "action": "reuse",
+      "hash": "145ade963eba427027d5e1381db5d51a0ef9e98e9fef9efbfa6074ca20da246f",
+      "size": 1816088,
+      "hashAlgorithm": "sha256"
+    },
+    "libSkiaSharp.dll": {
+      "action": "reuse",
+      "hash": "6e414f63034453ad56ff6ba4a9b4c27331c72eb08f0fbe28a75fea6a99c479cd",
+      "size": 12253496,
+      "hashAlgorithm": "sha256"
+    },
+    "Localization/en-US.json": {
+      "action": "reuse",
+      "hash": "909985a2cdfe8480fc779595934787c63c1c57fed0b783263c9dfd3b2cbce28b",
+      "size": 73959,
+      "hashAlgorithm": "sha256"
+    },
+    "Localization/ja-JP.json": {
+      "action": "reuse",
+      "hash": "16f31ee6d7b2957055c60b07bab2cba605ef4dba773b79e26cd59234170bbc1c",
+      "size": 62894,
+      "hashAlgorithm": "sha256"
+    },
+    "Localization/ko-KR.json": {
+      "action": "reuse",
+      "hash": "643ab4426db83e0a7f758c0930eba03653553d968c6f79d02c51c183f19e2b4a",
+      "size": 62808,
+      "hashAlgorithm": "sha256"
+    },
+    "Localization/zh-CN.json": {
+      "action": "reuse",
+      "hash": "fb1f9af6530263e33c7d0df65b767b68061e3f30cfbf2167360732f6e2eeefce",
+      "size": 74541,
+      "hashAlgorithm": "sha256"
+    },
+    "log4net.dll": {
+      "action": "reuse",
+      "hash": "cb03d4696508a010de41911ae41c9e613437f41c71bf3df09dac4ae1a5d8f23f",
+      "size": 295936,
+      "hashAlgorithm": "sha256"
+    },
+    "Markdown.Avalonia.dll": {
+      "action": "reuse",
+      "hash": "31edc8c590eb935f262befe9ef4e42bff84a99bd08c90104109fe14463a0326e",
+      "size": 184320,
+      "hashAlgorithm": "sha256"
+    },
+    "Markdown.Avalonia.Full.dll": {
+      "action": "reuse",
+      "hash": "1587fab1d57cdb982fe7a3c38dd363f7a33c7098a1f76169e9bfc90663bcf954",
+      "size": 7168,
+      "hashAlgorithm": "sha256"
+    },
+    "Markdown.Avalonia.Html.dll": {
+      "action": "reuse",
+      "hash": "36c65423b466616300b14daab5bfe871f105565f86264bf83d35ce0f003ec945",
+      "size": 76800,
+      "hashAlgorithm": "sha256"
+    },
+    "Markdown.Avalonia.Svg.dll": {
+      "action": "reuse",
+      "hash": "c01171cde697d1838fb3b8b7f8f8190cc3263ae9301328fe25a275f983730a7d",
+      "size": 9728,
+      "hashAlgorithm": "sha256"
+    },
+    "Markdown.Avalonia.SyntaxHigh.dll": {
+      "action": "reuse",
+      "hash": "2f90309cef9fce31cdfd060fd10588d10d64f719f4ee90fff2c71a195ac41730",
+      "size": 43520,
+      "hashAlgorithm": "sha256"
+    },
+    "Material.Avalonia.dll": {
+      "action": "reuse",
+      "hash": "d54a542d41f58959cb3caf153086f4d13693302f94101f2f5e4a723cb432719e",
+      "size": 14848,
+      "hashAlgorithm": "sha256"
+    },
+    "Material.Colors.dll": {
+      "action": "reuse",
+      "hash": "a3e71965f8c732efdd947af274f98dab92c22933217d9c17b9d9260383a688b0",
+      "size": 59904,
+      "hashAlgorithm": "sha256"
+    },
+    "Material.Icons.Avalonia.dll": {
+      "action": "reuse",
+      "hash": "34df729d0c24df028c9f6d1c4899ae7486830e27f68919c6b4b3c7b6f967de14",
+      "size": 41472,
+      "hashAlgorithm": "sha256"
+    },
+    "Material.Icons.dll": {
+      "action": "reuse",
+      "hash": "a24b37b8ec72e2c07285f906401c40a60a0d2b8a6173768b631889222206e48f",
+      "size": 5713408,
+      "hashAlgorithm": "sha256"
+    },
+    "Material.Ripple.dll": {
+      "action": "reuse",
+      "hash": "c30fff930d575add745b54612b33bbaa748bb3c6f21e94335c05cf1836812166",
+      "size": 25088,
+      "hashAlgorithm": "sha256"
+    },
+    "Material.Styles.dll": {
+      "action": "reuse",
+      "hash": "e18715b0b246c8084edb3a7ceee8f9b359b110a5272352fee5307b2f7f55edb5",
+      "size": 2925056,
+      "hashAlgorithm": "sha256"
+    },
+    "MaterialColorUtilities.dll": {
+      "action": "reuse",
+      "hash": "04827f60e84e4e91932eca1532086a3d230eeff230b8d96556d20940874759e9",
+      "size": 61440,
+      "hashAlgorithm": "sha256"
+    },
+    "MicroCom.Runtime.dll": {
+      "action": "reuse",
+      "hash": "2538ec6f3c24e901a90e33c37788b9a4e4b6ae8158cab7328a00a00bb28eab9e",
+      "size": 15360,
+      "hashAlgorithm": "sha256"
+    },
+    "Microsoft.Data.Sqlite.dll": {
+      "action": "reuse",
+      "hash": "0c6cd5069431b1e794bb18796e8c4a596c9f160ff80c25d9fbcd26635aabd11a",
+      "size": 178528,
+      "hashAlgorithm": "sha256"
+    },
+    "Microsoft.Extensions.Caching.Abstractions.dll": {
+      "action": "reuse",
+      "hash": "31caebf834b6da88696a4a21ecb38eefff2623a531be925f6bd27719583ee3e2",
+      "size": 31008,
+      "hashAlgorithm": "sha256"
+    },
+    "Microsoft.Extensions.Caching.Memory.dll": {
+      "action": "reuse",
+      "hash": "a6bc869c530a2ed7573575dd61e40f0a1079ef6074251afe9701f927c5355ca8",
+      "size": 45832,
+      "hashAlgorithm": "sha256"
+    },
+    "Microsoft.Extensions.Configuration.Abstractions.dll": {
+      "action": "reuse",
+      "hash": "80b30d1fa3913339f9ffe0a7a8c1eb1fdb8c2c72ab8da277d458c4d269b2784b",
+      "size": 27432,
+      "hashAlgorithm": "sha256"
+    },
+    "Microsoft.Extensions.Configuration.Binder.dll": {
+      "action": "reuse",
+      "hash": "5a47750f5c8eb91a203a743abbdc27c7feceeb2218d39445df6560629477eec9",
+      "size": 42656,
+      "hashAlgorithm": "sha256"
+    },
+    "Microsoft.Extensions.Configuration.dll": {
+      "action": "reuse",
+      "hash": "b5cd9da2c3364a5b201cecb0c80e25227d27ba44d96343d2894ff8ef3fd81550",
+      "size": 43800,
+      "hashAlgorithm": "sha256"
+    },
+    "Microsoft.Extensions.DependencyInjection.Abstractions.dll": {
+      "action": "reuse",
+      "hash": "0fd5a42061f381f2d5b07bc993f348e0158587994d2e8f3513167abb14e868ef",
+      "size": 65360,
+      "hashAlgorithm": "sha256"
+    },
+    "Microsoft.Extensions.DependencyInjection.dll": {
+      "action": "reuse",
+      "hash": "e5a8c11b6f6288d0fc532a6c2650fc1bd3c0912dbb9e824f9cab75e3cbb0c765",
+      "size": 96040,
+      "hashAlgorithm": "sha256"
+    },
+    "Microsoft.Extensions.Diagnostics.Abstractions.dll": {
+      "action": "reuse",
+      "hash": "ffd55e6daa120de5445f2680dae2092f6bd0fb372f35e7879159360635abcf4b",
+      "size": 23336,
+      "hashAlgorithm": "sha256"
+    },
+    "Microsoft.Extensions.Diagnostics.dll": {
+      "action": "reuse",
+      "hash": "31e08b4e0018ee136d65dfcca8f655a1a74cf8841e6029044c99b2e75d5f59f0",
+      "size": 35592,
+      "hashAlgorithm": "sha256"
+    },
+    "Microsoft.Extensions.FileProviders.Abstractions.dll": {
+      "action": "reuse",
+      "hash": "024ad56dbe36fd1419c035c0cc7388c20a66d6d1f2ae6a53cadfef8791a0fb58",
+      "size": 22352,
+      "hashAlgorithm": "sha256"
+    },
+    "Microsoft.Extensions.Hosting.Abstractions.dll": {
+      "action": "reuse",
+      "hash": "2b55e6e6afcb680126bd90be277a51760489704fc288a6f46441ef126fe73948",
+      "size": 32040,
+      "hashAlgorithm": "sha256"
+    },
+    "Microsoft.Extensions.Http.dll": {
+      "action": "reuse",
+      "hash": "c1133578dae376c51335ce9e0b800c666a06f5aafe5b6b23a2706c7025b087a9",
+      "size": 88856,
+      "hashAlgorithm": "sha256"
+    },
+    "Microsoft.Extensions.Logging.Abstractions.dll": {
+      "action": "reuse",
+      "hash": "ff502e6a37f96d520b811684be6a3105183b1e3aaaf6b408ec15ca40ef647ec8",
+      "size": 67408,
+      "hashAlgorithm": "sha256"
+    },
+    "Microsoft.Extensions.Logging.dll": {
+      "action": "reuse",
+      "hash": "b2cfba2e05ee89a91e9bc9cf112468a5f4fa05d1a77ea81c131ea656f3d133c2",
+      "size": 50976,
+      "hashAlgorithm": "sha256"
+    },
+    "Microsoft.Extensions.Options.ConfigurationExtensions.dll": {
+      "action": "reuse",
+      "hash": "b9ea7bb70bfecf5c649f2559300fce232729257cfdb4221dc96f1ea778227353",
+      "size": 22688,
+      "hashAlgorithm": "sha256"
+    },
+    "Microsoft.Extensions.Options.dll": {
+      "action": "reuse",
+      "hash": "98f50e64df35438943642267ae5320efd753cf8be159cd2fb114dd317b0f56d4",
+      "size": 64848,
+      "hashAlgorithm": "sha256"
+    },
+    "Microsoft.Extensions.Primitives.dll": {
+      "action": "reuse",
+      "hash": "43ef7298a0fcd858d9dbd02776d8f4f7c04c6da8c16f306a627d3de8178c6aa9",
+      "size": 42280,
+      "hashAlgorithm": "sha256"
+    },
+    "Microsoft.Office.Interop.Excel.dll": {
+      "action": "reuse",
+      "hash": "6053396eec17842f1e42a5e3f7cd4c3d9314f403dba49e1918d3ac4305b4e275",
+      "size": 1628800,
+      "hashAlgorithm": "sha256"
+    },
+    "Microsoft.Office.Interop.PowerPoint.dll": {
+      "action": "reuse",
+      "hash": "e252db17cfd1bb58eea20b5d8ca2b676236c8b015985b36398c569e5a67f0f0b",
+      "size": 400032,
+      "hashAlgorithm": "sha256"
+    },
+    "Microsoft.Office.Interop.Word.dll": {
+      "action": "reuse",
+      "hash": "23b1a58d7745524efd87d3740e8363fe34d766e159c28bdf9ff2aabc79ed72d0",
+      "size": 940672,
+      "hashAlgorithm": "sha256"
+    },
+    "Microsoft.Vbe.Interop.dll": {
+      "action": "reuse",
+      "hash": "0b9f3e948f9e162310b5da2857ab5dd950358fc796f390e4c54a51c0fc982cff",
+      "size": 64112,
+      "hashAlgorithm": "sha256"
+    },
+    "Microsoft.Win32.SystemEvents.dll": {
+      "action": "reuse",
+      "hash": "a7c7848674ee522fb9a2cf40271ee414f836b335d8cfe69e5588c0f4660ef93a",
+      "size": 81192,
+      "hashAlgorithm": "sha256"
+    },
+    "Mono.Cecil.dll": {
+      "action": "reuse",
+      "hash": "831dca77470d85cb6ffbea3072daa7a3df5b7c9fcfd9c3f43674a9be99d4bfcf",
+      "size": 361472,
+      "hashAlgorithm": "sha256"
+    },
+    "Mono.Cecil.Mdb.dll": {
+      "action": "reuse",
+      "hash": "28cb367972bdc1cd43e4006306af2fd96d37f4ed4b239ee90e1dc7237a93af7f",
+      "size": 39936,
+      "hashAlgorithm": "sha256"
+    },
+    "Mono.Cecil.Pdb.dll": {
+      "action": "reuse",
+      "hash": "a332332633fbcb20e8d50e49b4db7bd1557721417122cf0c5f4c42f2332391d0",
+      "size": 90112,
+      "hashAlgorithm": "sha256"
+    },
+    "Mono.Cecil.Rocks.dll": {
+      "action": "reuse",
+      "hash": "bf992f3dce364ebcc3200fa7832ef07e20b4e2dbc3a8a6213ce44e3d239db984",
+      "size": 27136,
+      "hashAlgorithm": "sha256"
+    },
+    "MonoMod.Backports.dll": {
+      "action": "reuse",
+      "hash": "ac3f32bfd44aab83abf71abdff6dde548d57b7c0f8a1fe6d8964e348b4eeafb1",
+      "size": 27648,
+      "hashAlgorithm": "sha256"
+    },
+    "MonoMod.Core.dll": {
+      "action": "reuse",
+      "hash": "c5a4827d583d4c0c2c46edbada84f20a0e04f8ffd9c5fd12bf45ffec6cc05059",
+      "size": 432640,
+      "hashAlgorithm": "sha256"
+    },
+    "MonoMod.Iced.dll": {
+      "action": "reuse",
+      "hash": "580633335b974b49633425ba642e8d64efb5f461c729138f2f87808c590417bf",
+      "size": 645632,
+      "hashAlgorithm": "sha256"
+    },
+    "MonoMod.ILHelpers.dll": {
+      "action": "reuse",
+      "hash": "fdd0e3538340fd78b8f521e62b8cac1ebb7683ac1f27f6aaedfc1044b14bf4bb",
+      "size": 4096,
+      "hashAlgorithm": "sha256"
+    },
+    "MonoMod.Utils.dll": {
+      "action": "reuse",
+      "hash": "fc61ea42e74933a7fbc6299418bd6d2b434c5d8320e538aa722377eb56eceac6",
+      "size": 340992,
+      "hashAlgorithm": "sha256"
+    },
+    "MudTools.OfficeInterop.dll": {
+      "action": "reuse",
+      "hash": "7863bb1afc58d7817d407ae27a5a344a2114b204007f91f1551dc4d592a4f341",
+      "size": 470016,
+      "hashAlgorithm": "sha256"
+    },
+    "MudTools.OfficeInterop.Excel.dll": {
+      "action": "reuse",
+      "hash": "167f73c0b64c85ce99a267b5cb4e8c24c8b9627c57650293833af85487abd414",
+      "size": 1658368,
+      "hashAlgorithm": "sha256"
+    },
+    "MudTools.OfficeInterop.PowerPoint.dll": {
+      "action": "reuse",
+      "hash": "f2b0b1df939c7834c95f9bdbc10209667fa5021299e70f0004ccc9d6490bf4cf",
+      "size": 515072,
+      "hashAlgorithm": "sha256"
+    },
+    "MudTools.OfficeInterop.Vbe.dll": {
+      "action": "reuse",
+      "hash": "0b5c983e49a05adaf6519acf5740ccb4361d504e49131f9e2c336915bf91dbe0",
+      "size": 61440,
+      "hashAlgorithm": "sha256"
+    },
+    "MudTools.OfficeInterop.Word.dll": {
+      "action": "reuse",
+      "hash": "70a4dfcea0b0e3cd9f311873c02a195f9acc4ec60032ec66c8885ae6a71c5339",
+      "size": 1850880,
+      "hashAlgorithm": "sha256"
+    },
+    "Office.dll": {
+      "action": "reuse",
+      "hash": "dc1c9337435fa37201dbb8c012e0397e0a1bae7273305ca397feed566ba0f9e9",
+      "size": 457328,
+      "hashAlgorithm": "sha256"
+    },
+    "portaudio.dll": {
+      "action": "reuse",
+      "hash": "b9b1d1dc5d05ad593325d38fb6f232d89bc326d6177da394b5f8fd5836abaac6",
+      "size": 175104,
+      "hashAlgorithm": "sha256"
+    },
+    "PortAudioSharp.dll": {
+      "action": "reuse",
+      "hash": "b080d091edabd5a99f7f821411b7c5b69fb385c2b6931c8b59ab565b9e98dd21",
+      "size": 17408,
+      "hashAlgorithm": "sha256"
+    },
+    "PostHog.dll": {
+      "action": "reuse",
+      "hash": "509d7852a0cd61e374ee6b5788e31c923966f89f15fd8af25f102f59f67ca6b1",
+      "size": 297472,
+      "hashAlgorithm": "sha256"
+    },
+    "Sentry.dll": {
+      "action": "reuse",
+      "hash": "d55ec4e68438fd515ae059f36c5fea4c5f5db3e610d042c7fcee318b2e0b1ee0",
+      "size": 827904,
+      "hashAlgorithm": "sha256"
+    },
+    "ShimSkiaSharp.dll": {
+      "action": "reuse",
+      "hash": "1140da92a2caa70c84ea37e6a366eaf7d6af25e0d6abd4f569cafe6645d7546a",
+      "size": 197120,
+      "hashAlgorithm": "sha256"
+    },
+    "SkiaSharp.dll": {
+      "action": "reuse",
+      "hash": "8285250ad46354e4bfc22211c2d40bcb63bee0d53bd18fdce2dde1573d51a5a7",
+      "size": 526136,
+      "hashAlgorithm": "sha256"
+    },
+    "SQLitePCLRaw.batteries_v2.dll": {
+      "action": "reuse",
+      "hash": "e83aed1d42d8ae806abeb02f0233a477275b82b5db92c92aa0c243255ab6a793",
+      "size": 5632,
+      "hashAlgorithm": "sha256"
+    },
+    "SQLitePCLRaw.core.dll": {
+      "action": "reuse",
+      "hash": "1e18b89ea319bffb633ea5698d8958cdaae3de8c5ac855353c7c6ad292795403",
+      "size": 51712,
+      "hashAlgorithm": "sha256"
+    },
+    "SQLitePCLRaw.provider.e_sqlite3.dll": {
+      "action": "reuse",
+      "hash": "64f5e6797a789e6f212cf619cc42af3888e64df3d2ac2b35b81304e5d0945b9d",
+      "size": 36864,
+      "hashAlgorithm": "sha256"
+    },
+    "Svg.Controls.Avalonia.dll": {
+      "action": "reuse",
+      "hash": "b549f56b84a96cd675f196c921aea07a4ad400d9c3e86a0b494016ed8681b8c8",
+      "size": 56832,
+      "hashAlgorithm": "sha256"
+    },
+    "Svg.Custom.dll": {
+      "action": "reuse",
+      "hash": "29b0d34b2d67e568f87494e6953fcce640e30d5a58be33d9dd7d64b7006c1728",
+      "size": 817664,
+      "hashAlgorithm": "sha256"
+    },
+    "Svg.Model.dll": {
+      "action": "reuse",
+      "hash": "9866082b3d65f972ef74a3eea5c83a9b52712d414c30c59fc65810bfd54c9e7c",
+      "size": 115712,
+      "hashAlgorithm": "sha256"
+    },
+    "Svg.SceneGraph.dll": {
+      "action": "reuse",
+      "hash": "a8bbbd36c57ff337a697f58d540e00cc1693d9234e460e2f0d147ce6e22caf2a",
+      "size": 365568,
+      "hashAlgorithm": "sha256"
+    },
+    "System.Configuration.ConfigurationManager.dll": {
+      "action": "reuse",
+      "hash": "e814b79f175ecde855c7ae003cd8bc5ed88edea4ab4089d055ed7b63da7bbec9",
+      "size": 382096,
+      "hashAlgorithm": "sha256"
+    },
+    "System.Diagnostics.DiagnosticSource.dll": {
+      "action": "reuse",
+      "hash": "49cf5573486c09cc4f71d7d0bbf1b5d53a8e807c2ff8b9c38c55a48dcdab83c5",
+      "size": 205648,
+      "hashAlgorithm": "sha256"
+    },
+    "System.Drawing.Common.dll": {
+      "action": "reuse",
+      "hash": "f249a737a776a06ea6e59fb79f46345af38f0a3e8f917099ce8b7d4f3177677c",
+      "size": 421712,
+      "hashAlgorithm": "sha256"
+    },
+    "System.Private.Windows.Core.dll": {
+      "action": "reuse",
+      "hash": "9fa592810ccad8b59de9d904130881566a43610df821ad711fb3bfe538a27f59",
+      "size": 1204560,
+      "hashAlgorithm": "sha256"
+    },
+    "System.Private.Windows.GdiPlus.dll": {
+      "action": "reuse",
+      "hash": "4924c65eb646d1db24d33d002bae83ca040b55bfdd893f0dfdb7f361c05d1f25",
+      "size": 168744,
+      "hashAlgorithm": "sha256"
+    },
+    "System.Runtime.WindowsRuntime.dll": {
+      "action": "reuse",
+      "hash": "314e7abc512ef886220a5c2772eb051f0e8bbc29f5c624795dd53a1a25060844",
+      "size": 54656,
+      "hashAlgorithm": "sha256"
+    },
+    "System.Security.Cryptography.ProtectedData.dll": {
+      "action": "reuse",
+      "hash": "7f2b633eed63bf20d558a25ed9686d2f1ef6c6e3fef5c0b19c2c1258d90acabd",
+      "size": 32912,
+      "hashAlgorithm": "sha256"
+    },
+    "System.Security.Permissions.dll": {
+      "action": "reuse",
+      "hash": "8ca99b4d76d2708d27040d82d87c9f2beb26987e283146aea6bc275d92e895ce",
+      "size": 96400,
+      "hashAlgorithm": "sha256"
+    },
+    "System.ServiceModel.Syndication.dll": {
+      "action": "reuse",
+      "hash": "ebf9b9251cbe9878e555a384ffefffd9d7043fb0ab8b6bfe24ce2cb8e18b0aeb",
+      "size": 121680,
+      "hashAlgorithm": "sha256"
+    },
+    "Tmds.DBus.Protocol.dll": {
+      "action": "reuse",
+      "hash": "3f2b6028c5b6cd7412a5fc36b79c0b0d650cfc02cc6221ebdae71d279efca949",
+      "size": 232960,
+      "hashAlgorithm": "sha256"
+    },
+    "version.json": {
+      "action": "replace",
+      "hash": "6af19a39434e9042253eefec938477098c65b3f0eafef3932cc1f93e6971f58d",
+      "size": 52,
+      "hashAlgorithm": "sha256"
+    },
+    "WindowsIdentity/AppxManifest.xml": {
+      "action": "reuse",
+      "hash": "23ee16f02d5be6ac5a1b28a18905cd7f2d4f05343cbe4969d63c839afcc7fcdf",
+      "size": 1532,
+      "hashAlgorithm": "sha256"
+    },
+    "YamlDotNet.dll": {
+      "action": "reuse",
+      "hash": "d618138109a40e4a7250e49e2abad8c450e3636bee18d7499ab231e37fa9150a",
+      "size": 300032,
+      "hashAlgorithm": "sha256"
+    },
+    "zh-Hans/AvaloniaEdit.resources.dll": {
+      "action": "reuse",
+      "hash": "5f82c0cb0dce166956ddafe96dee66f179fe326a16039b0d793307354d9e5ae6",
+      "size": 5632,
+      "hashAlgorithm": "sha256"
+    }
+  },
+  "changedFilesMap": {
+    "LanMountainDesktop.AirAppHost.deps.json": {
+      "archivePath": "LanMountainDesktop.AirAppHost.deps.json",
+      "hash": "013fcb5ca807aa7511179a198acfc0be90e486ec36e468d8095156eeb1c00f47",
+      "size": 79681,
+      "hashAlgorithm": "sha256"
+    },
+    "LanMountainDesktop.AirAppHost.dll": {
+      "archivePath": "LanMountainDesktop.AirAppHost.dll",
+      "hash": "628012bcaa04ddc2412d946b5f70a5f7cc18b618bd67b99c7b61c2a000cfff47",
+      "size": 20269568,
+      "hashAlgorithm": "sha256"
+    },
+    "LanMountainDesktop.AirAppHost.exe": {
+      "archivePath": "LanMountainDesktop.AirAppHost.exe",
+      "hash": "7a095c465f07c009e8a8f33236118546fdd67e78cd5463f4d7411bc775ac8949",
+      "size": 174080,
+      "hashAlgorithm": "sha256"
+    },
+    "LanMountainDesktop.AirAppSdk.dll": {
+      "archivePath": "LanMountainDesktop.AirAppSdk.dll",
+      "hash": "eaeb6fdb84b2b49d53d362e64b8d90d9c5fd915501ff65af5693e966eec99c3f",
+      "size": 316928,
+      "hashAlgorithm": "sha256"
+    },
+    "LanMountainDesktop.Core.dll": {
+      "archivePath": "LanMountainDesktop.Core.dll",
+      "hash": "a6ce11103ec6c2621e0282b64696dedd09e6a6dce9dc8bcc226ea3961d16661d",
+      "size": 264192,
+      "hashAlgorithm": "sha256"
+    },
+    "LanMountainDesktop.deps.json": {
+      "archivePath": "LanMountainDesktop.deps.json",
+      "hash": "20b4e95c0796f730f59e9d66a1c2bdcc96109f08c6d5442aed115d8f3ea30504",
+      "size": 78929,
+      "hashAlgorithm": "sha256"
+    },
+    "LanMountainDesktop.dll": {
+      "archivePath": "LanMountainDesktop.dll",
+      "hash": "300c74d7e5b6a77b187469f3a13f4eedbfe5ad953f0e0f53cb93d825e5b1ce8d",
+      "size": 29840384,
+      "hashAlgorithm": "sha256"
+    },
+    "LanMountainDesktop.exe": {
+      "archivePath": "LanMountainDesktop.exe",
+      "hash": "661d100aa0cdcac1b26b7672678e01bc05ca4bfa1c05d3b8b925120f17311502",
+      "size": 174592,
+      "hashAlgorithm": "sha256"
+    },
+    "LanMountainDesktop.Platform.dll": {
+      "archivePath": "LanMountainDesktop.Platform.dll",
+      "hash": "ee9990f992a0e7220289971960b87b0e6d8deee2cd3cd57e9cb059efd402e519",
+      "size": 69632,
+      "hashAlgorithm": "sha256"
+    },
+    "version.json": {
+      "archivePath": "version.json",
+      "hash": "6af19a39434e9042253eefec938477098c65b3f0eafef3932cc1f93e6971f58d",
+      "size": 52,
+      "hashAlgorithm": "sha256"
+    }
+  },
+  "checksums": {
+    "changed.zip": "md5:d170041c4c282caf6e3f3f1067b4e0c8"
+  },
+  "downloads": null,
+  "sources": null
+}

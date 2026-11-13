@@ -1,0 +1,2151 @@
+[
+ {
+  "key": "clock.settings.desc",
+  "zh": "配置时钟组件的时区和秒针动画。",
+  "en": "Configure the time zone and second hand animation.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "clock.settings.second_mode_label",
+  "zh": "秒针方式",
+  "en": "Second Hand",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "clock.settings.timezone",
+  "zh": "时区",
+  "en": "Time Zone",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "common.unit.minutes",
+  "zh": "分钟",
+  "en": "minutes",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "common.unit.seconds",
+  "zh": "秒",
+  "en": "seconds",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "common.unit.times",
+  "zh": "次",
+  "en": "times",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "component.move",
+  "zh": "移动",
+  "en": "Move",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "component.resize",
+  "zh": "调整大小",
+  "en": "Resize",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "component.settings.color_scheme",
+  "zh": "配色方案",
+  "en": "Color Scheme",
+  "ja_missing": false,
+  "ko_missing": true
+ },
+ {
+  "key": "component_category.all",
+  "zh": "全部",
+  "en": "All",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "component_library.components_none",
+  "zh": "暂无组件",
+  "en": "No components.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "component_library.preview_unavailable",
+  "zh": "预览不可用",
+  "en": "Preview unavailable",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "desktop.delete_page_confirm.close",
+  "zh": "取消",
+  "en": "Cancel",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "desktop.delete_page_confirm.message",
+  "zh": "确定要删除当前页面吗？\n\n此操作将删除当前页面上的所有组件，且无法撤销。",
+  "en": "Are you sure you want to delete the current page?\n\nThis will remove all components on this page and cannot be undone.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "desktop.delete_page_confirm.primary",
+  "zh": "删除",
+  "en": "Delete",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "desktop.delete_page_confirm.title",
+  "zh": "确认删除页面",
+  "en": "Confirm Delete Page",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "power.back",
+  "zh": "返回",
+  "en": "Back",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "power.confirm_cancel",
+  "zh": "取消",
+  "en": "Cancel",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "power.confirm_yes",
+  "zh": "确定",
+  "en": "Yes",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "power.lock_screen",
+  "zh": "锁定屏幕",
+  "en": "Lock Screen",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "power.logout",
+  "zh": "注销",
+  "en": "Log Out",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "power.logout_confirm_message",
+  "zh": "确定要注销当前用户吗？",
+  "en": "Are you sure you want to log out?",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "power.logout_confirm_title",
+  "zh": "注销确认",
+  "en": "Log Out Confirmation",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "power.menu",
+  "zh": "电源",
+  "en": "Power",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "power.restart",
+  "zh": "重启",
+  "en": "Restart",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "power.restart_confirm_message",
+  "zh": "确定要重启计算机吗？未保存的数据可能会丢失。",
+  "en": "Are you sure you want to restart this computer? Unsaved data may be lost.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "power.restart_confirm_title",
+  "zh": "重启确认",
+  "en": "Restart Confirmation",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "power.shutdown",
+  "zh": "关机",
+  "en": "Shutdown",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "power.shutdown_confirm_message",
+  "zh": "确定要关闭计算机吗？未保存的数据可能会丢失。",
+  "en": "Are you sure you want to shut down this computer? Unsaved data may be lost.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "power.shutdown_confirm_title",
+  "zh": "关机确认",
+  "en": "Shutdown Confirmation",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "power.sleep",
+  "zh": "睡眠",
+  "en": "Sleep",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "power.sleep_confirm_message",
+  "zh": "确定要让计算机进入睡眠状态吗？",
+  "en": "Are you sure you want to put the computer to sleep?",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "power.sleep_confirm_title",
+  "zh": "睡眠确认",
+  "en": "Sleep Confirmation",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "power.title",
+  "zh": "电源",
+  "en": "Power",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.add_source",
+  "zh": "添加订阅源",
+  "en": "Add source",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.air_app",
+  "zh": "轻应用",
+  "en": "Air APP",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.all_articles",
+  "zh": "全部文章",
+  "en": "All articles",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.all_sources",
+  "zh": "全部订阅源",
+  "en": "All sources",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.article_placeholder",
+  "zh": "RSS 文章正文将在这里显示。",
+  "en": "Your RSS articles will appear here.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.cancel",
+  "zh": "取消",
+  "en": "Cancel",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.checking_feed",
+  "zh": "正在检测订阅源...",
+  "en": "Checking feed...",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.delete",
+  "zh": "删除",
+  "en": "Delete",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.delete_source",
+  "zh": "删除 RSS 订阅源",
+  "en": "Delete RSS source",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.delete_source_confirm",
+  "zh": "确定删除“{0}”吗？",
+  "en": "Delete {0}?",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.edit",
+  "zh": "编辑",
+  "en": "Edit",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.edit_source",
+  "zh": "编辑 RSS 订阅源",
+  "en": "Edit RSS source",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.empty",
+  "zh": "导入 OPML 或添加第一个 RSS 源",
+  "en": "Import OPML or add your first RSS source",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.enabled",
+  "zh": "启用此订阅源",
+  "en": "Enabled",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.entry_count",
+  "zh": "显示文章数量",
+  "en": "Number of entries",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.export_opml",
+  "zh": "导出 OPML",
+  "en": "Export OPML",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.exported",
+  "zh": "OPML 已导出。",
+  "en": "OPML exported.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.favorite",
+  "zh": "收藏",
+  "en": "Favorite",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.favorited",
+  "zh": "已收藏",
+  "en": "Favorited",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.favorites",
+  "zh": "收藏",
+  "en": "Favorites",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.feed_url",
+  "zh": "订阅地址",
+  "en": "Feed URL",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.folder",
+  "zh": "文件夹",
+  "en": "Folder",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.hours_ago",
+  "zh": "{0} 小时前",
+  "en": "{0} hr ago",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.import_opml",
+  "zh": "导入 OPML",
+  "en": "Import OPML",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.import_result",
+  "zh": "成功导入 {0} 个，跳过 {1} 个，失败 {2} 个。",
+  "en": "Imported {0}, skipped {1}, failed {2}.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.instance_settings_description",
+  "zh": "这些显示选项仅应用于当前组件实例。",
+  "en": "These display options apply only to this component instance.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.just_now",
+  "zh": "刚刚",
+  "en": "Just now",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.keep_favorites",
+  "zh": "保留已收藏文章",
+  "en": "Keep favorited articles",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.latest_articles",
+  "zh": "最新文章",
+  "en": "Latest articles",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.load_remote_images",
+  "zh": "加载远程图片",
+  "en": "Load remote images",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.manual_only",
+  "zh": "仅手动刷新",
+  "en": "Manual only",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.mark_all_read",
+  "zh": "全部标为已读",
+  "en": "Mark all read",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.minutes",
+  "zh": "{0} 分钟",
+  "en": "{0} minutes",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.minutes_ago",
+  "zh": "{0} 分钟前",
+  "en": "{0} min ago",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.name",
+  "zh": "名称",
+  "en": "Name",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.open_original",
+  "zh": "打开原文",
+  "en": "Open original",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.open_reader",
+  "zh": "进入阅读器",
+  "en": "Open reader",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.optional_folder",
+  "zh": "可选的文件夹",
+  "en": "Optional folder",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.optional_name",
+  "zh": "可选的自定义名称",
+  "en": "Optional custom name",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.probe_add",
+  "zh": "检测并添加",
+  "en": "Probe and add",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.refresh",
+  "zh": "刷新",
+  "en": "Refresh",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.refresh_failed",
+  "zh": "刷新失败",
+  "en": "Refresh failed",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.refresh_interval",
+  "zh": "刷新间隔",
+  "en": "Refresh interval",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.refresh_interval_minutes",
+  "zh": "刷新间隔（分钟）",
+  "en": "Refresh interval (minutes)",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.refreshing",
+  "zh": "正在刷新...",
+  "en": "Refreshing...",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.save",
+  "zh": "保存",
+  "en": "Save",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.select_article",
+  "zh": "选择一篇文章",
+  "en": "Select an article",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.settings",
+  "zh": "RSS 设置",
+  "en": "RSS settings",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.short_date_format",
+  "zh": "M 月 d 日",
+  "en": "MMM d",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.source",
+  "zh": "订阅源",
+  "en": "Source",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.status_counts",
+  "zh": "{0} 篇文章 · {1} 个订阅源",
+  "en": "{0} articles · {1} sources",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.unread",
+  "zh": "未读",
+  "en": "Unread",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.unread_count",
+  "zh": "{0} 篇未读",
+  "en": "{0} unread",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.unread_first",
+  "zh": "未读文章优先显示",
+  "en": "Show unread entries first",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "rss.updated",
+  "zh": "已更新",
+  "en": "Updated",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.about.copyright_format",
+  "zh": "Copyright (c) 2024-{0} Lincube",
+  "en": "Copyright (c) 2024-{0} Lincube",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.about.link_github",
+  "zh": "GitHub 仓库",
+  "en": "GitHub Repository",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.about.link_issues",
+  "zh": "问题反馈",
+  "en": "Issue Tracker",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.about.project_resources_header",
+  "zh": "项目资源",
+  "en": "Project resources",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.components.corner_radius.spec_tooltip",
+  "zh": "查看圆角规范",
+  "en": "View Corner Radius Specification",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.dev.cli_example",
+  "zh": "--dev-plugin <path>   或 -dp <path>",
+  "en": "--dev-plugin <path>   or -dp <path>",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.dev.cli_label",
+  "zh": "命令行参数：",
+  "en": "Command-line arguments:",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.dev.description",
+  "zh": "调试、诊断与本地插件开发相关选项。",
+  "en": "Debugging, diagnostics, and local plugin development options.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.dev.env_example",
+  "zh": "LMD_DEV_PLUGIN=<path>",
+  "en": "LMD_DEV_PLUGIN=<path>",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.dev.env_label",
+  "zh": "环境变量：",
+  "en": "Environment variables:",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.dev.infobar.message",
+  "zh": "以下选项适用于调试、诊断与本地插件开发场景。",
+  "en": "These options are intended for debugging, diagnostics, and local plugin development.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.dev.infobar.title",
+  "zh": "预览与开发者功能",
+  "en": "Preview and developer features",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.dev.main_window_desktop_layer_description",
+  "zh": "让主桌面窗口保持在桌面层，使普通应用窗口可以显示在它上方。",
+  "en": "Keep the main desktop window on the desktop layer so ordinary app windows can stay above it.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.dev.main_window_desktop_layer_header",
+  "zh": "防遮挡其它应用窗口",
+  "en": "Prevent covering other apps",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.dev.mode_description",
+  "zh": "启用面向开发者的启动辅助与诊断信息。",
+  "en": "Enable developer-focused startup helpers and diagnostics.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.dev.mode_header",
+  "zh": "开发者模式",
+  "en": "Developer mode",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.dev.other_args_label",
+  "zh": "其它参数：",
+  "en": "Other arguments:",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.dev.other_dev_mode",
+  "zh": "--dev-mode / -dev     启用开发者模式启动辅助。",
+  "en": "--dev-mode / -dev     Enable developer mode startup helpers.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.dev.other_hot_reload",
+  "zh": "--hot-reload / -hr    为开发构建启用热重载。",
+  "en": "--hot-reload / -hr    Enable hot reload for development builds.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.dev.startup_args_description",
+  "zh": "可使用下列命令行参数或环境变量启动应用以进行开发。",
+  "en": "Use these launch arguments or environment variables to start the app in development scenarios.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.dev.startup_args_header",
+  "zh": "开发者启动参数",
+  "en": "Developer startup arguments",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.dev.three_finger_description",
+  "zh": "在当前平台支持时，启用手势在桌面分页间切换。",
+  "en": "Enable desktop page switching gestures when the current platform supports them.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.dev.three_finger_header",
+  "zh": "三指滑动切换桌面页",
+  "en": "Three-finger desktop swipe",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.dev.title",
+  "zh": "开发者",
+  "en": "Developer",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.general.fade_transition_header",
+  "zh": "淡入淡出启动过渡",
+  "en": "Fade startup transition",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.general.show_main_window_taskbar_desc",
+  "zh": "让主桌面宿主窗口保持在任务栏中可见。独立设置窗口始终拥有自己的任务栏入口。",
+  "en": "Keep the main desktop host window visible in the taskbar. The independent settings window always has its own taskbar entry.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.general.show_main_window_taskbar_header",
+  "zh": "在任务栏显示主桌面窗口",
+  "en": "Show main desktop window in taskbar",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.general.slide_transition_desc",
+  "zh": "在受支持的 Windows 版本上使用滑入启动过渡。启用后会关闭淡入淡出过渡。",
+  "en": "Use a slide-in startup transition on supported Windows builds. This option disables fade transition.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.general.slide_transition_header",
+  "zh": "滑入启动过渡",
+  "en": "Slide startup transition",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.launcher.appearance_desc",
+  "zh": "自定义应用启动台的外观样式。",
+  "en": "Customize the appearance of the App Launcher.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.launcher.appearance_header",
+  "zh": "外观",
+  "en": "Appearance",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.launcher.show_tile_background_desc",
+  "zh": "在应用图标后显示卡片背景，关闭后仅显示图标更加简洁。",
+  "en": "Display a background card behind each app icon. When turned off, only the icon is shown for a cleaner look.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.launcher.show_tile_background_header",
+  "zh": "显示图标卡片背景",
+  "en": "Show tile background",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.custom_seed.label",
+  "zh": "自定义莫奈种子色",
+  "en": "Custom Monet seed",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.description",
+  "zh": "统一莫奈色、壁纸颜色、语义角色和材质表面。",
+  "en": "Unify Monet, wallpaper colors, semantic roles, and material surfaces.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.native_events.active",
+  "zh": "原生壁纸事件已激活",
+  "en": "Native wallpaper events active",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.native_events.description",
+  "zh": "优先使用操作系统壁纸通知，并保持轮询作为回退。",
+  "en": "Use OS wallpaper notifications first and keep polling as fallback.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.native_events.inactive",
+  "zh": "壁纸监控未激活",
+  "en": "Wallpaper monitoring inactive",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.native_events.label",
+  "zh": "原生壁纸变更事件",
+  "en": "Native wallpaper change events",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.native_events.polling",
+  "zh": "轮询回退已激活",
+  "en": "Polling fallback active",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.preview.header",
+  "zh": "统一预览",
+  "en": "Unified preview",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.refresh_interval.label",
+  "zh": "轮询间隔",
+  "en": "Polling interval",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.refresh_now",
+  "zh": "刷新颜色",
+  "en": "Refresh colors",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.role.accent",
+  "zh": "强调色",
+  "en": "Accent",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.role.primary",
+  "zh": "主色",
+  "en": "Primary",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.role.secondary",
+  "zh": "次色",
+  "en": "Secondary",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.role.surface",
+  "zh": "表面",
+  "en": "Surface",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.role.text",
+  "zh": "文字",
+  "en": "Text",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.role.toggle",
+  "zh": "开关",
+  "en": "Toggle",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.semantic.header",
+  "zh": "语义颜色",
+  "en": "Semantic colors",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.source.description",
+  "zh": "选择应用表面、组件和插件使用的单一来源。",
+  "en": "Choose the single source used by app surfaces, components, and plugins.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.source.fallback",
+  "zh": "回退",
+  "en": "Fallback",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.source.label",
+  "zh": "颜色来源",
+  "en": "Color source",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.source_status.header",
+  "zh": "已解析来源",
+  "en": "Resolved source",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.surface.detail_format",
+  "zh": "Alpha={0:X2} 模糊={1:0}",
+  "en": "A={0:X2} Blur={1:0}",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.surfaces.header",
+  "zh": "材质表面",
+  "en": "Material surfaces",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.system_material.description",
+  "zh": "将所选材质模式应用到窗口和宿主表面。",
+  "en": "Apply the selected material mode to windows and host surfaces.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.system_material.label",
+  "zh": "系统材质",
+  "en": "System material",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.system_material.restart_message",
+  "zh": "系统材质更改需要重启应用。",
+  "en": "System material changes require restarting the app.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.title",
+  "zh": "材质与颜色",
+  "en": "Material & Color",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.wallpaper_seed.label",
+  "zh": "种子色",
+  "en": "Seed",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.wallpaper_source.app",
+  "zh": "应用壁纸",
+  "en": "App wallpaper",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.wallpaper_source.auto",
+  "zh": "自动",
+  "en": "Auto",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.wallpaper_source.label",
+  "zh": "壁纸颜色来源",
+  "en": "Wallpaper color source",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.material_color.wallpaper_source.system",
+  "zh": "系统壁纸",
+  "en": "System wallpaper",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.behavior_header",
+  "zh": "行为",
+  "en": "Behavior",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.click_close_desc",
+  "zh": "点击通知后立即关闭。",
+  "en": "Dismiss a notification when it is clicked.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.click_close_header",
+  "zh": "点击关闭",
+  "en": "Close on click",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.default_position_desc",
+  "zh": "通知首次出现的位置。",
+  "en": "Where notifications appear first.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.default_position_header",
+  "zh": "默认位置",
+  "en": "Default position",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.description",
+  "zh": "配置全局通知开关、交互行为与数量上限，并可发送测试通知。",
+  "en": "Configure global notifications, interaction behavior, limits, and send test toasts.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.duration.10s",
+  "zh": "10 秒",
+  "en": "10 seconds",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.duration.2s",
+  "zh": "2 秒",
+  "en": "2 seconds",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.duration.4s",
+  "zh": "4 秒",
+  "en": "4 seconds",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.duration.6s",
+  "zh": "6 秒",
+  "en": "6 seconds",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.duration.8s",
+  "zh": "8 秒",
+  "en": "8 seconds",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.duration_desc",
+  "zh": "通知在屏幕上保持可见的时间。",
+  "en": "How long notifications stay on screen.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.duration_header",
+  "zh": "显示时长",
+  "en": "Visible duration",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.enable_desc",
+  "zh": "开启或关闭全局通知功能。",
+  "en": "Turn all notification toasts on or off.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.enable_header",
+  "zh": "启用通知",
+  "en": "Enable notifications",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.hover_pause_desc",
+  "zh": "鼠标悬停时暂停自动关闭倒计时。",
+  "en": "Pause the auto-dismiss timer while the pointer is over a notification.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.hover_pause_header",
+  "zh": "悬停暂停计时",
+  "en": "Pause on hover",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.max_desc",
+  "zh": "同一位置最多同时显示多少条通知。",
+  "en": "Maximum notifications shown at once for each corner or edge.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.max_header",
+  "zh": "每区域最大数量",
+  "en": "Max per position",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.position.bottom_center",
+  "zh": "正下方",
+  "en": "Bottom center",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.position.bottom_left",
+  "zh": "左下角",
+  "en": "Bottom left",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.position.bottom_right",
+  "zh": "右下角",
+  "en": "Bottom right",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.position.center",
+  "zh": "正中央",
+  "en": "Center",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.position.top_center",
+  "zh": "正上方",
+  "en": "Top center",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.position.top_left",
+  "zh": "左上角",
+  "en": "Top left",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.position.top_right",
+  "zh": "右上角",
+  "en": "Top right",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.section_header",
+  "zh": "通知",
+  "en": "Notifications",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.severity.error",
+  "zh": "错误",
+  "en": "Error",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.severity.info",
+  "zh": "信息",
+  "en": "Info",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.severity.success",
+  "zh": "成功",
+  "en": "Success",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.severity.warning",
+  "zh": "警告",
+  "en": "Warning",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.test.message_default",
+  "zh": "这是一条测试通知。",
+  "en": "This is a test notification.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.test.message_error",
+  "zh": "操作失败，请重试。",
+  "en": "Something went wrong. Please try again.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.test.message_info",
+  "zh": "这是一条信息类型的测试通知。",
+  "en": "This is an informational test notification.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.test.message_success",
+  "zh": "任务已完成。",
+  "en": "The task completed successfully.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.test.message_warning",
+  "zh": "请注意检查。",
+  "en": "Please review this notice.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.test.title_default",
+  "zh": "测试通知",
+  "en": "Test notification",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.test.title_error",
+  "zh": "错误报告",
+  "en": "Error",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.test.title_info",
+  "zh": "测试通知",
+  "en": "Test notification",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.test.title_success",
+  "zh": "操作成功",
+  "en": "Succeeded",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.test.title_warning",
+  "zh": "警告提示",
+  "en": "Warning",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.test_header",
+  "zh": "测试",
+  "en": "Test",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.test_notification_desc",
+  "zh": "选择位置与类型后发送一条测试通知。",
+  "en": "Pick a position and severity, then send a sample notification.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.test_notification_header",
+  "zh": "测试通知",
+  "en": "Test notification",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.notifications.title",
+  "zh": "通知",
+  "en": "Notifications",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.privacy.policy_description",
+  "zh": "阑山桌面尊重您的隐私。未经您的同意，我们不会收集个人数据。",
+  "en": "LanMountainDesktop values your privacy. We do not collect personal data without your consent.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.privacy.policy_error",
+  "zh": "加载隐私政策失败。",
+  "en": "Failed to load privacy policy.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.privacy.policy_loading",
+  "zh": "正在加载隐私政策...",
+  "en": "Loading privacy policy...",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.privacy.policy_title",
+  "zh": "隐私政策",
+  "en": "Privacy Policy",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.privacy.telemetry_id_title",
+  "zh": "遥测 ID",
+  "en": "Telemetry ID",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.region.language_ko",
+  "zh": "韩文",
+  "en": "Korean",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.search.no_results",
+  "zh": "没有匹配的设置",
+  "en": "No matching settings",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.search.page_hint",
+  "zh": "打开设置页面",
+  "en": "Open settings page",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.search.placeholder",
+  "zh": "搜索设置",
+  "en": "Search settings",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.status_bar.clock_font_size_label",
+  "zh": "时钟字号",
+  "en": "Clock font size",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.status_bar.font_size.large",
+  "zh": "大",
+  "en": "Large",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.status_bar.font_size.medium",
+  "zh": "中",
+  "en": "Medium",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.status_bar.font_size.small",
+  "zh": "小",
+  "en": "Small",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.status_bar.network_speed_font_size_label",
+  "zh": "网速字号",
+  "en": "Network speed font size",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.status_bar.text_capsule_placeholder",
+  "zh": "请输入 Markdown 文本…",
+  "en": "Enter Markdown text…",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.study.alert_description",
+  "zh": "配置噪音干扰提醒。",
+  "en": "Configure noise interference alerts.",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.alert_header",
+  "zh": "提醒设置",
+  "en": "Alert Settings",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.auto_start_break_desc",
+  "zh": "专注时段结束后自动开始休息计时。",
+  "en": "Automatically start break timer when focus session ends.",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.auto_start_break_label",
+  "zh": "自动开始休息",
+  "en": "Auto-start Break",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.auto_start_focus_desc",
+  "zh": "休息时段结束后自动开始专注计时。",
+  "en": "Automatically start focus timer when break ends.",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.auto_start_focus_label",
+  "zh": "自动开始专注",
+  "en": "Auto-start Focus",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.avg_window_desc",
+  "zh": "噪音平滑显示的时间窗口，较大的值会使显示更稳定但响应更慢。",
+  "en": "Time window for smoothing noise display. Larger values make display more stable but slower to respond.",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.avg_window_label",
+  "zh": "平均时间窗",
+  "en": "Averaging Window",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.baseline_db_desc",
+  "zh": "校准后的显示分贝基准值，用于将 dBFS 转换为用户可读的 dB 值。",
+  "en": "Calibrated baseline decibel value for converting dBFS to user-readable dB.",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.baseline_db_label",
+  "zh": "基准显示分贝",
+  "en": "Baseline Display Decibel",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.break_duration_desc",
+  "zh": "短休息时段的持续时间（分钟）。",
+  "en": "Duration of a short break session (minutes).",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.break_duration_label",
+  "zh": "休息时长",
+  "en": "Break Duration",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.current_threshold_format",
+  "zh": "当前评分阈值: {0} dBFS",
+  "en": "Current scoring threshold: {0} dBFS",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.description",
+  "zh": "配置自习环境监测、专注计时和提醒设置。",
+  "en": "Configure study environment monitoring, focus timer, and alert settings.",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.display_description",
+  "zh": "配置噪音数据的显示方式。",
+  "en": "Configure how noise data is displayed.",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.display_header",
+  "zh": "显示设置",
+  "en": "Display Settings",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.focus_duration_desc",
+  "zh": "单次专注时段的持续时间（分钟）。",
+  "en": "Duration of a single focus session (minutes).",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.focus_duration_label",
+  "zh": "专注时长",
+  "en": "Focus Duration",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.footer_hint",
+  "zh": "这些设置将影响自习环境监测组件的行为。",
+  "en": "These settings affect the behavior of study environment monitoring components.",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.long_break_duration_desc",
+  "zh": "长休息时段的持续时间（分钟）。",
+  "en": "Duration of a long break session (minutes).",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.long_break_duration_label",
+  "zh": "长休息时长",
+  "en": "Long Break Duration",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.master_switch_desc",
+  "zh": "启用自习环境监测和专注计时功能。关闭后，相关组件将不会采集任何数据。",
+  "en": "Enable study environment monitoring and focus timer. When disabled, related components will not collect any data.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.study.master_switch_header",
+  "zh": "自习功能",
+  "en": "Study Feature",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.study.max_interrupts_desc",
+  "zh": "每分钟最多允许多少次噪音干扰事件，超过此值将触发提醒。",
+  "en": "Maximum noise interference events per minute before triggering an alert.",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.max_interrupts_label",
+  "zh": "最大容忍打断次数",
+  "en": "Max Tolerated Interrupts",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.noise_alert_enabled_desc",
+  "zh": "当检测到超过容忍阈值的噪音干扰时显示提醒。",
+  "en": "Show an alert when noise interference exceeds tolerance threshold.",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.noise_alert_enabled_label",
+  "zh": "启用噪音提醒",
+  "en": "Enable Noise Alert",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.noise_description",
+  "zh": "配置麦克风采集频率和噪音评分敏感度。",
+  "en": "Configure microphone sampling rate and noise scoring sensitivity.",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.noise_header",
+  "zh": "噪音监测",
+  "en": "Noise Monitoring",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.sampling_rate_desc",
+  "zh": "麦克风采集音频的时间间隔。更高的频率会更准确地捕捉噪音变化，但会增加电量消耗。",
+  "en": "Time interval for microphone audio sampling. Higher frequency captures noise changes more accurately but increases power consumption.",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.sampling_rate_label",
+  "zh": "采集频率",
+  "en": "Sampling Rate",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.sensitivity_desc",
+  "zh": "评分阈值决定了什么级别的噪音会被认为是干扰。阈值越严格，越容易检测到轻微噪音。",
+  "en": "Scoring threshold determines what level of noise is considered interference. Stricter thresholds detect quieter noises.",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.sensitivity_label",
+  "zh": "噪音敏感度",
+  "en": "Noise Sensitivity",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.sessions_before_long_break_desc",
+  "zh": "经过几个专注时段后触发长休息。",
+  "en": "Number of focus sessions before a long break.",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.sessions_before_long_break_label",
+  "zh": "长休息间隔",
+  "en": "Long Break Interval",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.show_realtime_db_desc",
+  "zh": "在组件中实时显示分贝值。",
+  "en": "Display decibel values in real-time on components.",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.show_realtime_db_label",
+  "zh": "显示实时分贝",
+  "en": "Show Realtime Decibel",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.timer_description",
+  "zh": "配置专注时段和休息时段的时长。",
+  "en": "Configure focus and break session durations.",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.timer_header",
+  "zh": "专注计时",
+  "en": "Focus Timer",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.study.title",
+  "zh": "自习",
+  "en": "Study",
+  "ja_missing": true,
+  "ko_missing": false
+ },
+ {
+  "key": "settings.update.check_card_title",
+  "zh": "检查更新",
+  "en": "Check for updates",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.update.download_threads_description",
+  "zh": "设置应用更新下载的并行线程数，可随时暂停并在支持的情况下恢复下载。",
+  "en": "Set the number of parallel threads used to download app updates. You can pause at any time and resume the download when supported.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.update.force_reinstall_description",
+  "zh": "下载所选版本的完整包，将此次运行标记为重新安装，而不是增量更新。",
+  "en": "Downloads the full package for the selected version and marks this run as a reinstall instead of an incremental update.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.update.force_reinstall_label",
+  "zh": "强制重新安装",
+  "en": "Force reinstall",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.update.latest_version_none",
+  "zh": "已是最新",
+  "en": "Up to date",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.update.mode_description",
+  "zh": "“手动更新”不自动下载与安装。“静默下载”在后台下载，由你确认安装。“静默安装”在后台下载并于下次退出时应用。",
+  "en": "\"Manual update\" never downloads or installs automatically. \"Silent download\" downloads in the background and asks you to confirm the install. \"Silent install\" downloads in the background and applies it the next time you exit.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.update.mode_silent_download",
+  "zh": "静默下载",
+  "en": "Silent download",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.update.mode_silent_install",
+  "zh": "静默安装",
+  "en": "Silent install",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.update.resume_support_description",
+  "zh": "下载操作会保留部分文件与包元数据，以便在服务器支持时通过暂停和继续功能恢复之前的进度。",
+  "en": "Downloads keep partial files and package metadata so the pause and resume controls can restore the previous progress when the server supports it.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.update.resume_support_label",
+  "zh": "断点续传支持",
+  "en": "Resume support",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.update.smart_update_description",
+  "zh": "开启后自动检查更新：优先官方 S3/CDN，失败时回退 GitHub（含全量重装），无需手动选择渠道。",
+  "en": "When enabled, updates are checked automatically: the official S3/CDN is tried first, falling back to GitHub (including full reinstalls), with no need to pick a channel manually.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.update.smart_update_label",
+  "zh": "智慧更新",
+  "en": "Smart update",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.update.smart_update_off",
+  "zh": "关",
+  "en": "Off",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.update.smart_update_on",
+  "zh": "开",
+  "en": "On",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.update.status_download_failed",
+  "zh": "下载失败。",
+  "en": "Download failed.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.update.status_install_failed",
+  "zh": "安装失败。",
+  "en": "Install failed.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.update.status_installed",
+  "zh": "安装完成。",
+  "en": "Install complete.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.update.status_paused",
+  "zh": "更新已暂停。",
+  "en": "Update paused.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.update.status_resuming",
+  "zh": "正在恢复下载...",
+  "en": "Resuming download...",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.update.status_rolled_back",
+  "zh": "已回滚更新。",
+  "en": "Update rolled back.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.update.status_section_header",
+  "zh": "更新状态",
+  "en": "Update status",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.update.transfer_controls_description",
+  "zh": "暂停正在运行的下载，从保存的状态恢复，或取消并清除待处理的更新文件。",
+  "en": "Pause a running download, resume it from the saved state, or cancel and clear pending update files.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.update.transfer_controls_title",
+  "zh": "传输控制",
+  "en": "Transfer controls",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.update.type_delta",
+  "zh": "增量更新",
+  "en": "Incremental Update",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.update.type_reinstall",
+  "zh": "重新安装",
+  "en": "Reinstall",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.update.update_type_label",
+  "zh": "更新类型",
+  "en": "Update type",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.wallpaper.custom_color_tooltip",
+  "zh": "自定义颜色",
+  "en": "Custom color",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.window.back",
+  "zh": "返回",
+  "en": "Back",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.window.more_options",
+  "zh": "更多选项",
+  "en": "More options",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.window.restart_menu_item",
+  "zh": "重启应用",
+  "en": "Restart app",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "settings.window.toggle_pane",
+  "zh": "展开或收起导航",
+  "en": "Toggle navigation",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "study.alert.noise_interrupt_message",
+  "zh": "当前打断密度: {0}次/分钟\n已超过阈值: {1}次/分钟",
+  "en": "Current interrupt density: {0}/min\nExceeds threshold: {1}/min",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "study.alert.noise_interrupt_title",
+  "zh": "噪音打断提醒",
+  "en": "Noise Interrupt Alert",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "study.alert.severe_interrupt_message",
+  "zh": "环境噪音过于嘈杂，严重影响学习效率\n当前打断密度: {0}次/分钟\n建议：寻找更安静的学习环境",
+  "en": "Environment is too noisy, severely affecting learning efficiency\nCurrent interrupt density: {0}/min\nSuggestion: Find a quieter study environment",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "study.alert.severe_interrupt_title",
+  "zh": "严重噪音干扰",
+  "en": "Severe Noise Interference",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "study.widget.disabled_hint",
+  "zh": "请在设置中开启",
+  "en": "Please enable in Settings",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "study.widget.disabled_title",
+  "zh": "自习功能未启用",
+  "en": "Study Feature Disabled",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "zhijiaohub.settings.about",
+  "zh": "关于",
+  "en": "About",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "zhijiaohub.settings.about_desc",
+  "zh": "智教Hub 展示来自教育技术社区的有趣图片。图片从 GitHub 仓库获取并缓存在本地。",
+  "en": "ZhiJiaoHub displays interesting images from the educational technology community. Images are fetched from GitHub repositories and cached locally.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "zhijiaohub.settings.auto_refresh",
+  "zh": "自动刷新",
+  "en": "Auto Refresh",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "zhijiaohub.settings.auto_refresh_desc",
+  "zh": "定期自动刷新图片列表。",
+  "en": "Automatically refresh the image list periodically.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "zhijiaohub.settings.classisland",
+  "zh": "ClassIsland 图库",
+  "en": "ClassIsland Gallery",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "zhijiaohub.settings.interval",
+  "zh": "刷新间隔（分钟）",
+  "en": "Refresh Interval (minutes)",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "zhijiaohub.settings.jiangtokoto",
+  "zh": "Jiangtokoto 表情包",
+  "en": "Jiangtokoto Memes",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "zhijiaohub.settings.mirror_direct",
+  "zh": "直连（GitHub）",
+  "en": "Direct (GitHub)",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "zhijiaohub.settings.mirror_ghproxy",
+  "zh": "镜像加速（推荐）",
+  "en": "Mirror Acceleration (Recommended)",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "zhijiaohub.settings.mirror_source",
+  "zh": "镜像加速",
+  "en": "Mirror Acceleration",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "zhijiaohub.settings.mirror_source_desc",
+  "zh": "如果图片加载缓慢或失败，请尝试使用镜像加速。镜像加速通过第三方代理服务加速 GitHub 访问。",
+  "en": "If images load slowly or fail, try using mirror acceleration. Mirror acceleration speeds up GitHub access through third-party proxy services.",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "zhijiaohub.settings.refresh",
+  "zh": "刷新设置",
+  "en": "Refresh Settings",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "zhijiaohub.settings.rinlit",
+  "zh": "Rin's 图库",
+  "en": "Rin's Gallery",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "zhijiaohub.settings.sectl",
+  "zh": "SECTL 图库",
+  "en": "SECTL Gallery",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "zhijiaohub.settings.source",
+  "zh": "图片源",
+  "en": "Image Source",
+  "ja_missing": true,
+  "ko_missing": true
+ },
+ {
+  "key": "zhijiaohub.settings.source_desc",
+  "zh": "选择图片来源。ClassIsland 图库包含 ClassIsland 社区的趣味瞬间，SECTL 图库包含 SECTL 社区的内容，Rin's 图库包含 Rin's 社区的内容，Jiangtokoto 表情包包含丰富的表情包资源。",
+  "en": "Select the image source. ClassIsland Gallery contains fun moments from the ClassIsland community, SECTL Gallery contains content from the SECTL community, Rin's Gallery contains content from Rin's community, Jiangtokoto Memes contains rich meme resources.",
+  "ja_missing": true,
+  "ko_missing": true
+ }
+]

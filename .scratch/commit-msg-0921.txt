@@ -1,0 +1,9 @@
+更新链加固：部署事务、维护安装与 PLONDS 分通道发布
+
+- 修复审计 U01–U12：部署校验与事务提交、根目录维护安装、快照回滚、公开 URL 校验、分通道/架构 latest、增量基线、下载取消/恢复与运行时前置。
+- 新增 Core Deployment 事务/校验/维护、LegacyInstallerWorker、PlondsMaintenanceGateway、维护安装器与运行时前置；在线安装复用同一套部署校验与回滚规则。
+- Release 显式触发 PLONDS Comparator，Publisher 完成公开下载校验后才更新最新清单；Release 载荷携带维护安装器。
+- 更新设置新增稳定/预览通道并同步四语言词表；保留并带上桌面编辑预览稳定性修复（CompositionVisual offset 不再归零，新增真实渲染回归）。
+- 守卫记账：RawPathContainment 删除已失效的 FilesPackageInstaller 豁免；漂移族 184→189（更新/部署/安装器新增 6 个同名不同体，分属不同契约，不是复制真源）。
+
+验证：Release 整解决方案构建 0 错误；PLONDS.Tool 构建 0 错误；x86 维护安装器 NativeAOT 预检成功；全量回归 1341/1341 通过；三个工作流 YAML 解析通过。0.9.2.0 已从 9e48034 发布，本批作为 0.9.2.1 发布。

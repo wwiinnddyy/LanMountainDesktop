@@ -1,6 +1,6 @@
 # AirApp SDK V1 迁移指南
 
-> 从旧的插件系统（`LanMountainDesktop.PluginSdk` / `plugin.json` / API 5.0.0）迁移到统一的 AirApp 扩展系统（`LanMountainDesktop.AirAppSdk` / `airapp.json` / API 1.0.0）。
+> 从旧的插件系统（`LanMountainDesktop.PluginSdk` / `plugin.json` / API 5.0.0）迁移到统一的 AirApp 扩展系统（`LanMountainDesktop.AirAppSdk` / `airapp.json` / API 1.0.1）。
 
 ## 概览
 
@@ -9,14 +9,14 @@ AirApp 取代插件成为阑山桌面的统一扩展系统。旧插件不再被�
 **支持状态**：`LanMountainDesktop.PluginSdk`（4.x / 5.x）与 `plugin.json` 已停止支持。宿主不再识别
 `plugin.json`，也不会加载基于 `IPlugin` / `PluginBase` / `[PluginEntrance]` 的程序集；`AirAppLoader`
 里不存在任何回退到旧清单或旧入口契约的分支。`apiVersion` 的主版本必须等于 `AirAppSdkInfo.ApiVersion`
-（当前 `1.0.0`），否则加载直接抛错——这也是仍停留在 PluginSdk 5.x 的轻应用在当前宿主上无法加载的原因。
+（当前 `1.0.1`），否则加载直接抛错——这也是仍停留在 PluginSdk 5.x 的轻应用在当前宿主上无法加载的原因。
 
 代码中剩余的 `plugin` 字样哪些可改、哪些是有意保留，见 `docs/ai/NAMING_AND_FROZEN_IDENTIFIERS.md`。
 
 | 项目 | 旧（插件系统） | 新（AirApp） |
 |------|---------------|-------------|
 | SDK 包 | `LanMountainDesktop.PluginSdk` | `LanMountainDesktop.AirAppSdk` |
-| API 版本 | 5.0.0 | 1.0.0 |
+| API 版本 | 5.0.0 | 1.0.1 |
 | 清单文件 | `plugin.json` | `airapp.json` |
 | 命名空间 | `LanMountainDesktop.PluginSdk` | `LanMountainDesktop.AirAppSdk` |
 | 模板 | `dotnet new lmd-plugin` | `dotnet new lmd-airapp` |
@@ -95,7 +95,7 @@ public sealed class MyAirApp : AirAppBase
 {
   "id": "com.example.myapp",
   "name": "My App",
-  "apiVersion": "1.0.0",
+  "apiVersion": "1.0.1",
   "entranceAssembly": "MyApp.dll",
   "runtime": { "mode": "in-process" },
   "components": [
@@ -109,8 +109,8 @@ public sealed class MyAirApp : AirAppBase
 
 ## 迁移步骤
 
-1. 把 `plugin.json` 重命名为 `airapp.json`，字段按上表更新（`runtime.mode` 用 `in-process`，`apiVersion` 用 `1.0.0`，补充 `components` / `windows` 声明）。
-2. 把 csproj 的 `PackageReference` 从 `LanMountainDesktop.PluginSdk` 改为 `LanMountainDesktop.AirAppSdk`（Version `1.0.0`），
+1. 把 `plugin.json` 重命名为 `airapp.json`，字段按上表更新（`runtime.mode` 用 `in-process`，`apiVersion` 用 `1.0.1`，补充 `components` / `windows` 声明）。
+2. 把 csproj 的 `PackageReference` 从 `LanMountainDesktop.PluginSdk` 改为 `LanMountainDesktop.AirAppSdk`（Version `1.0.1`），
    并加上 `ExcludeAssets="runtime"` `PrivateAssets="all"`。SDK 发布在 GitHub Packages，
    包源与认证配置见[环境准备](01-AirApp开发/01-快速开始/01-环境准备.md#配置包源)。
    同时删除工程里显式的 Avalonia 引用，版本交给 SDK 传递，否则会出现加载期类型冲突。
@@ -134,7 +134,7 @@ public sealed class MyAirApp : AirAppBase
 
 ## 已移除的 API
 
-下列类型在 AirApp SDK 1.0.0 中不存在，如果你参考过早期示例代码需要注意：
+下列类型在 AirApp SDK 1.0.1 中不存在，如果你参考过早期示例代码需要注意：
 
 - `AirAppBase.RegisterComponent` / `RegisterWindow` / `RegisterService`
   —— 注册只能在 `Initialize` 中通过 `IServiceCollection` 完成

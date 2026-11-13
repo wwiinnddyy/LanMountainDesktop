@@ -1,5 +1,17 @@
 # AirApp 运行时与窗口轻应用
 
+## 基线
+
+| 项 | 值 |
+|---|---|
+| SDK 包 | `LanMountainDesktop.AirAppSdk` |
+| `SdkVersion` / `ApiVersion` | 均为 `1.0.1`（唯一真源：`AirAppSdk/AirAppSdkInfo.cs`） |
+| 清单 | `airapp.json`（包内有且仅有一份） |
+| 包格式 | `.laapp`（构建时由 SDK 的 `buildTransitive` targets 生成） |
+
+API 主版本号必须与宿主相同，否则加载与市场安装都会被拒绝。本文只讲运行时与窗口链路；
+进程拓扑、加载流水线、已知缺口以 [整体架构](../04-架构与实现/01-整体架构.md) 为准。
+
 ## AirApp 是统一扩展系统
 
 AirApp（轻应用）是阑山桌面的统一扩展系统。开发者通过 `LanMountainDesktop.AirAppSdk` 可以开发两种形态的轻应用：
@@ -29,7 +41,7 @@ AirAppWindowLoader → 创建 IAirAppWindow → 内容嵌入 FAAppWindow 外壳
 | `LanMountainDesktop.Launcher` | OOBE、Splash、版本选择、预启动 Runtime、启动 Host |
 | `LanMountainDesktop.AirAppRuntime` | 生命周期与控制 IPC、实例去重、启动/激活/关闭 AirAppHost，转发 `--app-package` |
 | `LanMountainDesktop.AirAppHost` | 内置 3 个窗口（world-clock/whiteboard/rss-reader）+ 按 `--app-package` 加载第三方 AirApp 窗口 |
-| `LanMountainDesktop.AirAppSdk` | 统一 SDK（`IAirApp`/`AirAppBase`/`IAirAppWidget`/`IAirAppWindow`/`airapp.json`） |
+| `LanMountainDesktop.AirAppSdk` | 统一 SDK（`IAirApp` / `AirAppBase` / `IAirAppRuntimeContext` / `IAirAppWindow` / `AirAppManifest`） |
 | `LanMountainDesktop.AirAppTemplate` | `dotnet new lmd-airapp` 模板（组件 + 窗口 + 设置示例） |
 | `LanMountainDesktop.AirAppDevServer` | 开发者工具：监视项目 → `dotnet build` 出 `.laapp` → 打包/预览 |
 
@@ -41,6 +53,20 @@ AirAppWindowLoader → 创建 IAirAppWindow → 内容嵌入 FAAppWindow 外壳
 4. `dotnet build` 生成 `.laapp`，安装到 `Extensions/AirApps`。
 
 第三方 AirApp 窗口由 `AirAppHost` 进程承载：`AirAppWindowLoader` 读取包目录的 `airapp.json`，用 `AirAppLoader` 加载入口程序集，按 `--target-entry-id` 解析 `AirAppWindowRegistration`，把 `IAirAppWindow.Content` 嵌入 FAAppWindow 外壳。
+
+## 一个窗口会被开成几个进程
+
+Runtime 按 `instanceKey` 去重，键由 `AirAppLauncherService.BuildSingleInstanceKey` 生成：
+
+| 轻应用 | instanceKey | 效果 |
+|---|---|---|
+| `world-clock` | `world-clock:clock-suite:global` | 全局单例 |
+| `rss-reader` | `rss-reader:global` | 全局单例 |
+| 其余（含第三方） | `{appId}:{componentId}:{placementId}` | 每个桌面格子可各开一个窗口 |
+
+已存在的实例被再次请求时走"激活已有进程"（Win32 `ShowWindow` + `SetForegroundWindow`），不会新建。
+窗口打开后 `RegisterAsync`、关闭后 `UnregisterAsync` 都是 **best-effort**；Runtime 另靠进程存活状态回收实例。
+窗口与组件内存完全隔离——要交换数据只能走 `DataDirectory` 或自建 IPC。
 
 ## 内置窗口链路（回归保障）
 

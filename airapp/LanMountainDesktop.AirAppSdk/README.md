@@ -9,13 +9,18 @@ AirApp is the unified extension system for LanMountainDesktop. Developers use th
 ## Includes
 
 - `IAirApp` / `AirAppBase` entry abstractions with `[AirAppEntrance]`
-- `IAirAppWorker` / `AirAppWorkerBase` worker-side entry abstractions for isolated background mode
 - `AirAppManifest` (`airapp.json`) and shared contract declarations
-- `runtime.mode` manifest support for `in-process`, `isolated-background`, and `isolated-window`
+- `runtime.mode` manifest field. `in-process` is the only mode the host actually executes;
+  `isolated-background` and `isolated-window` are accepted by the manifest validator but do not
+  change how the AirApp is loaded today.
 - Desktop component registration (`AddAirAppComponent<TControl>`) and window registration (`AddAirAppWindow<TWindow>`)
 - Declarative and custom settings sections (`AddAirAppSettingsSection`)
 - Runtime context, appearance, settings, message bus, logger and host service abstractions
 - Build-transitive packaging targets for `.laapp` output
+
+> Peer scope: the SDK carries contracts and defaults only. AirApps must reference it with
+> `ExcludeAssets="runtime;native"` `PrivateAssets="all"` — the host supplies these assemblies at
+> runtime, and a `.laapp` that ships its own copy fails to load with duplicate-type errors.
 
 ## Quick Start
 
@@ -26,11 +31,12 @@ dotnet new install LanMountainDesktop.AirAppTemplate
 dotnet new lmd-airapp -n MyAirApp
 ```
 
-Or reference the package directly:
+Or reference the package directly (use the version published for your host's API major):
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="LanMountainDesktop.AirAppSdk" Version="1.0.0" />
+  <PackageReference Include="LanMountainDesktop.AirAppSdk" Version="1.0.1"
+                    ExcludeAssets="runtime;native" PrivateAssets="all" />
 </ItemGroup>
 ```
 

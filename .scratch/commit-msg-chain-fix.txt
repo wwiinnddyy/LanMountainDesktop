@@ -1,0 +1,8 @@
+PLONDS 发布链路：Comparator 显式触发 Publisher
+
+Release 用 GITHUB_TOKEN dispatch Comparator 后，GitHub 不会为这次运行再创建
+workflow_run 下游运行，Publisher 原先的 workflow_run 触发因此不会发生。
+现在 Comparator 在 compare 成功后显式 dispatch Publisher（带同一个 tag），
+Publisher 只保留 workflow_dispatch 入口；手动运行 Comparator 也能自动串上 Publisher。
+
+仅工作流改动，不改应用二进制；0.9.2.1 已发布的资产不受影响，下一次 Release 起生效。

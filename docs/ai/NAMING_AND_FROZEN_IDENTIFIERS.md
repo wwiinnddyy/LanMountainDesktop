@@ -144,7 +144,7 @@ Launcher 是随版本切换选中的独立二进制，升级窗口里它可能�
 
 `LanMountainDesktop.PluginSdk`（4.x / 5.x）与 `plugin.json` **已停止支持**：宿主不再识别 `plugin.json`，
 也不会加载基于 `IPlugin` / `PluginBase` 的程序集；`apiVersion` 主版本必须等于
-`AirAppSdkInfo.ApiVersion`（当前 `1.0.0`），否则加载直接抛错。
+`AirAppSdkInfo.ApiVersion`（当前 `1.0.1`），否则加载直接抛错。
 
 `AirApps/AirAppLoader.cs` 内不存在任何读取 `plugin.json` 或识别 `PluginEntrance` 的回退分支。
 迁移映射见 `docs/AIRAPP_SDK_V1_MIGRATION.md`；唯一的对外废弃声明原文在 `docs/01-AirApp开发/README.md`。
