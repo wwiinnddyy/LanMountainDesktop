@@ -19,8 +19,8 @@
 │  LanMountainDesktop.Platform（接口 + Windows/MacOS 实现）│
 ├─────────────────────────────────────────────────────┤
 │  共享核心层（必须无平台依赖）                          │
-│  LanMountainDesktop.Core（契约 / IPC / 插件打包）     │
-│  LanMountainDesktop.PluginSdk（SDK / 隔离 / 设置/外观）│
+│  LanMountainDesktop.Core（契约 / IPC / 部署与打包）    │
+│  LanMountainDesktop.AirAppSdk（SDK / 外观 / 设置契约） │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -84,5 +84,5 @@
 
 ## 7. 相关文档
 
-- 共享库平台依赖审计报告：`docs/cross-platform-shared-audit.md`
-- 架构总览：`docs/ARCHITECTURE.md`
+- 共享库平台依赖审计报告：`docs/archive/cross-platform-shared-audit.md`
+- 架构总览：`docs/04-架构与实现/01-整体架构.md`

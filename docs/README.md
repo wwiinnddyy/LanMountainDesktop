@@ -12,16 +12,18 @@
 
 ### [01-AirApp开发](01-AirApp开发/)
 完整的 AirApp（轻应用）开发指南
-- [轻应用快速开始](01-AirApp开发/01-快速开始/)
-- [轻应用核心概念](01-AirApp开发/02-核心概念/)
-- [AirApp API 参考](01-AirApp开发/03-API参考/)
+- [开发指南首页](01-AirApp开发/README.md)
+- 快速开始：[环境准备](01-AirApp开发/01-快速开始/01-环境准备.md) · [创建第一个轻应用](01-AirApp开发/01-快速开始/02-创建第一个轻应用.md)
+- 核心概念：[轻应用生命周期](01-AirApp开发/02-核心概念/01-轻应用生命周期.md) · [组件系统](01-AirApp开发/02-核心概念/02-组件系统.md) · [设置系统](01-AirApp开发/02-核心概念/03-设置系统.md)
+- API 参考：[IAirApp 接口](01-AirApp开发/03-API参考/01-IAirApp接口.md) · [IAirAppRuntimeContext](01-AirApp开发/03-API参考/02-IAirAppRuntimeContext.md)
 
 ### [02-AirApp运行时](02-AirApp运行时/)
 AirApp 运行时与独立窗口应用
-- [AirApp 现状与开发](02-AirApp运行时/README.md)
+- [AirApp 运行时与窗口轻应用](02-AirApp运行时/README.md)
 
 ### [03-组件设计规范](03-组件设计规范/)
 桌面组件设计系统和视觉规范
+- [设计 Token 与资源真源](03-组件设计规范/00-设计token真源.md) —— **键名与数值以它为准**
 - [设计系统概述](03-组件设计规范/01-设计系统概述.md)
 - [视觉规范](03-组件设计规范/02-视觉规范.md)
 - [布局规范](03-组件设计规范/03-布局规范.md)
@@ -30,7 +32,7 @@ AirApp 运行时与独立窗口应用
 
 ### [04-架构与实现](04-架构与实现/)
 技术架构、核心系统实现细节
-- [整体架构](04-架构与实现/01-整体架构.md)
+- [整体架构](04-架构与实现/01-整体架构.md) —— 唯一权威来源，先看这篇
 - [启动器系统](04-架构与实现/02-启动器系统.md)
 - [桌面宿主](04-架构与实现/03-桌面宿主.md)
 - [AirApp 运行时](04-架构与实现/04-AirApp运行时.md)
@@ -46,31 +48,58 @@ AirApp 运行时与独立窗口应用
 - [CI/CD 配置](05-更新与发布/04-CICD配置.md)
 - [发布流程](05-更新与发布/05-发布流程.md)
 
-## 🎯 快速索引
+### 专题文档
 
-### 我想...
+- [AirApp SDK V1 迁移指南](AIRAPP_SDK_V1_MIGRATION.md) —— 从旧插件体系迁移
+- [安装器安全模型](INSTALLER_SECURITY.md) —— 签名、校验与生效状态
+- [跨平台架构](CROSS_PLATFORM.md) —— 桌面 + 移动分层约束
+
+### [ai](ai/)（面向 AI 助手）
+
+- [DOC_SOURCES](ai/DOC_SOURCES.md) —— **冲突时以哪份为准**
+- [CODEBASE_MAP](ai/CODEBASE_MAP.md) —— 需求该落到哪一层
+- [CHANGE_WORKFLOW](ai/CHANGE_WORKFLOW.md) —— 改动流程
+- [NAMING_AND_FROZEN_IDENTIFIERS](ai/NAMING_AND_FROZEN_IDENTIFIERS.md) —— 哪些 `plugin` 字样必须保留
+- [SETTINGS_WINDOW_DESIGN](ai/SETTINGS_WINDOW_DESIGN.md) —— 设置窗口设计
+
+### 审计记录
+
+- [audits/](audits/) —— 历史审计报告。**这些是快照，不是现状**；引用前先对着代码核对。
+
+## 🎯 快速索引
 
 | 目标 | 查看文档 |
 |------|---------|
 | 了解项目基本信息 | [项目介绍](00-快速开始/01-项目介绍.md) |
 | 搭建开发环境 | [开发环境配置](00-快速开始/03-开发环境配置.md) |
-| 开发一个轻应用 | [AirApp 快速开始](01-AirApp开发/01-快速开始/) |
+| 开发一个轻应用 | [创建第一个轻应用](01-AirApp开发/01-快速开始/02-创建第一个轻应用.md) |
 | 创建桌面组件 | [组件系统](01-AirApp开发/02-核心概念/02-组件系统.md) |
-| 开发窗口轻应用 | [AirApp 现状与开发](02-AirApp运行时/README.md) |
+| 开发窗口轻应用 | [AirApp 运行时与窗口轻应用](02-AirApp运行时/README.md) |
 | 从旧插件迁移 | [AirApp SDK V1 迁移指南](AIRAPP_SDK_V1_MIGRATION.md) |
 | 了解设计规范 | [设计系统概述](03-组件设计规范/01-设计系统概述.md) |
 | 理解整体架构 | [整体架构](04-架构与实现/01-整体架构.md) |
+| 查哪个进程负责什么 | [桌面宿主](04-架构与实现/03-桌面宿主.md) · [启动器系统](04-架构与实现/02-启动器系统.md) |
 | 配置自动更新 | [更新系统架构](05-更新与发布/01-更新系统架构.md) |
-| 打包发布应用 | [打包与构建](05-更新与发布/03-打包与构建.md) |
+| 打包发布应用 | [打包与构建](05-更新与发布/03-打包与构建.md) · [发布流程](05-更新与发布/05-发布流程.md) |
+| 判断安全措施是否生效 | [安装器安全模型](INSTALLER_SECURITY.md) |
+
+## 📐 读文档的规矩
+
+1. **冲突时以 [`docs/ai/DOC_SOURCES.md`](ai/DOC_SOURCES.md) 列的权威来源为准**；仍冲突则以源码与 csproj 为准，然后回写文档。
+2. **"实现了"不等于"生效了"**。本仓有多处"代码存在但没接上生产路径"的情况（签名验证、隔离模式等）。文档必须写清生效范围，`docs/INSTALLER_SECURITY.md` 第 1 节是范例。
+3. **`archive/` 与 `audits/` 不是现状**，仅供追溯。
+4. 引用版本号、路径、类名时以代码为真源；改代码后回写对应文档。
 
 ## 🔧 技术栈
 
-- **.NET 10** - 应用框架
-- **Avalonia UI 12** - 跨平台 UI 框架
-- **FluentAvalonia** - Fluent Design 控件库
-- **CommunityToolkit.Mvvm** - MVVM 框架
-- **PLONDS** - 应用增量更新与分发系统
-- **dotnetCampus.Ipc** - 进程间通信
+- **.NET 10** —— 应用框架（`net10.0`）
+- **Avalonia 12.1** —— 跨平台 UI 框架
+- **FluentAvalonia 3.0** —— Fluent Design 控件库
+- **CommunityToolkit.Mvvm 8.4** —— MVVM 框架
+- **PLONDS** —— 应用更新与分发系统
+- **dotnetCampus.Ipc 2.0** —— 进程间通信
+
+版本以 `Directory.Packages.props` 为准。
 
 ## 📖 相关资源
 
@@ -80,9 +109,11 @@ AirApp 运行时与独立窗口应用
 
 ## 📝 贡献文档
 
-发现文档问题或想要改进？欢迎提交 Pull Request！
+文档源码位于 `docs/` 目录，使用 Markdown 格式编写。新增或改动文档时：
 
-文档源码位于 `docs/` 目录，使用 Markdown 格式编写。
+- 保持相对链接有效（移动文件会打断链接）
+- 术语与概念名以本文档集与源码为准，不要引入同义新词
+- 涉及"当前行为"的陈述要能对应到具体代码位置
 
 ## 📜 旧版文档
 

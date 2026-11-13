@@ -14,6 +14,10 @@
 
 ## 📚 规范内容
 
+### [0. 设计 Token 与资源真源](00-设计token真源.md) ⭐
+- **键名与数值的唯一真源**（27 个 `Adaptive*` 键、圆角两档、动效时长、字体、表面类）
+- 改任何视觉前先看这份
+
 ### [1. 设计系统概述](01-设计系统概述.md)
 - 设计原则
 - 设计语言
@@ -40,10 +44,9 @@
 - 拖拽与调整
 
 ### [5. 主题系统](05-主题系统.md)
-- 亮色主题
-- 暗色主题
-- 自定义主题
+- 自适应主题模型
 - 主题切换
+- 图标与图片适配
 
 ## 🎯 快速开始
 
@@ -76,17 +79,21 @@
 | **推荐组件宽度** | 200-400px | 常规信息展示 |
 | **推荐组件高度** | 150-300px | 常规信息展示 |
 | **安全边距** | 16px | 内容到边缘的最小距离 |
-| **圆角半径** | 8px | 卡片和容器圆角 |
+| **圆角半径** | `DesignCornerRadiusComponent` | 玻璃档 18px / 纯色回退档 8px，见[真源](00-设计token真源.md) |
 
-### 核心颜色（亮色主题）
+### 核心颜色
 
-| 用途 | 颜色值 | 说明 |
-|-----|--------|------|
-| **卡片背景** | `#FFFFFF` | 组件主背景 |
-| **主要文本** | `#1C1C1C` | 标题、重要信息 |
-| **次要文本** | `#616161` | 描述、辅助信息 |
-| **强调色** | `#0078D4` | 按钮、链接 |
-| **边框** | `#E0E0E0` | 卡片边框 |
+**颜色不是固定色值**，而是由主题色系统从材质色/壁纸运行时派生的自适应画笔。用键名取用，不要写死颜色、也不要自造键名。
+
+| 用途 | 资源键 |
+|-----|--------|
+| 表面（底 / 覆盖 / 抬升） | `AdaptiveSurfaceBaseBrush` / `AdaptiveSurfaceOverlayBrush` / `AdaptiveSurfaceRaisedBrush` |
+| 主要文本 | `AdaptiveTextPrimaryBrush` |
+| 次要文本 | `AdaptiveTextSecondaryBrush` |
+| 强调色 | `AdaptiveAccentBrush` |
+| 玻璃面板背景 / 边框 | `AdaptiveGlassPanelBackgroundBrush` / `AdaptiveGlassPanelBorderBrush` |
+
+完整 27 个键见[设计 Token 与资源真源](00-设计token真源.md)。
 
 ### 核心字体
 
@@ -109,36 +116,26 @@
 
 ## 🎨 设计资源
 
-### Avalonia AXAML 资源
+### 设计资源（AXAML）
 
-系统提供了完整的设计资源字典：
-
-```xml
-<ResourceDictionary>
-  <!-- 颜色资源 -->
-  <SolidColorBrush x:Key="CardBackgroundBrush" Color="#FFFFFF"/>
-  <SolidColorBrush x:Key="TextFillColorPrimaryBrush" Color="#1C1C1C"/>
-  
-  <!-- 尺寸资源 -->
-  <CornerRadius x:Key="DesignCornerRadiusComponent">8</CornerRadius>
-  <Thickness x:Key="DesignPaddingComponent">16</Thickness>
-  
-  <!-- 字体资源 -->
-  <FontFamily x:Key="DesignFontFamilyBase">Microsoft YaHei UI</FontFamily>
-</ResourceDictionary>
-```
-
-### 使用设计资源
+系统通过自适应主题注册资源键（**不是**一份固定色值的 `ResourceDictionary`）：
 
 ```xml
-<Border Background="{DynamicResource CardBackgroundBrush}"
-        CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
-        Padding="{DynamicResource DesignPaddingComponent}">
+<Border Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
+        BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
+        BorderThickness="1"
+        CornerRadius="{DynamicResource DesignCornerRadiusComponent}">
   <TextBlock Text="Hello"
-             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
              FontSize="14"/>
 </Border>
 ```
+
+要点：
+
+- 颜色键**只有** `Adaptive*` 一族（27 个），键名清单见[真源文档](00-设计token真源.md)。
+- 圆角用 `DesignCornerRadiusComponent` 及其层级 Token；**没有** `DesignPaddingComponent`、`DesignFontFamilyBase` 这类键——内边距与字号直接写字面值。
+- 字体家族由 `AppFontFamily`（MiSans VF）统一提供，窗口级已默认绑定。
 
 ## ✅ 设计检查清单
 
@@ -146,10 +143,10 @@
 
 ### 视觉检查
 - [ ] 遵循 16px 安全边距
-- [ ] 使用系统颜色资源
-- [ ] 使用系统字体和字号
-- [ ] 圆角统一使用 8px
-- [ ] 投影统一使用标准阴影
+- [ ] 只用真源清单里的 `Adaptive*` 颜色键
+- [ ] 字体沿用 `AppFontFamily`，字号在约定档位内
+- [ ] 根容器圆角用 `DesignCornerRadiusComponent`，内部元素用层级 Token
+- [ ] 没有对圆角资源乘 `scale`
 
 ### 主题检查
 - [ ] 亮色主题下文字清晰可读
@@ -179,9 +176,9 @@
 ## 🔗 相关资源
 
 ### 内部文档
-- [轻应用开发 - 组件系统](../01-轻应用开发/02-核心概念/02-组件系统.md)
-- [轻应用开发 - 设置系统](../01-轻应用开发/02-核心概念/03-设置系统.md)
-- [实战案例 - 天气组件](../01-轻应用开发/04-实战案例/01-天气组件.md)
+- [AirApp 开发 - 组件系统](../01-AirApp开发/02-核心概念/02-组件系统.md)
+- [AirApp 开发 - 设置系统](../01-AirApp开发/02-核心概念/03-设置系统.md)
+- [组件系统（架构）](../04-架构与实现/05-组件系统.md)
 
 ### 外部参考
 - [Fluent Design System](https://www.microsoft.com/design/fluent/)

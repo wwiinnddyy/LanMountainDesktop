@@ -8,7 +8,7 @@
 
 1. 读取 `AGENTS.md`
 2. 读取 `docs/ai/DOC_SOURCES.md`，确认这次需求涉及哪些权威文档
-3. 按需读取 `docs/ARCHITECTURE.md`、专题规范和相关目录内 README
+3. 按需读取 `docs/04-架构与实现/01-整体架构.md`、专题规范和相关目录内 README
 4. 检查 `.trae/specs/` 是否已有对应 feature
 5. 如果是新功能或行为变化，先补或更新 `spec.md / tasks.md / checklist.md`
 6. 再改代码
@@ -48,9 +48,9 @@ dotnet test LanMountainDesktop.slnx -c Debug
 
 出现以下变化时，AI 应同步回写文档：
 
-- 命令变化：更新 `docs/DEVELOPMENT.md`
-- 模块职责变化：更新 `docs/ARCHITECTURE.md`
-- 产品定位或阶段变化：更新 `docs/PRODUCT.md`
+- 命令变化：更新 `docs/archive/DEVELOPMENT.md`
+- 模块职责变化：更新 `docs/04-架构与实现/01-整体架构.md`
+- 产品定位或阶段变化：更新 `docs/00-快速开始/01-项目介绍.md`
 - AI 入口或权威来源变化：更新 `AGENTS.md` 或 `docs/ai/DOC_SOURCES.md`
 
 ## 不要做的事

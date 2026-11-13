@@ -1,7 +1,8 @@
 # Settings Window Fluent Shell Design
 
 This document is the authoritative implementation note for the LanMountainDesktop settings window shell.
-General visual tokens still come from `docs/VISUAL_SPEC.md` and `docs/CORNER_RADIUS_SPEC.md`.
+General visual tokens still come from `docs/archive/VISUAL_SPEC.md` and `docs/archive/CORNER_RADIUS_SPEC.md`
+（归档文档，仅作历史对照；当前的键名与数值以 `docs/03-组件设计规范/00-设计token真源.md` 为准）。
 
 ## References
 

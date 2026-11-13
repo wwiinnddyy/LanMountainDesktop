@@ -31,8 +31,8 @@
 | `LanMountainDesktop/ViewModels/` | 视图模型 | 页面状态、命令、交互行为 |
 | `LanMountainDesktop/Services/` | 服务层 | 设置、存储、遥测、业务能力 |
 | `LanMountainDesktop/ComponentSystem/` | 组件系统 | 组件定义、注册、放置规则、扩展清单 |
-| `LanMountainDesktop/plugins/` | 插件运行时 | 插件发现、安装、替换、market 集成 |
-| `LanMountainDesktop/Theme/` and `Styles/` | 主题和样式 | 视觉资源、主题行为、样式规则 |
+| `LanMountainDesktop/AirApps/` | AirApp 运行时 | 发现、加载、安装、市场集成、共享契约 |
+| `LanMountainDesktop/Theme/` and `Styles/` | 主题和样式 | 自适应画笔与键名、圆角 Token、样式规则 |
 | `LanMountainDesktop/Localization/` | 本地化 | 语言资源、语言切换 |
 | `LanMountainDesktop/DesktopEditing/` | 布局编辑 | 组件摆放、数学计算、编辑状态 |
 
@@ -40,18 +40,18 @@
 
 - 设置页改造：优先看 `desktop/LanMountainDesktop/Views/`, `ViewModels/`, `Services/`, `.trae/specs/`
 - 组件注册或元数据变化：优先看 `desktop/LanMountainDesktop/ComponentSystem/`
-- AirApp 安装、market、加载：优先看 `airapp/` 与 `desktop/LanMountainDesktop/Services/`
-- 主题、颜色、圆角：优先看 `airapp/LanMountainDesktop.AirAppSdk/`（外观/设置能力）与 `desktop/LanMountainDesktop/Theme/`
-- 设置持久化：优先看 `airapp/LanMountainDesktop.AirAppSdk/` 与宿主设置 facade
-- SDK 接口调整：优先看 `airapp/LanMountainDesktop.AirAppSdk/` 和 `core/LanMountainDesktop.Core/`
+- AirApp 安装、market、加载：优先看 `desktop/LanMountainDesktop/AirApps/`（宿主侧运行时）与 `airapp/`（SDK / Runtime / AirAppHost）
+- 主题、颜色、圆角：优先看 `desktop/LanMountainDesktop/Theme/`（自适应画笔与键名）与 `Styles/`（圆角 Token、样式）；键名清单见 `docs/03-组件设计规范/00-设计token真源.md`
+- 设置持久化：优先看 `desktop/LanMountainDesktop/Services/Settings/`（宿主实现）与 `Services/AppSettingsService.cs`；SDK 只提供契约
+- 部署与更新：优先看 `core/LanMountainDesktop.Core/Deployment/` 与 `desktop/LanMountainDesktop/Services/Plonds/`
 - 平台差异：优先看 `platform/LanMountainDesktop.Platform/`
-- 桌面壳层或生命周期：优先看 `desktop/LanMountainDesktop/Program.cs`, `App.axaml.cs`
+- 桌面壳层或生命周期：优先看 `desktop/LanMountainDesktop/Program.cs`, `App.axaml.cs`, `DesktopShellHost.cs`
 
 ## 测试对照
 
 当前测试工程 `LanMountainDesktop.Tests/` 内的典型覆盖包括：
 
-- `CornerRadiusScaleTests.cs`: 圆角和外观缩放相关
+- `CornerRadiusStyleTests.cs`: 圆角样式与外观相关
 - `DesktopPlacementMathTests.cs`: 桌面布局数学
 - `DesktopEditCommitMathTests.cs`: 桌面编辑提交计算
 - `ComponentSettingsServiceTests.cs`: 组件设置服务
