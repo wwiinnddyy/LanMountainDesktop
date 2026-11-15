@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -745,8 +745,6 @@ public sealed class AirAppRuntimeService : IDisposable
             if (assemblyName.StartsWith("Avalonia", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(assemblyName, "FluentAvaloniaUI", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(assemblyName, "FluentIcons.Avalonia", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(assemblyName, "Material.Avalonia", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(assemblyName, "Material.Icons.Avalonia", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(assemblyName, "MicroCom.Runtime", StringComparison.OrdinalIgnoreCase))
             {
                 AddSharedAssembly(options, assembly);

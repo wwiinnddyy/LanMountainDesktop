@@ -1,4 +1,5 @@
 using System;
+using TKCode.Arc;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -51,7 +52,7 @@ public partial class ClockComponentEditor : ComponentEditorViewBase
                      .OrderBy(zone => zone.GetUtcOffset(DateTime.UtcNow))
                      .ThenBy(zone => zone.DisplayName, StringComparer.OrdinalIgnoreCase))
         {
-            var item = new ComboBoxItem
+            var item = new SelectItem
             {
                 Tag = timeZone.Id,
                 Content = TimeZoneDisplayLabel.Format(timeZone)
@@ -61,9 +62,9 @@ public partial class ClockComponentEditor : ComponentEditorViewBase
         }
 
         TimeZoneComboBox.SelectedItem = TimeZoneComboBox.Items
-            .OfType<ComboBoxItem>()
-            .FirstOrDefault(item => string.Equals(item.Tag as string, configuredTimeZoneId, StringComparison.OrdinalIgnoreCase))
-            ?? TimeZoneComboBox.Items.OfType<ComboBoxItem>().FirstOrDefault();
+            .OfType<SelectItem>()
+            .FirstOrDefault(item => string.Equals(item.Value as string, configuredTimeZoneId, StringComparison.OrdinalIgnoreCase))
+            ?? TimeZoneComboBox.Items.OfType<SelectItem>().FirstOrDefault();
         var secondHandMode = ClockSecondHandMode.Normalize(snapshot.DesktopClockSecondHandMode);
         TickRadioButton.IsChecked = string.Equals(secondHandMode, ClockSecondHandMode.Tick, StringComparison.OrdinalIgnoreCase);
         SweepRadioButton.IsChecked = string.Equals(secondHandMode, ClockSecondHandMode.Sweep, StringComparison.OrdinalIgnoreCase);
@@ -92,7 +93,7 @@ public partial class ClockComponentEditor : ComponentEditorViewBase
     private void SaveState()
     {
         var snapshot = LoadSnapshot();
-        snapshot.DesktopClockTimeZoneId = TimeZoneComboBox.SelectedItem is ComboBoxItem item && item.Tag is string timeZoneId
+        snapshot.DesktopClockTimeZoneId = TimeZoneComboBox.SelectedItem is SelectItem item && item.Value is string timeZoneId
             ? timeZoneId
             : TimeZoneInfo.Local.Id;
         snapshot.DesktopClockSecondHandMode = SweepRadioButton.IsChecked == true

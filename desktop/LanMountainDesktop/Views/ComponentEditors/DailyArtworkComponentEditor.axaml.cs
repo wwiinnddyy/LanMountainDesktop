@@ -1,4 +1,5 @@
 using System;
+using TKCode.Arc;
 using Avalonia.Controls;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
@@ -45,7 +46,7 @@ public partial class DailyArtworkComponentEditor : ComponentEditorViewBase
             return;
         }
 
-        var source = SourceComboBox.SelectedItem is ComboBoxItem item && item.Tag is string tag
+        var source = SourceComboBox.SelectedItem is SelectItem item && item.Value is string tag
             ? DailyArtworkMirrorSources.Normalize(tag)
             : DailyArtworkMirrorSources.Overseas;
 

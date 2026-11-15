@@ -1,0 +1,264 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:LanMountainDesktop.Views"
+        xmlns:arc="https://github.com/AIDotNet/TKCode.Arc"
+        xmlns:lucide="https://github.com/AIDotNet/TKCode.Arc/lucide"
+        x:Class="LanMountainDesktop.Views.ArcSettingsWindow"
+        x:CompileBindings="False"
+        Width="1180"
+        Height="900"
+        MinWidth="900"
+        MinHeight="600"
+        WindowStartupLocation="CenterScreen"
+        Background="{arc:ArcDesignTokenResource Background}"
+        Title="设置">
+
+    <!-- 真实设置页沿用 SettingsCardStyles 的容器宽度资源；窗口级补一份，避免独立构造时缺键。 -->
+    <Window.Resources>
+        <x:Double x:Key="SettingsContainerMaxWidth">960</x:Double>
+    </Window.Resources>
+
+    <Window.Styles>
+        <Style Selector="lucide|LucideIcon.icon-sm">
+            <Setter Property="Width" Value="16" />
+            <Setter Property="Height" Value="16" />
+        </Style>
+        <Style Selector="lucide|LucideIcon.icon-md">
+            <Setter Property="Width" Value="17" />
+            <Setter Property="Height" Value="17" />
+        </Style>
+
+        <!-- 侧栏导航项（数据驱动：由 RebuildNavigationItems 按 SettingsPageRegistry 生成） -->
+        <Style Selector="Border.nav-item">
+            <Setter Property="Height" Value="34" />
+            <Setter Property="CornerRadius" Value="{arc:ArcDesignTokenResource RadiusControl}" />
+            <Setter Property="Padding" Value="10,0" />
+            <Setter Property="Margin" Value="0,1" />
+        </Style>
+        <Style Selector="Border.nav-item StackPanel">
+            <Setter Property="Orientation" Value="Horizontal" />
+            <Setter Property="Spacing" Value="10" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Border.nav-item lucide|LucideIcon.icon-sm">
+            <Setter Property="Foreground" Value="{arc:ArcDesignTokenResource TextSecondary}" />
+        </Style>
+        <Style Selector="Border.nav-item TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="FontSize" Value="{arc:ArcDesignTokenResource TypeSM}" />
+            <Setter Property="Foreground" Value="{arc:ArcDesignTokenResource TextSecondary}" />
+        </Style>
+        <Style Selector="Border.nav-item:pointerover">
+            <Setter Property="Background" Value="{arc:ArcDesignTokenResource AccentSubtle}" />
+        </Style>
+        <Style Selector="Border.nav-item.selected">
+            <Setter Property="Background" Value="{arc:ArcDesignTokenResource AccentSubtle}" />
+        </Style>
+        <Style Selector="Border.nav-item.selected lucide|LucideIcon.icon-sm">
+            <Setter Property="Foreground" Value="{arc:ArcDesignTokenResource Accent}" />
+        </Style>
+        <Style Selector="Border.nav-item.selected TextBlock">
+            <Setter Property="Foreground" Value="{arc:ArcDesignTokenResource Accent}" />
+            <Setter Property="FontWeight" Value="Medium" />
+        </Style>
+        <Style Selector="TextBlock.nav-section">
+            <Setter Property="FontSize" Value="{arc:ArcDesignTokenResource TypeXS}" />
+            <Setter Property="Foreground" Value="{arc:ArcDesignTokenResource TextMuted}" />
+            <Setter Property="FontWeight" Value="Medium" />
+            <Setter Property="Margin" Value="10,14,0,4" />
+        </Style>
+
+        <!-- 卡片式容器：底部操作栏与抽屉标题沿用样张的卡片语言 -->
+        <Style Selector="Border.settings-card">
+            <Setter Property="Background" Value="{arc:ArcDesignTokenResource Surface}" />
+            <Setter Property="BorderBrush" Value="{arc:ArcDesignTokenResource BorderSubtle}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="{arc:ArcDesignTokenResource RadiusPanel}" />
+            <Setter Property="Padding" Value="20,18" />
+        </Style>
+        <Style Selector="Border.icon-chip">
+            <Setter Property="Width" Value="36" />
+            <Setter Property="Height" Value="36" />
+            <Setter Property="CornerRadius" Value="{arc:ArcDesignTokenResource RadiusControl}" />
+            <Setter Property="Background" Value="{arc:ArcDesignTokenResource AccentSubtle}" />
+        </Style>
+        <Style Selector="Border.icon-chip lucide|LucideIcon.icon-md">
+            <Setter Property="Foreground" Value="{arc:ArcDesignTokenResource Accent}" />
+        </Style>
+        <Style Selector="TextBlock.page-title">
+            <Setter Property="FontSize" Value="{arc:ArcDesignTokenResource Type3XL}" />
+            <Setter Property="FontWeight" Value="Medium" />
+            <Setter Property="Foreground" Value="{arc:ArcDesignTokenResource Foreground}" />
+        </Style>
+        <Style Selector="TextBlock.page-subtitle">
+            <Setter Property="FontSize" Value="{arc:ArcDesignTokenResource TypeSM}" />
+            <Setter Property="Foreground" Value="{arc:ArcDesignTokenResource TextSecondary}" />
+        </Style>
+        <Style Selector="TextBlock.footer-hint">
+            <Setter Property="FontSize" Value="{arc:ArcDesignTokenResource TypeSM}" />
+            <Setter Property="Foreground" Value="{arc:ArcDesignTokenResource TextMuted}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TextBlock.drawer-title">
+            <Setter Property="FontSize" Value="{arc:ArcDesignTokenResource TypeBase}" />
+            <Setter Property="FontWeight" Value="Medium" />
+            <Setter Property="Foreground" Value="{arc:ArcDesignTokenResource Foreground}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </Window.Styles>
+
+    <Grid x:Name="RootGrid" ColumnDefinitions="248,*">
+
+        <!-- 侧栏 -->
+        <Border Grid.Column="0"
+                Background="{arc:ArcDesignTokenResource SurfaceMuted}"
+                BorderBrush="{arc:ArcDesignTokenResource BorderSubtle}"
+                BorderThickness="0,0,1,0">
+            <Grid RowDefinitions="Auto,Auto,*,Auto">
+
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10" Margin="16,16,12,8">
+                    <Border Classes="icon-chip"
+                            Background="{arc:ArcDesignTokenResource Accent}">
+                        <lucide:LucideIcon Classes="icon-md"
+                                           Kind="Mountain"
+                                           Foreground="{arc:ArcDesignTokenResource AccentForeground}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <TextBlock Text="LanMountain 设置"
+                               VerticalAlignment="Center"
+                               FontSize="{arc:ArcDesignTokenResource TypeBase}"
+                               FontWeight="Medium"
+                               Foreground="{arc:ArcDesignTokenResource Foreground}" />
+                </StackPanel>
+
+                <!-- 跨页设置搜索：接 SettingsSearchService（AutoCompleteBox + 自定义过滤） -->
+                <AutoCompleteBox x:Name="SettingsSearchBox"
+                                 Grid.Row="1"
+                                 Margin="12,6,12,6"
+                                 MaxDropDownHeight="420"
+                                 FilterMode="Custom"
+                                 ItemFilter="{x:Static local:ArcSettingsWindow.SettingsSearchFilter}"
+                                 ItemsSource="{Binding SearchResults}"
+                                 SelectedItem="{Binding SelectedSearchResult, Mode=TwoWay}"
+                                 PlaceholderText="搜索设置…"
+                                 KeyUp="OnSearchBoxKeyUp"
+                                 SelectionChanged="OnSearchBoxSelectionChanged">
+                    <AutoCompleteBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid RowDefinitions="Auto,Auto" Margin="4,6" MinWidth="200">
+                                <TextBlock Text="{Binding DisplayTitle}"
+                                           FontWeight="Medium"
+                                           TextTrimming="CharacterEllipsis" />
+                                <TextBlock Grid.Row="1"
+                                           Text="{Binding PageTitle}"
+                                           FontSize="12"
+                                           Opacity="0.72"
+                                           TextTrimming="CharacterEllipsis" />
+                            </Grid>
+                        </DataTemplate>
+                    </AutoCompleteBox.ItemTemplate>
+                </AutoCompleteBox>
+
+                <!-- 导航项由 code-behind 依据 SettingsPageRegistry 分组生成 -->
+                <ScrollViewer Grid.Row="2" Padding="12,4,12,8">
+                    <StackPanel x:Name="NavItemsHost" Spacing="0" />
+                </ScrollViewer>
+
+                <Border Grid.Row="3" Margin="12,8,12,14"
+                        Padding="12,10"
+                        CornerRadius="{arc:ArcDesignTokenResource RadiusControl}"
+                        Background="{arc:ArcDesignTokenResource Surface}"
+                        BorderBrush="{arc:ArcDesignTokenResource BorderSubtle}"
+                        BorderThickness="1"
+                        IsVisible="{Binding IsRestartRequested}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="部分更改需要重启后生效"
+                                   FontSize="{arc:ArcDesignTokenResource TypeSM}"
+                                   Foreground="{arc:ArcDesignTokenResource TextSecondary}"
+                                   TextWrapping="Wrap" />
+                        <arc:Button x:Name="RestartButton" Variant="Secondary"
+                                    HorizontalAlignment="Stretch"
+                                    Content="{Binding RestartButtonText}"
+                                    Click="OnRestartNowClick" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- 内容区 -->
+        <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto">
+
+            <Grid Grid.Row="0" ColumnDefinitions="Auto,*" Margin="40,32,48,20">
+                <arc:Button x:Name="BackButton"
+                            Grid.Column="0"
+                            Variant="Ghost"
+                            Width="34" Height="34"
+                            Margin="0,0,12,0"
+                            VerticalAlignment="Center"
+                            ToolTip.Tip="返回"
+                            IsVisible="{Binding CanGoBack}"
+                            Click="OnBackButtonClick">
+                    <lucide:LucideIcon Classes="icon-sm" Kind="ArrowLeft" />
+                </arc:Button>
+                <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                    <TextBlock Classes="page-title" Text="{Binding CurrentPageTitle}" />
+                    <TextBlock Classes="page-subtitle" Text="{Binding CurrentPageDescription}" />
+                </StackPanel>
+            </Grid>
+
+            <!-- 真实设置页（SettingsPageDescriptor.CreatePage）在此承载，功能与绑定全部复用已验证的 21 页 -->
+            <ContentControl x:Name="ContentFrame"
+                            Grid.Row="1"
+                            Margin="40,0,48,0" />
+
+            <!-- 底部操作栏：样张视觉保留；设置是即时保存的，故「保存更改」为确认并关闭 -->
+            <Border x:Name="FooterBar" Grid.Row="2" Classes="settings-card" Margin="40,8,48,24">
+                <Grid ColumnDefinitions="*,Auto,Auto">
+                    <TextBlock Grid.Column="0" Classes="footer-hint"
+                               Text="更改会自动保存并即时生效" />
+                    <arc:Button x:Name="ResetButton"
+                                Grid.Column="1"
+                                Variant="Secondary"
+                                Margin="0,0,10,0"
+                                VerticalAlignment="Center"
+                                Content="重置为默认"
+                                Click="OnResetDefaultsClick" />
+                    <arc:Button x:Name="SaveButton"
+                                Grid.Column="2"
+                                VerticalAlignment="Center"
+                                Content="保存更改"
+                                Click="OnSaveClick" />
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- 抽屉：AirApp 目录详情 / 隐私政策等页面通过 ISettingsPageHostContext.OpenDrawer 打开 -->
+        <Grid x:Name="DrawerLayer" Grid.ColumnSpan="2" IsVisible="{Binding IsDrawerOpen}">
+            <Border Background="{arc:ArcDesignTokenResource Background}"
+                    Opacity="0.55"
+                    PointerPressed="OnDrawerOverlayPointerPressed" />
+            <Border x:Name="DrawerPanel"
+                    HorizontalAlignment="Right"
+                    Width="380"
+                    Background="{arc:ArcDesignTokenResource Surface}"
+                    BorderBrush="{arc:ArcDesignTokenResource BorderSubtle}"
+                    BorderThickness="1,0,0,0"
+                    Padding="20">
+                <Grid RowDefinitions="Auto,*">
+                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+                        <TextBlock x:Name="DrawerTitleTextBlock"
+                                   Classes="drawer-title"
+                                   Text="{Binding DrawerTitle}" />
+                        <arc:Button Grid.Column="1" Variant="Ghost"
+                                    Width="32" Height="32"
+                                    ToolTip.Tip="关闭"
+                                    Click="OnCloseDrawerClick">
+                            <lucide:LucideIcon Classes="icon-sm" Kind="X" />
+                        </arc:Button>
+                    </Grid>
+                    <ContentControl x:Name="DrawerContentHost" Grid.Row="1" Margin="0,16,0,0" />
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

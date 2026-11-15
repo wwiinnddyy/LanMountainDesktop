@@ -1,9 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:arc="https://github.com/AIDotNet/TKCode.Arc"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:material="clr-namespace:Material.Styles;assembly=Material.Styles"
-             xmlns:materialAssists="clr-namespace:Material.Styles.Assists;assembly=Material.Styles"
              mc:Ignorable="d"
              x:Class="LanMountainDesktop.Views.ComponentEditors.ClassScheduleComponentEditor">
     <StackPanel Spacing="16">
@@ -24,20 +23,20 @@
             <StackPanel Spacing="12">
                 <TextBlock x:Name="ColorSchemeHeaderTextBlock"
                            Classes="component-editor-section-title" />
-                <ComboBox x:Name="ColorSchemeComboBox"
+                <arc:Select x:Name="ColorSchemeComboBox"
                           Classes="component-editor-select"
                           HorizontalAlignment="Stretch"
                           SelectionChanged="OnColorSchemeSelectionChanged">
-                    <ComboBoxItem x:Name="DefaultColorSchemeItem"
+                    <arc:SelectItem x:Name="DefaultColorSchemeItem"
                                   Classes="component-editor-select-item"
-                                  Tag="" />
-                    <ComboBoxItem x:Name="FollowSystemColorSchemeItem"
+                                  Value="" />
+                    <arc:SelectItem x:Name="FollowSystemColorSchemeItem"
                                   Classes="component-editor-select-item"
-                                  Tag="follow_system" />
-                    <ComboBoxItem x:Name="UseNativeColorSchemeItem"
+                                  Value="follow_system" />
+                    <arc:SelectItem x:Name="UseNativeColorSchemeItem"
                                   Classes="component-editor-select-item"
-                                  Tag="native" />
-                </ComboBox>
+                                  Value="native" />
+                </arc:Select>
             </StackPanel>
         </Border>
 
@@ -58,18 +57,18 @@
                     <StackPanel Grid.Column="1" Spacing="8" Width="160">
                         <TextBlock x:Name="WeekCycleLabel"
                                    Classes="component-editor-secondary-text" />
-                        <ComboBox x:Name="WeekCycleComboBox"
+                        <arc:Select x:Name="WeekCycleComboBox"
                                   Classes="component-editor-select"
                                   HorizontalAlignment="Stretch"
                                   SelectionChanged="OnWeekCycleSelectionChanged">
-                            <ComboBoxItem Content="1" Tag="1" />
-                            <ComboBoxItem Content="2" Tag="2" />
-                            <ComboBoxItem Content="3" Tag="3" />
-                            <ComboBoxItem Content="4" Tag="4" />
-                            <ComboBoxItem Content="5" Tag="5" />
-                            <ComboBoxItem Content="6" Tag="6" />
-                            <ComboBoxItem Content="7" Tag="7" />
-                        </ComboBox>
+                            <arc:SelectItem Content="1" Value="1" />
+                            <arc:SelectItem Content="2" Value="2" />
+                            <arc:SelectItem Content="3" Value="3" />
+                            <arc:SelectItem Content="4" Value="4" />
+                            <arc:SelectItem Content="5" Value="5" />
+                            <arc:SelectItem Content="6" Value="6" />
+                            <arc:SelectItem Content="7" Value="7" />
+                        </arc:Select>
                     </StackPanel>
                 </Grid>
                 
@@ -83,7 +82,7 @@
         <Border Classes="component-editor-card"
                 Padding="20">
             <StackPanel Spacing="12">
-                <Button x:Name="AddScheduleButton"
+                <arc:Button x:Name="AddScheduleButton"
                         HorizontalAlignment="Left"
                         Classes="accent"
                         Padding="16,10"

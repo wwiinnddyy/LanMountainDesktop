@@ -186,10 +186,12 @@ public sealed class ColorLiteralRatchetTests
     // （与键盘特殊键、通知盒未读/已读同形）。已并进 #G1-CY 那条"第三层表面"的口径，另加 #112 记账。
     // 2026-10-20 单窗口桌面板重构：DesktopWidgetWindow.axaml 随每组件一窗实现一起删除，
     // 标记面带走 1 个裸色值（编辑态边框 #0078D4）。319 -> 318。
-    private const int MarkupColorLiteralCeiling = 318;
+    // 2026-11-14 Arc Phase 1.5：摘除 Material.Avalonia，ComponentEditorWindow.axaml 的
+    // CustomMaterialTheme 行（PrimaryColor/SecondaryColor 两处种子）随之删除。318 -> 316。
+    private const int MarkupColorLiteralCeiling = 316;
 
     // 总数对账（与 .cs 面同一个套路：这条先于上限红，用来分"真收口"与"判据少看一片"）。
-    private const int MarkupMeasuredTotal = 318;
+    private const int MarkupMeasuredTotal = 316;
 
     private const int MarkupFileFloor = 38;
 

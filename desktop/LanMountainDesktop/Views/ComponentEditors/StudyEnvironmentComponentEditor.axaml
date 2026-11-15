@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:arc="https://github.com/AIDotNet/TKCode.Arc"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:ui="using:FluentAvalonia.UI.Controls"
@@ -23,20 +24,20 @@
             <StackPanel Spacing="12">
                 <TextBlock x:Name="ColorSchemeHeaderTextBlock"
                            Classes="component-editor-section-title" />
-                <ComboBox x:Name="ColorSchemeComboBox"
+                <arc:Select x:Name="ColorSchemeComboBox"
                           Classes="component-editor-select"
                           HorizontalAlignment="Stretch"
                           SelectionChanged="OnColorSchemeSelectionChanged">
-                    <ComboBoxItem x:Name="DefaultColorSchemeItem"
+                    <arc:SelectItem x:Name="DefaultColorSchemeItem"
                                   Classes="component-editor-select-item"
-                                  Tag="" />
-                    <ComboBoxItem x:Name="FollowSystemColorSchemeItem"
+                                  Value="" />
+                    <arc:SelectItem x:Name="FollowSystemColorSchemeItem"
                                   Classes="component-editor-select-item"
-                                  Tag="follow_system" />
-                    <ComboBoxItem x:Name="UseNativeColorSchemeItem"
+                                  Value="follow_system" />
+                    <arc:SelectItem x:Name="UseNativeColorSchemeItem"
                                   Classes="component-editor-select-item"
-                                  Tag="native" />
-                </ComboBox>
+                                  Value="native" />
+                </arc:Select>
             </StackPanel>
         </Border>
 
@@ -45,7 +46,7 @@
             <StackPanel Spacing="12">
                 <TextBlock
                            Classes="component-editor-section-title" />
-                <ToggleSwitch x:Name="DisplayDbToggleSwitch"
+                <arc:Switch x:Name="DisplayDbToggleSwitch"
                               IsCheckedChanged="OnToggleChanged" />
             </StackPanel>
         </Border>
@@ -55,7 +56,7 @@
             <StackPanel Spacing="12">
                 <TextBlock
                            Classes="component-editor-section-title" />
-                <ToggleSwitch x:Name="DbfsToggleSwitch"
+                <arc:Switch x:Name="DbfsToggleSwitch"
                               IsCheckedChanged="OnToggleChanged" />
             </StackPanel>
         </Border>

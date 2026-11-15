@@ -38,7 +38,7 @@ internal sealed class SettingsWindowService : ISettingsWindowService
     private readonly IAppearanceThemeService _appearanceThemeService;
     private readonly LocalizationService _localizationService;
     private SettingsWindowViewModel _viewModel = null!;
-    private SettingsWindow? _window;
+    private Window? _window;
 
     public SettingsWindowService(
         ISettingsPageRegistry pageRegistry,
@@ -63,11 +63,13 @@ internal sealed class SettingsWindowService : ISettingsWindowService
         _pageRegistry.Rebuild();
         _window ??= CreateWindow();
         var appearanceSnapshot = _appearanceThemeService.GetCurrent();
-        _window.ApplyChromeMode(appearanceSnapshot.UseSystemChrome);
-        ApplyThemeVariantAndResources(_window);
 
-        var targetPageId = request.PageId ?? _window.ViewModel.CurrentPageId;
-        _window.ReloadPages(targetPageId);
+        // 功能补齐后：重做版窗口与旧版回退窗口共用同一套行为面（chrome 模式、主题资源、页面重建），
+        // 由静态调度器按实际窗口类型分派，不再把能力写死在某一个类上。
+        ApplyChromeModeOnWindow(_window, appearanceSnapshot.UseSystemChrome);
+        ApplyThemeVariantAndResources(_window);
+        var targetPageId = request.PageId ?? _viewModel.CurrentPageId;
+        ReloadPagesOnWindow(_window, targetPageId);
 
         if (!_window.IsVisible)
         {
@@ -93,22 +95,23 @@ internal sealed class SettingsWindowService : ISettingsWindowService
         _window?.Close();
     }
 
-    private SettingsWindow CreateWindow()
+    private Window CreateWindow()
     {
         var regionState = _settingsFacade.Region.Get();
         var languageCode = regionState.LanguageCode ?? LocalizationService.DefaultLanguageCode;
 
         _viewModel = new SettingsWindowViewModel(_localizationService, languageCode).Initialize();
 
-        var appearanceSnapshot = _appearanceThemeService.GetCurrent();
-        var useSystemChrome = appearanceSnapshot.UseSystemChrome;
-
-        var window = new SettingsWindow(
+        // 用户拍板的「彻底重做版」：注入完整服务图（注册表 / 生命周期 / 设置门面 / VM），
+        // 使导航、搜索、动态 AirApp 页、语言与 Dev 模式刷新全部真实可用（§11.3）。
+        var window = new ArcSettingsWindow(
             _viewModel,
             _pageRegistry,
             _hostApplicationLifecycle,
-            useSystemChrome);
-        window.ShowInTaskbar = true;
+            _settingsFacade)
+        {
+            ShowInTaskbar = true
+        };
         window.Closed += (_, _) =>
         {
             _window = null;
@@ -117,7 +120,7 @@ internal sealed class SettingsWindowService : ISettingsWindowService
         return window;
     }
 
-    private void CenterWindowLater(SettingsWindow window, SettingsWindowOpenRequest request)
+    private void CenterWindowLater(Window window, SettingsWindowOpenRequest request)
     {
         Dispatcher.UIThread.Post(
             () =>
@@ -132,7 +135,7 @@ internal sealed class SettingsWindowService : ISettingsWindowService
             DispatcherPriority.Background);
     }
 
-    private static void CenterWindow(SettingsWindow window, SettingsWindowOpenRequest request)
+    private static void CenterWindow(Window window, SettingsWindowOpenRequest request)
     {
         var referenceWorkingArea =
             request.ScreenReferenceWindow is { IsVisible: true } screenReferenceWindow &&
@@ -203,6 +206,50 @@ internal sealed class SettingsWindowService : ISettingsWindowService
         StateChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    // 重做版（ArcSettingsWindow）与旧版回退（SettingsWindow）共用同一份行为面；
+    // 集中分派，避免把能力写死在某一个窗口类型上（§11.3）。
+    private static void ReloadPagesOnWindow(Window? window, string? pageId)
+    {
+        if (window is ArcSettingsWindow arc)
+        {
+            arc.ReloadPages(pageId);
+        }
+        else if (window is SettingsWindow legacy)
+        {
+            legacy.ReloadPages(pageId);
+        }
+    }
+
+    private static void RefreshShellTextOnWindow(Window? window)
+    {
+        if (window is ArcSettingsWindow arc)
+        {
+            arc.RefreshShellText();
+        }
+        else if (window is SettingsWindow legacy)
+        {
+            legacy.RefreshShellText();
+        }
+    }
+
+    // 重做版窗口使用系统原生标题栏、圆角走 Arc 令牌，这两项都不需要按窗口类型切换；
+    // 只有旧版回退窗口（FAAppWindow 自绘标题栏）才需要 ApplyChromeMode / ApplyFluentCornerRadius。
+    private static void ApplyChromeModeOnWindow(Window? window, bool useSystemChrome)
+    {
+        if (window is SettingsWindow legacy)
+        {
+            legacy.ApplyChromeMode(useSystemChrome);
+        }
+    }
+
+    private static void ApplyFluentCornerRadiusOnWindow(Window? window)
+    {
+        if (window is SettingsWindow legacy)
+        {
+            legacy.ApplyFluentCornerRadius();
+        }
+    }
+
     private void OnSettingsChanged(object? sender, SettingsChangedEvent e)
     {
         _ = sender;
@@ -247,14 +294,14 @@ internal sealed class SettingsWindowService : ISettingsWindowService
                 _localizationService.ClearCache();
                 _viewModel.RefreshLanguage(regionState.LanguageCode);
                 _pageRegistry.Rebuild();
-                _window.ReloadPages(devModeChanged ? "dev" : _viewModel.CurrentPageId);
-                _window.RefreshShellText();
+                ReloadPagesOnWindow(_window, devModeChanged ? "dev" : _viewModel.CurrentPageId);
+                RefreshShellTextOnWindow(_window);
             }
 
             if (themeChanged)
             {
                 var appearanceSnapshot = _appearanceThemeService.GetCurrent();
-                _window.ApplyChromeMode(appearanceSnapshot.UseSystemChrome);
+                ApplyChromeModeOnWindow(_window, appearanceSnapshot.UseSystemChrome);
                 ApplyTheme(_window);
             }
         }, DispatcherPriority.Background);
@@ -264,7 +311,7 @@ internal sealed class SettingsWindowService : ISettingsWindowService
     {
         Dispatcher.UIThread.Post(() =>
         {
-            if (_window is null || _viewModel is null)
+            if (_window is null)
             {
                 return;
             }
@@ -275,32 +322,32 @@ internal sealed class SettingsWindowService : ISettingsWindowService
             if (snapshot.IsDevModeEnabled && !devPageVisible)
             {
                 _pageRegistry.Rebuild();
-                _window.ReloadPages("dev");
+                ReloadPagesOnWindow(_window, "dev");
             }
             else if (!snapshot.IsDevModeEnabled && devPageVisible)
             {
                 _pageRegistry.Rebuild();
-                _window.ReloadPages(null);
+                ReloadPagesOnWindow(_window, null);
             }
         }, DispatcherPriority.Background);
     }
 
-    private static void ApplyThemeVariantAndResources(SettingsWindow window, IAppearanceThemeService appearanceThemeService)
+    private static void ApplyThemeVariantAndResources(Window window, IAppearanceThemeService appearanceThemeService)
     {
         var appearanceSnapshot = appearanceThemeService.GetCurrent();
         window.RequestedThemeVariant = appearanceSnapshot.IsNightMode
             ? ThemeVariant.Dark
             : ThemeVariant.Light;
         appearanceThemeService.ApplyThemeResources(window.Resources);
-        window.ApplyFluentCornerRadius();
+        ApplyFluentCornerRadiusOnWindow(window);
     }
 
-    private void ApplyThemeVariantAndResources(SettingsWindow window)
+    private void ApplyThemeVariantAndResources(Window window)
     {
         ApplyThemeVariantAndResources(window, _appearanceThemeService);
     }
 
-    private void ApplyTheme(SettingsWindow window)
+    private void ApplyTheme(Window window)
     {
         ApplyThemeVariantAndResources(window, _appearanceThemeService);
         _appearanceThemeService.ApplyWindowMaterial(window, MaterialSurfaceRole.SettingsWindowBackground);

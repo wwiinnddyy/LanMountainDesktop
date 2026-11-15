@@ -1,6 +1,6 @@
 using System;
 
-using Avalonia.Controls;
+using TKCode.Arc;
 
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Views.ComponentEditors;
@@ -94,7 +94,7 @@ public sealed class ComponentColorSchemeSelectionTests
     [Fact]
     public void Resolve_KeepsTheSelectedTag()
     {
-        var native = new ComboBoxItem { Tag = ThemeAppearanceValues.ColorSchemeNative };
+        var native = new SelectItem { Value = ThemeAppearanceValues.ColorSchemeNative };
 
         Assert.Equal(
             ThemeAppearanceValues.ColorSchemeNative,
@@ -105,8 +105,8 @@ public sealed class ComponentColorSchemeSelectionTests
     /// 认不出选项时落空串（＝第三档），而不是落 <c>follow_system</c>、也不是 null、也不抛。
     /// 2026-09-30 之前这里落的是「跟随系统」，那是两档时代的兜底；三档之后"认不出"与"没设置"
     /// 必须是同一个值，否则它与上面那格判档就不是同一条规则了。
-    /// 三种形态都钉：没选（null）、选项不是 <see cref="ComboBoxItem"/>、选项没带字符串 Tag——
-    /// 其中"带 Tag 但不是 ComboBoxItem"那一格钉的是"只认 ComboBoxItem"：
+    /// 三种形态都钉：没选（null）、选项不是 <see cref="SelectItem"/>、选项没带字符串 Tag——
+    /// 其中"带 Tag 但不是 SelectItem"那一格钉的是"只认 SelectItem"：
     /// 把判据放宽到 <c>ContentControl</c> 之类，前两种形态照样绿，只有这一格会红。
     /// </summary>
     [Theory]
@@ -116,9 +116,9 @@ public sealed class ComponentColorSchemeSelectionTests
         => Assert.Equal(string.Empty, ComponentColorSchemeSelection.Resolve(selected));
 
     [Fact]
-    public void Resolve_IgnoresATagThatIsNotOnAComboBoxItem()
+    public void Resolve_IgnoresATagThatIsNotOnASelectItem()
     {
-        var taggedButNotAChoice = new Label { Tag = ThemeAppearanceValues.ColorSchemeNative };
+        var taggedButNotAChoice = new Avalonia.Controls.TextBlock { Tag = ThemeAppearanceValues.ColorSchemeNative };
 
         Assert.Equal(string.Empty, ComponentColorSchemeSelection.Resolve(taggedButNotAChoice));
     }
@@ -126,7 +126,7 @@ public sealed class ComponentColorSchemeSelectionTests
     [Fact]
     public void Resolve_TagThatIsNotAString_FallsBackToTheUnsetValue()
     {
-        var tagged = new ComboBoxItem { Tag = 7 };
+        var tagged = new SelectItem { Value = 7 };
 
         Assert.Equal(string.Empty, ComponentColorSchemeSelection.Resolve(tagged));
     }
@@ -184,19 +184,20 @@ public sealed class ComponentColorSchemeSelectionTests
 
         var itemEnd = markup.IndexOf("/>", itemStart, StringComparison.Ordinal);
         Assert.True(itemEnd > itemStart, $"{editor} 的第三档那一项没写完");
+        // D2 迁移：SelectItem 的未设置占位属性从 Tag 改名为 Value（语义不变：空串＝没设置过）
         Assert.Contains(
-            "Tag=\"\"",
+            "Value=\"\"",
             markup.AsSpan(itemStart, itemEnd - itemStart).ToString(),
             StringComparison.Ordinal);
     }
 
-    /// <summary>三档各一个项，Tag 与三家 XAML 里的写法逐字相同（第三档是空串）。
+    /// <summary>三档各一个项，Value 与三家 XAML 里的写法逐字相同（第三档是空串）。
     /// 夹具在测试方法里现造：AvaloniaObject 带线程亲和，跨用例共享静态实例会把线程检查引进来。</summary>
-    private static (ComboBoxItem Default, ComboBoxItem FollowSystem, ComboBoxItem Native) NewItems() =>
+    private static (SelectItem Default, SelectItem FollowSystem, SelectItem Native) NewItems() =>
     (
-        new ComboBoxItem { Tag = string.Empty },
-        new ComboBoxItem { Tag = ThemeAppearanceValues.ColorSchemeFollowSystem },
-        new ComboBoxItem { Tag = ThemeAppearanceValues.ColorSchemeNative }
+        new SelectItem { Value = string.Empty },
+        new SelectItem { Value = ThemeAppearanceValues.ColorSchemeFollowSystem },
+        new SelectItem { Value = ThemeAppearanceValues.ColorSchemeNative }
     );
 
     private static string RepoRoot()

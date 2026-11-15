@@ -10,6 +10,8 @@ using LanMountainDesktop.Models;
 using LanMountainDesktop.AirApps;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
+using TKCode.Arc;
+using TKCode.Arc.Fonts;
 
 namespace LanMountainDesktop;
 
@@ -89,6 +91,11 @@ public sealed class Program
         var builder = AppBuilder.Configure<App>()
             .UsePlatformDetect()
             .WithInterFont()
+            .WithArcFonts()
+            .UseArc(arc => arc
+                .UseArcControls()
+                .UseArcBlocks()
+                .WithTheme(t => t.Appearance(ArcAppearance.System)))
             .LogToTrace();
 
         if (OperatingSystem.IsWindows())

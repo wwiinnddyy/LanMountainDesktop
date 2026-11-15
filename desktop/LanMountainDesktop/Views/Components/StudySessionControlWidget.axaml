@@ -2,7 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:fi="using:FluentIcons.Avalonia"
              mc:Ignorable="d"
              d:DesignWidth="300"
              d:DesignHeight="150"
@@ -49,10 +49,10 @@
                         Background="#2DFFFFFF"
                         BorderBrush="#40FFFFFF"
                         BorderThickness="1">
-                    <mi:MaterialIcon x:Name="ActionIcon"
-                                     Kind="Play"
-                                     Width="22"
-                                     Height="22" />
+                    <fi:SymbolIcon x:Name="ActionIcon"
+                                   Symbol="Play"
+                                   Width="22"
+                                   Height="22" />
                 </Border>
             </Button>
         </Grid>

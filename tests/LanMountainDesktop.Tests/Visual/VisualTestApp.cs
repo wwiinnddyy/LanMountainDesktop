@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Skia;
+using TKCode.Arc;
 
 using LanMountainDesktop;
 
@@ -30,5 +31,11 @@ public static class VisualTestApp
         {
             UseHeadlessDrawing = false
         })
-        .WithInterFont();
+        .WithInterFont()
+        // Arc 设计令牌（Phase 2.2 起 SettingsCardStyles 直接读 ArcDesignTokenResource）：
+        // 测试宿主也必须注册 Arc，否则令牌解析不到，卡片背景全空。
+        // §10.1：21 个设置页用 arc:SettingsGroup/SettingsRow（TKCode.Arc.Blocks），
+        // ControlTheme 必须 .UseArcBlocks() 注册；只注册 Controls 会让 Blocks 控件"有对象无模板"、
+        // 子元素不进可视化树——headless 里就是"整页空白"的同款假绿。与 Program.cs 保持一致。
+        .UseArc(arc => arc.UseArcControls().UseArcBlocks());
 }

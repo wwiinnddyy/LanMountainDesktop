@@ -1,10 +1,9 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:lucide="https://github.com/AIDotNet/TKCode.Arc/lucide"
         xmlns:vm="using:LanMountainDesktop.ViewModels"
-        xmlns:ui="using:FluentAvalonia.UI.Controls"
         xmlns:fi="using:FluentIcons.Avalonia"
         xmlns:ic="using:FluentIcons.Avalonia"
-        xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         xmlns:comp="using:LanMountainDesktop.Views.Components"
 
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -60,7 +59,7 @@
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
 
-        <Style Selector="mi|MaterialIcon.taskbar-profile-popup-action-icon">
+        <Style Selector="fi|SymbolIcon.taskbar-profile-popup-action-icon">
             <Setter Property="Foreground" Value="{DynamicResource TaskbarProfilePopupAccentBrush}" />
             <Setter Property="Width" Value="20" />
             <Setter Property="Height" Value="20" />
@@ -454,7 +453,7 @@
                                                                     Click="OnOpenSettingsClick">
                                                                 <Grid ColumnDefinitions="Auto,*"
                                                                       ColumnSpacing="12">
-                                                                    <mi:MaterialIcon Classes="taskbar-profile-popup-action-icon"
+                                                                    <lucide:LucideIcon Classes="taskbar-profile-popup-action-icon"
                                                                                      Kind="Settings" />
                                                                     <TextBlock x:Name="TaskbarProfileSettingsActionTextBlock"
                                                                                Grid.Column="1"
@@ -468,8 +467,8 @@
                                                                     Click="OnOpenComponentLibraryClick">
                                                                 <Grid ColumnDefinitions="Auto,*"
                                                                       ColumnSpacing="12">
-                                                                    <mi:MaterialIcon Classes="taskbar-profile-popup-action-icon"
-                                                                                     Kind="Pencil" />
+                                                                    <lucide:LucideIcon Classes="taskbar-profile-popup-action-icon"
+                                                                                     Kind="PenLine" />
                                                                     <TextBlock x:Name="TaskbarProfileDesktopEditActionTextBlock"
                                                                                Grid.Column="1"
                                                                                Classes="taskbar-profile-popup-action-text"
@@ -482,7 +481,7 @@
                                                                     Click="OnPowerMenuEnterClick">
                                                                 <Grid ColumnDefinitions="Auto,*"
                                                                       ColumnSpacing="12">
-                                                                    <mi:MaterialIcon Classes="taskbar-profile-popup-action-icon"
+                                                                    <lucide:LucideIcon Classes="taskbar-profile-popup-action-icon"
                                                                                      Kind="Power" />
                                                                     <TextBlock x:Name="TaskbarProfilePowerActionTextBlock"
                                                                                Grid.Column="1"
@@ -521,7 +520,7 @@
                                                                     Click="OnPowerMenuBackClick">
                                                                 <Grid ColumnDefinitions="Auto,*"
                                                                       ColumnSpacing="12">
-                                                                    <mi:MaterialIcon Classes="taskbar-profile-popup-action-icon"
+                                                                    <lucide:LucideIcon Classes="taskbar-profile-popup-action-icon"
                                                                                      Kind="ArrowLeft" />
                                                                     <TextBlock x:Name="TaskbarPowerBackTextBlock"
                                                                                Grid.Column="1"
@@ -544,7 +543,7 @@
                                                                     Click="OnPowerShutdownClick">
                                                                 <Grid ColumnDefinitions="Auto,*"
                                                                       ColumnSpacing="12">
-                                                                    <mi:MaterialIcon Classes="taskbar-profile-popup-action-icon"
+                                                                    <lucide:LucideIcon Classes="taskbar-profile-popup-action-icon"
                                                                                      Kind="Power" />
                                                                     <TextBlock x:Name="PowerShutdownTextBlock"
                                                                                Grid.Column="1"
@@ -558,8 +557,8 @@
                                                                     Click="OnPowerRestartClick">
                                                                 <Grid ColumnDefinitions="Auto,*"
                                                                       ColumnSpacing="12">
-                                                                    <mi:MaterialIcon Classes="taskbar-profile-popup-action-icon"
-                                                                                     Kind="Refresh" />
+                                                                    <lucide:LucideIcon Classes="taskbar-profile-popup-action-icon"
+                                                                                     Kind="RefreshCw" />
                                                                     <TextBlock x:Name="PowerRestartTextBlock"
                                                                                Grid.Column="1"
                                                                                Classes="taskbar-profile-popup-action-text"
@@ -572,8 +571,8 @@
                                                                     Click="OnPowerLogoutClick">
                                                                 <Grid ColumnDefinitions="Auto,*"
                                                                       ColumnSpacing="12">
-                                                                    <mi:MaterialIcon Classes="taskbar-profile-popup-action-icon"
-                                                                                     Kind="ExitToApp" />
+                                                                    <lucide:LucideIcon Classes="taskbar-profile-popup-action-icon"
+                                                                                     Kind="LogOut" />
                                                                     <TextBlock x:Name="PowerLogoutTextBlock"
                                                                                Grid.Column="1"
                                                                                Classes="taskbar-profile-popup-action-text"
@@ -586,8 +585,8 @@
                                                                     Click="OnPowerSleepClick">
                                                                 <Grid ColumnDefinitions="Auto,*"
                                                                       ColumnSpacing="12">
-                                                                    <mi:MaterialIcon Classes="taskbar-profile-popup-action-icon"
-                                                                                     Kind="WeatherNight" />
+                                                                    <lucide:LucideIcon Classes="taskbar-profile-popup-action-icon"
+                                                                                     Kind="Moon" />
                                                                     <TextBlock x:Name="PowerSleepTextBlock"
                                                                                Grid.Column="1"
                                                                                Classes="taskbar-profile-popup-action-text"
@@ -600,7 +599,7 @@
                                                                     Click="OnPowerLockClick">
                                                                 <Grid ColumnDefinitions="Auto,*"
                                                                       ColumnSpacing="12">
-                                                                    <mi:MaterialIcon Classes="taskbar-profile-popup-action-icon"
+                                                                    <lucide:LucideIcon Classes="taskbar-profile-popup-action-icon"
                                                                                      Kind="Lock" />
                                                                     <TextBlock x:Name="PowerLockTextBlock"
                                                                                Grid.Column="1"
@@ -664,9 +663,9 @@
                                 BorderThickness="0"
                                 Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
                                 Click="OnCloseComponentLibraryClick">
-                            <fi:SymbolIcon Classes="icon-s"
-                                           Symbol="Dismiss"
-                                           IconVariant="Regular" />
+                            <lucide:LucideIcon Classes="icon-s"
+                                           Kind="X"
+ />
                         </Button>
                     </Grid>
 
@@ -713,7 +712,7 @@
                                         Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
                                         Click="OnComponentLibraryBackClick">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <fi:SymbolIcon Classes="icon-s" Symbol="ArrowLeft" IconVariant="Regular" />
+                                        <lucide:LucideIcon Classes="icon-s" Kind="ArrowLeft" />
                                         <TextBlock x:Name="ComponentLibraryBackTextBlock"
                                                    VerticalAlignment="Center"
                                                    Text="Back" />
@@ -733,8 +732,8 @@
                                             CornerRadius="18"
                                             Click="OnComponentLibraryPrevComponentClick"
                                             IsVisible="False">
-                                        <fi:SymbolIcon Symbol="ChevronLeft"
-                                                       IconVariant="Regular" />
+                                        <lucide:LucideIcon Kind="ChevronLeft"
+ />
                                     </Button>
 
                                     <Border x:Name="ComponentLibraryComponentViewport"
@@ -774,8 +773,8 @@
                                             CornerRadius="18"
                                             Click="OnComponentLibraryNextComponentClick"
                                             IsVisible="False">
-                                        <fi:SymbolIcon Symbol="ChevronRight"
-                                                       IconVariant="Regular" />
+                                        <lucide:LucideIcon Kind="ChevronRight"
+ />
                                     </Button>
                                 </Grid>
                             </Grid>
@@ -805,10 +804,9 @@
 
             <Grid ColumnDefinitions="Auto,*"
                   ColumnSpacing="10">
-                <fi:FluentIcon x:Name="ComponentLibraryCollapsedChipIcon"
+                <lucide:LucideIcon x:Name="ComponentLibraryCollapsedChipIcon"
                                Grid.Column="0"
-                               Icon="Apps"
-                               IconVariant="Regular"
+                               Kind="LayoutGrid"
                                Width="18"
                                Height="18"
                                VerticalAlignment="Center"

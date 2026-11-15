@@ -1,12 +1,18 @@
 <Project>
   <PropertyGroup>
     <Version>0.0.0-dev</Version>
-    <TargetFramework Condition="'$(TargetFramework)' == ''">net10.0</TargetFramework>
+    <TargetFramework Condition="'$(TargetFramework)' == ''">net11.0</TargetFramework>
     <Nullable Condition="'$(Nullable)' == ''">enable</Nullable>
     <ImplicitUsings Condition="'$(ImplicitUsings)' == ''">enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
     <AnalysisMode Condition="'$(AnalysisMode)' == ''">Recommended</AnalysisMode>
     <ServerGarbageCollection>true</ServerGarbageCollection>
+    <!-- MonoMod（Harmony 依赖）的构建期检查（CheckTargetRuntime.targets）到 1.4.0-pre 仍未把 net11.0 加进白名单，
+         而运行时 detour 表自 1.4.0-pre 起支持 net11（changelog: Added Frameworks net11.0），故按上游预留的开关跳过。
+         两个属性都设：报错文案引用的是 MonoMod_CheckTargetRuntime，targets 实际读的是 MonoMod_ReallySkipCheckTargetRuntime。
+         放在 Build.props 是因为 buildTransitive 检查会随 Harmony 流入所有引用它的工程（desktop/AirAppHost/tests）。 -->
+    <MonoMod_CheckTargetRuntime>false</MonoMod_CheckTargetRuntime>
+    <MonoMod_ReallySkipCheckTargetRuntime>true</MonoMod_ReallySkipCheckTargetRuntime>
   </PropertyGroup>
 </Project>

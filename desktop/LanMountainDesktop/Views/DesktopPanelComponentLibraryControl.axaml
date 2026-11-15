@@ -1,5 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:arc="https://github.com/AIDotNet/TKCode.Arc"
+             xmlns:lucide="https://github.com/AIDotNet/TKCode.Arc/lucide"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:fi="using:FluentIcons.Avalonia"
              xmlns:converters="using:Avalonia.Data.Converters"
@@ -10,7 +12,7 @@
             <Setter Property="Padding" Value="0"/>
             <Setter Property="Margin" Value="0,3"/>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusSm}"/>
+            <Setter Property="CornerRadius" Value="{arc:ArcDesignTokenResource RadiusControl}"/>
             <Setter Property="MinHeight" Value="44"/>
         </Style>
         <Style Selector="ListBoxItem.category-item:pointerover /template/ ContentPresenter#PART_ContentPresenter">
@@ -26,37 +28,37 @@
             <Setter Property="Opacity" Value="1"/>
         </Style>
         <Style Selector="ListBoxItem.category-item TextBlock.category-text">
-            <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}"/>
+            <Setter Property="Foreground" Value="{arc:ArcDesignTokenResource Foreground}"/>
         </Style>
         <Style Selector="ListBoxItem.category-item:selected TextBlock.category-text">
-            <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}"/>
+            <Setter Property="Foreground" Value="{arc:ArcDesignTokenResource Foreground}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
-        <Style Selector="Button.panel-library-link">
+        <Style Selector="arc|Button.panel-library-link">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="6,4"/>
             <Setter Property="MinHeight" Value="28"/>
-            <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextSecondaryBrush}"/>
+            <Setter Property="Foreground" Value="{arc:ArcDesignTokenResource TextSecondary}"/>
         </Style>
-        <Style Selector="Button.panel-library-link:pointerover">
+        <Style Selector="arc|Button.panel-library-link:pointerover">
             <Setter Property="Background" Value="{DynamicResource AdaptiveButtonHoverBackgroundBrush}"/>
         </Style>
-        <Style Selector="Button.panel-library-add-button">
+        <Style Selector="arc|Button.panel-library-add-button">
             <Setter Property="Background" Value="{DynamicResource AdaptiveAccentBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveAccentBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource AdaptiveOnAccentBrush}"/>
-            <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusSm}"/>
+            <Setter Property="CornerRadius" Value="{arc:ArcDesignTokenResource RadiusControl}"/>
             <Setter Property="MinHeight" Value="38"/>
             <Setter Property="Padding" Value="22,8"/>
         </Style>
-        <Style Selector="Button.panel-library-add-button:pointerover">
+        <Style Selector="arc|Button.panel-library-add-button:pointerover">
             <Setter Property="Background" Value="{DynamicResource AdaptiveAccentLightBrush}"/>
         </Style>
-        <Style Selector="Button.panel-library-add-button TextBlock">
+        <Style Selector="arc|Button.panel-library-add-button TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource AdaptiveOnAccentBrush}"/>
         </Style>
-        <Style Selector="Button.panel-library-add-button fi|FluentIcon">
+        <Style Selector="arc|Button.panel-library-add-button lucide|LucideIcon">
             <Setter Property="Foreground" Value="{DynamicResource AdaptiveOnAccentBrush}"/>
         </Style>
     </UserControl.Styles>
@@ -82,10 +84,10 @@
                                         CornerRadius="{DynamicResource DesignCornerRadiusMicro}"
                                         Background="{DynamicResource AdaptiveAccentBrush}"
                                         VerticalAlignment="Center"/>
-                                <fi:FluentIcon Icon="{Binding Icon}"
+                                <lucide:LucideIcon Kind="{Binding Icon}"
                                                Grid.Column="1"
-                                               IconVariant="Regular"
-                                               FontSize="16"
+                                               Width="16"
+                                               Height="16"
                                                VerticalAlignment="Center"/>
                                 <TextBlock Grid.Column="2"
                                            VerticalAlignment="Center"
@@ -100,19 +102,19 @@
 
                 <StackPanel Grid.Row="1" Margin="0,8,14,4">
                     <Border Height="1"
-                            Background="{DynamicResource AdaptiveGlassPanelBorderBrush}"
+                            Background="{arc:ArcDesignTokenResource BorderSubtle}"
                             Opacity="0.4"
                             Margin="0,0,0,8"/>
-                    <Button Classes="panel-library-link"
+                    <arc:Button Classes="panel-library-link"
                             HorizontalAlignment="Left"
                             Click="OnFindMoreComponentsClick">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <fi:FluentIcon Icon="Globe" IconVariant="Regular" FontSize="14"/>
+                            <lucide:LucideIcon Kind="Globe" Width="14" Height="14"/>
                             <TextBlock x:Name="FindMoreComponentsTextBlock"
                                        Text="查找更多小组件"
                                        FontSize="12"/>
                         </StackPanel>
-                    </Button>
+                    </arc:Button>
                 </StackPanel>
             </Grid>
         </Border>
@@ -120,7 +122,7 @@
         <Border Grid.Column="1"
                 Width="1"
                 HorizontalAlignment="Left"
-                Background="{DynamicResource AdaptiveGlassPanelBorderBrush}"
+                Background="{arc:ArcDesignTokenResource BorderSubtle}"
                 Opacity="0.35"/>
 
         <Grid Grid.Column="1"
@@ -130,7 +132,7 @@
                   MinHeight="0">
                 <TextBlock FontSize="24"
                            FontWeight="SemiBold"
-                           Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                           Foreground="{arc:ArcDesignTokenResource Foreground}"
                            Text="{Binding SelectedComponent.DisplayName}"
                            HorizontalAlignment="Center"
                            TextTrimming="CharacterEllipsis"/>
@@ -139,7 +141,7 @@
                            Margin="0,6,0,14"
                            MaxHeight="44"
                            FontSize="13"
-                           Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                           Foreground="{arc:ArcDesignTokenResource TextSecondary}"
                            Opacity="0.82"
                            Text="{Binding SelectedComponent.Description}"
                            HorizontalAlignment="Center"
@@ -148,9 +150,9 @@
 
                 <Border x:Name="PreviewInteractionHost"
                         Grid.Row="2"
-                        CornerRadius="{DynamicResource DesignCornerRadiusLg}"
+                        CornerRadius="{arc:ArcDesignTokenResource RadiusPanel}"
                         Background="{DynamicResource AdaptiveSurfaceOverlayBrush}"
-                        BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
+                        BorderBrush="{arc:ArcDesignTokenResource BorderSubtle}"
                         BorderThickness="1"
                         MinWidth="360"
                         MinHeight="220"
@@ -164,9 +166,9 @@
                         PointerWheelChanged="OnPreviewPointerWheelChanged"
                         KeyDown="OnPreviewKeyDown">
                     <Border
-                            CornerRadius="{DynamicResource DesignCornerRadiusSm}"
-                            Background="{DynamicResource AdaptiveGlassPanelBackgroundBrush}"
-                            BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
+                            CornerRadius="{arc:ArcDesignTokenResource RadiusControl}"
+                            Background="{arc:ArcDesignTokenResource SurfaceMuted}"
+                            BorderBrush="{arc:ArcDesignTokenResource BorderSubtle}"
                             BorderThickness="1"
                             Padding="12"
                             HorizontalAlignment="Center"
@@ -179,19 +181,19 @@
                     </Border>
                 </Border>
 
-                <Button Grid.Row="3"
+                <arc:Button Grid.Row="3"
                         HorizontalAlignment="Center"
                         Margin="0,18,0,0"
                         Classes="panel-library-add-button"
                         Tag="{Binding SelectedComponent.ComponentId}"
                         Click="OnAddComponentClick">
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <fi:FluentIcon Icon="Add" IconVariant="Regular" FontSize="16"/>
+                        <lucide:LucideIcon Kind="Plus" Width="16" Height="16"/>
                         <TextBlock x:Name="AddComponentButtonTextBlock"
                                    Text="添加小组件"
                                    FontWeight="SemiBold"/>
                     </StackPanel>
-                </Button>
+                </arc:Button>
             </Grid>
 
             <Grid IsVisible="{Binding SelectedComponent, Converter={x:Static converters:ObjectConverters.IsNull}}"
@@ -201,15 +203,14 @@
                 <StackPanel Spacing="16"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center">
-                    <fi:FluentIcon Icon="Apps"
-                                   IconVariant="Regular"
-                                   FontSize="64"
+                    <lucide:LucideIcon Kind="LayoutGrid"
+ Width="64" Height="64"
                                    Opacity="0.3"
-                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"/>
+                                   Foreground="{arc:ArcDesignTokenResource TextSecondary}"/>
                     <TextBlock x:Name="EmptySelectionTextBlock"
                                HorizontalAlignment="Center"
                                FontSize="16"
-                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                               Foreground="{arc:ArcDesignTokenResource TextSecondary}"
                                Text="选择一个分类以查看可添加组件。"/>
                 </StackPanel>
             </Grid>

@@ -3,7 +3,7 @@
              xmlns:sty="using:FluentAvalonia.Styling"
              xmlns:ui="using:FluentAvalonia.UI.Controls"
              xmlns:fi="using:FluentIcons.Avalonia"
-             xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+xmlns:lucide="https://github.com/AIDotNet/TKCode.Arc/lucide"
              xmlns:conv="using:LanMountainDesktop.Converters"
              x:Class="LanMountainDesktop.App"
              xmlns:local="using:LanMountainDesktop"
@@ -23,12 +23,10 @@
 
     <Application.Styles>
         <sty:FluentAvaloniaTheme />
-        <mi:MaterialIconStyles />
         <StyleInclude Source="avares://LanMountainDesktop/Styles/FluttermotionToken.axaml" />
         <StyleInclude Source="avares://LanMountainDesktop/Styles/GlassModule.axaml" />
         <StyleInclude Source="avares://LanMountainDesktop/Styles/SettingsAnimations.axaml" />
         <StyleInclude Source="avares://LanMountainDesktop/Styles/SettingsCardStyles.axaml" />
-        <StyleInclude Source="avares://LanMountainDesktop/Styles/NavigationStyles.axaml" />
 
         <Style Selector="Window">
             <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}" />
@@ -76,17 +74,28 @@
             <Setter Property="FontSize" Value="16" />
         </Style>
 
+        <!-- D2 迁移：chrome 静态图标已换 LucideIcon（描边继承前景）；fi 样式保留给动态绑定站点与 widget 层 -->
+        <Style Selector="lucide|LucideIcon">
+            <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
+            <Setter Property="Width" Value="16" />
+            <Setter Property="Height" Value="16" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="lucide|LucideIcon.icon-s">
+            <Setter Property="Width" Value="12" />
+            <Setter Property="Height" Value="12" />
+        </Style>
+
+        <Style Selector="lucide|LucideIcon.icon-m">
+            <Setter Property="Width" Value="16" />
+            <Setter Property="Height" Value="16" />
+        </Style>
+
         <!-- Default FAFontIcon in settings surfaces to list-icon size unless overridden -->
         <Style Selector="ui|FAFontIcon">
             <Setter Property="FontSize" Value="16" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-        </Style>
-
-        <Style Selector="mi|MaterialIcon">
-            <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
-            <Setter Property="Width" Value="20" />
-            <Setter Property="Height" Value="20" />
-            <Setter Property="HorizontalAlignment" Value="Center" />
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
     </Application.Styles>

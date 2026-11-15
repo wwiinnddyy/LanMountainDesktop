@@ -3,8 +3,9 @@
                          xmlns:local="using:LanMountainDesktop.Views"
                          xmlns:vm="using:LanMountainDesktop.ViewModels"
                          xmlns:services="using:LanMountainDesktop.Services"
-                         xmlns:ui="using:FluentAvalonia.UI.Controls"
                          xmlns:fi="using:FluentIcons.Avalonia"
+                         xmlns:arc="https://github.com/AIDotNet/TKCode.Arc"
+             xmlns:lucide="https://github.com/AIDotNet/TKCode.Arc/lucide"
                          xmlns:faWindowing="using:FluentAvalonia.UI.Windowing"
                          x:Class="LanMountainDesktop.Views.SettingsWindow"
                          x:DataType="vm:SettingsWindowViewModel"
@@ -78,33 +79,24 @@
                 Background="{DynamicResource AdaptiveSettingsWindowTintBrush}"
                 IsHitTestVisible="False" />
 
-        <ui:FANavigationView x:Name="RootNavigationView"
-                             Grid.Row="1"
-                             Classes="settings-navigation-view"
-                             Margin="0"
-                             Background="Transparent"
-                             PaneDisplayMode="Auto"
-                             OpenPaneLength="283"
-                             IsSettingsVisible="False"
-                             IsBackButtonVisible="False"
-                             IsPaneToggleButtonVisible="False"
-                             SelectionChanged="OnNavigationSelectionChanged"
-                             ItemInvoked="OnNavigationItemInvoked">
-            <ui:FANavigationView.Styles>
-                <Style Selector="ui|FANavigationView#RootNavigationView:minimal">
-                    <Setter Property="IsPaneToggleButtonVisible" Value="False" />
-                </Style>
-            </ui:FANavigationView.Styles>
+        <Grid x:Name="NavigationHostGrid"
+              Grid.Row="1"
+              ColumnDefinitions="Auto,*">
 
-            <ui:FANavigationView.Resources>
-                <SolidColorBrush x:Key="NavigationViewContentBackground" Color="Transparent" />
-                <SolidColorBrush x:Key="NavigationViewContentGridBorderBrush" Color="Transparent" />
-                <SolidColorBrush x:Key="NavigationViewDefaultPaneBackground" Color="Transparent" />
-                <SolidColorBrush x:Key="NavigationViewExpandedPaneBackground" Color="Transparent" />
-                <SolidColorBrush x:Key="NavigationViewTopPaneBackground" Color="Transparent" />
-            </ui:FANavigationView.Resources>
+            <!-- Arc 侧栏（Phase 2.1，docs/ARC-MIGRATION-PLAN.md D1）：Sections 由 code-behind 按
+                 SettingsPageRegistry 分组重建；Push 模式让内容列随窗格宽度真实重排，贴合原
+                 导航视图的布局语义。页面控件（Phase 2.2）暂沿用 FluentAvalonia 主题。 -->
+            <arc:Sidebar x:Name="NavSidebar"
+                         Grid.Column="0"
+                         SelectedKey=""
+                         IsFilterVisible="False"
+                         ResizeMode="Push"
+                         Background="Transparent"
+                         SelectionChanged="OnSidebarSelectionChanged"
+                         ItemInvoked="OnSidebarItemInvoked" />
 
             <Grid x:Name="SettingsContentGrid"
+                  Grid.Column="1"
                   ColumnDefinitions="*,Auto"
                   ColumnSpacing="20"
                   Margin="12,0,16,16">
@@ -119,8 +111,8 @@
                                    Text="{Binding CurrentPageTitle}" />
                     </Grid>
 
-                    <ui:FAFrame x:Name="ContentFrame"
-                                Grid.Row="1" />
+                    <ContentControl x:Name="ContentFrame"
+                                    Grid.Row="1" />
 
                     <Canvas x:Name="SearchHighlightOverlay"
                             Grid.Row="1"
@@ -152,8 +144,8 @@
                                     Background="Transparent"
                                     BorderThickness="0"
                                     Click="OnCloseDrawerClick">
-                                <fi:FluentIcon Icon="Dismiss"
-                                               IconVariant="Regular" />
+                                <lucide:LucideIcon Kind="X"
+ />
                             </Button>
                         </Grid>
 
@@ -162,7 +154,7 @@
                     </Grid>
                 </Border>
             </Grid>
-        </ui:FANavigationView>
+        </Grid>
 
         <Border x:Name="WindowTitleBarHost"
                 Grid.Row="0"
@@ -186,16 +178,14 @@
                             IsVisible="{Binding CanGoBack}"
                             ToolTip.Tip="{Binding BackTooltip}"
                             Click="OnBackButtonClick">
-                        <fi:FluentIcon Icon="ArrowLeft"
-                                       IconVariant="Regular"
-                                       FontSize="16"
+                        <lucide:LucideIcon Kind="ArrowLeft"
+ Width="16" Height="16"
                                        Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                     </Button>
 
-                    <fi:FluentIcon x:Name="WindowBrandIcon"
-                                   Icon="Settings"
-                                   IconVariant="Filled"
-                                   FontSize="18"
+                    <lucide:LucideIcon x:Name="WindowBrandIcon"
+                                   Kind="Settings"
+ Width="18" Height="18"
                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                    IsHitTestVisible="False"
                                    Margin="8,0,2,0"
@@ -223,10 +213,9 @@
                                  KeyUp="OnSearchBoxKeyUp"
                                  SelectionChanged="OnSearchBoxSelectionChanged">
                     <AutoCompleteBox.InnerRightContent>
-                        <fi:FluentIcon Icon="Search"
-                                       IconVariant="Regular"
+                        <lucide:LucideIcon Kind="Search"
                                        Margin="6"
-                                       FontSize="15"
+ Width="15" Height="15"
                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                     </AutoCompleteBox.InnerRightContent>
                     <AutoCompleteBox.ItemTemplate>
@@ -261,9 +250,9 @@
                             Click="OnRestartNowClick">
                         <StackPanel Orientation="Horizontal"
                                     Spacing="6">
-                            <fi:FluentIcon x:Name="RestartButtonIcon"
-                                           Icon="ArrowSync"
-                                           IconVariant="Regular" />
+                            <lucide:LucideIcon x:Name="RestartButtonIcon"
+                                           Kind="RefreshCw"
+ />
                             <TextBlock x:Name="RestartButtonTextBlock"
                                        Text="{Binding RestartButtonText}" />
                         </StackPanel>
@@ -272,17 +261,16 @@
                     <Button
                             Classes="titlebar-icon-button"
                             ToolTip.Tip="{Binding MoreOptionsText}">
-                        <fi:FluentIcon Icon="MoreHorizontal"
-                                       IconVariant="Regular"
-                                       FontSize="17"
+                        <lucide:LucideIcon Kind="Ellipsis"
+ Width="17" Height="17"
                                        Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                         <Button.Flyout>
                             <MenuFlyout>
                                 <MenuItem Header="{Binding RestartMenuItemText}"
                                           Click="OnRestartMenuItemClick">
                                     <MenuItem.Icon>
-                                        <fi:FluentIcon Icon="ArrowSync"
-                                                       IconVariant="Regular" />
+                                        <lucide:LucideIcon Kind="RefreshCw"
+ />
                                     </MenuItem.Icon>
                                 </MenuItem>
                             </MenuFlyout>

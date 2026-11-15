@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:arc="https://github.com/AIDotNet/TKCode.Arc"
              mc:Ignorable="d"
              x:Class="LanMountainDesktop.Views.ComponentEditors.ToggleIntervalComponentEditor">
     <StackPanel Spacing="16">
@@ -18,10 +19,10 @@
                                Classes="component-editor-secondary-text"
                                TextWrapping="Wrap" />
                 </StackPanel>
-                <ToggleSwitch x:Name="EnabledToggleSwitch"
-                              Grid.Column="1"
-                              VerticalAlignment="Center"
-                              IsCheckedChanged="OnEnabledChanged" />
+                <arc:Switch x:Name="EnabledToggleSwitch"
+                            Grid.Column="1"
+                            VerticalAlignment="Center"
+                            IsCheckedChanged="OnEnabledChanged" />
             </Grid>
         </Border>
 
@@ -31,10 +32,9 @@
             <StackPanel Spacing="12">
                 <TextBlock x:Name="IntervalLabelTextBlock"
                            Classes="component-editor-section-title" />
-                <ComboBox x:Name="IntervalComboBox"
-                          Classes="component-editor-select"
-                          HorizontalAlignment="Stretch"
-                          SelectionChanged="OnIntervalSelectionChanged" />
+                <arc:Select x:Name="IntervalComboBox"
+                            HorizontalAlignment="Stretch"
+                            SelectionChanged="OnIntervalSelectionChanged" />
             </StackPanel>
         </Border>
 
@@ -45,10 +45,9 @@
             <StackPanel Spacing="12">
                 <TextBlock x:Name="ExtraSelectorLabelTextBlock"
                            Classes="component-editor-section-title" />
-                <ComboBox x:Name="ExtraSelectorComboBox"
-                          Classes="component-editor-select"
-                          HorizontalAlignment="Stretch"
-                          SelectionChanged="OnExtraSelectionChanged" />
+                <arc:Select x:Name="ExtraSelectorComboBox"
+                            HorizontalAlignment="Stretch"
+                            SelectionChanged="OnExtraSelectionChanged" />
             </StackPanel>
         </Border>
     </StackPanel>

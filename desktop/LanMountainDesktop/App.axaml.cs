@@ -190,6 +190,7 @@ public partial class App : Application
 
         ApplyThemeFromSettings();
         ApplyCurrentCultureFromSettings();
+
         EnsureSettingsWindowService();
         EnsureWeatherLocationRefreshService();
         EnsureNotificationService();
@@ -204,6 +205,11 @@ public partial class App : Application
         }
 
         AppLogger.Info("App", "Framework initialization completed.");
+
+        // Arc 设计系统桥接（Phase 1.3）：壁纸取色 → Arc 令牌；触发点与重放策略见 docs/ARC-MIGRATION-PLAN.md §2
+        // 必须晚于 AppBuilder.Setup 完成（UseArc 的 AfterSetup 在这里之后才建立 ArcThemeManager），
+        // 放在 Initialize() 里会撞上 "Arc is not set up"（2026-11-15 冒烟实测）。
+        ArcThemeBridge.Attach(HostMaterialColorProvider.GetOrCreate());
 
         LinuxDesktopEntryInstaller.EnsureInstalled();
         InitializePublicIpc();

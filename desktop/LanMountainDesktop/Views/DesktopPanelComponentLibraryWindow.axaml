@@ -1,5 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:arc="https://github.com/AIDotNet/TKCode.Arc"
+             xmlns:lucide="https://github.com/AIDotNet/TKCode.Arc/lucide"
         xmlns:controls="using:LanMountainDesktop.Views"
         xmlns:fi="using:FluentIcons.Avalonia"
         x:Class="LanMountainDesktop.Views.DesktopPanelComponentLibraryWindow"
@@ -25,7 +27,7 @@
                 VerticalAlignment="Stretch"
                 Margin="0"
                 Padding="0"
-                CornerRadius="{DynamicResource DesignCornerRadiusLg}"
+                CornerRadius="{arc:ArcDesignTokenResource RadiusPanel}"
                 BoxShadow="none"
                 ClipToBounds="True">
             <Grid RowDefinitions="Auto,*">
@@ -38,9 +40,9 @@
                                    VerticalAlignment="Center"
                                    FontSize="22"
                                    FontWeight="SemiBold"
-                                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                   Foreground="{arc:ArcDesignTokenResource Foreground}"
                                    Text="添加小组件" />
-                        <Button Grid.Column="1"
+                        <arc:Button Grid.Column="1"
                                 Width="32"
                                 Height="32"
                                 Padding="0"
@@ -48,10 +50,9 @@
                                 BorderThickness="0"
                                 Click="OnCloseClick"
                                 VerticalAlignment="Center">
-                            <fi:FluentIcon Icon="Dismiss"
-                                           IconVariant="Regular"
-                                           FontSize="16" />
-                        </Button>
+                            <lucide:LucideIcon Kind="X"
+ Width="16" Height="16" />
+                        </arc:Button>
                     </Grid>
                 </Border>
 

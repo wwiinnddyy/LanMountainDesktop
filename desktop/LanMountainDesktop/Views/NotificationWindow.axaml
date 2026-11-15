@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:lucide="https://github.com/AIDotNet/TKCode.Arc/lucide"
         xmlns:vm="using:LanMountainDesktop.ViewModels"
         xmlns:fi="using:FluentIcons.Avalonia"
         xmlns:controls="using:LanMountainDesktop.Controls"
@@ -71,9 +72,9 @@
                            Stretch="Uniform"
                            Source="{Binding Icon}"
                            IsVisible="{Binding Icon, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                    <fi:SymbolIcon
-                                   FontSize="28"
-                                   Symbol="Info"
+                    <lucide:LucideIcon
+ Width="28" Height="28"
+                                   Kind="Info"
                                    IsVisible="{Binding Icon, Converter={x:Static ObjectConverters.IsNull}}"
                                    Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
                 </Panel>

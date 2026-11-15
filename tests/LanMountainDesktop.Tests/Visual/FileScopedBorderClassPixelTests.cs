@@ -46,6 +46,9 @@ public sealed class FileScopedBorderClassPixelTests
         ["music-progress-fill"] = () => new MusicControlWidget(),
         ["notification-card"] = () => new NotificationWindow(),
         ["about-hero-card"] = () => new AboutSettingsPage(),
+        // §11 用户拍板的「彻底重做版」设置窗口：文件作用域样式，画刷走 Arc 令牌，真实例可直接判。
+        ["settings-card"] = () => new ArcSettingsWindow(),
+        ["icon-chip"] = () => new ArcSettingsWindow(),
     };
 
     /// <summary>还没覆盖的类，每条写清挡在哪；理由对应的类一旦从磁盘消失就红。</summary>

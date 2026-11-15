@@ -1,76 +1,47 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
-             xmlns:ui="using:FluentAvalonia.UI.Controls"
              xmlns:fi="using:FluentIcons.Avalonia"
+             xmlns:arc="https://github.com/AIDotNet/TKCode.Arc"
              x:Class="LanMountainDesktop.Views.SettingsPages.DevSettingsPage"
              x:DataType="vm:DevSettingsPageViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Classes="settings-page-container settings-page-animated">
-            <ui:FAInfoBar IsOpen="True"
-                        IsClosable="False"
-                        Severity="Warning"
-                        Title="{Binding InfoBarTitle}"
-                        Message="{Binding InfoBarMessage}"
-                        Margin="0,0,0,16">
-                <ui:FAInfoBar.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0288;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-                </ui:FAInfoBar.IconSource>
-            </ui:FAInfoBar>
+            <arc:Alert Tone="Warning"
+                       Title="{Binding InfoBarTitle}"
+                       Content="{Binding InfoBarMessage}"
+                       Margin="0,0,0,16" />
 
-            <ui:FASettingsExpander Header="{Binding DevModeHeader}"
+            <arc:SettingsGroup>
+                <arc:SettingsRow Header="{Binding DevModeHeader}"
                                  Description="{Binding DevModeDescription}">
-                <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF01AC;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-                </ui:FASettingsExpander.IconSource>
-                <ui:FASettingsExpander.Footer>
-                    <ToggleSwitch IsChecked="{Binding IsDevModeEnabled}" />
-                </ui:FASettingsExpander.Footer>
-            </ui:FASettingsExpander>
-
-            <ui:FASettingsExpander Header="{Binding ThreeFingerHeader}"
+                    <arc:Switch IsChecked="{Binding IsDevModeEnabled}" />
+                </arc:SettingsRow>
+                <arc:SettingsRow Header="{Binding ThreeFingerHeader}"
                                  Description="{Binding ThreeFingerDescription}">
-                <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF02FC;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-                </ui:FASettingsExpander.IconSource>
-                <ui:FASettingsExpander.Footer>
-                    <ToggleSwitch IsChecked="{Binding EnableThreeFingerSwipe}" />
-                </ui:FASettingsExpander.Footer>
-            </ui:FASettingsExpander>
-
-            <ui:FASettingsExpander Header="{Binding MainWindowDesktopLayerHeader}"
+                    <arc:Switch IsChecked="{Binding EnableThreeFingerSwipe}" />
+                </arc:SettingsRow>
+                <arc:SettingsRow Header="{Binding MainWindowDesktopLayerHeader}"
                                  Description="{Binding MainWindowDesktopLayerDescription}">
-                <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF1BE0;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-                </ui:FASettingsExpander.IconSource>
-                <ui:FASettingsExpander.Footer>
-                    <ToggleSwitch IsChecked="{Binding EnableMainWindowDesktopLayer, Mode=TwoWay}" />
-                </ui:FASettingsExpander.Footer>
-            </ui:FASettingsExpander>
+                    <arc:Switch IsChecked="{Binding EnableMainWindowDesktopLayer, Mode=TwoWay}" />
+                </arc:SettingsRow>
+            </arc:SettingsGroup>
 
             <Separator Classes="settings-separator" />
 
-            <ui:FASettingsExpander Header="{Binding AirAppPathHeader}"
-                                 Description="{Binding AirAppPathDescription}">
-                <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF023C;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-                </ui:FASettingsExpander.IconSource>
-                <ui:FASettingsExpanderItem>
-                    <TextBox Text="{Binding DevAirAppPath}"
-                             Watermark="{Binding AirAppPathPlaceholder}"
-                             Width="360"
-                             MinWidth="200" />
-                </ui:FASettingsExpanderItem>
-            </ui:FASettingsExpander>
+            <arc:SettingsRow Header="{Binding AirAppPathHeader}"
+                             Description="{Binding AirAppPathDescription}">
+                <arc:Input Text="{Binding DevAirAppPath}"
+                           Placeholder="{Binding AirAppPathPlaceholder}"
+                           Width="360"
+                           MinWidth="200" />
+            </arc:SettingsRow>
 
             <Separator Classes="settings-separator" />
 
-            <ui:FASettingsExpander Header="{Binding StartupArgsHeader}"
-                                 Description="{Binding StartupArgsDescription}">
-                <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF1930;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-                </ui:FASettingsExpander.IconSource>
-                <ui:FASettingsExpanderItem>
+            <arc:SettingsRow Header="{Binding StartupArgsHeader}"
+                             Description="{Binding StartupArgsDescription}">
+                <arc:SettingsRow.Details>
                     <StackPanel Margin="0,8,0,0"
                                 Spacing="8">
                         <TextBlock Text="{Binding CliLabel}"
@@ -112,8 +83,8 @@
                             </StackPanel>
                         </Border>
                     </StackPanel>
-                </ui:FASettingsExpanderItem>
-            </ui:FASettingsExpander>
+                </arc:SettingsRow.Details>
+            </arc:SettingsRow>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

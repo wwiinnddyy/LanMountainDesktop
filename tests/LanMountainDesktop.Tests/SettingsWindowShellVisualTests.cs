@@ -32,31 +32,18 @@ public sealed class SettingsWindowShellVisualTests
     [Fact]
     public void SettingsWindow_NavigationShellBackgroundsAreTransparent()
     {
+        // Phase 2.1（docs/ARC-MIGRATION-PLAN.md）：导航壳换成 Arc Sidebar；
+        // 壳背景保持透明，壁纸自适应背景层（RootGrid 上那两层）继续从底下透出。
         var xaml = ReadRepositoryFile("desktop", "LanMountainDesktop", "Views", "SettingsWindow.axaml");
 
-        Assert.Contains("Classes=\"settings-navigation-view\"", xaml);
-        Assert.Contains("<SolidColorBrush x:Key=\"NavigationViewContentBackground\" Color=\"Transparent\" />", xaml);
-        Assert.Contains("<SolidColorBrush x:Key=\"NavigationViewContentGridBorderBrush\" Color=\"Transparent\" />", xaml);
-        Assert.Contains("<SolidColorBrush x:Key=\"NavigationViewDefaultPaneBackground\" Color=\"Transparent\" />", xaml);
-        Assert.Contains("<SolidColorBrush x:Key=\"NavigationViewExpandedPaneBackground\" Color=\"Transparent\" />", xaml);
-        Assert.Contains("<SolidColorBrush x:Key=\"NavigationViewTopPaneBackground\" Color=\"Transparent\" />", xaml);
+        Assert.Contains("<arc:Sidebar x:Name=\"NavSidebar\"", xaml);
+        Assert.Contains("Background=\"Transparent\"", ExtractElementStart(xaml, "<arc:Sidebar x:Name=\"NavSidebar\""));
+        Assert.DoesNotContain("FANavigationView", xaml);
     }
 
-    [Fact]
-    public void NavigationStyles_KeepSettingsNavigationTemplateTransparent()
-    {
-        var styles = ReadRepositoryFile("desktop", "LanMountainDesktop", "Styles", "NavigationStyles.axaml");
-
-        Assert.Contains("ui|FANavigationView.settings-navigation-view", styles);
-        Assert.Contains("Grid#RootGrid", styles);
-        Assert.Contains("Grid#ContentGrid", styles);
-        Assert.Contains("Grid#PaneRoot", styles);
-        Assert.Contains("Border#NavigationViewBorder", styles);
-        Assert.Contains("Border#ContentGridBorder", styles);
-        Assert.Contains("Border#PaneBorder", styles);
-        Assert.Contains("<Setter Property=\"Background\" Value=\"Transparent\" />", styles);
-        Assert.Contains("<Setter Property=\"BorderBrush\" Value=\"Transparent\" />", styles);
-    }
+    // NavigationStyles_KeepSettingsNavigationTemplateTransparent 已随 Phase 2.1 移除：
+    // FANavigationView 换成 Arc Sidebar 后，NavigationStyles.axaml（模板透明化样式）整体退役，
+    // Sidebar 的壳透明由其自身 Background="Transparent" 承担（见上面的 Sidebar 断言）。
 
     private static string ExtractElementStart(string source, string startToken)
     {

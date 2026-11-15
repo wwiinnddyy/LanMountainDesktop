@@ -2,9 +2,9 @@ using System;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using FluentAvalonia.UI.Controls;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
+using TKCode.Arc;
 
 namespace LanMountainDesktop.Views.ComponentEditors;
 
@@ -94,7 +94,7 @@ public partial class ZhiJiaoHubComponentEditor : ComponentEditorViewBase
             return;
         }
 
-        var source = SourceComboBox.SelectedItem is ComboBoxItem item && item.Tag is string tag
+        var source = SourceComboBox.SelectedItem is SelectItem item && item.Value is string tag
             ? ZhiJiaoHubSources.Normalize(tag)
             : ZhiJiaoHubSources.ClassIsland;
 
@@ -114,17 +114,15 @@ public partial class ZhiJiaoHubComponentEditor : ComponentEditorViewBase
     // Rin's 图库是第三方成人向内容源：每次切过去都要先确认，取消则不落盘。
     protected virtual async Task<bool> ConfirmAdultContentAsync()
     {
-        var dialog = new FAContentDialog
-        {
-            Title = L("zhijiaohub.settings.adult_warning.title", "成人内容提醒"),
-            Content = L("zhijiaohub.settings.adult_warning.message",
+        var result = await Dialog.ShowAsync(this,
+            L("zhijiaohub.settings.adult_warning.title", "成人内容提醒"),
+            L("zhijiaohub.settings.adult_warning.message",
                 "Rin's 图库来自第三方社区，可能包含成人（18 禁）内容。\n\n阑山桌面不是内容提供方，不对内容作任何担保。继续即表示你已年满 18 岁，并自行承担使用风险。"),
-            PrimaryButtonText = L("zhijiaohub.settings.adult_warning.confirm", "我已年满 18 岁，继续使用"),
-            CloseButtonText = L("zhijiaohub.settings.adult_warning.cancel", "取消"),
-            DefaultButton = FAContentDialogButton.Close
-        };
+            description: null,
+            new DialogAction(L("zhijiaohub.settings.adult_warning.cancel", "取消"), false),
+            new DialogAction(L("zhijiaohub.settings.adult_warning.confirm", "我已年满 18 岁，继续使用"), true, ButtonVariant.Primary));
 
-        return await dialog.ShowAsync() == FAContentDialogResult.Primary;
+        return result is true;
     }
 
     private void SelectSourceItem(string source)
@@ -145,7 +143,7 @@ public partial class ZhiJiaoHubComponentEditor : ComponentEditorViewBase
             return;
         }
 
-        var mirrorSource = MirrorSourceComboBox.SelectedItem is ComboBoxItem item && item.Tag is string tag
+        var mirrorSource = MirrorSourceComboBox.SelectedItem is SelectItem item && item.Value is string tag
             ? ZhiJiaoHubMirrorSources.Normalize(tag)
             : ZhiJiaoHubMirrorSources.Direct;
 
@@ -171,14 +169,14 @@ public partial class ZhiJiaoHubComponentEditor : ComponentEditorViewBase
         SaveSnapshot(snapshot, nameof(ComponentSettingsSnapshot.ZhiJiaoHubAutoRefreshEnabled));
     }
 
-    private void OnIntervalValueChanged(object? sender, NumericUpDownValueChangedEventArgs e)
+    private void OnIntervalValueChanged(object? sender, NumberFieldValueChangedEventArgs e)
     {
         if (_suppressEvents)
         {
             return;
         }
 
-        var interval = (int)Math.Clamp(IntervalNumeric.Value ?? 30, 5, 1440);
+        var interval = (int)Math.Clamp(IntervalNumeric.Value, 5m, 1440m);
 
         var snapshot = LoadSnapshot();
         snapshot.ZhiJiaoHubAutoRefreshIntervalMinutes = interval;

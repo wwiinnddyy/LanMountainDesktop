@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:arc="https://github.com/AIDotNet/TKCode.Arc"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
@@ -22,7 +23,7 @@
             <StackPanel Spacing="12">
                 <TextBlock x:Name="ClockOneLabelTextBlock"
                            Classes="component-editor-section-title" />
-                <ComboBox x:Name="ClockOneComboBox"
+                <arc:Select x:Name="ClockOneComboBox"
                           Classes="component-editor-select"
                           HorizontalAlignment="Stretch"
                           SelectionChanged="OnTimeZoneSelectionChanged" />
@@ -34,7 +35,7 @@
             <StackPanel Spacing="12">
                 <TextBlock x:Name="ClockTwoLabelTextBlock"
                            Classes="component-editor-section-title" />
-                <ComboBox x:Name="ClockTwoComboBox"
+                <arc:Select x:Name="ClockTwoComboBox"
                           Classes="component-editor-select"
                           HorizontalAlignment="Stretch"
                           SelectionChanged="OnTimeZoneSelectionChanged" />
@@ -46,7 +47,7 @@
             <StackPanel Spacing="12">
                 <TextBlock x:Name="ClockThreeLabelTextBlock"
                            Classes="component-editor-section-title" />
-                <ComboBox x:Name="ClockThreeComboBox"
+                <arc:Select x:Name="ClockThreeComboBox"
                           Classes="component-editor-select"
                           HorizontalAlignment="Stretch"
                           SelectionChanged="OnTimeZoneSelectionChanged" />
@@ -58,7 +59,7 @@
             <StackPanel Spacing="12">
                 <TextBlock x:Name="ClockFourLabelTextBlock"
                            Classes="component-editor-section-title" />
-                <ComboBox x:Name="ClockFourComboBox"
+                <arc:Select x:Name="ClockFourComboBox"
                           Classes="component-editor-select"
                           HorizontalAlignment="Stretch"
                           SelectionChanged="OnTimeZoneSelectionChanged" />

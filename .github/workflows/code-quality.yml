@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  DOTNET_VERSION: '10.0.x'
+  DOTNET_VERSION: '11.0.x'
   Solution_Name: LanMountainDesktop.slnx
   DOTNET_gcServer: 1
 

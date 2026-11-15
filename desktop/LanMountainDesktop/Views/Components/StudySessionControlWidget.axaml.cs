@@ -7,7 +7,6 @@ using Avalonia.Threading;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
-using Material.Icons;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -199,7 +198,7 @@ public partial class StudySessionControlWidget : UserControl, IDesktopComponentW
         {
             PrimaryTextBlock.Text = L("study.widget.disabled_title", "自习功能未启用");
             SecondaryTextBlock.Text = L("study.widget.disabled_hint", "请在设置中开启");
-            ActionIcon.Kind = MaterialIconKind.Settings;
+            ActionIcon.Symbol = FluentIcons.Common.Symbol.Settings;
             ApplyActionBadgeStyle(panelColor, StudyPanelPalette.DisabledBadge);
             return;
         }
@@ -216,7 +215,7 @@ public partial class StudySessionControlWidget : UserControl, IDesktopComponentW
             SecondaryTextBlock.Text = _transientMessage ?? string.Format(
                 L("study.session_control.running_elapsed_format", "Elapsed {0}"),
                 FormatElapsed(snapshot.Session.Elapsed));
-            ActionIcon.Kind = MaterialIconKind.Stop;
+            ActionIcon.Symbol = FluentIcons.Common.Symbol.Stop;
             ApplyActionBadgeStyle(panelColor, Color.Parse("#FFF97373"));
             ApplyTransientWarningTintIfNeeded(panelColor);
             return;
@@ -224,7 +223,7 @@ public partial class StudySessionControlWidget : UserControl, IDesktopComponentW
 
         PrimaryTextBlock.Text = L("study.session_control.action.start", "Start Study Session");
         SecondaryTextBlock.Text = _transientMessage ?? ResolveIdleHint(snapshot);
-        ActionIcon.Kind = MaterialIconKind.Play;
+        ActionIcon.Symbol = FluentIcons.Common.Symbol.Play;
         ApplyActionBadgeStyle(panelColor, Color.Parse("#FF60A5FA"));
         ApplyTransientWarningTintIfNeeded(panelColor);
     }

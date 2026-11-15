@@ -1,32 +1,28 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
-             xmlns:ui="using:FluentAvalonia.UI.Controls"
              xmlns:fi="using:FluentIcons.Avalonia"
+             xmlns:arc="https://github.com/AIDotNet/TKCode.Arc"
              x:Class="LanMountainDesktop.Views.SettingsPages.AirAppCatalogSettingsPage"
              x:Name="Root"
              x:DataType="vm:AirAppCatalogSettingsPageViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Classes="settings-page-container settings-page-animated">
-            <ui:FASettingsExpander Header="{Binding RefreshButtonText}"
-                                 Description="{Binding StatusMessage}">
-                <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF15E8;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-                </ui:FASettingsExpander.IconSource>
-                <ui:FASettingsExpander.Footer>
-                    <Grid ColumnDefinitions="*,Auto"
-                          ColumnSpacing="12">
-                        <TextBox
-                                 Text="{Binding SearchText}"
-                                 PlaceholderText="{Binding SearchPlaceholder}"
-                                 Focusable="True"
-                                 IsTabStop="True" />
-                        <Button Grid.Column="1"
-                                Command="{Binding RefreshCommand}"
-                                Content="{Binding RefreshButtonText}" />
-                    </Grid>
-                </ui:FASettingsExpander.Footer>
-            </ui:FASettingsExpander>
+            <arc:SettingsRow Header="{Binding RefreshButtonText}"
+                             Description="{Binding StatusMessage}">
+                <Grid ColumnDefinitions="*,Auto"
+                      ColumnSpacing="12"
+                      Width="440">
+                    <arc:Input
+                             Text="{Binding SearchText}"
+                             Placeholder="{Binding SearchPlaceholder}"
+                             Focusable="True"
+                             IsTabStop="True" />
+                    <arc:Button Grid.Column="1"
+                            Command="{Binding RefreshCommand}"
+                            Content="{Binding RefreshButtonText}" />
+                </Grid>
+            </arc:SettingsRow>
 
             <TextBlock Classes="settings-item-description"
                        IsVisible="{Binding ShowEmptyState}"
@@ -69,7 +65,7 @@
                                     </Grid>
                                 </Border>
 
-                                <Button Grid.Column="1"
+                                <arc:Button Grid.Column="1"
                                         Classes="plugin-catalog-row-button"
                                         Command="{Binding #Root.DataContext.OpenDetailsCommand}"
                                         CommandParameter="{Binding}">
@@ -85,9 +81,9 @@
                                                      Margin="0,6,0,0"
                                                      HorizontalAlignment="Stretch" />
                                     </StackPanel>
-                                </Button>
+                                </arc:Button>
 
-                                <Button Grid.Column="2"
+                                <arc:Button Grid.Column="2"
                                         Classes="plugin-catalog-icon-button"
                                         VerticalAlignment="Center"
                                         Command="{Binding #Root.DataContext.ExecutePrimaryActionCommand}"
@@ -95,7 +91,7 @@
                                         IsEnabled="{Binding IsActionEnabled}"
                                         ToolTip.Tip="{Binding ActionTooltip}">
                                     <fi:SymbolIcon Symbol="{Binding ActionSymbol}" />
-                                </Button>
+                                </arc:Button>
                             </Grid>
                         </Border>
                     </DataTemplate>

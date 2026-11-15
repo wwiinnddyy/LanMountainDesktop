@@ -1,4 +1,5 @@
 using System;
+using TKCode.Arc;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -29,7 +30,7 @@ public partial class WhiteboardComponentEditor : ComponentEditorViewBase
         RetentionComboBox.Items.Clear();
         for (var days = WhiteboardNoteRetentionPolicy.MinimumDays; days <= WhiteboardNoteRetentionPolicy.MaximumDays; days++)
         {
-            var item = new ComboBoxItem
+            var item = new SelectItem
             {
                 Tag = days.ToString(),
                 Content = L(
@@ -62,9 +63,9 @@ public partial class WhiteboardComponentEditor : ComponentEditorViewBase
 
         _suppressEvents = true;
         RetentionComboBox.SelectedItem = RetentionComboBox.Items
-            .OfType<ComboBoxItem>()
+            .OfType<SelectItem>()
             .FirstOrDefault(item =>
-                item.Tag is string tag &&
+                item.Value is string tag &&
                 int.TryParse(tag, out var days) &&
                 days == retentionDays);
         _suppressEvents = false;
@@ -86,8 +87,8 @@ public partial class WhiteboardComponentEditor : ComponentEditorViewBase
 
     private int GetSelectedRetentionDays()
     {
-        if (RetentionComboBox.SelectedItem is ComboBoxItem item &&
-            item.Tag is string tag &&
+        if (RetentionComboBox.SelectedItem is SelectItem item &&
+            item.Value is string tag &&
             int.TryParse(tag, out var days))
         {
             return NormalizeRetentionDays(days);

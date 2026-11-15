@@ -4,13 +4,13 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.VisualTree;
-using FluentAvalonia.UI.Controls;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.ViewModels;
 using LanMountainDesktop.Views;
+using TKCode.Arc;
 
 namespace LanMountainDesktop.Views.SettingsPages;
 
@@ -120,17 +120,14 @@ public partial class AboutSettingsPage : AirAppSettingsPageBase
 
     private async void PromptEnableDevMode(ISettingsFacadeService settingsFacade)
     {
-        var dialog = new FAContentDialog
-        {
-            Title = "Enable developer mode",
-            Content = "Developer mode exposes experimental settings, diagnostics, and local AirApp debugging options.\n\nUse it only when you are actively testing or troubleshooting the desktop host.",
-            PrimaryButtonText = "Enable",
-            CloseButtonText = "Not now",
-            DefaultButton = FAContentDialogButton.Close
-        };
+        var result = await Dialog.ShowAsync(this,
+            "Enable developer mode",
+            "Developer mode exposes experimental settings, diagnostics, and local AirApp debugging options.\n\nUse it only when you are actively testing or troubleshooting the desktop host.",
+            description: null,
+            new DialogAction("Not now", false),
+            new DialogAction("Enable", true, ButtonVariant.Primary));
 
-        var result = await dialog.ShowAsync();
-        if (result != FAContentDialogResult.Primary)
+        if (result is not true)
         {
             return;
         }

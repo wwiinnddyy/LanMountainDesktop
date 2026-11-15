@@ -1,8 +1,8 @@
 using System;
 
-using Avalonia.Controls;
-
 using LanMountainDesktop.Services;
+
+using TKCode.Arc;
 
 namespace LanMountainDesktop.Views.ComponentEditors;
 
@@ -42,13 +42,13 @@ public static class ComponentColorSchemeSelection
         return Choice.Default;
     }
 
-    /// <summary>把磁盘值翻成下拉该选中哪一项。三家各传自己那三个 <see cref="ComboBoxItem"/>，
+    /// <summary>把磁盘值翻成下拉该选中哪一项。三家各传自己那三个 <see cref="SelectItem"/>，
     /// 判档只有上面那一处——症状防的是"改了一家的映射、另两家不动"。</summary>
-    public static ComboBoxItem ResolveSelection(
+    public static SelectItem ResolveSelection(
         string? colorSchemeSource,
-        ComboBoxItem defaultItem,
-        ComboBoxItem followSystemItem,
-        ComboBoxItem nativeItem)
+        SelectItem defaultItem,
+        SelectItem followSystemItem,
+        SelectItem nativeItem)
         => Classify(colorSchemeSource) switch
         {
             Choice.Native => nativeItem,
@@ -56,11 +56,11 @@ public static class ComponentColorSchemeSelection
             _ => defaultItem
         };
 
-    /// <summary>把下拉的选中项换回要落盘的值。第三项的 Tag 是空串——那就是"从没设置过"，
+    /// <summary>把下拉的选中项换回要落盘的值。第三项的 Value 是空串——那就是"从没设置过"，
     /// 渲染侧照旧按全局配色档走。认不出选项时也落空串（同判档那一处：认不出＝没设置），
     /// 不抛。</summary>
     public static string Resolve(object? selectedItem)
-        => selectedItem is ComboBoxItem item && item.Tag is string tag
+        => selectedItem is SelectItem item && item.Value is string tag
             ? tag
             : string.Empty;
 

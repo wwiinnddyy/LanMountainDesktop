@@ -16,7 +16,7 @@ on:
         type: string
 
 env:
-  DOTNET_VERSION: '10.0.x'
+  DOTNET_VERSION: '11.0.x'
   PLONDS_S3_PREFIX: lanmountain/update/plonds
   PLONDS_S3_PUBLIC_BASE_KEY_PREFIX: ''
   # GitHub runner 到 Rainyun S3 的跨境链路对持续大流量上传极不稳定（连接重置）。

@@ -1,18 +1,18 @@
-﻿<Project>
+<Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Aprillz.MewUI.Windows" Version="0.22.1" />
-    <PackageVersion Include="Avalonia" Version="12.1.0" />
-    <PackageVersion Include="Avalonia.Android" Version="12.1.0" />
+    <PackageVersion Include="Avalonia" Version="12.1.5" />
+    <PackageVersion Include="Avalonia.Android" Version="12.1.5" />
     <PackageVersion Include="Avalonia.Angle.Windows.Natives" Version="2.1.27548.20260419" />
     <PackageVersion Include="Avalonia.Controls.WebView" Version="12.0.1" />
-    <PackageVersion Include="Avalonia.Desktop" Version="12.1.0" />
-    <PackageVersion Include="Avalonia.Fonts.Inter" Version="12.1.0" />
-    <PackageVersion Include="Avalonia.Headless.XUnit" Version="12.1.0" />
-    <PackageVersion Include="Avalonia.Skia" Version="12.1.0" />
-    <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.1.0" />
+    <PackageVersion Include="Avalonia.Desktop" Version="12.1.5" />
+    <PackageVersion Include="Avalonia.Fonts.Inter" Version="12.1.5" />
+    <PackageVersion Include="Avalonia.Headless.XUnit" Version="12.1.5" />
+    <PackageVersion Include="Avalonia.Skia" Version="12.1.5" />
+    <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.1.5" />
     <PackageVersion Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3" />
     <PackageVersion Include="ClassIsland.Markdown.Avalonia" Version="12.0.0" />
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
@@ -35,6 +35,7 @@
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="11.0.0-preview.5.26302.115" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="11.0.0-preview.5.26302.115" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
+    <PackageVersion Include="MonoMod.Core" Version="1.4.0-prerelease.1" />
     <PackageVersion Include="MudTools.OfficeInterop" Version="2.0.9" />
     <PackageVersion Include="MudTools.OfficeInterop.Excel" Version="2.0.9" />
     <PackageVersion Include="MudTools.OfficeInterop.PowerPoint" Version="2.0.9" />
@@ -45,6 +46,10 @@
     <PackageVersion Include="SkiaSharp" Version="4.150.0" />
     <PackageVersion Include="SkiaSharp.NativeAssets.Win32" Version="4.150.0" />
     <PackageVersion Include="System.CommandLine" Version="2.0.9" />
+    <PackageVersion Include="TKCode.Arc" Version="1.1.0" />
+    <PackageVersion Include="TKCode.Arc.Blocks" Version="1.1.0" />
+    <PackageVersion Include="TKCode.Arc.Fonts" Version="1.1.0" />
+    <PackageVersion Include="TKCode.Arc.Icons.Lucide" Version="1.1.0" />
     <PackageVersion Include="System.Drawing.Common" Version="11.0.0-preview.5.26302.115" />
     <PackageVersion Include="System.Runtime.WindowsRuntime" Version="5.0.0-preview.5.20278.1" />
     <PackageVersion Include="System.ServiceModel.Syndication" Version="10.0.9" />

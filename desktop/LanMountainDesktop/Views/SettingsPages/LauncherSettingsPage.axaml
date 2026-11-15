@@ -2,7 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:controls="using:LanMountainDesktop.Controls"
-             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:arc="https://github.com/AIDotNet/TKCode.Arc"
              x:Class="LanMountainDesktop.Views.SettingsPages.LauncherSettingsPage"
              x:DataType="vm:LauncherSettingsPageViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -15,68 +15,41 @@
                        Margin="0,0,0,16"
                        Text="{Binding LauncherSubtitle}" />
 
-            <ui:FASettingsExpander Header="{Binding AppearanceHeader}"
-                                 Description="{Binding AppearanceDescription}"
-                                 IsExpanded="True">
-                <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0888;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-                </ui:FASettingsExpander.IconSource>
-                <ui:FASettingsExpanderItem>
-                    <Grid ColumnDefinitions="*,Auto">
-                        <StackPanel Spacing="2">
-                            <TextBlock Text="{Binding ShowTileBackgroundHeader}" />
-                            <TextBlock Classes="settings-item-description"
-                                       Text="{Binding ShowTileBackgroundDescription}" />
-                        </StackPanel>
-                        <ToggleSwitch Grid.Column="1"
-                                      IsChecked="{Binding ShowTileBackground}" />
-                    </Grid>
-                </ui:FASettingsExpanderItem>
-            </ui:FASettingsExpander>
+            <arc:SettingsGroup Header="{Binding AppearanceHeader}"
+                               Description="{Binding AppearanceDescription}">
+                <arc:SettingsRow Header="{Binding ShowTileBackgroundHeader}"
+                                 Description="{Binding ShowTileBackgroundDescription}">
+                    <arc:Switch IsChecked="{Binding ShowTileBackground}" />
+                </arc:SettingsRow>
+            </arc:SettingsGroup>
 
             <Separator Classes="settings-separator" />
 
-            <ui:FASettingsExpander Header="{Binding HiddenHeader}"
-                                 Description="{Binding HiddenDescription}"
-                                 IsExpanded="True">
-                <ui:FASettingsExpander.Footer>
+            <arc:SettingsGroup Header="{Binding HiddenHeader}"
+                               Description="{Binding HiddenDescription}">
+                <TextBlock Classes="settings-item-description"
+                           IsVisible="{Binding IsHiddenItemsEmpty}"
+                           Margin="0,4,0,8"
+                           Text="{Binding HiddenEmptyText}"
+                           TextWrapping="Wrap" />
+
+                <ItemsControl ItemsSource="{Binding HiddenItems}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:LauncherHiddenItemViewModel">
+                            <arc:SettingsRow Header="{Binding DisplayName}"
+                                             Description="{Binding TypeLabel}">
+                                <arc:Button Command="{Binding RestoreCommand}" Content="{Binding RestoreButtonText}" VerticalAlignment="Center" />
+                            </arc:SettingsRow>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <arc:SettingsGroup.Footer>
                     <TextBlock Classes="settings-item-description"
                                Text="{Binding HiddenCountText}"
                                VerticalAlignment="Center" />
-                </ui:FASettingsExpander.Footer>
-                <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF1C80;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-                </ui:FASettingsExpander.IconSource>
-                <ui:FASettingsExpanderItem>
-                    <StackPanel Spacing="8">
-                        <TextBlock Classes="settings-item-description"
-                                   IsVisible="{Binding IsHiddenItemsEmpty}"
-                                   Margin="0,0,0,4"
-                                   Text="{Binding HiddenEmptyText}"
-                                   TextWrapping="Wrap" />
-
-                        <ItemsControl ItemsSource="{Binding HiddenItems}"
-                                      IsVisible="{Binding HasHiddenItems}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="vm:LauncherHiddenItemViewModel">
-                                    <ui:FASettingsExpanderItem Content="{Binding DisplayName}"
-                                                             Description="{Binding TypeLabel}"
-                                                             IsClickEnabled="False">
-                                        <ui:FASettingsExpanderItem.IconSource>
-                                            <ui:FAFontIconSource Glyph="&#xF19FC;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-                                        </ui:FASettingsExpanderItem.IconSource>
-                                        <ui:FASettingsExpanderItem.Footer>
-                                            <Button Command="{Binding RestoreCommand}"
-                                                    Content="{Binding RestoreButtonText}"
-                                                    VerticalAlignment="Center" />
-                                        </ui:FASettingsExpanderItem.Footer>
-                                    </ui:FASettingsExpanderItem>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-                </ui:FASettingsExpanderItem>
-            </ui:FASettingsExpander>
+                </arc:SettingsGroup.Footer>
+            </arc:SettingsGroup>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

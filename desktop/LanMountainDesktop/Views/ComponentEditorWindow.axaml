@@ -1,10 +1,11 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:arc="https://github.com/AIDotNet/TKCode.Arc"
+             xmlns:lucide="https://github.com/AIDotNet/TKCode.Arc/lucide"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:fa="clr-namespace:FluentIcons.Avalonia;assembly=FluentIcons.Avalonia"
-        xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
-        xmlns:themes="clr-namespace:Material.Styles.Themes;assembly=Material.Styles"
+        xmlns:fi="using:FluentIcons.Avalonia"
         mc:Ignorable="d"
         x:Class="LanMountainDesktop.Views.ComponentEditorWindow"
         Classes="component-editor-window"
@@ -47,7 +48,6 @@
     </Window.Resources>
 
     <Window.Styles>
-        <themes:CustomMaterialTheme BaseTheme="Light" PrimaryColor="#6750A4" SecondaryColor="#625B71" />
         <StyleInclude Source="avares://LanMountainDesktop/Styles/ComponentEditorThemeResources.axaml" />
     </Window.Styles>
 
@@ -60,11 +60,11 @@
                 PointerPressed="OnWindowTitleBarPointerPressed">
             <Grid ColumnDefinitions="Auto,*,Auto"
                   ColumnSpacing="16">
-                <mi:MaterialIcon x:Name="HeaderIcon"
-                                 Width="28"
-                                 Height="28"
-                                 Foreground="{DynamicResource EditorPrimaryBrush}"
-                                 VerticalAlignment="Center" />
+                <lucide:LucideIcon x:Name="HeaderIcon"
+                               Width="28"
+                               Height="28"
+                               Foreground="{DynamicResource EditorPrimaryBrush}"
+                               VerticalAlignment="Center" />
 
                 <StackPanel Grid.Column="1"
                             Spacing="0"
@@ -76,7 +76,7 @@
                                TextTrimming="CharacterEllipsis" />
                 </StackPanel>
 
-                <Button Grid.Column="2"
+                <arc:Button Grid.Column="2"
                         Classes="component-editor-titlebar-button"
                         VerticalAlignment="Center"
                         Background="Transparent"
@@ -84,15 +84,15 @@
                         Width="40" Height="40"
                         Padding="8"
                         Click="OnCloseClick">
-                    <mi:MaterialIcon Kind="Close"
-                                     Width="24" Height="24" />
-                </Button>
+                    <lucide:LucideIcon Kind="X"
+                                   Width="24" Height="24" />
+                </arc:Button>
             </Grid>
         </Border>
 
         <Border Grid.Row="1"
                 Background="{DynamicResource EditorSurfaceContainerBrush}"
-                CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+                CornerRadius="{arc:ArcDesignTokenResource RadiusPanel}"
                 Margin="16,0,16,16"
                 ClipToBounds="True">
             <Panel>
@@ -106,7 +106,7 @@
                 </ScrollViewer>
 
                 <!-- Floating Save Button (MD3 Style) -->
-                <Button
+                <arc:Button
                         HorizontalAlignment="Right"
                         VerticalAlignment="Bottom"
                         Margin="28"
@@ -114,18 +114,18 @@
                         Height="64"
                         Background="{DynamicResource EditorPrimaryBrush}"
                         Foreground="{DynamicResource EditorOnPrimaryBrush}"
-                        CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+                        CornerRadius="{arc:ArcDesignTokenResource RadiusPanel}"
                         Classes="accent"
                         Click="OnCloseClick">
-                    <Button.Styles>
+                    <arc:Button.Styles>
                         <Style Selector="Button:pointerover">
                             <Setter Property="RenderTransform" Value="scale(1.05)" />
                         </Style>
-                    </Button.Styles>
-                    <mi:MaterialIcon Kind="Check"
-                                     Width="32"
-                                     Height="32" />
-                </Button>
+                    </arc:Button.Styles>
+                    <lucide:LucideIcon Kind="Check"
+                                   Width="32"
+                                   Height="32" />
+                </arc:Button>
             </Panel>
         </Border>
     </Grid>

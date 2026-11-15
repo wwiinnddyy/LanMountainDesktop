@@ -1,15 +1,16 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:fi="using:FluentIcons.Avalonia"
+             xmlns:lucide="https://github.com/AIDotNet/TKCode.Arc/lucide"
              x:Class="LanMountainDesktop.Controls.IconText">
 
     <StackPanel Orientation="Horizontal"
                 Spacing="8"
                 VerticalAlignment="Center">
-        <fi:FluentIcon x:Name="IconElement"
-                       Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                       FontSize="14"
-                       VerticalAlignment="Center" />
+        <lucide:LucideIcon x:Name="IconElement"
+                           Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                           Width="14"
+                           Height="14"
+                           VerticalAlignment="Center" />
         <TextBlock x:Name="TextElement"
                    Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
                    FontSize="14"

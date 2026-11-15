@@ -1,6 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
-using FluentIcons.Common;
+using TKCode.Arc.Icons.Lucide;
 
 namespace LanMountainDesktop.Controls;
 
@@ -72,7 +72,7 @@ public partial class SettingsSectionCard : UserControl
             return;
         }
 
-        CardIcon.Symbol = MapIcon(IconKey);
+        CardIcon.Kind = MapIcon(IconKey);
         IconHost.IsVisible = !string.IsNullOrWhiteSpace(IconKey);
 
         TitleTextBlock.Text = Title ?? string.Empty;
@@ -82,18 +82,18 @@ public partial class SettingsSectionCard : UserControl
         CardContentHost.Content = CardContent;
     }
 
-    private static Symbol MapIcon(string? iconKey)
+    private static LucideIconKind MapIcon(string? iconKey)
     {
         return iconKey?.Trim() switch
         {
-            "DesignIdeas" => Symbol.Color,
-            "Image" => Symbol.Image,
-            "GridDots" => Symbol.GridDots,
-            "PuzzlePiece" => Symbol.PuzzlePiece,
-            "Info" => Symbol.Info,
-            "ArrowSync" => Symbol.ArrowSync,
-            "Bell" => Symbol.AlertOn,
-            _ => Symbol.Settings
+            "DesignIdeas" => LucideIconKind.Palette,
+            "Image" => LucideIconKind.Image,
+            "GridDots" => LucideIconKind.LayoutGrid,
+            "PuzzlePiece" => LucideIconKind.Puzzle,
+            "Info" => LucideIconKind.Info,
+            "ArrowSync" => LucideIconKind.RefreshCw,
+            "Bell" => LucideIconKind.Bell,
+            _ => LucideIconKind.Settings
         };
     }
 }

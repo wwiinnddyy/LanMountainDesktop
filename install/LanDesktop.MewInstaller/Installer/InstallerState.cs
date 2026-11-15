@@ -6,6 +6,7 @@ using LanDesktopPLONDS.Installer.Localization;
 using LanDesktopPLONDS.Installer.Models;
 using LanDesktopPLONDS.Installer.Services;
 using LanMountainDesktop.Shared.Contracts.Privacy;
+using LanMountainDesktop.Shared.Text;
 using LanMountainDesktop.Shared.Threading;
 
 namespace LanDesktop.MewInstaller.Installer;
@@ -333,42 +334,17 @@ internal sealed class InstallerState : IDisposable
         DownloadProgress.Value = progress.DownloadProgress;
         InstallProgress.Value = progress.InstallProgress;
         CurrentFile.Value = progress.CurrentFile;
-        DownloadBytesText.Value = FormatBytes(progress.BytesDownloaded, progress.TotalBytes);
+        DownloadBytesText.Value = ByteSizeText.FormatBytes(progress.BytesDownloaded, progress.TotalBytes);
 
         var now = DateTime.UtcNow;
         var elapsed = (now - _lastProgressTime).TotalSeconds;
         if (elapsed > 0.5 && progress.BytesDownloaded > _lastBytesDownloaded && progress.BytesDownloaded > 0)
         {
             var speedBytesPerSec = (progress.BytesDownloaded - _lastBytesDownloaded) / elapsed;
-            DownloadSpeedText.Value = $"{ToSize((long)speedBytesPerSec)}/s";
+            DownloadSpeedText.Value = $"{ByteSizeText.ToSize((long)speedBytesPerSec)}/s";
             _lastBytesDownloaded = progress.BytesDownloaded;
             _lastProgressTime = now;
         }
-    }
-
-    private static string FormatBytes(long downloaded, long? total)
-    {
-        if (downloaded <= 0 && total is not > 0)
-        {
-            return string.Empty;
-        }
-
-        var downloadedText = ToSize(downloaded);
-        return total is > 0 ? $"{downloadedText} / {ToSize(total.Value)}" : downloadedText;
-    }
-
-    private static string ToSize(long value)
-    {
-        string[] suffixes = ["B", "KB", "MB", "GB"];
-        var size = (double)value;
-        var suffix = 0;
-        while (size >= 1024 && suffix < suffixes.Length - 1)
-        {
-            size /= 1024;
-            suffix++;
-        }
-
-        return $"{size:0.##} {suffixes[suffix]}";
     }
 
     public void Dispose()

@@ -2,7 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:controls="using:LanMountainDesktop.Controls"
-             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:arc="https://github.com/AIDotNet/TKCode.Arc"
              x:Class="LanMountainDesktop.Views.SettingsPages.WallpaperSettingsPage"
              x:DataType="vm:WallpaperSettingsPageViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -188,63 +188,36 @@
                                Text="{Binding WallpaperHeader}"
                                Margin="0,0,0,8" />
 
-            <ui:FASettingsExpander Header="{Binding WallpaperTypeLabel}">
-                <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF067C;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-                </ui:FASettingsExpander.IconSource>
-                <ui:FASettingsExpander.Footer>
-                    <ComboBox Width="200"
-                              ItemsSource="{Binding WallpaperTypes}"
-                              SelectedItem="{Binding SelectedWallpaperType}">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:SelectionOption">
-                                <TextBlock Text="{Binding Label}" />
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                </ui:FASettingsExpander.Footer>
-            </ui:FASettingsExpander>
-
-            <ui:FASettingsExpander Header="{Binding WallpaperPathLabel}"
-                                 IsVisible="{Binding IsImage}"
-                                 Margin="0,4,0,0">
-                <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF058C;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-                </ui:FASettingsExpander.IconSource>
-                <ui:FASettingsExpander.Footer>
+            <arc:SettingsGroup>
+                <arc:SettingsRow Header="{Binding WallpaperTypeLabel}">
+                    <arc:Select Width="200"
+                                ItemsSource="{Binding WallpaperTypes}"
+                                SelectedItem="{Binding SelectedWallpaperType}"
+                                DisplayMemberBinding="{Binding Label}" />
+                </arc:SettingsRow>
+                <arc:SettingsRow Header="{Binding WallpaperPathLabel}"
+                                 IsVisible="{Binding IsImage}">
                     <StackPanel Orientation="Horizontal"
                                 Spacing="8">
-                        <TextBox IsReadOnly="True"
-                                 Width="300"
-                                 Text="{Binding WallpaperPath}"
-                                 VerticalAlignment="Center" />
-                        <Button Click="OnBrowseWallpaperClick"
-                                Classes="accent"
-                                Content="{Binding ImportWallpaperButtonText}"
-                                VerticalAlignment="Center" />
+                        <arc:Input IsReadOnly="True"
+                                   Width="300"
+                                   Text="{Binding WallpaperPath}"
+                                   VerticalAlignment="Center" />
+                        <arc:Button Click="OnBrowseWallpaperClick"
+                                    Variant="Primary"
+                                    Content="{Binding ImportWallpaperButtonText}"
+                                    VerticalAlignment="Center" />
                     </StackPanel>
-                </ui:FASettingsExpander.Footer>
-            </ui:FASettingsExpander>
-
-            <ui:FASettingsExpander Header="{Binding WallpaperPlacementLabel}"
+                </arc:SettingsRow>
+                <arc:SettingsRow Header="{Binding WallpaperPlacementLabel}"
                                  Description="{Binding WallpaperPlacementDescription}"
-                                 IsVisible="{Binding IsImage}"
-                                 Margin="0,4,0,0">
-                <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF01A8;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-                </ui:FASettingsExpander.IconSource>
-                <ui:FASettingsExpander.Footer>
-                    <ComboBox Width="200"
-                              ItemsSource="{Binding WallpaperPlacements}"
-                              SelectedItem="{Binding SelectedWallpaperPlacement}">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:SelectionOption">
-                                <TextBlock Text="{Binding Label}" />
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                </ui:FASettingsExpander.Footer>
-            </ui:FASettingsExpander>
+                                 IsVisible="{Binding IsImage}">
+                    <arc:Select Width="200"
+                                ItemsSource="{Binding WallpaperPlacements}"
+                                SelectedItem="{Binding SelectedWallpaperPlacement}"
+                                DisplayMemberBinding="{Binding Label}" />
+                </arc:SettingsRow>
+            </arc:SettingsGroup>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

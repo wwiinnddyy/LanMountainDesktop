@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -11,13 +11,16 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using FluentAvalonia.UI.Controls;
 using FluentIcons.Avalonia;
 using FluentIcons.Common;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.DesktopEditing;
 using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Models;
+using TKCode.Arc;
+using TKCode.Arc.Icons.Lucide;
+// Arc 侧 Button 与 Avalonia 的 Button 同名（迁移纪律：C# 引 Arc 一律别名消歧），本文件的裸 Button 均为 Avalonia。
+using Button = Avalonia.Controls.Button;
 using LanMountainDesktop.Platform.Abstractions;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
@@ -52,7 +55,7 @@ public partial class MainWindow : Window
 
     private sealed record ComponentLibraryCategory(
         string Id,
-        Icon Icon,
+        LucideIconKind Icon,
         string Title,
         IReadOnlyList<ComponentLibraryComponentEntry> Components);
 
@@ -448,16 +451,14 @@ public partial class MainWindow : Window
     {
         try
         {
-            var dialog = new FAContentDialog
-            {
-                Title = title,
-                Content = message,
-                PrimaryButtonText = L("power.confirm_yes", "Yes"),
-                SecondaryButtonText = L("power.confirm_cancel", "Cancel")
-            };
+            var result = await Dialog.ShowAsync(this,
+                title,
+                message,
+                description: null,
+                new DialogAction(L("power.confirm_cancel", "Cancel"), false),
+                new DialogAction(L("power.confirm_yes", "Yes"), true, ButtonVariant.Primary));
 
-            var result = await dialog.ShowAsync(this);
-            if (result == FAContentDialogResult.Primary)
+            if (result is true)
             {
                 await action();
             }
@@ -1674,18 +1675,18 @@ public partial class MainWindow : Window
                                  action.Id == TaskbarActionId.DeleteComponent;
             var isHideAction = action.Id == TaskbarActionId.HideLauncherEntry;
 
-            var iconSymbol = action.Id switch
+            var iconKind = action.Id switch
             {
-                TaskbarActionId.EditComponent => Symbol.Edit,
-                _ when isDeleteAction || isHideAction => Symbol.Delete,
-                _ => Symbol.Add
+                TaskbarActionId.EditComponent => LucideIconKind.PenLine,
+                _ when isDeleteAction || isHideAction => LucideIconKind.Trash2,
+                _ => LucideIconKind.Plus
             };
 
-            Control icon = new SymbolIcon
+            Control icon = new LucideIcon
             {
-                Symbol = iconSymbol,
-                IconVariant = IconVariant.Regular,
-                FontSize = iconSize
+                Kind = iconKind,
+                Width = iconSize,
+                Height = iconSize
             };
 
             var buttonContent = new StackPanel
@@ -1756,17 +1757,16 @@ public partial class MainWindow : Window
             return;
         }
 
-        var dialog = new FAContentDialog
-        {
-            Title = L("desktop.delete_page_confirm.title", "Delete desktop page"),
-            Content = L("desktop.delete_page_confirm.message", "This will permanently remove the current desktop page and all widgets placed on it.\n\nThis action cannot be undone."),
-            PrimaryButtonText = L("desktop.delete_page_confirm.close", "Cancel"),
-            SecondaryButtonText = L("desktop.delete_page_confirm.primary", "Delete"),
-            DefaultButton = FAContentDialogButton.Primary
-        };
+        // FA 版这里"取消"是 Primary（安全默认）、"删除"是 Secondary；Arc 侧按官方最佳实践把
+        // 破坏性动作放右侧 Danger、安全动作放左侧 Secondary，语义不变。
+        var result = await Dialog.ShowAsync(this,
+            L("desktop.delete_page_confirm.title", "Delete desktop page"),
+            L("desktop.delete_page_confirm.message", "This will permanently remove the current desktop page and all widgets placed on it.\n\nThis action cannot be undone."),
+            description: null,
+            new DialogAction(L("desktop.delete_page_confirm.close", "Cancel"), false),
+            new DialogAction(L("desktop.delete_page_confirm.primary", "Delete"), true, ButtonVariant.Danger));
 
-        var result = await dialog.ShowAsync(this);
-        if (result == FAContentDialogResult.Secondary)
+        if (result is true)
         {
             DeleteCurrentDesktopPage();
         }
@@ -3457,11 +3457,11 @@ public partial class MainWindow : Window
             var row = new RowDefinition(GridLength.Auto);
             ComponentLibraryCategoryPagesContainer.RowDefinitions.Add(row);
 
-            var icon = new FluentIcon
+            var icon = new LucideIcon
             {
-                Icon = category.Icon,
-                IconVariant = IconVariant.Regular,
-                FontSize = 18,
+                Kind = category.Icon,
+                Width = 18,
+                Height = 18,
                 VerticalAlignment = VerticalAlignment.Center
             };
 

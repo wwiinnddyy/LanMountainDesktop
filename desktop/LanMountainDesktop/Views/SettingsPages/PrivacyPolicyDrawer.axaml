@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:lucide="https://github.com/AIDotNet/TKCode.Arc/lucide"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:mdxaml="https://github.com/whistyun/Markdown.Avalonia"
              xmlns:helpers="using:LanMountainDesktop.Helpers"
@@ -17,7 +18,7 @@
                                 Width="48"
                                 Height="48">
                             <Viewbox Stretch="Uniform">
-                                <fi:SymbolIcon Symbol="Document" />
+                                <lucide:LucideIcon Kind="FileText" />
                             </Viewbox>
                         </Border>
                         

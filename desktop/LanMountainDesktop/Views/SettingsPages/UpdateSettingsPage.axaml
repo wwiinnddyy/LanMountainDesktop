@@ -1,9 +1,11 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:lucide="https://github.com/AIDotNet/TKCode.Arc/lucide"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:controls="using:LanMountainDesktop.Controls"
              xmlns:ui="using:FluentAvalonia.UI.Controls"
              xmlns:fi="using:FluentIcons.Avalonia"
+             xmlns:arc="https://github.com/AIDotNet/TKCode.Arc"
              x:Class="LanMountainDesktop.Views.SettingsPages.UpdateSettingsPage"
              x:DataType="vm:UpdateSettingsViewModel">
   <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -15,27 +17,26 @@
 
         <StackPanel Spacing="12" Margin="0,0,0,20">
           <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="0">
-            <ui:FAFontIcon Classes="settings-hero-icon"
-                           Glyph="&#xF0288;"
-                           FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+            <lucide:LucideIcon Classes="settings-hero-icon"
+                           Kind="RefreshCw" />
 
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
               <TextBlock Classes="settings-hero-title" Text="{Binding StatusMessage}" />
               <TextBlock Classes="settings-item-description" Text="{Binding LastCheckedText}" />
             </StackPanel>
 
-            <Button Grid.Column="2"
-                    Classes="settings-accent-button"
-                    Content="{Binding CheckButtonText}"
-                    Command="{Binding CheckCommand}"
-                    IsVisible="{Binding CanCheck}"
-                    VerticalAlignment="Center"
-                    Margin="12,0,0,0" />
+            <arc:Button Grid.Column="2"
+                        Classes="settings-accent-button"
+                        Content="{Binding CheckButtonText}"
+                        Command="{Binding CheckCommand}"
+                        IsVisible="{Binding CanCheck}"
+                        VerticalAlignment="Center"
+                        Margin="12,0,0,0" />
           </Grid>
 
           <StackPanel IsVisible="{Binding IsProgressSectionVisible}" Spacing="12">
             <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding IsProgressVisible}">
-               <ProgressBar Grid.Column="0" Minimum="0" Maximum="1" Value="{Binding ProgressFraction}" VerticalAlignment="Center" Margin="0,0,12,0" />
+               <arc:Progress Grid.Column="0" Minimum="0" Maximum="1" Value="{Binding ProgressFraction}" VerticalAlignment="Center" Margin="0,0,12,0" />
                <TextBlock Grid.Column="1" Text="{Binding ProgressFraction, StringFormat='{}{0:P0}'}" VerticalAlignment="Center" Classes="settings-item-label" />
             </Grid>
 
@@ -46,26 +47,18 @@
 
             <TextBlock Classes="settings-item-description" Text="{Binding ProgressDetail}" TextWrapping="Wrap" IsVisible="{Binding !IsBusy}" />
 
-            <ui:FAInfoBar Title="{Binding PausedBadgeText}" Message="{Binding PausedHintText}" IsOpen="True" IsClosable="False" IsVisible="{Binding IsPaused}">
-              <ui:FAInfoBar.IconSource>
-                <ui:FAFontIconSource Glyph="&#xF28D;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-              </ui:FAInfoBar.IconSource>
-            </ui:FAInfoBar>
+            <arc:Alert Title="{Binding PausedBadgeText}" Content="{Binding PausedHintText}" IsVisible="{Binding IsPaused}" />
 
-            <ui:FAInfoBar Title="{Binding ResumeSupportLabel}" Message="{Binding ResumeSupportDescription}" IsOpen="True" IsClosable="False" Severity="Informational">
-              <ui:FAInfoBar.IconSource>
-                <ui:FAFontIconSource Glyph="&#xF0647;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-              </ui:FAInfoBar.IconSource>
-            </ui:FAInfoBar>
+            <arc:Alert Title="{Binding ResumeSupportLabel}" Content="{Binding ResumeSupportDescription}" />
 
             <WrapPanel Orientation="Horizontal" ItemWidth="NaN">
               <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
-                <Button Classes="settings-accent-button" Content="{Binding DownloadButtonText}" Command="{Binding DownloadCommand}" IsVisible="{Binding CanDownload}" />
-                <Button Classes="settings-accent-button" Content="{Binding InstallButtonText}" Command="{Binding InstallCommand}" IsVisible="{Binding CanInstall}" />
-                <Button Content="{Binding PauseButtonText}" Command="{Binding PauseCommand}" IsVisible="{Binding CanPause}" />
-                <Button Classes="settings-accent-button" Content="{Binding ResumeButtonText}" Command="{Binding ResumeCommand}" IsVisible="{Binding CanResume}" />
-                <Button Content="{Binding RollbackButtonText}" Command="{Binding RollbackCommand}" IsVisible="{Binding CanRollback}" />
-                <Button Content="{Binding CancelButtonText}" Command="{Binding CancelCommand}" IsVisible="{Binding CanCancel}" />
+                <arc:Button Classes="settings-accent-button" Content="{Binding DownloadButtonText}" Command="{Binding DownloadCommand}" IsVisible="{Binding CanDownload}" />
+                <arc:Button Classes="settings-accent-button" Content="{Binding InstallButtonText}" Command="{Binding InstallCommand}" IsVisible="{Binding CanInstall}" />
+                <arc:Button Content="{Binding PauseButtonText}" Command="{Binding PauseCommand}" IsVisible="{Binding CanPause}" />
+                <arc:Button Classes="settings-accent-button" Content="{Binding ResumeButtonText}" Command="{Binding ResumeCommand}" IsVisible="{Binding CanResume}" />
+                <arc:Button Content="{Binding RollbackButtonText}" Command="{Binding RollbackCommand}" IsVisible="{Binding CanRollback}" />
+                <arc:Button Content="{Binding CancelButtonText}" Command="{Binding CancelCommand}" IsVisible="{Binding CanCancel}" />
               </StackPanel>
             </WrapPanel>
           </StackPanel>
@@ -76,41 +69,20 @@
           <StackPanel Spacing="2" Margin="0,16,0,0">
             <TextBlock Classes="settings-section-description" Text="{Binding ReleaseFactsDescription}" Margin="0,0,0,12" />
 
-            <ui:FASettingsExpander Classes="settings-expander-card" Header="{Binding CurrentVersionLabel}">
-              <ui:FASettingsExpander.IconSource>
-                <ui:FAFontIconSource Glyph="&#xF0288;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-              </ui:FASettingsExpander.IconSource>
-              <ui:FASettingsExpander.Footer>
-                <TextBlock Classes="settings-item-description" Text="{Binding CurrentVersionText}" />
-              </ui:FASettingsExpander.Footer>
-            </ui:FASettingsExpander>
-
-            <ui:FASettingsExpander Classes="settings-expander-card" Header="{Binding LatestVersionLabel}">
-              <ui:FASettingsExpander.IconSource>
-                <ui:FAFontIconSource Glyph="&#xF0288;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-              </ui:FASettingsExpander.IconSource>
-              <ui:FASettingsExpander.Footer>
-                <TextBlock Classes="settings-item-description" Text="{Binding LatestVersionDisplayText}" />
-              </ui:FASettingsExpander.Footer>
-            </ui:FASettingsExpander>
-
-            <ui:FASettingsExpander Classes="settings-expander-card" Header="{Binding PublishedAtLabel}">
-              <ui:FASettingsExpander.IconSource>
-                <ui:FAFontIconSource Glyph="&#xF0168;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-              </ui:FASettingsExpander.IconSource>
-              <ui:FASettingsExpander.Footer>
-                <TextBlock Classes="settings-item-description" Text="{Binding PublishedAtText}" />
-              </ui:FASettingsExpander.Footer>
-            </ui:FASettingsExpander>
-
-            <ui:FASettingsExpander Classes="settings-expander-card" Header="{Binding UpdateTypeLabel}">
-              <ui:FASettingsExpander.IconSource>
-                <ui:FAFontIconSource Glyph="&#xF0504;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-              </ui:FASettingsExpander.IconSource>
-              <ui:FASettingsExpander.Footer>
-                <TextBlock Classes="settings-item-description" Text="{Binding UpdateTypeText}" />
-              </ui:FASettingsExpander.Footer>
-            </ui:FASettingsExpander>
+            <arc:SettingsGroup>
+              <arc:SettingsRow Header="{Binding CurrentVersionLabel}">
+                <TextBlock Classes="settings-item-description" Text="{Binding CurrentVersionText}" VerticalAlignment="Center" />
+              </arc:SettingsRow>
+              <arc:SettingsRow Header="{Binding LatestVersionLabel}">
+                <TextBlock Classes="settings-item-description" Text="{Binding LatestVersionDisplayText}" VerticalAlignment="Center" />
+              </arc:SettingsRow>
+              <arc:SettingsRow Header="{Binding PublishedAtLabel}">
+                <TextBlock Classes="settings-item-description" Text="{Binding PublishedAtText}" VerticalAlignment="Center" />
+              </arc:SettingsRow>
+              <arc:SettingsRow Header="{Binding UpdateTypeLabel}">
+                <TextBlock Classes="settings-item-description" Text="{Binding UpdateTypeText}" VerticalAlignment="Center" />
+              </arc:SettingsRow>
+            </arc:SettingsGroup>
           </StackPanel>
         </TabItem>
 
@@ -118,63 +90,29 @@
           <StackPanel Spacing="2" Margin="0,16,0,0">
             <TextBlock Classes="settings-section-description" Text="{Binding PreferencesDescription}" Margin="0,0,0,12" />
 
-            <ui:FASettingsExpander Classes="settings-expander-card" Header="{Binding SmartUpdateLabel}" Description="{Binding SmartUpdateDescription}">
-              <ui:FASettingsExpander.IconSource>
-                <ui:FAFontIconSource Glyph="&#xF0908;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-              </ui:FASettingsExpander.IconSource>
-              <ui:FASettingsExpander.Footer>
-                <ToggleSwitch IsChecked="{Binding SmartUpdateEnabled}" OnContent="{Binding SmartUpdateOnText}" OffContent="{Binding SmartUpdateOffText}" />
-              </ui:FASettingsExpander.Footer>
-            </ui:FASettingsExpander>
-
-            <ui:FASettingsExpander Classes="settings-expander-card" Header="{Binding ChannelLabel}" Description="{Binding ChannelDescription}">
-              <ui:FASettingsExpander.Footer>
-                <ComboBox ItemsSource="{Binding ChannelOptions}" SelectedItem="{Binding SelectedChannel}"
-                          IsEnabled="{Binding CanChangeChannel}" AutomationProperties.Name="{Binding ChannelLabel}">
-                  <ComboBox.ItemTemplate>
-                    <DataTemplate x:DataType="vm:SelectionOption">
-                      <TextBlock Text="{Binding Label}" TextWrapping="Wrap" />
-                    </DataTemplate>
-                  </ComboBox.ItemTemplate>
-                </ComboBox>
-              </ui:FASettingsExpander.Footer>
-            </ui:FASettingsExpander>
-
-            <ui:FASettingsExpander Classes="settings-expander-card" Header="{Binding ModeLabel}" Description="{Binding ModeDescription}" IsVisible="{Binding SmartUpdateEnabled}">
-              <ui:FASettingsExpander.IconSource>
-                <ui:FAFontIconSource Glyph="&#xF08E8;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-              </ui:FASettingsExpander.IconSource>
-              <ui:FASettingsExpander.Footer>
-                <ComboBox Width="220" ItemsSource="{Binding ModeOptions}" SelectedItem="{Binding SelectedMode}">
-                  <ComboBox.ItemTemplate>
-                    <DataTemplate x:DataType="vm:SelectionOption">
-                      <TextBlock Text="{Binding Label}" TextWrapping="Wrap" />
-                    </DataTemplate>
-                  </ComboBox.ItemTemplate>
-                </ComboBox>
-              </ui:FASettingsExpander.Footer>
-            </ui:FASettingsExpander>
-
-            <ui:FASettingsExpander Classes="settings-expander-card" Header="{Binding ForceReinstallLabel}" Description="{Binding ForceReinstallDescription}">
-              <ui:FASettingsExpander.IconSource>
-                <ui:FAFontIconSource Glyph="&#xF0504;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-              </ui:FASettingsExpander.IconSource>
-              <ui:FASettingsExpander.Footer>
-                <ToggleSwitch IsChecked="{Binding ForceReinstall}" />
-              </ui:FASettingsExpander.Footer>
-            </ui:FASettingsExpander>
-
-            <ui:FASettingsExpander Classes="settings-expander-card" Header="{Binding DownloadThreadsLabel}" Description="{Binding DownloadThreadsDescription}">
-              <ui:FASettingsExpander.IconSource>
-                <ui:FAFontIconSource Glyph="&#xF0168;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-              </ui:FASettingsExpander.IconSource>
-              <ui:FASettingsExpander.Footer>
+            <arc:SettingsGroup>
+              <arc:SettingsRow Header="{Binding SmartUpdateLabel}" Description="{Binding SmartUpdateDescription}">
+                <arc:Switch IsChecked="{Binding SmartUpdateEnabled}" />
+              </arc:SettingsRow>
+              <arc:SettingsRow Header="{Binding ChannelLabel}" Description="{Binding ChannelDescription}">
+                <arc:Select Width="200" ItemsSource="{Binding ChannelOptions}" SelectedItem="{Binding SelectedChannel}"
+                            IsEnabled="{Binding CanChangeChannel}" AutomationProperties.Name="{Binding ChannelLabel}"
+                            DisplayMemberBinding="{Binding Label}" />
+              </arc:SettingsRow>
+              <arc:SettingsRow Header="{Binding ModeLabel}" Description="{Binding ModeDescription}" IsVisible="{Binding SmartUpdateEnabled}">
+                <arc:Select Width="220" ItemsSource="{Binding ModeOptions}" SelectedItem="{Binding SelectedMode}"
+                            DisplayMemberBinding="{Binding Label}" />
+              </arc:SettingsRow>
+              <arc:SettingsRow Header="{Binding ForceReinstallLabel}" Description="{Binding ForceReinstallDescription}">
+                <arc:Switch IsChecked="{Binding ForceReinstall}" />
+              </arc:SettingsRow>
+              <arc:SettingsRow Header="{Binding DownloadThreadsLabel}" Description="{Binding DownloadThreadsDescription}">
                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                  <Slider Width="140" Minimum="1" Maximum="128" Value="{Binding DownloadThreadsSliderValue}" TickFrequency="1" IsSnapToTickEnabled="True" />
+                  <arc:Slider Width="140" Minimum="1" Maximum="128" Value="{Binding DownloadThreadsSliderValue}" IsValueVisible="False" />
                   <TextBlock Classes="settings-item-label" Text="{Binding DownloadThreadsSliderValue, StringFormat='{}{0:F0}'}" VerticalAlignment="Center" />
                 </StackPanel>
-              </ui:FASettingsExpander.Footer>
-            </ui:FASettingsExpander>
+              </arc:SettingsRow>
+            </arc:SettingsGroup>
           </StackPanel>
         </TabItem>
       </TabControl>

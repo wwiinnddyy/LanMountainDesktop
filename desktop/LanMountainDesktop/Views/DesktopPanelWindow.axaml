@@ -1,5 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:arc="https://github.com/AIDotNet/TKCode.Arc"
+             xmlns:lucide="https://github.com/AIDotNet/TKCode.Arc/lucide"
         xmlns:fi="using:FluentIcons.Avalonia"
         x:Class="LanMountainDesktop.Views.DesktopPanelWindow"
         Title="Desktop Panel"
@@ -19,10 +21,10 @@
             <Setter Property="BorderThickness" Value="2" />
         </Style>
         <Style Selector="Border.panel-component-host.panel-edit-host">
-            <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveButtonBorderBrush}" />
+            <Setter Property="BorderBrush" Value="{arc:ArcDesignTokenResource BorderSubtle}" />
         </Style>
         <Style Selector="Border.panel-component-host.panel-edit-host:pointerover">
-            <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveTextSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="{arc:ArcDesignTokenResource TextSecondary}" />
         </Style>
         <Style Selector="Border.panel-component-host.panel-edit-host.panel-selected">
             <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveAccentBrush}" />
@@ -31,7 +33,7 @@
 
     <Border x:Name="PanelShell"
             Classes="surface-translucent-strong"
-            CornerRadius="{DynamicResource DesignCornerRadiusLg}"
+            CornerRadius="{arc:ArcDesignTokenResource RadiusPanel}"
             ClipToBounds="True"
             BoxShadow="none">
         <Grid>
@@ -46,34 +48,34 @@
                         VerticalAlignment="Center"
                         Spacing="6"
                         Margin="12">
-                <fi:FluentIcon x:Name="EmptyStateIcon"
-                               Icon="Apps"
-                               FontSize="28"
-                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                <lucide:LucideIcon x:Name="EmptyStateIcon"
+                               Kind="LayoutGrid"
+ Width="28" Height="28"
+                               Foreground="{arc:ArcDesignTokenResource TextSecondary}"
                                HorizontalAlignment="Center" />
                 <TextBlock x:Name="EmptyStateTitleTextBlock"
                            FontSize="15"
                            FontWeight="SemiBold"
-                           Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                           Foreground="{arc:ArcDesignTokenResource Foreground}"
                            HorizontalAlignment="Center"
                            TextAlignment="Center"
                            TextWrapping="Wrap" />
                 <TextBlock x:Name="EmptyStateDescriptionTextBlock"
                            FontSize="12"
-                           Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                           Foreground="{arc:ArcDesignTokenResource TextSecondary}"
                            HorizontalAlignment="Center"
                            TextAlignment="Center"
                            TextWrapping="Wrap"
                            MaxWidth="360" />
-                <Button
+                <arc:Button
                         Margin="0,4,0,0"
                         HorizontalAlignment="Center"
                         Click="OnPanelAddComponentClick">
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <fi:FluentIcon Icon="Add" FontSize="14" />
+                        <lucide:LucideIcon Kind="Plus" Width="14" Height="14" />
                         <TextBlock x:Name="AddComponentButtonTextBlock" />
                     </StackPanel>
-                </Button>
+                </arc:Button>
             </StackPanel>
         </Grid>
     </Border>

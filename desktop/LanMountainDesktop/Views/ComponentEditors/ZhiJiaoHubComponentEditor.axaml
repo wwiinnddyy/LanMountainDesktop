@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:arc="https://github.com/AIDotNet/TKCode.Arc"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
@@ -11,23 +12,23 @@
             <StackPanel Spacing="12">
                 <TextBlock x:Name="SourceLabelTextBlock"
                            Classes="component-editor-section-title" />
-                <ComboBox x:Name="SourceComboBox"
+                <arc:Select x:Name="SourceComboBox"
                           Classes="component-editor-select"
                           HorizontalAlignment="Stretch"
                           SelectionChanged="OnSourceSelectionChanged">
-                    <ComboBoxItem x:Name="ClassIslandItem"
+                    <arc:SelectItem x:Name="ClassIslandItem"
                                   Classes="component-editor-select-item"
-                                  Tag="classisland" />
-                    <ComboBoxItem x:Name="SectlItem"
+                                  Value="classisland" />
+                    <arc:SelectItem x:Name="SectlItem"
                                   Classes="component-editor-select-item"
-                                  Tag="sectl" />
-                    <ComboBoxItem x:Name="RinLitItem"
+                                  Value="sectl" />
+                    <arc:SelectItem x:Name="RinLitItem"
                                   Classes="component-editor-select-item"
-                                  Tag="rinlit" />
-                    <ComboBoxItem x:Name="JiangtokotoItem"
+                                  Value="rinlit" />
+                    <arc:SelectItem x:Name="JiangtokotoItem"
                                   Classes="component-editor-select-item"
-                                  Tag="jiangtokoto" />
-                </ComboBox>
+                                  Value="jiangtokoto" />
+                </arc:Select>
                 <TextBlock x:Name="SourceDescriptionTextBlock"
                            Classes="component-editor-secondary-text"
                            TextWrapping="Wrap" />
@@ -40,17 +41,17 @@
             <StackPanel Spacing="12">
                 <TextBlock x:Name="MirrorSourceLabelTextBlock"
                            Classes="component-editor-section-title" />
-                <ComboBox x:Name="MirrorSourceComboBox"
+                <arc:Select x:Name="MirrorSourceComboBox"
                           Classes="component-editor-select"
                           HorizontalAlignment="Stretch"
                           SelectionChanged="OnMirrorSourceSelectionChanged">
-                    <ComboBoxItem x:Name="DirectMirrorItem"
+                    <arc:SelectItem x:Name="DirectMirrorItem"
                                   Classes="component-editor-select-item"
-                                  Tag="direct" />
-                    <ComboBoxItem x:Name="GhProxyMirrorItem"
+                                  Value="direct" />
+                    <arc:SelectItem x:Name="GhProxyMirrorItem"
                                   Classes="component-editor-select-item"
-                                  Tag="gh-proxy" />
-                </ComboBox>
+                                  Value="gh-proxy" />
+                </arc:Select>
                 <TextBlock x:Name="MirrorSourceDescriptionTextBlock"
                            Classes="component-editor-secondary-text"
                            TextWrapping="Wrap" />
@@ -73,7 +74,7 @@
                                    Classes="component-editor-secondary-text"
                                    FontSize="12" />
                     </StackPanel>
-                    <ToggleSwitch x:Name="AutoRefreshToggle"
+                    <arc:Switch x:Name="AutoRefreshToggle"
                                   Grid.Column="1"
                                   IsCheckedChanged="OnAutoRefreshChanged" />
                 </Grid>
@@ -83,10 +84,10 @@
                             Spacing="8">
                     <TextBlock x:Name="IntervalLabelTextBlock"
                                Classes="component-editor-primary-text" />
-                    <NumericUpDown x:Name="IntervalNumeric"
+                    <arc:NumberField x:Name="IntervalNumeric"
                                    Minimum="5"
                                    Maximum="1440"
-                                   Increment="5"
+                                   Step="5"
                                    ValueChanged="OnIntervalValueChanged" />
                 </StackPanel>
             </StackPanel>

@@ -8,6 +8,7 @@ using LanDesktopPLONDS.Installer.Localization;
 using LanDesktopPLONDS.Installer.Models;
 using LanDesktopPLONDS.Installer.Services;
 using LanMountainDesktop.Shared.Contracts.Privacy;
+using LanMountainDesktop.Shared.Text;
 using LanMountainDesktop.Shared.Threading;
 
 namespace LanDesktopPLONDS.Installer.ViewModels;
@@ -473,7 +474,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         DownloadProgress = progress.DownloadProgress;
         InstallProgress = progress.InstallProgress;
         CurrentFile = progress.CurrentFile;
-        DownloadBytesText = FormatBytes(progress.BytesDownloaded, progress.TotalBytes);
+        DownloadBytesText = ByteSizeText.FormatBytes(progress.BytesDownloaded, progress.TotalBytes);
 
         // Task 5: 计算下载速度
         var now = DateTime.UtcNow;
@@ -481,7 +482,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         if (elapsed > 0.5 && progress.BytesDownloaded > _lastBytesDownloaded && progress.BytesDownloaded > 0)
         {
             var speedBytesPerSec = (progress.BytesDownloaded - _lastBytesDownloaded) / elapsed;
-            DownloadSpeedText = $"{ToSize((long)speedBytesPerSec)}/s";
+            DownloadSpeedText = $"{ByteSizeText.ToSize((long)speedBytesPerSec)}/s";
             _lastBytesDownloaded = progress.BytesDownloaded;
             _lastProgressTime = now;
         }
@@ -494,31 +495,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
             step.IsUnlocked = step.StepId <= MaxUnlockedStep;
             step.IsSelected = step.StepId == CurrentStep;
         }
-    }
-
-    private static string FormatBytes(long downloaded, long? total)
-    {
-        if (downloaded <= 0 && total is not > 0)
-        {
-            return string.Empty;
-        }
-
-        var downloadedText = ToSize(downloaded);
-        return total is > 0 ? $"{downloadedText} / {ToSize(total.Value)}" : downloadedText;
-    }
-
-    private static string ToSize(long value)
-    {
-        string[] suffixes = ["B", "KB", "MB", "GB"];
-        var size = (double)value;
-        var suffix = 0;
-        while (size >= 1024 && suffix < suffixes.Length - 1)
-        {
-            size /= 1024;
-            suffix++;
-        }
-
-        return $"{size:0.##} {suffixes[suffix]}";
     }
 
     // =====================================================================

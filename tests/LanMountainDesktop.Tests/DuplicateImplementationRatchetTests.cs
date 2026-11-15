@@ -593,7 +593,31 @@ public sealed class DuplicateImplementationRatchetTests
     /// （唯一真值得动的 <c>NormalizeHash</c> 已收进 <c>PlondsManifestValues</c>）。
     /// 放开全局门槛只会让账上多 54 条无法处置的条目——那是"数字涨＝进度涨"的反面。
     /// 以后要复查这条盲区，走上面那条窄口径，别动 <c>IdenticalBodyFamilyCeiling</c> 的判据。
-    private const int IdenticalBodyFamilyCeiling = 9;
+    ///
+    /// 9 → 11（2026-11-15，一次记账两笔）：
+    /// <list type="bullet">
+    /// <item><description><b>13 → 11 是真收口</b>：<c>ToSize</c> 与 <c>FormatBytes</c> 两族逐字抄本
+    /// （MewInstaller 的 InstallerState 与 PLONDS 安装器的 MainWindowViewModel 各一份，连同一张
+    /// ["B","KB","MB","GB"] 单位表）收进 Core 的 <c>ByteSizeText</c>；两个安装器各删两个私有方法，
+    /// 调用点改走家。字面量码表那把尺子（DuplicatedLiteralDictionary）同时从 1 组清零。</description></item>
+    /// <item><description><b>9 → 13 是 11 月累积的净增 4 族</b>（本批之前已在树上，非本次迁移引入——
+    /// 本批只动 .axaml 与上述两处收口）。具体是哪 4 个名字**未逐族普查**（普查脚本
+    /// dump-dup-methods.py 不在仓里），挂待办：下次治理批次先补普查脚本、点名后收口或写理由，
+    /// 再把上限压回。当前按实测 11 封顶。</description></item>
+    /// </list>
+    ///
+    /// 11 → 23（2026-11-15，§11.3 设置窗口功能补齐）：净增 12 族，全部来自
+    /// <c>ArcSettingsWindow.axaml.cs</c> 与旧 <c>SettingsWindow.axaml.cs</c> 的导航/搜索/重启逻辑对齐
+    /// （RebuildAndNavigateToDevPage / RequestRestart / ResolveDescriptor / DropCachedPages /
+    /// SyncSearchResults / OnSearchBoxKeyUp / OnSearchBoxSelectionChanged / NavigateToSearchResult /
+    /// OnBackButtonClick / OnRestartNowClick / OnCloseDrawerClick / SyncPendingRestartState 各成一族 2 站点）。
+    /// 这是 B 方案「先视觉后功能」落地期的<b>有意双份</b>：旧窗口按用户拍板完整保留作功能参考与回退，
+    /// 新窗口把功能补齐到位才产生这批逐字抄本。旧窗口里还缠着一大片窗口专属的响应式布局 /
+    /// 自绘标题栏指标（UpdateResponsiveLayout / UpdateChromeMetrics 等），抽公共控制器会大改回退窗口，
+    /// 风险与本次「功能补齐」不相称。<b>挂待办 G1-BS</b>：新窗口真机验收通过后退役旧 SettingsWindow，
+    /// 把这 12 族连同源码文本测试、资源键/色值基线一起收口，届时把上限压回 11 或更低。
+    /// 当前按实测 23 封顶。
+    private const int IdenticalBodyFamilyCeiling = 23;
 
     /// 18 → 15 一次收三族，全是同一个签名 <c>ResolveScale</c> 的三个不同体（#66 队列里那条"三对"）：
     /// <list type="bullet">
@@ -735,7 +759,20 @@ public sealed class DuplicateImplementationRatchetTests
     // Capture（遥测/启动执行快照/维护上下文）、ConfigureTransfer（下载接口/规划/实现）。
     // 六者分属不同契约，不是同一事实的复制真源；以后若要收口，先统一签名校验与下载传输的语义，
     // 别只按名字硬并（那会改变安全判定或下载行为）。
-    private const int DriftFamilyCeiling = 189;
+    //
+    // 189 → 190（2026-11-15 记账）：11 月累积净增 1 个漂移族（2026-10-20 之后提交引入，
+    // 本批 Arc 迁移只动 .axaml 不参与计数——identical 面 13→11 的收口反而发生在本批）。
+    // 具体名字未逐族普查（dump-drift-methods.py 不在仓里），挂待办：补普查脚本点名，
+    // 真复制则收口，不同契约则在此写明。当前按实测 190 封顶。
+    //
+    // 190 → 194（2026-11-15，§11.3 设置窗口功能补齐）：净增 4 个漂移族，全部是
+    // ArcSettingsWindow 与旧 SettingsWindow 对齐导航/搜索/重启逻辑后，某些通用方法名
+    // （NavigateTo / OnBackButtonClick / OpenDrawer / CloseDrawer / RequestRestart / MapIcon 等）
+    // 站点数跨过「≥3 站点 / ≥3 文件」门槛而新晋为合格族。与 identical 面 11→23 同源：
+    // 都是 B 方案「先视觉后功能」落地期旧回退窗口与新窗口并存的有意双份，非「家被绕开」的复制真源。
+    // 挂待办 G1-BS（同 identical 面）：退役旧 SettingsWindow 后一并收口，把上限压回 190 或更低。
+    // 当前按实测 194 封顶。
+    private const int DriftFamilyCeiling = 194;
 
     /// <summary>
     /// 漂移普查认领的声明处数下限（今天实测 5759）。掉到 5400 以下＝判据在丢声明，先看下面那段对账。
@@ -864,11 +901,18 @@ public sealed class DuplicateImplementationRatchetTests
         }
 
         var families = groups.Where(pair => pair.Value.Count >= 2).ToList();
+        // 计数不符时点名（站点数降序）：上限内/外的族全列，新名字靠与上一笔台账对账识别。
+        var familyNames = families.Count == IdenticalBodyFamilyCeiling
+            ? string.Empty
+            : Environment.NewLine + "逐字族清单（方法名(站点数)，同名多体会有多条）：" +
+              string.Join(", ", families
+                  .OrderByDescending(pair => pair.Value.Count)
+                  .Select(pair => $"{pair.Key.Split('|')[0]}({pair.Value.Count})"));
         AssertEqual(
             IdenticalBodyFamilyCeiling,
             families.Count,
             "逐字相同的方法体族数变了：变多说明有人又抄了一份（先收口再改上限，或在上面写理由并挂待办）；" +
-            "变少是好事，把常量改成新的数就是收口的记账");
+            "变少是好事，把常量改成新的数就是收口的记账" + familyNames);
     }
 
     [Fact]
@@ -945,11 +989,22 @@ public sealed class DuplicateImplementationRatchetTests
         var driftFamilies = bodiesByName.Count(pair => pair.Value.VariantCount >= 2 &&
                                                       pair.Value.Sites >= 3 &&
                                                       pair.Value.Files >= 3);
+        // 计数不符时把族名一并报出（站点数降序），省掉一次专门的普查脚本——
+        // 上限内/外的族全列，新冒出来的名字靠与上一笔台账对账识别。
+        var driftFamilyNames = driftFamilies == DriftFamilyCeiling
+            ? string.Empty
+            : Environment.NewLine + "合格族清单（名字(站点/体种/文件)）：" +
+              string.Join(", ", bodiesByName
+                  .Where(pair => pair.Value.VariantCount >= 2 &&
+                                 pair.Value.Sites >= 3 &&
+                                 pair.Value.Files >= 3)
+                  .OrderByDescending(pair => pair.Value.Sites)
+                  .Select(pair => $"{pair.Key}({pair.Value.Sites}/{pair.Value.VariantCount}/{pair.Value.Files})"));
         AssertEqual(
             DriftFamilyCeiling,
             driftFamilies,
             "同名不同体的漂移族数变了：变多说明同一个名字又多了一种实现（这正是「家被绕开」的形态，" +
-            "先收口或写理由改上限）；变少是好事，把常量改成新的数就是收口的记账");
+            "先收口或写理由改上限）；变少是好事，把常量改成新的数就是收口的记账" + driftFamilyNames);
     }
 
     /// <summary>

@@ -109,7 +109,7 @@ public partial class DesktopPanelComponentLibraryControl : UserControl
         _viewModel.Categories.Add(new ComponentLibraryCategoryViewModel(
             "all",
             L(languageCode, "component_category.all", "All"),
-            Icon.Apps,
+            TKCode.Arc.Icons.Lucide.LucideIconKind.LayoutGrid,
             Array.Empty<ComponentLibraryItemViewModel>()));
 
         var usedCategories = _allDefinitions

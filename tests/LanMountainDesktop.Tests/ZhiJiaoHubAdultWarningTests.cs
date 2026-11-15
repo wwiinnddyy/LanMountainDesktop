@@ -15,6 +15,8 @@ using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Views.ComponentEditors;
 
+using TKCode.Arc;
+
 using Xunit;
 
 namespace LanMountainDesktop.Tests;
@@ -36,7 +38,7 @@ public sealed class ZhiJiaoHubAdultWarningTests
         window.Show();
         Dispatcher.UIThread.RunJobs();
 
-        var combo = editor.GetVisualDescendants().OfType<ComboBox>()
+        var combo = editor.GetVisualDescendants().OfType<Select>()
             .First(c => ItemWithTag(c, ZhiJiaoHubSources.RinLit) is not null);
 
         // 场景 1：取消 —— 弹了一次，但没落盘、没刷新，选中还原回 ClassIsland
@@ -79,11 +81,11 @@ public sealed class ZhiJiaoHubAdultWarningTests
         window.Close();
     }
 
-    private static ComboBoxItem? ItemWithTag(ComboBox combo, string tag)
+    private static SelectItem? ItemWithTag(Select combo, string tag)
     {
         for (var i = 0; i < combo.ItemCount; i++)
         {
-            if (combo.Items[i] is ComboBoxItem item && item.Tag as string == tag)
+            if (combo.Items[i] is SelectItem item && item.Value as string == tag)
             {
                 return item;
             }

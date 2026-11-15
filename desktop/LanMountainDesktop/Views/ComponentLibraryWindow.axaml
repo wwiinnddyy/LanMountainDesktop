@@ -1,5 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:arc="https://github.com/AIDotNet/TKCode.Arc"
+             xmlns:lucide="https://github.com/AIDotNet/TKCode.Arc/lucide"
         xmlns:vm="using:LanMountainDesktop.ViewModels"
         xmlns:fi="using:FluentIcons.Avalonia"
         x:Class="LanMountainDesktop.Views.ComponentLibraryWindow"
@@ -11,7 +13,7 @@
         CanResize="True"
         WindowDecorations="Full"
         Title="Component Library"
-        Background="{DynamicResource AdaptiveSurfaceBaseBrush}">
+        Background="{arc:ArcDesignTokenResource Background}">
 
     <Grid RowDefinitions="Auto,*"
           RowSpacing="10"
@@ -21,25 +23,25 @@
             <TextBlock VerticalAlignment="Center"
                        FontSize="18"
                        FontWeight="SemiBold"
-                       Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                       Foreground="{arc:ArcDesignTokenResource Foreground}"
                        Text="{Binding Title}" />
-            <Button Grid.Column="1"
+            <arc:Button Grid.Column="1"
                     Width="34"
                     Height="34"
                     Padding="0"
                     Background="Transparent"
                     BorderThickness="0"
                     Click="OnCloseClick">
-                <fi:FluentIcon Icon="Dismiss"
-                               IconVariant="Regular" />
-            </Button>
+                <lucide:LucideIcon Kind="X"
+ />
+            </arc:Button>
         </Grid>
 
         <Grid Grid.Row="1"
               ColumnDefinitions="240,*"
               ColumnSpacing="12">
             <Border Classes="surface-translucent-panel"
-                    CornerRadius="{DynamicResource DesignCornerRadiusLg}"
+                    CornerRadius="{arc:ArcDesignTokenResource RadiusPanel}"
                     Padding="10">
                 <ListBox x:Name="CategoryListBox"
                          Background="Transparent"
@@ -50,17 +52,18 @@
                         <DataTemplate x:DataType="vm:ComponentLibraryCategoryViewModel">
                             <Border Padding="10"
                                     Margin="0,0,0,6"
-                                    CornerRadius="{DynamicResource DesignCornerRadiusSm}"
-                                    Background="{DynamicResource AdaptiveNavItemBackgroundBrush}">
+                                    CornerRadius="{arc:ArcDesignTokenResource RadiusControl}"
+                                    Background="{arc:ArcDesignTokenResource SurfaceMuted}">
                                 <Grid ColumnDefinitions="Auto,*"
                                       ColumnSpacing="8">
-                                    <fi:FluentIcon Icon="{Binding Icon}"
-                                                   IconVariant="Regular"
-                                                   FontSize="16" />
+                                    <lucide:LucideIcon Kind="{Binding Icon}"
+                                                   Width="16"
+                                                   Height="16"
+                                                   VerticalAlignment="Center" />
                                     <TextBlock Grid.Column="1"
                                                VerticalAlignment="Center"
                                                FontWeight="SemiBold"
-                                               Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                               Foreground="{arc:ArcDesignTokenResource Foreground}"
                                                Text="{Binding Title}" />
                                 </Grid>
                             </Border>
@@ -71,7 +74,7 @@
 
             <Border Grid.Column="1"
                     Classes="surface-translucent-strong"
-                    CornerRadius="{DynamicResource DesignCornerRadiusLg}"
+                    CornerRadius="{arc:ArcDesignTokenResource RadiusPanel}"
                     Padding="10">
                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled">
@@ -87,17 +90,17 @@
                                 <Border Width="240"
                                         Height="220"
                                         Margin="6"
-                                        CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+                                        CornerRadius="{arc:ArcDesignTokenResource RadiusPanel}"
                                         Padding="10"
-                                        Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
-                                        BorderBrush="{DynamicResource AdaptiveButtonBorderBrush}"
+                                        Background="{arc:ArcDesignTokenResource SurfaceRaised}"
+                                        BorderBrush="{arc:ArcDesignTokenResource BorderSubtle}"
                                         BorderThickness="1">
                                     <Grid RowDefinitions="*,Auto,Auto"
                                           RowSpacing="8">
-                                        <Border CornerRadius="{DynamicResource DesignCornerRadiusSm}"
-                                                Background="{DynamicResource AdaptiveGlassPanelBackgroundBrush}"
+                                        <Border CornerRadius="{arc:ArcDesignTokenResource RadiusControl}"
+                                                Background="{arc:ArcDesignTokenResource SurfaceMuted}"
                                                 BorderThickness="1"
-                                                BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
+                                                BorderBrush="{arc:ArcDesignTokenResource BorderSubtle}"
                                                 Padding="8">
                                             <ContentControl Content="{Binding PreviewControl}"
                                                             HorizontalAlignment="Center"
@@ -109,16 +112,16 @@
                                         <TextBlock Grid.Row="1"
                                                    HorizontalAlignment="Center"
                                                    FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                                   Foreground="{arc:ArcDesignTokenResource Foreground}"
                                                    Text="{Binding DisplayName}" />
 
-                                        <Button Grid.Row="2"
+                                        <arc:Button Grid.Row="2"
                                                 HorizontalAlignment="Center"
                                                 Padding="12,6"
                                                 Tag="{Binding ComponentId}"
                                                 Click="OnAddComponentClick">
                                             <TextBlock Text="Add to Desktop" />
-                                        </Button>
+                                        </arc:Button>
                                     </Grid>
                                 </Border>
                             </DataTemplate>

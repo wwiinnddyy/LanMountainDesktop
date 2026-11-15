@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:arc="https://github.com/AIDotNet/TKCode.Arc"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
@@ -22,7 +23,7 @@
             <StackPanel Spacing="12">
                 <TextBlock x:Name="TimeZoneLabelTextBlock"
                            Classes="component-editor-section-title" />
-                <ComboBox x:Name="TimeZoneComboBox"
+                <arc:Select x:Name="TimeZoneComboBox"
                           Classes="component-editor-select"
                           HorizontalAlignment="Stretch"
                           SelectionChanged="OnTimeZoneSelectionChanged" />

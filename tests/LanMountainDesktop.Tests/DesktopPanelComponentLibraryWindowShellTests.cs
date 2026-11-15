@@ -36,7 +36,8 @@ public sealed class DesktopPanelComponentLibraryWindowShellTests
         Assert.Contains("VerticalAlignment=\"Stretch\"", panelShell);
         Assert.Contains("Margin=\"0\"", panelShell);
         Assert.Contains("BoxShadow=\"none\"", panelShell);
-        Assert.Contains("CornerRadius=\"{DynamicResource DesignCornerRadiusLg}\"", panelShell);
+        // D2 批次 B：圆角资源键从 DesignCornerRadiusLg 换成 Arc token（形状语义不变，仍由令牌提供面板圆角）
+        Assert.Contains("CornerRadius=\"{arc:ArcDesignTokenResource RadiusPanel}\"", panelShell);
         Assert.Contains("ClipToBounds=\"True\"", panelShell);
         Assert.DoesNotContain("Margin=\"10\"", panelShell);
     }

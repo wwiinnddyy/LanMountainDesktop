@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:arc="https://github.com/AIDotNet/TKCode.Arc"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              x:Class="LanMountainDesktop.Views.ComponentEditors.NotificationBoxComponentEditor"
              x:DataType="vm:NotificationBoxEditorViewModel">
@@ -19,15 +20,15 @@
                            Classes="component-editor-section-title" />
                 <TextBlock Text="{Binding MaxDisplayCountDescription}"
                            Classes="component-editor-secondary-text" />
-                <ComboBox ItemsSource="{Binding MaxDisplayCountOptions}"
+                <arc:Select ItemsSource="{Binding MaxDisplayCountOptions}"
                           SelectedItem="{Binding SelectedMaxDisplayCount}"
                           HorizontalAlignment="Stretch">
-                    <ComboBox.ItemTemplate>
+                    <arc:Select.ItemTemplate>
                         <DataTemplate x:DataType="vm:SelectionOption">
                             <TextBlock Text="{Binding Label}" />
                         </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
+                    </arc:Select.ItemTemplate>
+                </arc:Select>
             </StackPanel>
         </Border>
 
@@ -36,15 +37,15 @@
             <StackPanel Spacing="12">
                 <TextBlock Text="{Binding SortOrderLabel}"
                            Classes="component-editor-section-title" />
-                <ComboBox ItemsSource="{Binding SortOrderOptions}"
+                <arc:Select ItemsSource="{Binding SortOrderOptions}"
                           SelectedItem="{Binding SelectedSortOrder}"
                           HorizontalAlignment="Stretch">
-                    <ComboBox.ItemTemplate>
+                    <arc:Select.ItemTemplate>
                         <DataTemplate x:DataType="vm:SelectionOption">
                             <TextBlock Text="{Binding Label}" />
                         </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
+                    </arc:Select.ItemTemplate>
+                </arc:Select>
             </StackPanel>
         </Border>
 
@@ -54,16 +55,16 @@
                 <TextBlock Text="{Binding DisplayOptionsLabel}"
                            Classes="component-editor-section-title" />
 
-                <CheckBox IsChecked="{Binding ShowAppIcon}"
+                <arc:Checkbox IsChecked="{Binding ShowAppIcon}"
                           Content="{Binding ShowAppIconLabel}" />
 
-                <CheckBox IsChecked="{Binding ShowTimestamp}"
+                <arc:Checkbox IsChecked="{Binding ShowTimestamp}"
                           Content="{Binding ShowTimestampLabel}" />
 
-                <CheckBox IsChecked="{Binding GroupByApp}"
+                <arc:Checkbox IsChecked="{Binding GroupByApp}"
                           Content="{Binding GroupByAppLabel}" />
 
-                <CheckBox IsChecked="{Binding ShowClearButton}"
+                <arc:Checkbox IsChecked="{Binding ShowClearButton}"
                           Content="{Binding ShowClearButtonLabel}" />
             </StackPanel>
         </Border>
@@ -73,15 +74,15 @@
             <StackPanel Spacing="12">
                 <TextBlock Text="{Binding TimeFormatLabel}"
                            Classes="component-editor-section-title" />
-                <ComboBox ItemsSource="{Binding TimeFormatOptions}"
+                <arc:Select ItemsSource="{Binding TimeFormatOptions}"
                           SelectedItem="{Binding SelectedTimeFormat}"
                           HorizontalAlignment="Stretch">
-                    <ComboBox.ItemTemplate>
+                    <arc:Select.ItemTemplate>
                         <DataTemplate x:DataType="vm:SelectionOption">
                             <TextBlock Text="{Binding Label}" />
                         </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
+                    </arc:Select.ItemTemplate>
+                </arc:Select>
             </StackPanel>
         </Border>
     </StackPanel>

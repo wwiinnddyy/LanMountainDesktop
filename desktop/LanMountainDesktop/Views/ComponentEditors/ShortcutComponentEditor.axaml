@@ -1,5 +1,6 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:arc="https://github.com/AIDotNet/TKCode.Arc"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              x:Class="LanMountainDesktop.Views.ComponentEditors.ShortcutComponentEditor"
              x:DataType="vm:ShortcutEditorViewModel">
@@ -18,16 +19,16 @@
                 <TextBlock Text="{Binding TargetPathLabel}"
                            Classes="component-editor-section-title" />
                 <Grid ColumnDefinitions="*,Auto">
-                    <TextBox Text="{Binding TargetPath}"
+                    <arc:Input Text="{Binding TargetPath}"
                              IsReadOnly="True"
                              PlaceholderText="{Binding TargetPathPlaceholder}"
                              Grid.Column="0" />
-                    <Button Content="{Binding BrowseButtonText}"
+                    <arc:Button Content="{Binding BrowseButtonText}"
                             Click="OnBrowseClick"
                             Grid.Column="1"
                             Margin="8,0,0,0" />
                 </Grid>
-                <Button Content="{Binding ClearButtonText}"
+                <arc:Button Content="{Binding ClearButtonText}"
                         Click="OnClearClick"
                         HorizontalAlignment="Stretch" />
             </StackPanel>
@@ -38,15 +39,15 @@
             <StackPanel Spacing="12">
                 <TextBlock Text="{Binding ClickModeLabel}"
                            Classes="component-editor-section-title" />
-                <ComboBox ItemsSource="{Binding ClickModeOptions}"
+                <arc:Select ItemsSource="{Binding ClickModeOptions}"
                           SelectedItem="{Binding SelectedClickMode}"
                           HorizontalAlignment="Stretch">
-                    <ComboBox.ItemTemplate>
+                    <arc:Select.ItemTemplate>
                         <DataTemplate x:DataType="vm:SelectionOption">
                             <TextBlock Text="{Binding Label}" />
                         </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
+                    </arc:Select.ItemTemplate>
+                </arc:Select>
             </StackPanel>
         </Border>
 
@@ -57,7 +58,7 @@
                            Classes="component-editor-section-title" />
                 <TextBlock Text="{Binding BackgroundDescription}"
                            Classes="component-editor-secondary-text" />
-                <CheckBox IsChecked="{Binding ShowBackground}"
+                <arc:Checkbox IsChecked="{Binding ShowBackground}"
                           Content="{Binding BackgroundLabel}" />
             </StackPanel>
         </Border>

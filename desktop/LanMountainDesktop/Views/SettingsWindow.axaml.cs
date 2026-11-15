@@ -15,7 +15,10 @@ using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Shared.Contracts;
 using LanMountainDesktop.ViewModels;
-using Symbol = FluentIcons.Common.Symbol;
+using TKCode.Arc;
+using TKCode.Arc.Icons.Lucide;
+// TKCode.Arc 与 Avalonia.Controls 存在同名控件（Button 等）；本文件的控件引用全部是 Avalonia 语义。
+using Button = Avalonia.Controls.Button;
 
 namespace LanMountainDesktop.Views;
 
@@ -33,7 +36,6 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
     private const double MaxPaneOpenLength = 288d;
     private const double BaseNarrowThreshold = 800d;
     private const double CustomTitleBarHeight = 48d;
-    private const string PaneToggleItemTag = "__pane_toggle__";
 
     private readonly ISettingsPageRegistry _pageRegistry;
     private readonly IHostApplicationLifecycle _hostApplicationLifecycle;
@@ -45,7 +47,6 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
     private bool _isResponsiveRefreshPending;
     private bool _isRestartPromptVisible;
     private bool _isHandlingSearchSelection;
-    private FANavigationViewItem? _paneToggleItem;
     private Border? _currentSearchHighlight;
     private Action? _searchHighlightCleanup;
 
@@ -73,9 +74,9 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         ApplyChromeMode(useSystemChrome);
         ApplyFluentCornerRadius();
 
-        if (RootNavigationView is not null)
+        if (NavSidebar is not null)
         {
-            RootNavigationView.PropertyChanged += OnRootNavigationViewPropertyChanged;
+            NavSidebar.PropertyChanged += OnSidebarPropertyChanged;
         }
 
         Opened += OnOpened;
@@ -100,7 +101,6 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         SyncPendingRestartState();
         SyncTitleText();
         UpdateChromeMetrics();
-        UpdatePaneToggleVisibility();
         UpdateResponsiveLayout();
         RequestResponsiveLayoutRefresh();
     }
@@ -120,7 +120,6 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         RebuildNavigationItems();
         NavigateTo(pageId ?? ViewModel.Pages.FirstOrDefault()?.PageId, addHistory: false, source: "reload");
         RebuildSearchIndex(scanBuiltInPages: true);
-        UpdatePaneToggleVisibility();
     }
 
     public void RebuildAndNavigateToDevPage()
@@ -215,77 +214,46 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
 
     private void RebuildNavigationItems()
     {
-        if (RootNavigationView is null)
+        if (NavSidebar is null)
         {
             return;
         }
 
-        RootNavigationView.MenuItems.Clear();
-        RootNavigationView.FooterMenuItems.Clear();
+        NavSidebar.Sections.Clear();
 
-        _paneToggleItem = new FANavigationViewItem
-        {
-            Content = string.Empty,
-            Tag = PaneToggleItemTag,
-            IconSource = CreateSettingsIconSource(Symbol.Navigation),
-            SelectsOnInvoked = false
-        };
-        ToolTip.SetTip(_paneToggleItem, ViewModel.TogglePaneTooltip);
-        RootNavigationView.MenuItems.Add(_paneToggleItem);
-
+        // 与原 FANavigationView 的分隔语义一致：Category 变化即新组（连续同类共用一组，
+        // About/Dev 自然落到尾部各自的组）。
         AirAppSettingsPageCategory? previousCategory = null;
+        SidebarSection? currentSection = null;
 
         foreach (var page in ViewModel.Pages)
         {
-            var item = new FANavigationViewItem
+            if (currentSection is null || previousCategory != page.Category)
             {
-                Content = page.Title,
-                Tag = page.PageId,
-                IconSource = CreateSettingsIconSource(MapIcon(page.IconKey))
-            };
-
-            if (page.Category == AirAppSettingsPageCategory.About ||
-                page.Category == AirAppSettingsPageCategory.Dev)
-            {
-                RootNavigationView.FooterMenuItems.Add(item);
-                continue;
+                currentSection = new SidebarSection();
+                NavSidebar.Sections.Add(currentSection);
             }
 
-            if (previousCategory is not null && previousCategory != page.Category)
+            currentSection.Items.Add(new SidebarItem
             {
-                RootNavigationView.MenuItems.Add(new FANavigationViewItemSeparator());
-            }
-
-            RootNavigationView.MenuItems.Add(item);
+                Key = page.PageId,
+                Label = page.Title,
+                Icon = CreateSettingsIcon(MapIcon(page.IconKey)),
+            });
 
             previousCategory = page.Category;
         }
     }
 
-    private void OnNavigationSelectionChanged(object? sender, FANavigationViewSelectionChangedEventArgs e)
+    private void OnSidebarSelectionChanged(object? sender, SidebarSelectionChangedEventArgs e)
     {
-        _ = sender;
-        var selectedItem = e.SelectedItemContainer ?? e.SelectedItem as Control;
-        if (IsPaneToggleItem(selectedItem))
-        {
-            RestoreCurrentNavigationSelection();
-            return;
-        }
-
-        NavigateTo(selectedItem?.Tag as string, addHistory: true, source: "navigation");
+        NavigateTo(NavSidebar?.SelectedItem?.Key, addHistory: true, source: "navigation");
     }
 
-    private void OnNavigationItemInvoked(object? sender, FANavigationViewItemInvokedEventArgs e)
+    private void OnSidebarItemInvoked(object? sender, SidebarItemInvokedEventArgs e)
     {
-        _ = sender;
-        var invokedItem = e.InvokedItemContainer ?? e.InvokedItem as Control;
-        if (!IsPaneToggleItem(invokedItem))
-        {
-            return;
-        }
-
-        ToggleNavigationPane();
-        RestoreCurrentNavigationSelection();
+        // 已选中页再点也走 NavigateTo（幂等早退），保持与原 ItemInvoked 一致的行为面。
+        NavigateTo(NavSidebar?.SelectedItem?.Key, addHistory: true, source: "navigation");
     }
 
     private void NavigateTo(
@@ -337,7 +305,6 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         CloseDrawer();
         TrySelectNavigationItem(descriptor.PageId);
         SyncTitleText();
-        UpdatePaneToggleVisibility();
         UpdateResponsiveLayout();
         RequestResponsiveLayoutRefresh();
         if (searchResult is not null)
@@ -426,22 +393,13 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
 
     private void TrySelectNavigationItem(string pageId)
     {
-        if (RootNavigationView is null)
+        if (NavSidebar is null)
         {
             return;
         }
 
-        var allItems = RootNavigationView.MenuItems.OfType<FANavigationViewItem>()
-            .Concat(RootNavigationView.FooterMenuItems.OfType<FANavigationViewItem>());
-
-        foreach (var item in allItems)
-        {
-            if (string.Equals(item.Tag as string, pageId, StringComparison.OrdinalIgnoreCase))
-            {
-                RootNavigationView.SelectedItem = item;
-                return;
-            }
-        }
+        // SelectedKey 双向绑定选中项；设置后触发的 SelectionChanged 会在 NavigateTo 里幂等早退。
+        NavSidebar.SelectedKey = pageId;
     }
 
     private void OnRestartNowClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -578,18 +536,14 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
 
         try
         {
-            var dialog = new FAContentDialog
-            {
-                Title = ViewModel.RestartDialogTitle,
-                Content = ViewModel.RestartMessage,
-                PrimaryButtonText = ViewModel.RestartDialogPrimaryText,
-                CloseButtonText = ViewModel.RestartDialogCloseText,
-                DefaultButton = FAContentDialogButton.Primary
-            };
-            ApplyFluentCornerRadius(dialog.Resources);
+            var result = await Dialog.ShowAsync(this,
+                ViewModel.RestartDialogTitle,
+                ViewModel.RestartMessage,
+                description: null,
+                new DialogAction(ViewModel.RestartDialogCloseText, false),
+                new DialogAction(ViewModel.RestartDialogPrimaryText, true, ButtonVariant.Primary));
 
-            var result = await dialog.ShowAsync(this);
-            if (result == FAContentDialogResult.Primary)
+            if (result is true)
             {
                 _hostApplicationLifecycle.TryRestart(new HostApplicationLifecycleRequest(
                     Source: "SettingsWindow",
@@ -638,17 +592,15 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         var columnSpacing = Math.Clamp(20d * renderScale, 16d, 28d);
         var edgePadding = Math.Clamp(20d * renderScale, 12d, 28d);
         var drawerWidth = Math.Clamp(BaseDrawerWidth * contentScale, 276d, 380d);
-        var compactPaneWidth = Math.Clamp(48d * renderScale, 40d, 60d);
         var narrowThreshold = Math.Clamp(BaseNarrowThreshold * renderScale, 760d, 980d);
         var isNarrow = width < narrowThreshold;
         var paneOpenWidth = ComputePaneOpenLength();
-        var paneReservedWidth = GetReservedPaneWidth(compactPaneWidth, isNarrow, paneOpenWidth);
         var containerMaxWidth = ComputeSettingsContainerMaxWidth();
 
-        if (RootNavigationView is not null &&
-            Math.Abs(RootNavigationView.OpenPaneLength - paneOpenWidth) > 0.5d)
+        if (NavSidebar is not null &&
+            Math.Abs(NavSidebar.ExpandedWidth - paneOpenWidth) > 0.5d)
         {
-            RootNavigationView.OpenPaneLength = paneOpenWidth;
+            NavSidebar.ExpandedWidth = paneOpenWidth;
         }
 
         SettingsContentGrid.Margin = new Thickness(horizontalMargin, topMargin, horizontalMargin, bottomMargin);
@@ -669,9 +621,8 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
             SettingsContentGrid.ColumnSpacing = columnSpacing;
         }
 
-        var rootContentWidth = RootNavigationView?.Bounds.Width > 1
-            ? RootNavigationView.Bounds.Width - paneReservedWidth
-            : Math.Max(SettingsContentGrid.Bounds.Width, width - horizontalMargin * 2d - paneReservedWidth);
+        // Push 模式下内容列与侧栏真实并排，SettingsContentGrid 的 Bounds 即扣除窗格后的可用宽。
+        var rootContentWidth = Math.Max(SettingsContentGrid.Bounds.Width, width - horizontalMargin * 2d);
         var contentHostWidth = rootContentWidth - (isNarrow ? 0d : drawerWidth + SettingsContentGrid.ColumnSpacing);
         var availableContentWidth = Math.Max(MinSettingsContentWidth, contentHostWidth - edgePadding * 2d);
         var resolvedContentWidth = Math.Min(containerMaxWidth, availableContentWidth);
@@ -815,9 +766,9 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         RemoveSearchHighlight();
         DropCachedPages();
         PendingRestartStateService.StateChanged -= OnPendingRestartStateChanged;
-        if (RootNavigationView is not null)
+        if (NavSidebar is not null)
         {
-            RootNavigationView.PropertyChanged -= OnRootNavigationViewPropertyChanged;
+            NavSidebar.PropertyChanged -= OnSidebarPropertyChanged;
         }
         Opened -= OnOpened;
         SizeChanged -= OnWindowSizeChanged;
@@ -896,60 +847,14 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         return false;
     }
 
-    private void ToggleNavigationPane()
-    {
-        if (RootNavigationView is null)
-        {
-            return;
-        }
-
-        RootNavigationView.IsPaneOpen = !RootNavigationView.IsPaneOpen;
-        UpdateResponsiveLayout();
-        RequestResponsiveLayoutRefresh();
-    }
-
-    private void OnRootNavigationViewPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+    private void OnSidebarPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
     {
         _ = sender;
 
-        if (e.Property == FANavigationView.IsPaneOpenProperty ||
-            e.Property == FANavigationView.OpenPaneLengthProperty ||
-            e.Property == FANavigationView.PaneDisplayModeProperty ||
-            e.Property == FANavigationView.IsPaneToggleButtonVisibleProperty)
+        // 折叠/展开改变窗格宽度（弹簧过渡），内容可用宽随之变化。
+        if (e.Property == Sidebar.IsCollapsedProperty)
         {
-            if (e.Property == FANavigationView.IsPaneToggleButtonVisibleProperty)
-            {
-                UpdatePaneToggleVisibility();
-            }
-
             RequestResponsiveLayoutRefresh();
-        }
-    }
-
-    /// <summary>
-    /// The NavigationView template toggle is disabled; the first menu item is the only pane toggle.
-    /// </summary>
-    private void UpdatePaneToggleVisibility()
-    {
-        if (_paneToggleItem is null)
-        {
-            return;
-        }
-
-        _paneToggleItem.IsVisible = true;
-        ToolTip.SetTip(_paneToggleItem, ViewModel.TogglePaneTooltip);
-    }
-
-    private static bool IsPaneToggleItem(Control? item)
-    {
-        return string.Equals(item?.Tag as string, PaneToggleItemTag, StringComparison.Ordinal);
-    }
-
-    private void RestoreCurrentNavigationSelection()
-    {
-        if (!string.IsNullOrWhiteSpace(ViewModel.CurrentPageId))
-        {
-            TrySelectNavigationItem(ViewModel.CurrentPageId);
         }
     }
 
@@ -970,18 +875,6 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
             DispatcherPriority.Loaded);
     }
 
-    private double GetReservedPaneWidth(double compactPaneWidth, bool isNarrow, double openPaneWidth)
-    {
-        if (RootNavigationView is null || isNarrow)
-        {
-            return 0d;
-        }
-
-        return RootNavigationView.IsPaneOpen
-            ? openPaneWidth
-            : compactPaneWidth;
-    }
-
     private void UpdateChromeMetrics()
     {
         if (_useSystemChrome)
@@ -1000,7 +893,7 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
             RestartButtonIcon is null ||
             RestartButtonTextBlock is null ||
             DrawerTitleTextBlock is null ||
-            RootNavigationView is null)
+            NavSidebar is null)
         {
             return;
         }
@@ -1020,7 +913,8 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
 
         WindowTitleBarHost.Height = titleBarHeight;
 
-        WindowBrandIcon.FontSize = titleBarIconSize + 2;
+        WindowBrandIcon.Width = titleBarIconSize + 2;
+        WindowBrandIcon.Height = titleBarIconSize + 2;
 
         WindowTitleTextBlock.FontSize = titleFontSize;
 
@@ -1030,7 +924,8 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
             restartStack.Spacing = restartSpacing;
         }
 
-        RestartButtonIcon.FontSize = titleBarIconSize;
+        RestartButtonIcon.Width = titleBarIconSize;
+        RestartButtonIcon.Height = titleBarIconSize;
         RestartButtonTextBlock.FontSize = titleFontSize;
 
         DrawerTitleTextBlock.FontSize = drawerTitleFontSize;
@@ -1105,58 +1000,43 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         }
     }
 
-    private static Symbol MapIcon(string iconKey)
+    private static LucideIconKind MapIcon(string iconKey)
     {
         return iconKey?.Trim() switch
         {
-            "DesignIdeas" => Symbol.Color,
-            "Image" => Symbol.Image,
-            "WeatherMoon" => Symbol.WeatherMoon,
-            "Apps" => Symbol.Apps,
-            "AppFolder" => Symbol.AppFolder,
-            "AppsListDetail" => Symbol.AppsListDetail,
-            "MatchAppLayout" => Symbol.MatchAppLayout,
-            "Widget" => Symbol.GridDots,
-            "SwitchApps" => Symbol.ArrowSync,
-            "GridDots" => Symbol.GridDots,
-            "PuzzlePiece" => Symbol.PuzzlePiece,
-            "ShoppingBag" => Symbol.ShoppingBag,
-            "Shield" => Symbol.ShieldLock,
-            "Info" => Symbol.Info,
-            "ArrowSync" => Symbol.ArrowSync,
-            "Hourglass" => Symbol.Hourglass,
-            "Alert" => Symbol.Alert,
-            "Bell" => Symbol.AlertOn,
-            "DeveloperBoard" => Symbol.DeveloperBoard,
-            "FolderLink" => Symbol.FolderLink,
-            "WindowConsole" => Symbol.WindowConsole,
-            "HardDrive" => Symbol.HardDrive,
-            _ => Symbol.Settings
+            "DesignIdeas" => LucideIconKind.Palette,
+            "Image" => LucideIconKind.Image,
+            "WeatherMoon" => LucideIconKind.Moon,
+            "Apps" => LucideIconKind.LayoutGrid,
+            "AppFolder" => LucideIconKind.Folder,
+            "AppsListDetail" => LucideIconKind.List,
+            "MatchAppLayout" => LucideIconKind.LayoutTemplate,
+            "Widget" => LucideIconKind.LayoutGrid,
+            "SwitchApps" => LucideIconKind.RefreshCw,
+            "GridDots" => LucideIconKind.LayoutGrid,
+            "PuzzlePiece" => LucideIconKind.Puzzle,
+            "ShoppingBag" => LucideIconKind.ShoppingBag,
+            "Shield" => LucideIconKind.Shield,
+            "Info" => LucideIconKind.Info,
+            "ArrowSync" => LucideIconKind.RefreshCw,
+            "Hourglass" => LucideIconKind.Hourglass,
+            "Alert" => LucideIconKind.TriangleAlert,
+            "Bell" => LucideIconKind.Bell,
+            "DeveloperBoard" => LucideIconKind.Cpu,
+            "FolderLink" => LucideIconKind.FolderOpen,
+            "WindowConsole" => LucideIconKind.SquareCode,
+            "HardDrive" => LucideIconKind.HardDrive,
+            _ => LucideIconKind.Settings
         };
     }
 
-    private static FAFontIconSource CreateSettingsIconSource(Symbol symbol)
+    private static LucideIcon CreateSettingsIcon(LucideIconKind kind)
     {
-        var symbolIcon = new FluentIcons.Avalonia.SymbolIcon
+        return new LucideIcon
         {
-            Symbol = symbol,
-            IconVariant = FluentIcons.Common.IconVariant.Regular
-        };
-
-        // FluentAvalonia still expects IconSource here, so bridge the Avalonia 12 FluentIcons glyph/font into FAFontIconSource.
-        var iconTextProp = typeof(FluentIcons.Avalonia.SymbolIcon).GetProperty("IconText", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        var iconFontProp = typeof(FluentIcons.Avalonia.SymbolIcon).GetProperty("IconFont", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-
-        var iconText = iconTextProp?.GetValue(symbolIcon) as string ?? "?";
-        var iconFont = iconFontProp?.GetValue(symbolIcon);
-        var fontFamily = iconFont?.GetType().GetProperty("FontFamily")?.GetValue(iconFont) as Avalonia.Media.FontFamily
-            ?? new Avalonia.Media.FontFamily("avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons");
-
-        return new FAFontIconSource
-        {
-            Glyph = iconText,
-            FontFamily = fontFamily,
-            FontSize = 16
+            Kind = kind,
+            Width = 16,
+            Height = 16
         };
     }
 }

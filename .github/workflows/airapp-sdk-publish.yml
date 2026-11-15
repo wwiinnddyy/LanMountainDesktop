@@ -25,7 +25,7 @@ on:
         default: false
 
 env:
-  DOTNET_VERSION: '10.0.x'
+  DOTNET_VERSION: '11.0.x'
   DOTNET_gcServer: 1
   NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
 

@@ -14,8 +14,17 @@ using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.ViewModels;
 using LanMountainDesktop.Views;
+using TKCode.Arc;
 
 namespace LanMountainDesktop.Services;
+
+/// <summary>Arc Dialog 结果值 ↔ FAContentDialogResult 的映射键（FA 枚举退役前保留对外契约）。</summary>
+internal static class DialogNotificationResults
+{
+    public const string Primary = "primary";
+    public const string Secondary = "secondary";
+    public const string Close = "close";
+}
 
 public enum NotificationPosition
 {
@@ -174,32 +183,38 @@ internal sealed class NotificationService : INotificationService
             return FAContentDialogResult.None;
         }
 
-        var dialog = new FAContentDialog
+        // Arc Dialog 的代码构建路径：按钮带结果值，点击回传；Esc/遮罩/关闭键回 null。
+        // 结果字符串映射回 FA 枚举以保持本服务的对外契约不变（FA 退役前）。
+        var actions = new List<DialogAction>();
+        if (!string.IsNullOrEmpty(content.PrimaryButtonText))
         {
-            Title = content.Title,
-            Content = content.Message ?? string.Empty,
-            PrimaryButtonText = content.PrimaryButtonText,
-            SecondaryButtonText = content.SecondaryButtonText,
-            CloseButtonText = content.CloseButtonText,
-            DefaultButton = !string.IsNullOrEmpty(content.PrimaryButtonText) ? FAContentDialogButton.Primary :
-                           !string.IsNullOrEmpty(content.SecondaryButtonText) ? FAContentDialogButton.Secondary :
-                           FAContentDialogButton.Close
-        };
+            actions.Add(new DialogAction(content.PrimaryButtonText, DialogNotificationResults.Primary, ButtonVariant.Primary));
+        }
 
-        var result = await dialog.ShowAsync(mainWindow);
+        if (!string.IsNullOrEmpty(content.SecondaryButtonText))
+        {
+            actions.Add(new DialogAction(content.SecondaryButtonText, DialogNotificationResults.Secondary));
+        }
+
+        if (!string.IsNullOrEmpty(content.CloseButtonText))
+        {
+            actions.Add(new DialogAction(content.CloseButtonText, DialogNotificationResults.Close));
+        }
+
+        var result = await Dialog.ShowAsync(mainWindow, content.Title, content.Message ?? string.Empty, description: null, actions.ToArray());
 
         // Execute callbacks based on result
         switch (result)
         {
-            case FAContentDialogResult.Primary:
+            case DialogNotificationResults.Primary:
                 content.OnPrimaryButtonClick?.Invoke();
-                break;
-            case FAContentDialogResult.Secondary:
+                return FAContentDialogResult.Primary;
+            case DialogNotificationResults.Secondary:
                 content.OnSecondaryButtonClick?.Invoke();
-                break;
+                return FAContentDialogResult.Secondary;
         }
 
-        return result;
+        return FAContentDialogResult.None;
     }
 
     private static bool IsNotificationEnabled()

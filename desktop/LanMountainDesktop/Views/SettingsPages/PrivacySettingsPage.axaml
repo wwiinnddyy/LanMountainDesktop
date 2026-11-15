@@ -1,8 +1,8 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:controls="using:LanMountainDesktop.Controls"
-             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:arc="https://github.com/AIDotNet/TKCode.Arc"
              xmlns:fi="using:FluentIcons.Avalonia"
              x:Class="LanMountainDesktop.Views.SettingsPages.PrivacySettingsPage"
              x:DataType="vm:PrivacySettingsPageViewModel">
@@ -12,25 +12,16 @@
                                Text="{Binding PrivacyHeader}"
                                Margin="0,0,0,4" />
 
-            <ui:FASettingsExpander Header="{Binding CrashUploadHeader}"
+            <arc:SettingsGroup>
+                <arc:SettingsRow Header="{Binding CrashUploadHeader}"
                                  Description="{Binding CrashUploadDescription}">
-                <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0D9C;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-                </ui:FASettingsExpander.IconSource>
-                <ui:FASettingsExpander.Footer>
-                    <ToggleSwitch IsChecked="{Binding UploadAnonymousCrashData}" />
-                </ui:FASettingsExpander.Footer>
-            </ui:FASettingsExpander>
-
-            <ui:FASettingsExpander Header="{Binding UsageUploadHeader}"
+                    <arc:Switch IsChecked="{Binding UploadAnonymousCrashData}" />
+                </arc:SettingsRow>
+                <arc:SettingsRow Header="{Binding UsageUploadHeader}"
                                  Description="{Binding UsageUploadDescription}">
-                <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF07A4;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-                </ui:FASettingsExpander.IconSource>
-                <ui:FASettingsExpander.Footer>
-                    <ToggleSwitch IsChecked="{Binding UploadAnonymousUsageData}" />
-                </ui:FASettingsExpander.Footer>
-            </ui:FASettingsExpander>
+                    <arc:Switch IsChecked="{Binding UploadAnonymousUsageData}" />
+                </arc:SettingsRow>
+            </arc:SettingsGroup>
 
             <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                     CornerRadius="8"
@@ -45,14 +36,14 @@
                                    FontSize="12"
                                    Opacity="0.7"
                                    Margin="0,4,0,8" />
-                        <TextBox x:Name="TelemetryIdTextBox"
+                        <arc:Input x:Name="TelemetryIdTextBox"
                                  Text="{Binding TelemetryId}"
                                  IsReadOnly="True"
                                  FontFamily="Consolas"
                                  FontSize="12"
                                  Focusable="False"
                                  IsTabStop="False"
-                                 HorizontalAlignment="Stretch" />
+                                 HorizontalAlignment="Stretch"  />
                     </StackPanel>
                 </Grid>
             </Border>

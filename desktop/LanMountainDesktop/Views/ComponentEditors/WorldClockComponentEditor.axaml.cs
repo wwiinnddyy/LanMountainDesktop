@@ -1,4 +1,5 @@
 using System;
+using TKCode.Arc;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -12,7 +13,7 @@ namespace LanMountainDesktop.Views.ComponentEditors;
 public partial class WorldClockComponentEditor : ComponentEditorViewBase
 {
     private readonly TimeZoneService _timeZoneService = new();
-    private readonly ComboBox[] _timeZoneCombos;
+    private readonly Select[] _timeZoneCombos;
     private bool _suppressEvents;
 
     public WorldClockComponentEditor()
@@ -57,7 +58,7 @@ public partial class WorldClockComponentEditor : ComponentEditorViewBase
             combo.Items.Clear();
             foreach (var zone in allTimeZones)
             {
-                var item = new ComboBoxItem
+                var item = new SelectItem
                 {
                     Tag = zone.Id,
                     Content = TimeZoneDisplayLabel.Format(zone)
@@ -72,9 +73,9 @@ public partial class WorldClockComponentEditor : ComponentEditorViewBase
             var combo = _timeZoneCombos[index];
             var targetId = index < selectedIds.Count ? selectedIds[index] : TimeZoneInfo.Local.Id;
             combo.SelectedItem = combo.Items
-                .OfType<ComboBoxItem>()
-                .FirstOrDefault(item => string.Equals(item.Tag as string, targetId, StringComparison.OrdinalIgnoreCase))
-                ?? combo.Items.OfType<ComboBoxItem>().FirstOrDefault();
+                .OfType<SelectItem>()
+                .FirstOrDefault(item => string.Equals(item.Value as string, targetId, StringComparison.OrdinalIgnoreCase))
+                ?? combo.Items.OfType<SelectItem>().FirstOrDefault();
         }
 
         var secondMode = ClockSecondHandMode.Normalize(LoadSnapshot().WorldClockSecondHandMode);
@@ -106,7 +107,7 @@ public partial class WorldClockComponentEditor : ComponentEditorViewBase
     {
         var snapshot = LoadSnapshot();
         snapshot.WorldClockTimeZoneIds = _timeZoneCombos
-            .Select(combo => combo.SelectedItem is ComboBoxItem item && item.Tag is string tag ? tag : TimeZoneInfo.Local.Id)
+            .Select(combo => combo.SelectedItem is SelectItem item && item.Value is string tag ? tag : TimeZoneInfo.Local.Id)
             .ToList();
         snapshot.WorldClockSecondHandMode = SweepRadioButton.IsChecked == true
             ? ClockSecondHandMode.Sweep

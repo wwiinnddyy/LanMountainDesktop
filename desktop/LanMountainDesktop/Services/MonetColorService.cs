@@ -181,7 +181,7 @@ public sealed class MonetColorService
         }
     }
 
-    private static uint ToArgb(Color color)
+    internal static uint ToArgb(Color color)
     {
         return
             ((uint)color.A << 24) |
@@ -190,7 +190,7 @@ public sealed class MonetColorService
             color.B;
     }
 
-    private static Color FromArgb(uint argb)
+    internal static Color FromArgb(uint argb)
     {
         var a = (byte)((argb >> 24) & 0xFF);
         var r = (byte)((argb >> 16) & 0xFF);

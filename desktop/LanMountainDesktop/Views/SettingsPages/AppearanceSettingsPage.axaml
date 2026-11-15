@@ -2,7 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:controls="using:LanMountainDesktop.Controls"
-             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:arc="https://github.com/AIDotNet/TKCode.Arc"
              x:Class="LanMountainDesktop.Views.SettingsPages.AppearanceSettingsPage"
              x:DataType="vm:AppearanceSettingsPageViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -11,32 +11,18 @@
                                Text="{Binding ThemeHeader}"
                                Margin="0,0,0,4" />
 
-            <ui:FASettingsExpander Header="{Binding ThemeModeLabel}"
-                                   Description="{Binding ThemeModeDescription}">
-                <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0504;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-                </ui:FASettingsExpander.IconSource>
-                <ui:FASettingsExpander.Footer>
-                    <ComboBox Width="200"
-                              ItemsSource="{Binding ThemeModeOptions}"
-                              SelectedItem="{Binding SelectedThemeMode}">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:SelectionOption">
-                                <TextBlock Text="{Binding Label}" />
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                </ui:FASettingsExpander.Footer>
-            </ui:FASettingsExpander>
-
-            <ui:FASettingsExpander Header="{Binding UseSystemChromeLabel}">
-                <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0908;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-                </ui:FASettingsExpander.IconSource>
-                <ui:FASettingsExpander.Footer>
-                    <ToggleSwitch IsChecked="{Binding UseSystemChrome}" />
-                </ui:FASettingsExpander.Footer>
-            </ui:FASettingsExpander>
+            <arc:SettingsGroup>
+                <arc:SettingsRow Header="{Binding ThemeModeLabel}"
+                                 Description="{Binding ThemeModeDescription}">
+                    <arc:Select Width="200"
+                                ItemsSource="{Binding ThemeModeOptions}"
+                                DisplayMemberBinding="{Binding Label}"
+                                SelectedItem="{Binding SelectedThemeMode}" />
+                </arc:SettingsRow>
+                <arc:SettingsRow Header="{Binding UseSystemChromeLabel}">
+                    <arc:Switch IsChecked="{Binding UseSystemChrome}" />
+                </arc:SettingsRow>
+            </arc:SettingsGroup>
 
         </StackPanel>
     </ScrollViewer>

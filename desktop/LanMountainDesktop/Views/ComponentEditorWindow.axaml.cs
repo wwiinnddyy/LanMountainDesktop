@@ -8,22 +8,16 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Platform;
 using Avalonia.Styling;
-using FluentIcons.Common;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
-using Material.Styles.Themes;
-using Material.Styles.Themes.Base;
-
-using Material.Icons;
-using Material.Icons.Avalonia;
+using TKCode.Arc.Icons.Lucide;
 
 namespace LanMountainDesktop.Views;
 
 public partial class ComponentEditorWindow : Window
 {
     private readonly Dictionary<string, Size> _sizeCache = new(StringComparer.OrdinalIgnoreCase);
-    private readonly CustomMaterialTheme _materialTheme;
     private DesktopComponentEditorDescriptor? _descriptor;
     private string? _currentComponentId;
     private bool _suppressAspectRatioCorrection;
@@ -32,8 +26,6 @@ public partial class ComponentEditorWindow : Window
     public ComponentEditorWindow()
     {
         InitializeComponent();
-        _materialTheme = Styles.OfType<CustomMaterialTheme>().FirstOrDefault()
-            ?? throw new InvalidOperationException("Component editor Material theme is missing.");
         _lastStableSize = new Size(Width, Height);
         ApplyChromeMode(useSystemChrome: false);
     }
@@ -77,9 +69,6 @@ public partial class ComponentEditorWindow : Window
         ArgumentNullException.ThrowIfNull(palette);
 
         RequestedThemeVariant = palette.IsNightMode ? ThemeVariant.Dark : ThemeVariant.Light;
-        _materialTheme.BaseTheme = palette.IsNightMode ? BaseThemeMode.Dark : BaseThemeMode.Light;
-        _materialTheme.PrimaryColor = palette.PrimaryColor;
-        _materialTheme.SecondaryColor = palette.SecondaryColor;
 
         SetBrushResource("EditorPrimaryBrush", palette.PrimaryColor);
         SetBrushResource("EditorOnPrimaryBrush", palette.OnPrimaryColor);
@@ -222,27 +211,27 @@ public partial class ComponentEditorWindow : Window
         }
     }
 
-    private static MaterialIconKind ResolveSymbol(string iconKey)
+    private static LucideIconKind ResolveSymbol(string iconKey)
     {
         return iconKey switch
         {
-            "Clock" => MaterialIconKind.Clock,
-            "Timer" => MaterialIconKind.Timer,
-            "WeatherSunny" => MaterialIconKind.WeatherSunny,
-            "CalendarDate" => MaterialIconKind.CalendarRange,
-            "CalendarMonth" => MaterialIconKind.CalendarMonth,
-            "MicOn" => MaterialIconKind.Microphone,
-            "News" => MaterialIconKind.Newspaper,
-            "Image" => MaterialIconKind.Image,
-            "Book" => MaterialIconKind.BookOpenVariant,
-            "History" => MaterialIconKind.History,
-            "DataLine" => MaterialIconKind.ChartLine,
-            "Edit" => MaterialIconKind.Pencil,
-            "Calculator" => MaterialIconKind.Calculator,
-            "Storage" => MaterialIconKind.UsbFlashDrive,
-            "Globe" => MaterialIconKind.Web,
-            "Play" => MaterialIconKind.Play,
-            _ => MaterialIconKind.Settings
+            "Clock" => LucideIconKind.Clock,
+            "Timer" => LucideIconKind.Timer,
+            "WeatherSunny" => LucideIconKind.Sun,
+            "CalendarDate" => LucideIconKind.Calendar,
+            "CalendarMonth" => LucideIconKind.CalendarDays,
+            "MicOn" => LucideIconKind.Mic,
+            "News" => LucideIconKind.Newspaper,
+            "Image" => LucideIconKind.Image,
+            "Book" => LucideIconKind.BookOpen,
+            "History" => LucideIconKind.History,
+            "DataLine" => LucideIconKind.ChartLine,
+            "Edit" => LucideIconKind.PenLine,
+            "Calculator" => LucideIconKind.Calculator,
+            "Storage" => LucideIconKind.Database,
+            "Globe" => LucideIconKind.Globe,
+            "Play" => LucideIconKind.Play,
+            _ => LucideIconKind.Settings
         };
     }
 

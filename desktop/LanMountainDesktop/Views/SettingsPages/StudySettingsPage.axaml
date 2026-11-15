@@ -1,345 +1,144 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
-             xmlns:ui="using:FluentAvalonia.UI.Controls"
              xmlns:fi="using:FluentIcons.Avalonia"
+             xmlns:arc="https://github.com/AIDotNet/TKCode.Arc"
              x:Class="LanMountainDesktop.Views.SettingsPages.StudySettingsPage"
              x:DataType="vm:StudySettingsPageViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Classes="settings-page-container settings-page-animated">
 
-            <!-- 閹绱戦崗?-->
-            <ui:FASettingsExpander Classes="settings-expander-card"
-                                 Header="{Binding MasterSwitchHeader}"
+            <!-- 主开关 -->
+            <arc:SettingsGroup>
+                <arc:SettingsRow Header="{Binding MasterSwitchHeader}"
                                  Description="{Binding MasterSwitchDescription}">
-                <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF2014;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-                </ui:FASettingsExpander.IconSource>
-                <ui:FASettingsExpander.Footer>
-                    <ToggleSwitch IsChecked="{Binding StudyEnabled}" />
-                </ui:FASettingsExpander.Footer>
-            </ui:FASettingsExpander>
+                    <arc:Switch IsChecked="{Binding StudyEnabled}" />
+                </arc:SettingsRow>
+            </arc:SettingsGroup>
 
-            <!-- 閸ｎ亪鐓堕惄鎴炵ゴ鐠佸墽鐤?-->
-            <ui:FASettingsExpander Classes="settings-expander-card"
-                                 Header="{Binding NoiseMonitoringHeader}"
-                                 Description="{Binding NoiseMonitoringDescription}"
-                                 IsEnabled="{Binding StudyEnabled}">
-                <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0018;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-                </ui:FASettingsExpander.IconSource>
-
-                <!-- 闁插洭娉︽０鎴犲芳 -->
-                <ui:FASettingsExpanderItem>
-                    <StackPanel Spacing="8">
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-                            <StackPanel Classes="settings-item">
-                                <TextBlock Classes="settings-item-label"
-                                           Text="{Binding SamplingRateLabel}" />
-                                <TextBlock Classes="settings-item-description"
-                                           Text="{Binding SamplingRateDescription}" />
-                            </StackPanel>
-                            <TextBlock Grid.Column="1"
-                                       VerticalAlignment="Center"
-                                       FontWeight="SemiBold"
-                                       Text="{Binding SamplingRateValueText}" />
-                        </Grid>
-                        <Slider Minimum="20"
+            <!-- 噪声监测 -->
+            <arc:SettingsGroup Header="{Binding NoiseMonitoringHeader}"
+                               Description="{Binding NoiseMonitoringDescription}"
+                               IsEnabled="{Binding StudyEnabled}"
+                               Margin="0,16,0,0">
+                <arc:SettingsRow Header="{Binding SamplingRateLabel}"
+                                 Description="{Binding SamplingRateDescription}">
+                    <arc:Slider Minimum="20"
                                 Maximum="200"
+                                Width="260"
                                 Value="{Binding SamplingRateMs}"
-                                SmallChange="10"
-                                LargeChange="20"
-                                TickFrequency="20"
-                                IsSnapToTickEnabled="True" />
-                    </StackPanel>
-                </ui:FASettingsExpanderItem>
-
-                <!-- 閸ｎ亪鐓堕弫蹇斿妳鎼?-->
-                <ui:FASettingsExpanderItem>
-                    <StackPanel Spacing="8">
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-                            <StackPanel Classes="settings-item">
-                                <TextBlock Classes="settings-item-label"
-                                           Text="{Binding NoiseSensitivityLabel}" />
-                                <TextBlock Classes="settings-item-description"
-                                           Text="{Binding NoiseSensitivityDescription}" />
-                            </StackPanel>
-                            <TextBlock Grid.Column="1"
-                                       VerticalAlignment="Center"
-                                       FontWeight="SemiBold"
-                                       Text="{Binding NoiseSensitivityValueText}" />
-                        </Grid>
-                        <Slider Minimum="-70"
+                                IsValueVisible="True" />
+                </arc:SettingsRow>
+                <arc:SettingsRow Header="{Binding NoiseSensitivityLabel}"
+                                 Description="{Binding NoiseSensitivityDescription}">
+                    <arc:Slider Minimum="-70"
                                 Maximum="-35"
+                                Width="260"
                                 Value="{Binding NoiseSensitivityDbfs}"
-                                SmallChange="1"
-                                LargeChange="5"
-                                TickFrequency="5"
-                                IsSnapToTickEnabled="True" />
-                    </StackPanel>
-                </ui:FASettingsExpanderItem>
+                                IsValueVisible="True" />
+                </arc:SettingsRow>
+                <arc:SettingsRow>
+                    <arc:SettingsRow.Details>
+                        <TextBlock Classes="settings-item-description"
+                                   Text="{Binding CurrentThresholdText}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,4,0,0" />
+                    </arc:SettingsRow.Details>
+                </arc:SettingsRow>
+            </arc:SettingsGroup>
 
-                <!-- 鐠囧嫬鍨庨梼鍫濃偓鍏兼▔缁€?-->
-                <ui:FASettingsExpanderItem>
-                    <TextBlock Classes="settings-item-description"
-                               Text="{Binding CurrentThresholdText}"
-                               TextWrapping="Wrap" />
-                </ui:FASettingsExpanderItem>
-            </ui:FASettingsExpander>
-
-            <!-- 娑撴挻鏁炵拋鈩冩鐠佸墽鐤?-->
-            <ui:FASettingsExpander Classes="settings-expander-card"
-                                 Header="{Binding FocusTimerHeader}"
-                                 Description="{Binding FocusTimerDescription}"
-                                 IsEnabled="{Binding StudyEnabled}">
-                <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF066C;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-                </ui:FASettingsExpander.IconSource>
-
-                <!-- 娑撴挻鏁為弮鍫曟毐 -->
-                <ui:FASettingsExpanderItem>
-                    <StackPanel Spacing="8">
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-                            <StackPanel Classes="settings-item">
-                                <TextBlock Classes="settings-item-label"
-                                           Text="{Binding FocusDurationLabel}" />
-                                <TextBlock Classes="settings-item-description"
-                                           Text="{Binding FocusDurationDescription}" />
-                            </StackPanel>
-                            <TextBlock Grid.Column="1"
-                                       VerticalAlignment="Center"
-                                       FontWeight="SemiBold"
-                                       Text="{Binding FocusDurationValueText}" />
-                        </Grid>
-                        <Slider Minimum="5"
+            <!-- 专注计时 -->
+            <arc:SettingsGroup Header="{Binding FocusTimerHeader}"
+                               Description="{Binding FocusTimerDescription}"
+                               IsEnabled="{Binding StudyEnabled}"
+                               Margin="0,16,0,0">
+                <arc:SettingsRow Header="{Binding FocusDurationLabel}"
+                                 Description="{Binding FocusDurationDescription}">
+                    <arc:Slider Minimum="5"
                                 Maximum="90"
+                                Width="260"
                                 Value="{Binding FocusDurationMinutes}"
-                                SmallChange="1"
-                                LargeChange="5"
-                                TickFrequency="5"
-                                IsSnapToTickEnabled="True" />
-                    </StackPanel>
-                </ui:FASettingsExpanderItem>
-
-                <!-- 娴兼垶浼呴弮鍫曟毐 -->
-                <ui:FASettingsExpanderItem>
-                    <StackPanel Spacing="8">
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-                            <StackPanel Classes="settings-item">
-                                <TextBlock Classes="settings-item-label"
-                                           Text="{Binding BreakDurationLabel}" />
-                                <TextBlock Classes="settings-item-description"
-                                           Text="{Binding BreakDurationDescription}" />
-                            </StackPanel>
-                            <TextBlock Grid.Column="1"
-                                       VerticalAlignment="Center"
-                                       FontWeight="SemiBold"
-                                       Text="{Binding BreakDurationValueText}" />
-                        </Grid>
-                        <Slider Minimum="1"
+                                IsValueVisible="True" />
+                </arc:SettingsRow>
+                <arc:SettingsRow Header="{Binding BreakDurationLabel}"
+                                 Description="{Binding BreakDurationDescription}">
+                    <arc:Slider Minimum="1"
                                 Maximum="30"
+                                Width="260"
                                 Value="{Binding BreakDurationMinutes}"
-                                SmallChange="1"
-                                LargeChange="5"
-                                TickFrequency="5"
-                                IsSnapToTickEnabled="True" />
-                    </StackPanel>
-                </ui:FASettingsExpanderItem>
-
-                <!-- 闂€澶哥搐閹垱妞傞梹?-->
-                <ui:FASettingsExpanderItem>
-                    <StackPanel Spacing="8">
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-                            <StackPanel Classes="settings-item">
-                                <TextBlock Classes="settings-item-label"
-                                           Text="{Binding LongBreakDurationLabel}" />
-                                <TextBlock Classes="settings-item-description"
-                                           Text="{Binding LongBreakDurationDescription}" />
-                            </StackPanel>
-                            <TextBlock Grid.Column="1"
-                                       VerticalAlignment="Center"
-                                       FontWeight="SemiBold"
-                                       Text="{Binding LongBreakDurationValueText}" />
-                        </Grid>
-                        <Slider Minimum="5"
+                                IsValueVisible="True" />
+                </arc:SettingsRow>
+                <arc:SettingsRow Header="{Binding LongBreakDurationLabel}"
+                                 Description="{Binding LongBreakDurationDescription}">
+                    <arc:Slider Minimum="5"
                                 Maximum="60"
+                                Width="260"
                                 Value="{Binding LongBreakDurationMinutes}"
-                                SmallChange="1"
-                                LargeChange="5"
-                                TickFrequency="5"
-                                IsSnapToTickEnabled="True" />
-                    </StackPanel>
-                </ui:FASettingsExpanderItem>
-
-                <!-- 闂€澶哥搐閹垶妫块梾?-->
-                <ui:FASettingsExpanderItem>
-                    <StackPanel Spacing="8">
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-                            <StackPanel Classes="settings-item">
-                                <TextBlock Classes="settings-item-label"
-                                           Text="{Binding SessionsBeforeLongBreakLabel}" />
-                                <TextBlock Classes="settings-item-description"
-                                           Text="{Binding SessionsBeforeLongBreakDescription}" />
-                            </StackPanel>
-                            <TextBlock Grid.Column="1"
-                                       VerticalAlignment="Center"
-                                       FontWeight="SemiBold"
-                                       Text="{Binding SessionsBeforeLongBreakValueText}" />
-                        </Grid>
-                        <Slider Minimum="2"
+                                IsValueVisible="True" />
+                </arc:SettingsRow>
+                <arc:SettingsRow Header="{Binding SessionsBeforeLongBreakLabel}"
+                                 Description="{Binding SessionsBeforeLongBreakDescription}">
+                    <arc:Slider Minimum="2"
                                 Maximum="8"
+                                Width="260"
                                 Value="{Binding SessionsBeforeLongBreak}"
-                                SmallChange="1"
-                                LargeChange="1"
-                                TickFrequency="1"
-                                IsSnapToTickEnabled="True" />
-                    </StackPanel>
-                </ui:FASettingsExpanderItem>
+                                IsValueVisible="True" />
+                </arc:SettingsRow>
+                <arc:SettingsRow Header="{Binding AutoStartBreakLabel}"
+                                 Description="{Binding AutoStartBreakDescription}">
+                    <arc:Switch IsChecked="{Binding AutoStartBreak}" />
+                </arc:SettingsRow>
+                <arc:SettingsRow Header="{Binding AutoStartFocusLabel}"
+                                 Description="{Binding AutoStartFocusDescription}">
+                    <arc:Switch IsChecked="{Binding AutoStartFocus}" />
+                </arc:SettingsRow>
+            </arc:SettingsGroup>
 
-                <!-- 閼奉亜濮╁鈧慨瀣╃搐閹?-->
-                <ui:FASettingsExpanderItem>
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-                        <StackPanel Classes="settings-item">
-                            <TextBlock Classes="settings-item-label"
-                                       Text="{Binding AutoStartBreakLabel}" />
-                            <TextBlock Classes="settings-item-description"
-                                       Text="{Binding AutoStartBreakDescription}" />
-                        </StackPanel>
-                        <ToggleSwitch Grid.Column="1"
-                                      IsChecked="{Binding AutoStartBreak}" />
-                    </Grid>
-                </ui:FASettingsExpanderItem>
+            <!-- 提醒 -->
+            <arc:SettingsGroup Header="{Binding AlertHeader}"
+                               Description="{Binding AlertDescription}"
+                               IsEnabled="{Binding StudyEnabled}"
+                               Margin="0,16,0,0">
+                <arc:SettingsRow Header="{Binding NoiseAlertEnabledLabel}"
+                                 Description="{Binding NoiseAlertEnabledDescription}">
+                    <arc:Switch IsChecked="{Binding NoiseAlertEnabled}" />
+                </arc:SettingsRow>
+                <arc:SettingsRow Header="{Binding MaxInterruptsPerMinuteLabel}"
+                                 Description="{Binding MaxInterruptsPerMinuteDescription}"
+                                 IsVisible="{Binding NoiseAlertEnabled}">
+                    <arc:NumberField Width="120"
+                                     Minimum="3"
+                                     Maximum="20"
+                                     Value="{Binding MaxInterruptsPerMinute}" />
+                </arc:SettingsRow>
+            </arc:SettingsGroup>
 
-                <!-- 閼奉亜濮╁鈧慨瀣╃瑩濞?-->
-                <ui:FASettingsExpanderItem>
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-                        <StackPanel Classes="settings-item">
-                            <TextBlock Classes="settings-item-label"
-                                       Text="{Binding AutoStartFocusLabel}" />
-                            <TextBlock Classes="settings-item-description"
-                                       Text="{Binding AutoStartFocusDescription}" />
-                        </StackPanel>
-                        <ToggleSwitch Grid.Column="1"
-                                      IsChecked="{Binding AutoStartFocus}" />
-                    </Grid>
-                </ui:FASettingsExpanderItem>
-            </ui:FASettingsExpander>
-
-            <!-- 閹绘劙鍟嬬拋鍓х枂 -->
-            <ui:FASettingsExpander Classes="settings-expander-card"
-                                 Header="{Binding AlertHeader}"
-                                 Description="{Binding AlertDescription}"
-                                 IsEnabled="{Binding StudyEnabled}">
-                <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0010;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-                </ui:FASettingsExpander.IconSource>
-
-                <!-- 閸ｎ亪鐓堕幍鎾存焽閹绘劙鍟?-->
-                <ui:FASettingsExpanderItem>
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-                        <StackPanel Classes="settings-item">
-                            <TextBlock Classes="settings-item-label"
-                                       Text="{Binding NoiseAlertEnabledLabel}" />
-                            <TextBlock Classes="settings-item-description"
-                                       Text="{Binding NoiseAlertEnabledDescription}" />
-                        </StackPanel>
-                        <ToggleSwitch Grid.Column="1"
-                                      IsChecked="{Binding NoiseAlertEnabled}" />
-                    </Grid>
-                </ui:FASettingsExpanderItem>
-
-                <!-- 濮ｅ繐鍨庨柦鐔告付婢堆冾啇韫囧秵澧﹂弬顓燁偧閺?-->
-                <ui:FASettingsExpanderItem IsVisible="{Binding NoiseAlertEnabled}">
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-                        <StackPanel Classes="settings-item">
-                            <TextBlock Classes="settings-item-label"
-                                       Text="{Binding MaxInterruptsPerMinuteLabel}" />
-                            <TextBlock Classes="settings-item-description"
-                                       Text="{Binding MaxInterruptsPerMinuteDescription}" />
-                        </StackPanel>
-                        <NumericUpDown Grid.Column="1"
-                                       Width="120"
-                                       Minimum="3"
-                                       Maximum="20"
-                                       Increment="1"
-                                       Value="{Binding MaxInterruptsPerMinute}" />
-                    </Grid>
-                </ui:FASettingsExpanderItem>
-            </ui:FASettingsExpander>
-
-            <!-- 閺勫墽銇氱拋鍓х枂 -->
-            <ui:FASettingsExpander Classes="settings-expander-card"
-                                 Header="{Binding DisplayHeader}"
-                                 Description="{Binding DisplayDescription}"
-                                 IsEnabled="{Binding StudyEnabled}">
-                <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0908;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-                </ui:FASettingsExpander.IconSource>
-
-                <!-- 閺勫墽銇氱€圭偞妞傞崚鍡氱 -->
-                <ui:FASettingsExpanderItem>
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-                        <StackPanel Classes="settings-item">
-                            <TextBlock Classes="settings-item-label"
-                                       Text="{Binding ShowRealtimeDbLabel}" />
-                            <TextBlock Classes="settings-item-description"
-                                       Text="{Binding ShowRealtimeDbDescription}" />
-                        </StackPanel>
-                        <ToggleSwitch Grid.Column="1"
-                                      IsChecked="{Binding ShowRealtimeDb}" />
-                    </Grid>
-                </ui:FASettingsExpanderItem>
-
-                <!-- 閸╁搫鍣弰鍓с仛閸掑棜绀?-->
-                <ui:FASettingsExpanderItem>
-                    <StackPanel Spacing="8">
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-                            <StackPanel Classes="settings-item">
-                                <TextBlock Classes="settings-item-label"
-                                           Text="{Binding BaselineDbLabel}" />
-                                <TextBlock Classes="settings-item-description"
-                                           Text="{Binding BaselineDbDescription}" />
-                            </StackPanel>
-                            <TextBlock Grid.Column="1"
-                                       VerticalAlignment="Center"
-                                       FontWeight="SemiBold"
-                                       Text="{Binding BaselineDbValueText}" />
-                        </Grid>
-                        <Slider Minimum="20"
+            <!-- 显示 -->
+            <arc:SettingsGroup Header="{Binding DisplayHeader}"
+                               Description="{Binding DisplayDescription}"
+                               IsEnabled="{Binding StudyEnabled}"
+                               Margin="0,16,0,0">
+                <arc:SettingsRow Header="{Binding ShowRealtimeDbLabel}"
+                                 Description="{Binding ShowRealtimeDbDescription}">
+                    <arc:Switch IsChecked="{Binding ShowRealtimeDb}" />
+                </arc:SettingsRow>
+                <arc:SettingsRow Header="{Binding BaselineDbLabel}"
+                                 Description="{Binding BaselineDbDescription}">
+                    <arc:Slider Minimum="20"
                                 Maximum="90"
+                                Width="260"
                                 Value="{Binding BaselineDb}"
-                                SmallChange="1"
-                                LargeChange="5"
-                                TickFrequency="5"
-                                IsSnapToTickEnabled="True" />
-                    </StackPanel>
-                </ui:FASettingsExpanderItem>
-
-                <!-- 楠炲啿娼庨弮鍫曟？缁?-->
-                <ui:FASettingsExpanderItem>
-                    <StackPanel Spacing="8">
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-                            <StackPanel Classes="settings-item">
-                                <TextBlock Classes="settings-item-label"
-                                           Text="{Binding AvgWindowSecLabel}" />
-                                <TextBlock Classes="settings-item-description"
-                                           Text="{Binding AvgWindowSecDescription}" />
-                            </StackPanel>
-                            <TextBlock Grid.Column="1"
-                                       VerticalAlignment="Center"
-                                       FontWeight="SemiBold"
-                                       Text="{Binding AvgWindowSecValueText}" />
-                        </Grid>
-                        <Slider Minimum="1"
+                                IsValueVisible="True" />
+                </arc:SettingsRow>
+                <arc:SettingsRow Header="{Binding AvgWindowSecLabel}"
+                                 Description="{Binding AvgWindowSecDescription}">
+                    <arc:Slider Minimum="1"
                                 Maximum="8"
+                                Width="260"
                                 Value="{Binding AvgWindowSec}"
-                                SmallChange="1"
-                                LargeChange="1"
-                                TickFrequency="1"
-                                IsSnapToTickEnabled="True" />
-                    </StackPanel>
-                </ui:FASettingsExpanderItem>
-            </ui:FASettingsExpander>
+                                IsValueVisible="True" />
+                </arc:SettingsRow>
+            </arc:SettingsGroup>
 
             <TextBlock Classes="settings-item-description"
                        Margin="0,8,0,0"

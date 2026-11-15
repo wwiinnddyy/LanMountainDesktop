@@ -128,13 +128,20 @@ public sealed class ExternalAirAppLoadProbeTests : IDisposable
             .EnumerateFiles(repoDirectory, "plugin.json", SearchOption.AllDirectories)
             .FirstOrDefault(file => !file.Contains($"{Path.DirectorySeparatorChar}.git{Path.DirectorySeparatorChar}", StringComparison.Ordinal));
 
-        Assert.NotNull(legacyManifest);
+        if (legacyManifest is null)
+        {
+            // 探针前提：仓库里还留着一份 legacy plugin.json。elysia.LanDesktopConnect 已完成
+            // airapp.json 迁移（宿主只认 airapp.json），前提消失时按生态探针口径跳过；
+            // 严格模式下照常报红，提醒把这条探针重新对准下一个仍在用 plugin.json 的仓库。
+            RequireStrictProbeOrSkip("elysia.LanDesktopConnect 已无 legacy plugin.json（应已完成 airapp.json 迁移）");
+            return;
+        }
 
         var staging = Path.Combine(Path.GetTempPath(), "lmd-probe-legacy-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(staging);
         try
         {
-            File.Copy(legacyManifest!, Path.Combine(staging, "plugin.json"));
+            File.Copy(legacyManifest, Path.Combine(staging, "plugin.json"));
 
             var results = new AirAppLoader().LoadAll(staging);
 

@@ -4,6 +4,7 @@ using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using LanMountainDesktop.ComponentSystem;
+using TKCode.Arc;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 
@@ -77,24 +78,20 @@ public partial class ToggleIntervalComponentEditor : ComponentEditorViewBase
         IntervalComboBox.Items.Clear();
         foreach (var minutes in SupportedIntervals)
         {
-            var item = new ComboBoxItem
-            {
-                Tag = minutes.ToString(),
+            var item = new SelectItem {
+                Value = minutes.ToString(),
                 Content = L("refresh.frequency." + RefreshIntervalCatalog.ToLocalizationKeySuffix(minutes), RefreshIntervalCatalog.ToEnglishFallbackLabel(minutes))
             };
-            item.Classes.Add("component-editor-select-item");
             IntervalComboBox.Items.Add(item);
         }
 
         ExtraSelectorComboBox.Items.Clear();
         foreach (var option in _options.ExtraOptions)
         {
-            var item = new ComboBoxItem
-            {
-                Tag = option.Value,
+            var item = new SelectItem {
+                Value = option.Value,
                 Content = L(option.LabelKey, option.FallbackLabel)
             };
-            item.Classes.Add("component-editor-select-item");
             ExtraSelectorComboBox.Items.Add(item);
         }
     }
@@ -119,16 +116,16 @@ public partial class ToggleIntervalComponentEditor : ComponentEditorViewBase
 
             var normalizedInterval = RefreshIntervalCatalog.Normalize(_options.GetInterval(snapshot), _options.DefaultInterval);
             IntervalComboBox.SelectedItem = IntervalComboBox.Items
-                .OfType<ComboBoxItem>()
-                .FirstOrDefault(item => item.Tag is string tag && int.TryParse(tag, out var minutes) && minutes == normalizedInterval);
+                .OfType<SelectItem>()
+                .FirstOrDefault(item => item.Value is string tag && int.TryParse(tag, out var minutes) && minutes == normalizedInterval);
 
             if (_options.GetExtraValue is not null && _options.ExtraOptions.Count > 0)
             {
                 var extraValue = _options.GetExtraValue(snapshot);
                 ExtraSelectorComboBox.SelectedItem = ExtraSelectorComboBox.Items
-                    .OfType<ComboBoxItem>()
-                    .FirstOrDefault(item => string.Equals(item.Tag as string, extraValue, StringComparison.OrdinalIgnoreCase))
-                    ?? ExtraSelectorComboBox.Items.OfType<ComboBoxItem>().FirstOrDefault();
+                    .OfType<SelectItem>()
+                    .FirstOrDefault(item => string.Equals(item.Value as string, extraValue, StringComparison.OrdinalIgnoreCase))
+                    ?? ExtraSelectorComboBox.Items.OfType<SelectItem>().FirstOrDefault();
             }
         }
         finally
@@ -181,8 +178,8 @@ public partial class ToggleIntervalComponentEditor : ComponentEditorViewBase
         _options.SetInterval(snapshot, GetSelectedInterval());
 
         if (_options.SetExtraValue is not null &&
-            ExtraSelectorComboBox.SelectedItem is ComboBoxItem extraItem &&
-            extraItem.Tag is string extraValue)
+            ExtraSelectorComboBox.SelectedItem is SelectItem extraItem &&
+            extraItem.Value is string extraValue)
         {
             _options.SetExtraValue(snapshot, extraValue);
         }
@@ -192,9 +189,9 @@ public partial class ToggleIntervalComponentEditor : ComponentEditorViewBase
 
     private int GetSelectedInterval()
     {
-        if (IntervalComboBox.SelectedItem is ComboBoxItem item &&
-            item.Tag is string tag &&
-            int.TryParse(tag, out var minutes))
+        if (IntervalComboBox.SelectedItem is SelectItem item &&
+            item.Value is string tag &&
+                                int.TryParse(tag, out var minutes))
         {
             return RefreshIntervalCatalog.Normalize(minutes, _options.DefaultInterval);
         }

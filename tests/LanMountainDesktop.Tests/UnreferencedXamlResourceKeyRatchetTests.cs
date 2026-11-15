@@ -67,16 +67,9 @@ public sealed class UnreferencedXamlResourceKeyRatchetTests
     /// </summary>
     private static readonly Dictionary<string, string> LibraryOwnedKeys = new(StringComparer.Ordinal)
     {
-        ["NavigationViewContentBackground"] = "设置页导航壳透明覆盖（SettingsWindow.axaml）",
-        ["NavigationViewContentGridBorderBrush"] = "同上",
-        ["NavigationViewDefaultPaneBackground"] = "同上",
-        ["NavigationViewExpandedPaneBackground"] = "同上",
-        ["NavigationViewTopPaneBackground"] = "同上",
-        ["PaneToggleButtonWidth"] = "导航壳瓦片按钮尺寸覆盖（NavigationStyles.axaml）",
-        ["PaneToggleButtonHeight"] = "同上",
-        ["PaneToggleButtonHeightGridLength"] =
-            "同上。这条曾被登记成『照 WinUI 猜写的死覆盖』——那是拿 UTF-8 字节搜程序集搜出来的假阴性：" +
-            "编译好的 XAML 载荷里字符串是 UTF-16，换成 UTF-16 就在库的键表里（与 NavigationViewCompactPaneLength 相邻）",
+        // 2026-11-14 Arc Phase 2.1：FANavigationView 换成 Arc Sidebar（SettingsWindow 重建），
+        // 原 8 条导航壳覆盖（NavigationView* ×5 + NavigationStyles.axaml 的 PaneToggle* ×3）
+        // 随定义一起删除，壳透明由 Sidebar 自身 Background="Transparent" 承担。
         ["ControlCornerRadius"] =
             "Avalonia 的 Fluent 主题按名取用（两份主题程序集里都读得到），4/8 是 Fluent 设计档，" +
             "GlassModule 与启动器三个窗口各覆盖一份。此前它的『引用』只有测试里那句注释",
@@ -253,9 +246,12 @@ public sealed class UnreferencedXamlResourceKeyRatchetTests
 
         var stale = Accepted.Keys.Where(key => !foundKeys.Contains(key)).ToList();
 
+        // 下限是防"扫描坏了"的哨兵，不是配额：2026-11-14 Arc Phase 2.1 真删了 8+ 个键
+        // （NavigationView 壳覆盖 ×5 + NavigationStyles.axaml 整文件的 PaneToggle ×3 等），
+        // 唯一键数从 104 掉到 95，下限随真实存量下调；再大幅走低仍会红。
         Assert.True(
-            definitions.Count >= 100,
-            $"这一跑只看到 {definitions.Count} 个 x:Key 定义（2026-09-23 实测 104 个）：" +
+            definitions.Count >= 90,
+            $"这一跑只看到 {definitions.Count} 个 x:Key 定义（2026-11-14 Arc Phase 2.1 后实测 95 个）：" +
             "定义正则或扫描范围坏了，此时的\"孤儿数\"不可信");
 
         Assert.True(

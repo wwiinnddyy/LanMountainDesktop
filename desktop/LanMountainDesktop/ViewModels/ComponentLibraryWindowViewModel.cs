@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Avalonia.Controls;
-using FluentIcons.Common;
+using TKCode.Arc.Icons.Lucide;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace LanMountainDesktop.ViewModels;
@@ -33,7 +33,7 @@ public sealed class ComponentLibraryCategoryViewModel
     public ComponentLibraryCategoryViewModel(
         string id,
         string title,
-        Icon icon,
+        LucideIconKind icon,
         IReadOnlyList<ComponentLibraryItemViewModel> components)
     {
         Id = id;
@@ -46,7 +46,7 @@ public sealed class ComponentLibraryCategoryViewModel
 
     public string Title { get; }
 
-    public Icon Icon { get; }
+    public LucideIconKind Icon { get; }
 
     public IReadOnlyList<ComponentLibraryItemViewModel> Components { get; }
 }

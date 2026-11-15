@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:arc="https://github.com/AIDotNet/TKCode.Arc"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
@@ -25,12 +26,12 @@
                 <TextBlock x:Name="SourcesDescriptionTextBlock"
                            Classes="component-editor-secondary-text"
                            TextWrapping="Wrap" />
-                <CheckBox x:Name="RegistryCheckBox"
-                          IsCheckedChanged="OnSourceSelectionChanged" />
-                <CheckBox x:Name="RecentFoldersCheckBox"
-                          IsCheckedChanged="OnSourceSelectionChanged" />
-                <CheckBox x:Name="JumpListsCheckBox"
-                          IsCheckedChanged="OnSourceSelectionChanged" />
+                <arc:Checkbox x:Name="RegistryCheckBox"
+                          CheckedStateChanged="OnSourceSelectionChanged" />
+                <arc:Checkbox x:Name="RecentFoldersCheckBox"
+                          CheckedStateChanged="OnSourceSelectionChanged" />
+                <arc:Checkbox x:Name="JumpListsCheckBox"
+                          CheckedStateChanged="OnSourceSelectionChanged" />
             </StackPanel>
         </Border>
 

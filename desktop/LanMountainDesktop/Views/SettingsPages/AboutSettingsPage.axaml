@@ -2,8 +2,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:controls="using:LanMountainDesktop.Controls"
-             xmlns:ui="using:FluentAvalonia.UI.Controls"
              xmlns:fi="using:FluentIcons.Avalonia"
+             xmlns:arc="https://github.com/AIDotNet/TKCode.Arc"
              x:Class="LanMountainDesktop.Views.SettingsPages.AboutSettingsPage"
              x:DataType="vm:AboutSettingsPageViewModel">
     <UserControl.Resources>
@@ -44,10 +44,7 @@
             <Setter Property="HorizontalAlignment" Value="Stretch" />
         </Style>
 
-        <Style Selector="ui|FAInfoBar.about-static-info">
-            <Setter Property="IsOpen" Value="True" />
-            <Setter Property="IsClosable" Value="False" />
-            <Setter Property="Severity" Value="Informational" />
+        <Style Selector="arc|Alert.about-static-info">
             <Setter Property="Margin" Value="0,0,0,12" />
         </Style>
     </UserControl.Styles>
@@ -65,29 +62,19 @@
             <TextBlock Classes="settings-subsection-title"
                        Text="{Binding AppInfoHeader}" />
 
-            <ui:FAInfoBar Classes="about-static-info"
-                          Title="{Binding VersionLabel}"
-                          Message="{Binding VersionText}">
-                <ui:FAInfoBar.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0288;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-                </ui:FAInfoBar.IconSource>
-            </ui:FAInfoBar>
+            <arc:Alert Classes="about-static-info"
+                       Title="{Binding VersionLabel}"
+                       Content="{Binding VersionText}" />
 
-            <ui:FAInfoBar Classes="about-static-info"
-                          Title="{Binding CodenameLabel}"
-                          Message="{Binding CodenameText}">
-                <ui:FAInfoBar.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF13D0;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-                </ui:FAInfoBar.IconSource>
-            </ui:FAInfoBar>
+            <arc:Alert Classes="about-static-info"
+                       Title="{Binding CodenameLabel}"
+                       Content="{Binding CodenameText}" />
 
-            <ui:FASettingsExpander Header="{Binding ProjectResourcesHeader}"
-                                   IsExpanded="True">
-                <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF02AC;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-                </ui:FASettingsExpander.IconSource>
-                <ui:FASettingsExpanderItem>
-                    <ui:FASettingsExpanderItem.Footer>
+            <arc:SettingsRow Header="{Binding ProjectResourcesHeader}">
+                <arc:SettingsRow.Details>
+                    <StackPanel Spacing="10"
+                                Margin="0,8,0,0">
+                        <TextBlock Text="{Binding CopyrightLine}" />
                         <WrapPanel>
                             <WrapPanel.Styles>
                                 <Style Selector="HyperlinkButton">
@@ -102,10 +89,9 @@
                                 <TextBlock Text="{Binding LinkIssuesText}" />
                             </HyperlinkButton>
                         </WrapPanel>
-                    </ui:FASettingsExpanderItem.Footer>
-                    <TextBlock Text="{Binding CopyrightLine}" />
-                </ui:FASettingsExpanderItem>
-            </ui:FASettingsExpander>
+                    </StackPanel>
+                </arc:SettingsRow.Details>
+            </arc:SettingsRow>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

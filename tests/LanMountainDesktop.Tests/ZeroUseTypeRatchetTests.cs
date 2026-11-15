@@ -27,6 +27,8 @@ public sealed class ZeroUseTypeRatchetTests
     {
         ["ProcessStartInfoArgumentExtensions"] = "扩展方法宿主，调用点写成 .WithArgument(...)，类型名本身不出现"
             + "（实测 LinuxNotificationListener.cs:254 一处链式调用）",
+        ["MainWindowExtensions"] = "扩展方法宿主，调用点写成 .Glyph(...)，类型名本身不出现"
+            + "（实测 MewInstaller MainWindow.cs 8 处链式调用：107/165/215/229/249/292/307/328，各步骤页的字形文本）",
         ["UpdatePhaseExtensions"] = "扩展方法宿主，调用点写成 phase.IsBusy() / CanCheck()："
             + "实测 19 处（UpdateSettingsViewModel 9 / SettingsDomainServices 4 / UpdateOrchestrator 6）",
         ["SettingsServiceAppSnapshotExtensions"] = "扩展方法宿主，调用点写成 settings.Load()，ISettingsService 上没有同名实例方法："

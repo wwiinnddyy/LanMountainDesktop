@@ -21,6 +21,7 @@ using LanMountainDesktop.AirAppSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
 using LanMountainDesktop.Views.Components;
+using TKCode.Arc.Icons.Lucide;
 
 namespace LanMountainDesktop.Views;
 
@@ -1475,11 +1476,11 @@ public partial class MainWindow : Window
             BorderThickness = new Thickness(0),
             Tag = new LauncherHiddenItemToken(hiddenItem.Kind, hiddenItem.Key)
         };
-        restoreButton.Content = new FluentIcons.Avalonia.SymbolIcon
+        restoreButton.Content = new LucideIcon
         {
-            Symbol = FluentIcons.Common.Symbol.Eye,
-            IconVariant = FluentIcons.Common.IconVariant.Regular,
-            FontSize = 18,
+            Kind = LucideIconKind.Eye,
+            Width = 18,
+            Height = 18,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center
         };
